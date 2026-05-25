@@ -1,9 +1,14 @@
-.hvigor/
-.idea/
-.DS_Store
+# Build
 build/
-entry/build/
+.preview/
 oh_modules/
-entry/oh_modules/
-*.hap
-*.app
+node_modules/
+
+# IDE
+.idea/
+.hvigor/
+local.properties
+
+# OS
+.DS_Store
+Thumbs.db
