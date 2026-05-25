@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "PackCheck entry module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "PackCheck"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "PackCheck"
+    }
+  ]
+}

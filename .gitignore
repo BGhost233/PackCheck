@@ -1,0 +1,9 @@
+.hvigor/
+.idea/
+.DS_Store
+build/
+entry/build/
+oh_modules/
+entry/oh_modules/
+*.hap
+*.app
