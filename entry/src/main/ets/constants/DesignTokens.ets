@@ -13,6 +13,8 @@ export const ARROW_COLOR = '#CCCCCC';
 export const GROUP_HEADER_BG = '#F5F5F5';
 export const PROGRESS_END_COLOR = '#4CAF50';
 export const COUNTDOWN_ORANGE = '#FF8C42';
+export const PRICE_COLOR = '#4A90D9';
+export const BLUR_BG = '#CCF8F9FA';
 
 export const VIEW_HOME = 'home';
 export const VIEW_GEAR = 'gear';
@@ -43,3 +45,7 @@ export const ITEM_GAP = 12;
 export const CARD_RADIUS = 20;
 export const SMALL_CARD_RADIUS = 12;
 export const CHIP_RADIUS = 18;
+export const GEAR_HEADER_EXPANDED = 280;
+export const GEAR_HEADER_COLLAPSED = 56;
+export const HOME_HEADER_COLLAPSED = 56;
+export const HOME_COLLAPSE_MAX = 200;

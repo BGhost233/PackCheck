@@ -9,6 +9,9 @@ node_modules/
 .hvigor/
 local.properties
 
+# Tools
+.superpowers/
+
 # OS
 .DS_Store
 Thumbs.db

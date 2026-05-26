@@ -72,10 +72,21 @@ export struct ReviewPage {
 
   build() {
     Column() {
-      Text('← 左滑未带   右滑已带 →')
-        .fontSize(14)
-        .fontColor(TEXT_TERTIARY)
-        .padding({ top: 72, bottom: 40 })
+      Row({ space: 12 }) {
+        SymbolGlyph($r('sys.symbol.chevron_left'))
+          .fontSize(14)
+          .fontColor([TEXT_TERTIARY])
+        Text('左滑未带')
+          .fontSize(14)
+          .fontColor(TEXT_TERTIARY)
+        Text('右滑已带')
+          .fontSize(14)
+          .fontColor(TEXT_TERTIARY)
+        SymbolGlyph($r('sys.symbol.chevron_right'))
+          .fontSize(14)
+          .fontColor([TEXT_TERTIARY])
+      }
+      .padding({ top: 72, bottom: 40 })
       if (this.reviewFinished) {
         this.Summary();
       } else {

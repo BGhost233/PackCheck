@@ -1,3 +1,4 @@
+import { curves } from '@kit.ArkUI';
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import {
   CARD_BG,
@@ -25,6 +26,100 @@ export struct HomePage {
   onOpenGear: () => void = (): void => {};
   onOpenChecklist: (id: string) => void = (id: string): void => {};
   onConfirmDeleteChecklist: (item: TripChecklist) => void = (item: TripChecklist): void => {};
+
+  @State private heroDaysDisplay: number = 0;
+  @State private heroNumberAnimated: boolean = false;
+  @State private progressNumeratorDisplay: number = 0;
+  @State private progressAnimated: boolean = false;
+  @State private scrollOffset: number = 0;
+  private collapseMax: number = 200;
+  private scroller: Scroller = new Scroller();
+
+  aboutToAppear(): void {
+    this.heroDaysDisplay = 0;
+    this.heroNumberAnimated = false;
+    this.progressNumeratorDisplay = 0;
+    this.progressAnimated = false;
+    this.scrollOffset = 0;
+  }
+
+  private scrollProgress(): number {
+    return Math.max(0, Math.min(1, this.scrollOffset / this.collapseMax));
+  }
+
+  private titleFontSize(): number {
+    return 28 - this.scrollProgress() * 12;
+  }
+
+  private titlePaddingBottom(): number {
+    return 18 - this.scrollProgress() * 10;
+  }
+
+  private heroOpacity(): number {
+    return 1 - this.scrollProgress();
+  }
+
+  private getAnimatedHeroLead(checklist: TripChecklist): string {
+    if (this.heroNumberAnimated) {
+      return this.countdownLead(checklist);
+    }
+    const days = this.daysLeft(checklist);
+    if (days === undefined) {
+      return this.countdownLead(checklist);
+    }
+    if (days === 0) {
+      return this.countdownLead(checklist);
+    }
+    return Math.round(this.heroDaysDisplay).toString();
+  }
+
+  private getAnimatedProgressText(checklist: TripChecklist): string {
+    if (this.progressAnimated) {
+      return this.progressText(checklist);
+    }
+    return Math.round(this.progressNumeratorDisplay).toString() + '/' + checklist.items.length.toString();
+  }
+
+  private startHeroNumberAnimation(): void {
+    const checklist = this.latestChecklist();
+    if (checklist === undefined) {
+      this.heroNumberAnimated = true;
+      return;
+    }
+    const days = this.daysLeft(checklist);
+    if (days === undefined || days === 0) {
+      this.heroNumberAnimated = true;
+      return;
+    }
+    const target = Math.abs(days);
+    this.getUIContext().animateTo({
+      duration: 800,
+      curve: Curve.EaseOut,
+      onFinish: (): void => {
+        this.heroNumberAnimated = true;
+      }
+    }, (): void => {
+      this.heroDaysDisplay = target;
+    });
+  }
+
+  private startProgressAnimation(): void {
+    const checklist = this.latestChecklist();
+    if (checklist === undefined) {
+      this.progressAnimated = true;
+      return;
+    }
+    const target = this.checkedCount(checklist);
+    this.getUIContext().animateTo({
+      duration: 800,
+      curve: Curve.EaseOut,
+      onFinish: (): void => {
+        this.progressAnimated = true;
+      }
+    }, (): void => {
+      this.progressNumeratorDisplay = target;
+    });
+  }
 
   private latestChecklist(): TripChecklist | undefined {
     if (this.checklists.length === 0) {
@@ -176,18 +271,36 @@ export struct HomePage {
     return date.getFullYear().toString() + '-' + (date.getMonth() + 1).toString() + '-' + date.getDate().toString();
   }
 
-  private historyListHeight(): number {
+  private historyContentHeight(): number {
     if (this.checklists.length === 0) {
-      return 0;
+      return 64;
     }
     return this.checklists.length * 72;
   }
 
+  private compactHeaderText(): string {
+    const latest = this.latestChecklist();
+    if (latest === undefined) {
+      return '';
+    }
+    const days = this.daysLeft(latest);
+    if (days === undefined) {
+      return '· ' + latest.title;
+    }
+    if (days > 0) {
+      return '· ' + latest.title + ' · ' + days.toString() + '天后';
+    }
+    if (days === 0) {
+      return '· ' + latest.title + ' · 今天出发';
+    }
+    return '· ' + latest.title;
+  }
+
   build() {
     Column() {
-      this.Header();
-      Scroll() {
+      Scroll(this.scroller) {
         Column({ space: 24 }) {
+          this.DynamicHeader();
           if (this.latestChecklist() !== undefined) {
             this.HeroCard(this.latestChecklist());
           } else {
@@ -201,6 +314,10 @@ export struct HomePage {
       }
       .edgeEffect(EdgeEffect.Spring)
       .layoutWeight(1)
+      .scrollBar(BarState.Off)
+      .onScroll((xOffset: number, yOffset: number) => {
+        this.scrollOffset = yOffset;
+      })
     }
     .width('100%')
     .height('100%')
@@ -208,20 +325,34 @@ export struct HomePage {
   }
 
   @Builder
-  private Header() {
+  private DynamicHeader() {
     Row() {
-      Text('PackCheck')
-        .fontSize(28)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(TEXT_MAIN)
-        .layoutWeight(1)
-      Text(this.homeStatusText())
-        .fontSize(13)
-        .fontColor(TEXT_TERTIARY)
+      Column({ space: 2 }) {
+        Text('PackCheck')
+          .fontSize(this.titleFontSize())
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+        if (this.scrollProgress() > 0.6) {
+          Text(this.compactHeaderText())
+            .fontSize(12)
+            .fontColor(TEXT_TERTIARY)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+      }
+      .alignItems(HorizontalAlign.Start)
+      .layoutWeight(1)
+      if (this.scrollProgress() < 0.5) {
+        Text(this.homeStatusText())
+          .fontSize(13)
+          .fontColor(TEXT_TERTIARY)
+          .opacity(1 - this.scrollProgress() * 2)
+      }
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
-    .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 20, bottom: 18 })
+    .padding({ top: 20, bottom: this.titlePaddingBottom() })
+    .animation({ duration: 80, curve: Curve.Linear })
   }
 
   @Builder
@@ -241,7 +372,7 @@ export struct HomePage {
         .width('100%')
 
         Row() {
-          Text(this.countdownLead(checklist))
+          Text(this.getAnimatedHeroLead(checklist))
             .fontSize(this.daysLeft(checklist) === 0 ? 36 : 48)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.daysLeft(checklist) !== undefined && this.daysLeft(checklist) !== undefined &&
@@ -253,6 +384,9 @@ export struct HomePage {
         }
         .width('100%')
         .alignItems(VerticalAlign.Bottom)
+        .onAppear((): void => {
+          this.startHeroNumberAnimation();
+        })
 
         Row() {
           Text((checklist.date !== undefined && checklist.date.length > 0 ? checklist.date : '未设置日期') +
@@ -273,8 +407,11 @@ export struct HomePage {
         colors: [[heroGradientStart(this.daysLeft(checklist)), 0], [CARD_BG, 1]]
       })
       .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
+      .opacity(this.heroOpacity())
       .onClick(() => {
-        this.onOpenChecklist(checklist.id);
+        if (this.heroOpacity() > 0.3) {
+          this.onOpenChecklist(checklist.id);
+        }
       })
     }
   }
@@ -295,13 +432,16 @@ export struct HomePage {
         .height(52)
         .color(PRIMARY_COLOR)
         .style({ strokeWidth: 5, enableSmoothEffect: true })
-      Text(this.progressText(checklist))
+      Text(this.getAnimatedProgressText(checklist))
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor(PRIMARY_COLOR)
     }
     .width(52)
     .height(52)
+    .onAppear((): void => {
+      this.startProgressAnimation();
+    })
   }
 
   @Builder
@@ -406,7 +546,8 @@ export struct HomePage {
         }
         .edgeEffect(EdgeEffect.Spring)
         .width('100%')
-        .height(this.historyListHeight())
+        .height(this.historyContentHeight())
+        .scrollBar(BarState.Off)
         .backgroundColor(CARD_BG)
         .borderRadius(16)
       }
@@ -424,7 +565,7 @@ export struct HomePage {
           .backgroundColor(DIVIDER_COLOR)
         Circle({ width: 10, height: 10 })
           .fill(this.isChecklistDone(item) ? PRIMARY_COLOR : '#00000000')
-          .stroke(this.isChecklistDone(item) ? PRIMARY_COLOR : PRIMARY_COLOR)
+          .stroke(PRIMARY_COLOR)
           .strokeWidth(2)
         Row()
           .width(2)

@@ -30,6 +30,7 @@ export struct ChecklistDetail {
 
   @State private headerCollapsed: boolean = false;
   @State private headerAnimating: boolean = false;
+  @State private pressedItemId: string = '';
 
   private listScroller: Scroller = new Scroller();
   private readonly collapseThreshold: number = 80;
@@ -396,15 +397,18 @@ export struct ChecklistDetail {
   private CollapsedHeader() {
     if (this.currentChecklist() !== undefined) {
       Row({ space: 10 }) {
-        Text('←')
-          .fontSize(22)
-          .fontColor(PRIMARY_COLOR)
-          .width(32)
-          .height(40)
-          .textAlign(TextAlign.Start)
-          .onClick(() => {
-            this.onReturnHome();
-          })
+        Row() {
+          SymbolGlyph($r('sys.symbol.chevron_left'))
+            .fontSize(22)
+            .fontColor([PRIMARY_COLOR])
+        }
+        .width(32)
+        .height(40)
+        .justifyContent(FlexAlign.Start)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => {
+          this.onReturnHome();
+        })
         Text(this.currentChecklistTitle() + ' · ' + this.progressText(this.currentChecklist()!) +
           ' · ' + this.progressPercent(this.currentChecklist()!).toString() + '%')
           .fontSize(18)
@@ -414,13 +418,13 @@ export struct ChecklistDetail {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
         Row({ space: 8 }) {
-          this.MiniActionButton('＋', () => {
+          this.MiniActionButton($r('sys.symbol.plus'), () => {
             this.handleAddItem();
           });
-          this.MiniActionButton('↓', () => {
+          this.MiniActionButton($r('sys.symbol.square_and_arrow_down'), () => {
             this.handleImportFromGear();
           });
-          this.MiniActionButton('☑', () => {
+          this.MiniActionButton($r('sys.symbol.list_checkmark'), () => {
             this.handleSequentialCheck();
           });
         }
@@ -436,30 +440,35 @@ export struct ChecklistDetail {
   }
 
   @Builder
-  private MiniActionButton(icon: string, action: () => void) {
-    Text(icon)
-      .fontSize(16)
-      .fontColor(PRIMARY_COLOR)
-      .width(32)
-      .height(32)
-      .textAlign(TextAlign.Center)
-      .backgroundColor(PRIMARY_TINT_COLOR)
-      .borderRadius(16)
-      .onClick(action)
+  private MiniActionButton(icon: Resource, action: () => void) {
+    Row() {
+      SymbolGlyph(icon)
+        .fontSize(16)
+        .fontColor([PRIMARY_COLOR])
+    }
+    .width(32)
+    .height(32)
+    .justifyContent(FlexAlign.Center)
+    .backgroundColor(PRIMARY_TINT_COLOR)
+    .borderRadius(16)
+    .onClick(action)
   }
 
   @Builder
   private NavBar() {
     Row() {
-      Text('←')
-        .fontSize(24)
-        .fontColor(PRIMARY_COLOR)
-        .width(44)
-        .height(44)
-        .textAlign(TextAlign.Start)
-        .onClick(() => {
-          this.onReturnHome();
-        })
+      Row() {
+        SymbolGlyph($r('sys.symbol.chevron_left'))
+          .fontSize(24)
+          .fontColor([PRIMARY_COLOR])
+      }
+      .width(44)
+      .height(44)
+      .justifyContent(FlexAlign.Start)
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        this.onReturnHome();
+      })
     }
     .width('100%')
     .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 18, bottom: 4 })
@@ -509,10 +518,15 @@ export struct ChecklistDetail {
             .fontColor(this.countdownText(checklist) === '今天出发！' ? PRIMARY_COLOR : TEXT_SECONDARY)
         }
         if (this.checkedWeight(checklist) > 0) {
-          Text('⚖ ' + this.formatKg(this.checkedWeight(checklist)))
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(TEXT_SECONDARY)
+          Row({ space: 3 }) {
+            SymbolGlyph($r('sys.symbol.weight_unit'))
+              .fontSize(14)
+              .fontColor([TEXT_SECONDARY])
+            Text(this.formatKg(this.checkedWeight(checklist)))
+              .fontSize(14)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(TEXT_SECONDARY)
+          }
         }
       }
       .width('100%')
@@ -526,9 +540,9 @@ export struct ChecklistDetail {
         Stack({ alignContent: Alignment.Center }) {
           Circle({ width: 44, height: 44 })
             .fill(PRIMARY_COLOR)
-          Text('✓')
+          SymbolGlyph($r('sys.symbol.checkmark'))
             .fontSize(20)
-            .fontColor('#FFFFFF')
+            .fontColor(['#FFFFFF'])
         }
         .width(44)
         .height(44)
@@ -590,13 +604,13 @@ export struct ChecklistDetail {
   @Builder
   private ActionRow() {
     Row({ space: 10 }) {
-      this.ActionChip('＋', '添加物品', () => {
+      this.ActionChip($r('sys.symbol.plus'), '添加物品', () => {
         this.handleAddItem();
       });
-      this.ActionChip('↓', '从装备库导入', () => {
+      this.ActionChip($r('sys.symbol.square_and_arrow_down'), '从装备库导入', () => {
         this.handleImportFromGear();
       });
-      this.ActionChip('☑', '逐项核查', () => {
+      this.ActionChip($r('sys.symbol.list_checkmark'), '逐项核查', () => {
         this.handleSequentialCheck();
       });
     }
@@ -604,11 +618,11 @@ export struct ChecklistDetail {
   }
 
   @Builder
-  private ActionChip(icon: string, label: string, action: () => void) {
+  private ActionChip(icon: Resource, label: string, action: () => void) {
     Row({ space: 4 }) {
-      Text(icon)
+      SymbolGlyph(icon)
         .fontSize(14)
-        .fontColor(PRIMARY_COLOR)
+        .fontColor([PRIMARY_COLOR])
       Text(label)
         .fontSize(13)
         .fontColor(PRIMARY_COLOR)
@@ -640,9 +654,11 @@ export struct ChecklistDetail {
         .fontColor(TEXT_TERTIARY)
         .margin({ left: 6 })
       Blank()
-      Text(this.isGroupCollapsed(group) ? '∨' : '∧')
+      SymbolGlyph($r('sys.symbol.chevron_down'))
         .fontSize(14)
-        .fontColor(TEXT_TERTIARY)
+        .fontColor([TEXT_TERTIARY])
+        .rotate({ angle: this.isGroupCollapsed(group) ? -90 : 0 })
+        .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
     }
     .width('100%')
     .height(44)
@@ -664,6 +680,7 @@ export struct ChecklistDetail {
       Text(item.name)
         .fontSize(16)
         .fontColor(item.checked ? '#BBBBBB' : TEXT_MAIN)
+        .decoration(item.checked ? { type: TextDecorationType.LineThrough, color: '#CCCCCC' } : undefined)
         .layoutWeight(1)
         .onClick(() => {
           this.onOpenEditItem(item);
@@ -686,6 +703,16 @@ export struct ChecklistDetail {
     .padding({ left: 16, right: 16 })
     .backgroundColor(this.highlightedItemId === item.id ? LIGHT_PRIMARY_COLOR : CARD_BG)
     .borderRadius(12)
+    .scale({ x: this.pressedItemId === item.id ? 0.97 : 1, y: this.pressedItemId === item.id ? 0.97 : 1 })
+    .opacity(this.pressedItemId === item.id ? 0.85 : 1)
+    .animation({ duration: 260, curve: curves.springMotion(0.22, 0.82) })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedItemId = item.id;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedItemId = '';
+      }
+    })
     .onClick(() => {
       this.onOpenEditItem(item);
     })
@@ -706,9 +733,9 @@ export struct ChecklistDetail {
           .stroke(this.isChecklistItemChecked(itemId) ? PRIMARY_COLOR : ARROW_COLOR)
           .strokeWidth(2)
         if (this.isChecklistItemChecked(itemId)) {
-          Text('✓')
+          SymbolGlyph($r('sys.symbol.checkmark'))
             .fontSize(15)
-            .fontColor('#FFFFFF')
+            .fontColor(['#FFFFFF'])
             .fontWeight(FontWeight.Bold)
         }
       }

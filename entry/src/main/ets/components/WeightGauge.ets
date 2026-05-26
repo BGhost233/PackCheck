@@ -1,3 +1,4 @@
+import { curves } from '@kit.ArkUI';
 import {
   CARD_BG,
   DANGER_COLOR,
@@ -17,6 +18,44 @@ export struct WeightGauge {
   @Prop totalPrice: number = 0;
 
   onEditTargetWeight: () => void = (): void => {};
+
+  @State private displayWeight: number = 0;
+  @State private displayGearCount: number = 0;
+  @State private displayTotalPrice: number = 0;
+  @State private counterAnimated: boolean = false;
+
+  aboutToAppear(): void {
+    this.displayWeight = 0;
+    this.displayGearCount = 0;
+    this.displayTotalPrice = 0;
+    this.counterAnimated = false;
+  }
+
+  private getDisplayWeight(): number {
+    return this.counterAnimated ? this.currentWeight : this.displayWeight;
+  }
+
+  private getDisplayGearCount(): string {
+    return (this.counterAnimated ? this.gearCount : this.displayGearCount).toString();
+  }
+
+  private getDisplayTotalPrice(): string {
+    return '¥' + (this.counterAnimated ? this.totalPrice : this.displayTotalPrice).toString();
+  }
+
+  private startCounterAnimation(): void {
+    this.getUIContext().animateTo({
+      duration: 800,
+      curve: Curve.EaseOut,
+      onFinish: (): void => {
+        this.counterAnimated = true;
+      }
+    }, (): void => {
+      this.displayWeight = this.currentWeight;
+      this.displayGearCount = this.gearCount;
+      this.displayTotalPrice = this.totalPrice;
+    });
+  }
 
   private ratioValue(): number {
     if (this.targetWeight <= 0) {
@@ -53,7 +92,7 @@ export struct WeightGauge {
           .color(this.isOverTarget() ? DANGER_COLOR : PRIMARY_COLOR)
           .style({ strokeWidth: 10, enableSmoothEffect: true })
         Column({ space: 2 }) {
-          Text(this.formatKg(this.currentWeight))
+          Text(this.formatKg(this.getDisplayWeight()))
             .fontSize(28)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.isOverTarget() ? DANGER_COLOR : PRIMARY_COLOR)
@@ -78,8 +117,8 @@ export struct WeightGauge {
         })
 
       Row() {
-        this.StatPill('件数', this.gearCount.toString());
-        this.StatPill('总价', '¥' + this.totalPrice.toString());
+        this.StatPill('件数', this.getDisplayGearCount());
+        this.StatPill('总价', this.getDisplayTotalPrice());
         this.StatPill('重量', this.formatKg(this.currentWeight));
       }
       .width('100%')
@@ -90,6 +129,9 @@ export struct WeightGauge {
     .backgroundColor(CARD_BG)
     .borderRadius(20)
     .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
+    .onAppear((): void => {
+      this.startCounterAnimation();
+    })
   }
 
   @Builder
