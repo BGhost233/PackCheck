@@ -55,6 +55,9 @@ export struct HomePage {
   @State private heroPressed: boolean = false;
   @State private historyStaggerReady: boolean = false;
   @State private emptyHeroBreathScale: number = 0.98;
+  @State private heroRingCelebrateScale: number = 1.0;
+  @State private ringCelebrateColor: string = PRIMARY_COLOR;
+  private wasLatestChecklistDone: boolean = false;
   private scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
@@ -65,8 +68,10 @@ export struct HomePage {
     this.scrollOffset = 0;
     this.historyStaggerReady = false;
     this.emptyHeroBreathScale = 1.02;
+    this.wasLatestChecklistDone = false;
     setTimeout(() => {
       this.historyStaggerReady = true;
+      this.checkCelebration();
     }, 100);
   }
 
@@ -309,6 +314,33 @@ export struct HomePage {
     return this.checklists.length * 72;
   }
 
+  private checkCelebration(): void {
+    if (this.wasLatestChecklistDone) {
+      return;
+    }
+    const checklist = this.latestChecklist();
+    if (checklist !== undefined && this.isChecklistDone(checklist) && checklist.items.length > 0) {
+      this.wasLatestChecklistDone = true;
+      this.heroRingCelebrateScale = 1.35;
+      this.ringCelebrateColor = '#FFD700';
+      this.getUIContext().animateTo({
+        duration: 500,
+        curve: SPRING_PRESS()
+      }, () => {
+        this.heroRingCelebrateScale = 1.35;
+      });
+      setTimeout(() => {
+        this.getUIContext().animateTo({
+          duration: 400,
+          curve: SPRING_GENERAL()
+        }, () => {
+          this.heroRingCelebrateScale = 1.0;
+          this.ringCelebrateColor = PRIMARY_COLOR;
+        });
+      }, 600);
+    }
+  }
+
   private compactHeaderText(): string {
     const latest = this.latestChecklist();
     if (latest === undefined) {
@@ -508,15 +540,18 @@ export struct HomePage {
       })
         .width(52)
         .height(52)
-        .color(PRIMARY_COLOR)
+        .color(this.ringCelebrateColor)
         .style({ strokeWidth: 5, enableSmoothEffect: true })
+        .animation({ duration: 500, curve: SPRING_GENERAL() })
       Text(this.getAnimatedProgressText(checklist))
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
-        .fontColor(PRIMARY_COLOR)
+        .fontColor(this.ringCelebrateColor)
+        .animation({ duration: 500, curve: SPRING_GENERAL() })
     }
     .width(52)
     .height(52)
+    .scale({ x: this.heroRingCelebrateScale, y: this.heroRingCelebrateScale })
     .onAppear((): void => {
       this.startProgressAnimation();
     })
