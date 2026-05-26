@@ -1,8 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { curves, LengthMetrics } from '@kit.ArkUI';
-import { deviceInfo } from '@kit.BasicServicesKit';
 import { sensor, vibrator } from '@kit.SensorServiceKit';
-import { HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
 import { ChecklistDetail } from '../components/ChecklistDetail';
 import { GearPage } from '../components/GearPage';
 import { HomePage } from '../components/HomePage';
@@ -41,6 +39,23 @@ import {
   VIEW_HOME,
   VIEW_REVIEW
 } from '../constants/DesignTokens';
+import {
+  SPRING_GENERAL,
+  SPRING_PRESS,
+  SPRING_TAB,
+  SPRING_COUNTER,
+  DURATION_FAST,
+  DURATION_NORMAL,
+  DURATION_SLOW,
+  DURATION_COUNTER,
+  STAGGER_DELAY_MENU,
+  STAGGER_DELAY_LIST,
+  STAGGER_OFFSET_Y,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_BOUNCE,
+  PRESS_SCALE_REST,
+  PANEL_SCALE_START
+} from '../constants/AnimationTokens';
 import { ChecklistItem, DEFAULT_CATEGORIES, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 
@@ -59,8 +74,10 @@ struct Index {
   @State private filterPanelTranslateY: number = -600;
   @State private filterPanelOverlayOpacity: number = 0;
   @State private tabPillOffsetX: number = 4;
-  private supportHdsTabs: boolean = deviceInfo.sdkApiVersion >= 23;
-  private hdsTabsController: HdsTabsController = new HdsTabsController();
+  @State private currentTabIndex: number = 0;
+  private tabsController: TabsController = new TabsController();
+  private navPathStack: NavPathStack = new NavPathStack();
+  private lastBackPressTime: number = 0;
   @State private gearSearchKeyword: string = '';
   @State private gearSortMode: string = GEAR_SORT_GROUP;
   @State private expandedGearId: string = '';
@@ -104,6 +121,7 @@ struct Index {
   @State private reviewDragX: number = 0;
   @State private highlightedItemId: string = '';
   @State private checklistRenderNonce: number = 0;
+  @State private pressedTabIndex: number = -1;
 
   private shakeListening: boolean = false;
   private lastShakeAt: number = 0;
@@ -384,8 +402,8 @@ struct Index {
     this.filterPanelTranslateY = -600;
     this.filterPanelOverlayOpacity = 0;
     this.getUIContext().animateTo({
-      duration: 500,
-      curve: curves.springMotion(0.22, 0.82)
+      duration: DURATION_SLOW,
+      curve: SPRING_GENERAL()
     }, (): void => {
       this.filterPanelTranslateY = 0;
       this.filterPanelOverlayOpacity = 1;
@@ -395,7 +413,7 @@ struct Index {
   private applyGearFilterPanel(): void {
     this.selectedGearCategories = this.normalizeGearCategories(this.tempGearFilterCategories);
     this.getUIContext().animateTo({
-      duration: 250,
+      duration: DURATION_NORMAL,
       curve: Curve.EaseIn,
       onFinish: (): void => {
         this.gearFilterPanelExpanded = false;
@@ -929,7 +947,7 @@ struct Index {
     this.showEditGearPanel = true;
     this.editGearPanelScale = 0.85;
     this.editGearPanelOpacity = 0;
-    this.getUIContext().animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
+    this.getUIContext().animateTo({ duration: DURATION_SLOW, curve: SPRING_GENERAL() }, () => {
       this.editGearPanelScale = 1;
       this.editGearPanelOpacity = 1;
     });
@@ -1200,24 +1218,23 @@ struct Index {
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
     this.selectedChecklistId = created.id;
-    this.currentView = VIEW_CHECKLIST;
-    this.startShakeListening();
     this.closeSheet();
+    this.startShakeListening();
+    this.navPathStack.pushPathByName('ChecklistDetail', undefined, true);
   }
 
   private openChecklist(checklistId: string): void {
     this.selectedChecklistId = checklistId;
     this.collapsedGroups = [];
-    this.currentView = VIEW_CHECKLIST;
     this.startShakeListening();
+    this.navPathStack.pushPathByName('ChecklistDetail', undefined, true);
   }
 
   private returnToHome(): void {
     this.stopShakeListening();
-    this.currentView = VIEW_HOME;
-    this.tabPillOffsetX = 4;
-    if (this.supportHdsTabs) {
-      this.hdsTabsController.changeIndex(0);
+    this.tabsController.changeIndex(0);
+    if (this.navPathStack.size() > 0) {
+      this.navPathStack.pop(true);
     }
   }
 
@@ -1230,17 +1247,19 @@ struct Index {
     this.reviewIndex = 0;
     this.reviewFinished = false;
     this.reviewDragX = 0;
-    this.currentView = VIEW_REVIEW;
+    this.navPathStack.pushPathByName('ReviewPage', undefined, true);
   }
 
   private exitReviewMode(): void {
     this.reviewDragX = 0;
-    this.currentView = VIEW_CHECKLIST;
     this.startShakeListening();
+    if (this.navPathStack.size() > 0) {
+      this.navPathStack.pop(true);
+    }
   }
 
   private startShakeListening(): void {
-    if (this.shakeListening || this.currentView !== VIEW_CHECKLIST) {
+    if (this.shakeListening) {
       return;
     }
     try {
@@ -1330,7 +1349,7 @@ struct Index {
     this.showEditItemPanel = true;
     this.editItemPanelScale = 0.85;
     this.editItemPanelOpacity = 0;
-    this.getUIContext().animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
+    this.getUIContext().animateTo({ duration: DURATION_SLOW, curve: SPRING_GENERAL() }, () => {
       this.editItemPanelScale = 1;
       this.editItemPanelOpacity = 1;
     });
@@ -1687,8 +1706,8 @@ struct Index {
     this.selectedChecklistId = created.id;
     this.cancelGearMultiSelect();
     this.closeSheet();
-    this.currentView = VIEW_CHECKLIST;
     this.startShakeListening();
+    this.navPathStack.pushPathByName('ChecklistDetail', undefined, true);
   }
 
   private addItemsToChecklist(checklistId: string, items: ChecklistItem[]): TripChecklist[] {
@@ -1935,13 +1954,102 @@ struct Index {
     this.sheetMode = SHEET_NONE;
   }
 
+  @Builder
+  NavDestinationMap(name: string, param: Object) {
+    if (name === 'ChecklistDetail') {
+      NavDestination() {
+        ChecklistDetail({
+          checklists: this.checklists,
+          gears: this.gears,
+          selectedChecklistId: this.selectedChecklistId,
+          collapsedGroups: this.collapsedGroups,
+          highlightedItemId: this.highlightedItemId,
+          progressPulse: this.progressPulse,
+          checklistRenderNonce: this.checklistRenderNonce,
+          onReturnHome: () => {
+            this.returnToHome();
+          },
+          onOpenEditTrip: () => {
+            this.openEditTripSheet();
+          },
+          onOpenDatePicker: () => {
+            this.openDatePicker();
+          },
+          onOpenTempItem: () => {
+            this.openTempItemSheet();
+          },
+          onOpenImport: () => {
+            this.openImportSheet();
+          },
+          onOpenReview: () => {
+            this.openReviewMode();
+          },
+          onToggleGroup: (group: string) => {
+            this.toggleGroup(group);
+          },
+          onOpenEditItem: (item: ChecklistItem) => {
+            this.openEditItemSheet(item);
+          },
+          onToggleChecklistItem: (itemId: string) => {
+            this.toggleChecklistItem(itemId);
+          },
+          onSaveChecklistItemToGear: (item: ChecklistItem) => {
+            this.saveChecklistItemToGear(item);
+          },
+          onDeleteChecklistItem: (itemId: string) => {
+            this.deleteChecklistItem(itemId);
+          }
+        })
+      }
+      .hideTitleBar(true)
+      .width('100%')
+      .height('100%')
+    } else if (name === 'ReviewPage') {
+      NavDestination() {
+        ReviewPage({
+          checklists: this.checklists,
+          selectedChecklistId: this.selectedChecklistId,
+          reviewIndex: this.reviewIndex,
+          reviewFinished: this.reviewFinished,
+          reviewDragX: this.reviewDragX,
+          onUpdateDragX: (value: number) => {
+            this.reviewDragX = value;
+          },
+          onMarkReviewItem: (checked: boolean) => {
+            this.markReviewItem(checked);
+          },
+          onExitReviewMode: () => {
+            this.exitReviewMode();
+          }
+        })
+      }
+      .hideTitleBar(true)
+      .width('100%')
+      .height('100%')
+    }
+  }
+
+  onBackPress(): boolean | void {
+    if (this.navPathStack.size() > 0) {
+      if (this.navPathStack.size() === 1) {
+        this.stopShakeListening();
+      }
+      return false;
+    }
+    const now = Date.now();
+    if (now - this.lastBackPressTime < 2000) {
+      return false;
+    }
+    this.lastBackPressTime = now;
+    this.showToastMessage('再滑一次退出应用');
+    return true;
+  }
+
   build() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      Column() {
-        if (this.currentView === VIEW_HOME || this.currentView === VIEW_GEAR) {
-          if (this.supportHdsTabs) {
-            this.HdsMainTabs();
-          } else if (this.currentView === VIEW_HOME) {
+    Navigation(this.navPathStack) {
+      Stack({ alignContent: Alignment.Bottom }) {
+        Tabs({ barPosition: BarPosition.End, index: this.currentTabIndex, controller: this.tabsController }) {
+          TabContent() {
             HomePage({
               checklists: this.checklists,
               gears: this.gears,
@@ -1949,8 +2057,7 @@ struct Index {
                 this.openTripSheet();
               },
               onOpenGear: () => {
-                this.currentView = VIEW_GEAR;
-                this.tabPillOffsetX = 102;
+                this.tabsController.changeIndex(1);
               },
               onOpenChecklist: (id: string) => {
                 this.openChecklist(id);
@@ -1959,7 +2066,9 @@ struct Index {
                 this.confirmDeleteChecklist(item);
               }
             });
-          } else {
+          }
+
+          TabContent() {
             GearPage({
               gears: this.gears,
               selectedGearCategories: this.selectedGearCategories,
@@ -2008,199 +2117,115 @@ struct Index {
               }
             });
           }
-        } else if (this.currentView === VIEW_REVIEW) {
-          ReviewPage({
-            checklists: this.checklists,
-            selectedChecklistId: this.selectedChecklistId,
-            reviewIndex: this.reviewIndex,
-            reviewFinished: this.reviewFinished,
-            reviewDragX: this.reviewDragX,
-            onUpdateDragX: (value: number) => {
-              this.reviewDragX = value;
-            },
-            onMarkReviewItem: (checked: boolean) => {
-              this.markReviewItem(checked);
-            },
-            onExitReviewMode: () => {
-              this.exitReviewMode();
-            }
-          });
-        } else {
-          ChecklistDetail({
-            checklists: this.checklists,
-            gears: this.gears,
-            selectedChecklistId: this.selectedChecklistId,
-            collapsedGroups: this.collapsedGroups,
-            highlightedItemId: this.highlightedItemId,
-            progressPulse: this.progressPulse,
-            checklistRenderNonce: this.checklistRenderNonce,
-            onReturnHome: () => {
-              this.returnToHome();
-            },
-            onOpenEditTrip: () => {
-              this.openEditTripSheet();
-            },
-            onOpenDatePicker: () => {
-              this.openDatePicker();
-            },
-            onOpenTempItem: () => {
-              this.openTempItemSheet();
-            },
-            onOpenImport: () => {
-              this.openImportSheet();
-            },
-            onOpenReview: () => {
-              this.openReviewMode();
-            },
-            onToggleGroup: (group: string) => {
-              this.toggleGroup(group);
-            },
-            onOpenEditItem: (item: ChecklistItem) => {
-              this.openEditItemSheet(item);
-            },
-            onToggleChecklistItem: (itemId: string) => {
-              this.toggleChecklistItem(itemId);
-            },
-            onSaveChecklistItemToGear: (item: ChecklistItem) => {
-              this.saveChecklistItemToGear(item);
-            },
-            onDeleteChecklistItem: (itemId: string) => {
-              this.deleteChecklistItem(itemId);
-            }
-          });
+        }
+        .barHeight(0)
+        .barBackgroundColor(Color.Transparent)
+        .width('100%')
+        .height('100%')
+        .backgroundColor(Color.Transparent)
+        .onChange((index: number) => {
+          this.currentTabIndex = index;
+          if (index === 0) {
+            this.currentView = VIEW_HOME;
+            this.tabPillOffsetX = 4;
+          } else {
+            this.currentView = VIEW_GEAR;
+            this.tabPillOffsetX = 102;
+          }
+        })
+
+        if (this.gearFilterPanelExpanded) {
+          this.GearFilterPanelOverlay();
+        }
+        this.BottomEdgeFade()
+        this.CapsuleTabBar()
+        if (this.sheetMode !== SHEET_NONE) {
+          this.SheetOverlay();
+        }
+        if (this.showEditItemPanel) {
+          this.EditItemPanelOverlay();
+        }
+        if (this.showEditGearPanel) {
+          this.EditGearPanelOverlay();
+        }
+        if (this.showCompletionToast) {
+          this.CompletionToast();
         }
       }
       .width('100%')
       .height('100%')
-      .backgroundColor(PAGE_BG)
-
-      if (this.gearFilterPanelExpanded) {
-        this.GearFilterPanelOverlay();
-      }
-      if (this.shouldShowBottomTabs() && !this.gearFilterPanelExpanded && !this.supportHdsTabs) {
-        this.BottomTabBar();
-      }
-      if (this.sheetMode !== SHEET_NONE) {
-        this.SheetOverlay();
-      }
-      if (this.showEditItemPanel) {
-        this.EditItemPanelOverlay();
-      }
-      if (this.showEditGearPanel) {
-        this.EditGearPanelOverlay();
-      }
-      if (this.showCompletionToast) {
-        this.CompletionToast();
-      }
     }
-    .width('100%')
-    .height('100%')
-  }
-
-  private shouldShowBottomTabs(): boolean {
-    return this.currentView === VIEW_HOME || this.currentView === VIEW_GEAR;
+    .navDestination(this.NavDestinationMap)
+    .hideTitleBar(true)
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 
   @Builder
-  private HdsMainTabs() {
-    HdsTabs({ controller: this.hdsTabsController }) {
-      TabContent() {
-        HomePage({
-          checklists: this.checklists,
-          gears: this.gears,
-          onOpenTrip: () => {
-            this.openTripSheet();
-          },
-          onOpenGear: () => {
-            this.currentView = VIEW_GEAR;
-            this.hdsTabsController.changeIndex(1);
-          },
-          onOpenChecklist: (id: string) => {
-            this.openChecklist(id);
-          },
-          onConfirmDeleteChecklist: (item: TripChecklist) => {
-            this.confirmDeleteChecklist(item);
-          }
-        });
-      }
-      .tabBar('清单')
+  private BottomEdgeFade() {
+    Row()
+      .width('100%')
+      .height(24)
+      .linearGradient({
+        angle: 0,
+        direction: GradientDirection.Bottom,
+        colors: [[Color.Transparent, 0.0], [CARD_BG, 1.0]]
+      })
+      .hitTestBehavior(HitTestMode.Transparent)
+      .margin({ bottom: 72 })
+  }
 
-      TabContent() {
-        GearPage({
-          gears: this.gears,
-          selectedGearCategories: this.selectedGearCategories,
-          gearSearchKeyword: this.gearSearchKeyword,
-          gearSortMode: this.gearSortMode,
-          expandedGearId: this.expandedGearId,
-          targetWeightGram: $targetWeightGram,
-          multiSelectMode: this.multiSelectMode,
-          selectedMultiGearIds: this.selectedMultiGearIds,
-          onSearchChange: (keyword: string) => {
-            this.gearSearchKeyword = keyword;
-          },
-          onOpenFilterPanel: () => {
-            this.openGearFilterPanel();
-          },
-          onOpenSort: () => {
-            this.sheetMode = SHEET_GEAR_SORT;
-          },
-          onStartMultiSelect: () => {
-            this.multiSelectMode = true;
-            this.selectedMultiGearIds = [];
-          },
-          onOpenAddGear: () => {
-            this.openAddGear();
-          },
-          onOpenEditGear: (item: GearItem) => {
-            this.openEditGear(item);
-          },
-          onConfirmDeleteGear: (item: GearItem) => {
-            this.confirmDeleteGear(item);
-          },
-          onToggleGearExpanded: (id: string) => {
-            this.toggleGearExpanded(id);
-          },
-          onEnterGearMultiSelect: (id: string) => {
-            this.enterGearMultiSelect(id);
-          },
-          onToggleMultiGearSelection: (id: string) => {
-            this.toggleMultiGearSelection(id);
-          },
-          onCancelGearMultiSelect: () => {
-            this.cancelGearMultiSelect();
-          },
-          onOpenGenerateTripSheet: () => {
-            this.openGenerateTripSheet();
-          }
-        });
+  @Builder
+  private CapsuleTabBar() {
+    Stack({ alignContent: Alignment.Center }) {
+      Row()
+        .width(94)
+        .height(40)
+        .backgroundColor(PRIMARY_COLOR)
+        .borderRadius(20)
+        .position({ x: this.tabPillOffsetX, y: 4 })
+        .shadow({ radius: 8, color: '#332D7D46', offsetX: 0, offsetY: 2 })
+        .animation({ duration: DURATION_SLOW, curve: SPRING_TAB() })
+
+      Row() {
+        this.CapsuleTabItem('清单', 0);
+        this.CapsuleTabItem('装备库', 1);
       }
-      .tabBar('装备库')
+      .width(200)
+      .height(48)
+      .justifyContent(FlexAlign.SpaceAround)
+      .alignItems(VerticalAlign.Center)
     }
-    .width('100%')
-    .height('100%')
-    .barOverlap(true)
-    .vertical(false)
-    .barPosition(BarPosition.End)
-    .barFloatingStyle({
-      barBottomMargin: 28,
-      gradientMask: {
-        maskColor: '#FFF1F3F5',
-        maskHeight: 92
-      },
-      systemMaterialEffect: {
-        materialType: hdsMaterial.MaterialType.IMMERSIVE,
-        materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-      }
-    })
-    .onChange((index: number) => {
-      if (index === 0) {
-        this.currentView = VIEW_HOME;
-        this.tabPillOffsetX = 4;
-      } else {
-        this.currentView = VIEW_GEAR;
-        this.tabPillOffsetX = 102;
-      }
-    })
+    .width(200)
+    .height(48)
+    .backgroundColor('#F0FFFFFF')
+    .borderRadius(24)
+    .shadow({ radius: 12, color: '#1A000000', offsetX: 0, offsetY: 4 })
+    .margin({ bottom: 24 })
+  }
+
+  @Builder
+  private CapsuleTabItem(title: string, tabIndex: number) {
+    Text(title)
+      .fontSize(14)
+      .fontSize(this.currentTabIndex === tabIndex ? 15 : 14)
+      .fontWeight(this.currentTabIndex === tabIndex ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(this.currentTabIndex === tabIndex ? '#FFFFFF' : TEXT_TERTIARY)
+      .textAlign(TextAlign.Center)
+      .layoutWeight(1)
+      .height(44)
+      .scale({ x: this.pressedTabIndex === tabIndex ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.pressedTabIndex === tabIndex ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+      .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.pressedTabIndex = tabIndex;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.pressedTabIndex = -1;
+        }
+      })
+      .onClick(() => {
+        this.gearFilterPanelExpanded = false;
+        this.tabsController.changeIndex(tabIndex);
+      })
   }
 
   @Builder
@@ -2315,55 +2340,10 @@ struct Index {
     .width('30.5%')
     .height(42)
     .margin({ right: 10, bottom: 10 })
+    .transition({ type: TransitionType.Insert, translate: { y: STAGGER_OFFSET_Y }, opacity: 0 })
     .onClick(() => {
       this.toggleTempGearCategory(category);
     })
-  }
-
-  @Builder
-  private BottomTabBar() {
-    Stack({ alignContent: Alignment.Center }) {
-      Row()
-        .width(94)
-        .height(40)
-        .backgroundColor(PRIMARY_COLOR)
-        .borderRadius(20)
-        .position({ x: this.tabPillOffsetX, y: 4 })
-        .animation({ duration: 350, curve: curves.springMotion() })
-
-      Row() {
-        this.BottomTabItem('清单', VIEW_HOME, 0);
-        this.BottomTabItem('装备库', VIEW_GEAR, 1);
-      }
-      .width(200)
-      .height(48)
-      .justifyContent(FlexAlign.SpaceAround)
-      .alignItems(VerticalAlign.Center)
-    }
-    .width(200)
-    .height(48)
-    .backgroundColor('rgba(255, 255, 255, 0.75)')
-    .backdropBlur(20)
-    .borderRadius(24)
-    .shadow({ radius: 20, color: '#10000000', offsetX: 0, offsetY: 4 })
-    .margin({ bottom: 24 })
-  }
-
-  @Builder
-  private BottomTabItem(title: string, targetView: string, tabIndex: number) {
-    Text(title)
-      .fontSize(14)
-      .fontWeight(this.currentView === targetView ? FontWeight.Medium : FontWeight.Normal)
-      .fontColor(this.currentView === targetView ? '#FFFFFF' : TEXT_TERTIARY)
-      .textAlign(TextAlign.Center)
-      .layoutWeight(1)
-      .height(44)
-      .animation({ duration: 250 })
-      .onClick(() => {
-        this.gearFilterPanelExpanded = false;
-        this.currentView = targetView;
-        this.tabPillOffsetX = tabIndex === 0 ? 4 : 102;
-      })
   }
 
   @Builder
@@ -2381,7 +2361,7 @@ struct Index {
       .backgroundColor(LIGHT_PRIMARY_COLOR)
       .borderRadius(24)
       .shadow({ radius: 8, color: '#262D7D46', offsetX: 0, offsetY: 2 })
-      .transition({ type: TransitionType.Insert, translate: { y: -20 }, opacity: 0 })
+      .transition({ type: TransitionType.Insert, translate: { y: -20 }, scale: { x: PANEL_SCALE_START, y: PANEL_SCALE_START }, opacity: 0 })
     }
     .width('100%')
     .height('100%')
@@ -2448,7 +2428,7 @@ struct Index {
       .padding({ left: 16, right: 16, top: 16, bottom: 20 })
       .backgroundColor(CARD_BG)
       .borderRadius({ topLeft: 24, topRight: 24 })
-      .transition({ type: TransitionType.Insert, translate: { y: 320 }, opacity: 0 })
+      .transition({ type: TransitionType.Insert, translate: { y: 320 }, scale: { x: PANEL_SCALE_START, y: PANEL_SCALE_START }, opacity: 0 })
     }
     .width('100%')
     .height('100%')
@@ -2514,6 +2494,8 @@ struct Index {
     .padding({ left: 12, right: 12 })
     .backgroundColor(this.gearSortMode === mode ? LIGHT_PRIMARY_COLOR : PAGE_BG)
     .borderRadius(12)
+    .scale({ x: this.gearSortMode === mode ? PRESS_SCALE_BOUNCE : PRESS_SCALE_REST, y: this.gearSortMode === mode ? PRESS_SCALE_BOUNCE : PRESS_SCALE_REST })
+    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
     .onClick(() => {
       this.gearSortMode = mode;
       this.closeSheet();
