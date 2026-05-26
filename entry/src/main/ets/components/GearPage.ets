@@ -49,6 +49,7 @@ export struct GearPage {
   @Link targetWeightGram: number;
   @Prop multiSelectMode: boolean = false;
   @Prop selectedMultiGearIds: string[] = [];
+  @Prop gearBudget: number = 0;
 
   @State private pressedGearId: string = '';
   @State private searchExpanded: boolean = false;
@@ -512,6 +513,7 @@ export struct GearPage {
           targetWeight: this.targetWeightGram,
           gearCount: this.gears.length,
           totalPrice: this.totalGearPrice(),
+          budget: this.gearBudget,
           onEditTargetWeight: () => {
             this.openWeightEditor();
           }
