@@ -60,6 +60,8 @@ export struct GearPage {
   @State private fabShadowOpacity: number = 0.3;
   @State private fabPressed: boolean = false;
   @State private gearScrollOffset: number = 0;
+  @State private collapsedGearGroups: string[] = [];
+  @State private gearGroupExpandTrigger: number = 0;
 
   private store: PackStore = new PackStore();
   private gearListScroller: Scroller = new Scroller();
@@ -271,6 +273,22 @@ export struct GearPage {
     return this.filteredGearsByGroup(group).length;
   }
 
+  private isGearGroupCollapsed(group: string): boolean {
+    return this.collapsedGearGroups.indexOf(group) >= 0;
+  }
+
+  private toggleGearGroupCollapse(group: string): void {
+    const idx = this.collapsedGearGroups.indexOf(group);
+    if (idx >= 0) {
+      const next = this.collapsedGearGroups;
+      next.splice(idx, 1);
+      this.collapsedGearGroups = next;
+      this.gearGroupExpandTrigger++;
+    } else {
+      this.collapsedGearGroups = this.collapsedGearGroups.concat([group]);
+    }
+  }
+
   private gearMetaText(item: GearItem): string {
     let text = item.category;
     if (item.weight !== undefined) {
@@ -381,11 +399,12 @@ export struct GearPage {
                 ListItem() {
                   this.GroupHeader(group);
                 }
-                ForEach(this.filteredGearsByGroup(group), (item: GearItem) => {
-                  ListItem() {
-                    this.GearRow(item);
-                  }
-                  .swipeAction({
+                if (!this.isGearGroupCollapsed(group)) {
+                  ForEach(this.filteredGearsByGroup(group), (item: GearItem) => {
+                    ListItem() {
+                      this.GearRow(item);
+                    }
+                    .swipeAction({
                     end: {
                       builder: this.DeleteAction(item),
                       actionAreaDistance: 80,
@@ -395,6 +414,7 @@ export struct GearPage {
                     }
                   })
                 }, (item: GearItem) => item.id)
+                }
               }, (group: string) => group)
             }
             ListItem() {
@@ -603,6 +623,11 @@ export struct GearPage {
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
         .layoutWeight(1)
+      SymbolGlyph($r('sys.symbol.chevron_down'))
+        .fontSize(14)
+        .fontColor([TEXT_TERTIARY])
+        .rotate({ angle: this.isGearGroupCollapsed(group) ? -90 : 0 })
+        .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
     }
     .width('100%')
     .height(40)
@@ -611,6 +636,9 @@ export struct GearPage {
     .margin({ top: 8, bottom: 2 })
     .backgroundColor(GROUP_HEADER_BG)
     .borderRadius(10)
+    .onClick(() => {
+      this.toggleGearGroupCollapse(group);
+    })
   }
 
   @Builder
