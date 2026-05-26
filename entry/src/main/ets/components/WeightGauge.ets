@@ -14,8 +14,10 @@ import {
   SPRING_PRESS,
   SPRING_GENERAL,
   DURATION_FAST,
+  DURATION_NORMAL,
   PRESS_SCALE_DOWN,
-  PRESS_SCALE_REST
+  PRESS_SCALE_REST,
+  STAGGER_OFFSET_Y
 } from '../constants/AnimationTokens';
 
 enum GaugeMode {
@@ -40,12 +42,16 @@ export struct WeightGauge {
   @State private counterAnimated: boolean = false;
   @State private ringBounceScale: number = 1.0;
   @State private gearCountPopScale: number = 1.0;
+  @State private ringEntranceScale: number = 0;
+  @State private pillEntranceIndices: boolean[] = [false, false, false];
 
   aboutToAppear(): void {
     this.displayWeight = 0;
     this.displayGearCount = 0;
     this.displayTotalPrice = 0;
     this.counterAnimated = false;
+    this.ringEntranceScale = 0;
+    this.pillEntranceIndices = [false, false, false];
   }
 
   private getDisplayWeight(): number {
@@ -194,7 +200,10 @@ export struct WeightGauge {
       }
       .width(148)
       .height(148)
-      .scale({ x: this.ringBounceScale, y: this.ringBounceScale })
+      .scale({
+        x: this.ringBounceScale * this.ringEntranceScale,
+        y: this.ringBounceScale * this.ringEntranceScale
+      })
       .animation({ duration: DURATION_FAST, curve: SPRING_PRESS() })
       .onClick(() => {
         this.toggleGaugeMode();
@@ -215,9 +224,9 @@ export struct WeightGauge {
         })
 
       Row() {
-        this.StatPill('件数', this.getDisplayGearCount().toString(), this.gearCountPopScale);
-        this.StatPill('总价', '¥' + this.getDisplayTotalPrice().toString(), 1.0);
-        this.StatPill('重量', this.formatKg(this.currentWeight), 1.0);
+        this.StatPill('件数', this.getDisplayGearCount().toString(), this.gearCountPopScale, 0);
+        this.StatPill('总价', '¥' + this.getDisplayTotalPrice().toString(), 1.0, 1);
+        this.StatPill('重量', this.formatKg(this.currentWeight), 1.0, 2);
       }
       .width('100%')
       .justifyContent(FlexAlign.SpaceBetween)
@@ -229,11 +238,32 @@ export struct WeightGauge {
     .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
     .onAppear((): void => {
       this.startCounterAnimation();
+      this.getUIContext().animateTo({
+        duration: 600,
+        curve: SPRING_GENERAL()
+      }, () => {
+        this.ringEntranceScale = 1.0;
+      });
+      setTimeout(() => {
+        const indices = this.pillEntranceIndices;
+        indices[0] = true;
+        this.pillEntranceIndices = indices;
+      }, 50);
+      setTimeout(() => {
+        const indices = this.pillEntranceIndices;
+        indices[1] = true;
+        this.pillEntranceIndices = indices;
+      }, 130);
+      setTimeout(() => {
+        const indices = this.pillEntranceIndices;
+        indices[2] = true;
+        this.pillEntranceIndices = indices;
+      }, 210);
     })
   }
 
   @Builder
-  private StatPill(label: string, value: string, popScale: number) {
+  private StatPill(label: string, value: string, popScale: number, staggerIndex: number) {
     Column({ space: 2 }) {
       Text(label)
         .fontSize(11)
@@ -251,6 +281,9 @@ export struct WeightGauge {
     .backgroundColor(LIGHT_PRIMARY_COLOR)
     .borderRadius(SMALL_CARD_RADIUS)
     .margin({ left: 4, right: 4 })
+    .opacity(this.pillEntranceIndices[staggerIndex] ? 1 : 0)
+    .translate({ y: this.pillEntranceIndices[staggerIndex] ? 0 : STAGGER_OFFSET_Y })
+    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
     .scale({ x: PRESS_SCALE_REST, y: PRESS_SCALE_REST })
     .onClick(() => {
       this.onStatPillClick(label);
