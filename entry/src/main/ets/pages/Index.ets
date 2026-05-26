@@ -122,6 +122,8 @@ struct Index {
   @State private highlightedItemId: string = '';
   @State private checklistRenderNonce: number = 0;
   @State private pressedTabIndex: number = -1;
+  @State private tabPillWidth: number = 94;
+  @State private tabContentOpacity: number = 1.0;
 
   private shakeListening: boolean = false;
   private lastShakeAt: number = 0;
@@ -2133,6 +2135,8 @@ struct Index {
             this.tabPillOffsetX = 102;
           }
         })
+        .opacity(this.tabContentOpacity)
+        .animation({ duration: DURATION_FAST, curve: SPRING_GENERAL() })
 
         if (this.gearFilterPanelExpanded) {
           this.GearFilterPanelOverlay();
@@ -2178,7 +2182,7 @@ struct Index {
   private CapsuleTabBar() {
     Stack({ alignContent: Alignment.Center }) {
       Row()
-        .width(94)
+        .width(this.tabPillWidth)
         .height(40)
         .backgroundColor(PRIMARY_COLOR)
         .borderRadius(20)
@@ -2223,8 +2227,27 @@ struct Index {
         }
       })
       .onClick(() => {
+        if (this.currentTabIndex === tabIndex) {
+          return;
+        }
         this.gearFilterPanelExpanded = false;
-        this.tabsController.changeIndex(tabIndex);
+        this.getUIContext().animateTo({
+          duration: 200,
+          curve: SPRING_TAB()
+        }, () => {
+          this.tabPillWidth = 110;
+          this.tabContentOpacity = 0;
+        });
+        setTimeout(() => {
+          this.tabsController.changeIndex(tabIndex);
+          this.getUIContext().animateTo({
+            duration: 350,
+            curve: SPRING_GENERAL()
+          }, () => {
+            this.tabPillWidth = 94;
+            this.tabContentOpacity = 1.0;
+          });
+        }, 200);
       })
   }
 
