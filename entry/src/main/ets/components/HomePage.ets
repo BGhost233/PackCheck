@@ -1,11 +1,14 @@
 import { curves } from '@kit.ArkUI';
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import {
+  BLUR_BG,
   CARD_BG,
   CARD_RADIUS,
   COUNTDOWN_ORANGE,
   DANGER_COLOR,
   DIVIDER_COLOR,
+  HOME_COLLAPSE_MAX,
+  HOME_HEADER_COLLAPSED,
   LIGHT_PRIMARY_COLOR,
   PAGE_BG,
   PAGE_PADDING,
@@ -15,7 +18,21 @@ import {
   TEXT_SECONDARY,
   TEXT_TERTIARY
 } from '../constants/DesignTokens';
+import {
+  SPRING_PRESS,
+  SPRING_GENERAL,
+  SPRING_SCROLL,
+  DURATION_NORMAL,
+  DURATION_SLOW,
+  DURATION_COUNTER,
+  DURATION_SCROLL_SMOOTH,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST,
+  STAGGER_OFFSET_Y,
+  STAGGER_DELAY_LIST
+} from '../constants/AnimationTokens';
 import { heroGradientStart } from '../utils/ColorUtils';
+
 
 @Component
 export struct HomePage {
@@ -32,7 +49,12 @@ export struct HomePage {
   @State private progressNumeratorDisplay: number = 0;
   @State private progressAnimated: boolean = false;
   @State private scrollOffset: number = 0;
-  private collapseMax: number = 200;
+  @State private smoothScrollOffset: number = 0;
+  @State private quickEntryPressed: string = '';
+  @State private historyPressedId: string = '';
+  @State private heroPressed: boolean = false;
+  @State private historyStaggerReady: boolean = false;
+  @State private emptyHeroBreathScale: number = 0.98;
   private scroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
@@ -41,10 +63,15 @@ export struct HomePage {
     this.progressNumeratorDisplay = 0;
     this.progressAnimated = false;
     this.scrollOffset = 0;
+    this.historyStaggerReady = false;
+    this.emptyHeroBreathScale = 1.02;
+    setTimeout(() => {
+      this.historyStaggerReady = true;
+    }, 100);
   }
 
   private scrollProgress(): number {
-    return Math.max(0, Math.min(1, this.scrollOffset / this.collapseMax));
+    return Math.max(0, Math.min(1, this.smoothScrollOffset / HOME_COLLAPSE_MAX));
   }
 
   private titleFontSize(): number {
@@ -57,6 +84,10 @@ export struct HomePage {
 
   private heroOpacity(): number {
     return 1 - this.scrollProgress();
+  }
+
+  private heroScale(): number {
+    return 1 - this.scrollProgress() * 0.4;
   }
 
   private getAnimatedHeroLead(checklist: TripChecklist): string {
@@ -93,8 +124,8 @@ export struct HomePage {
     }
     const target = Math.abs(days);
     this.getUIContext().animateTo({
-      duration: 800,
-      curve: Curve.EaseOut,
+      duration: DURATION_COUNTER,
+      curve: SPRING_GENERAL(),
       onFinish: (): void => {
         this.heroNumberAnimated = true;
       }
@@ -111,8 +142,8 @@ export struct HomePage {
     }
     const target = this.checkedCount(checklist);
     this.getUIContext().animateTo({
-      duration: 800,
-      curve: Curve.EaseOut,
+      duration: DURATION_COUNTER,
+      curve: SPRING_GENERAL(),
       onFinish: (): void => {
         this.progressAnimated = true;
       }
@@ -298,26 +329,61 @@ export struct HomePage {
 
   build() {
     Column() {
-      Scroll(this.scroller) {
-        Column({ space: 24 }) {
-          this.DynamicHeader();
-          if (this.latestChecklist() !== undefined) {
-            this.HeroCard(this.latestChecklist());
-          } else {
-            this.EmptyHero();
+      Stack() {
+        Scroll(this.scroller) {
+          Column({ space: 24 }) {
+            this.DynamicHeader();
+            if (this.latestChecklist() !== undefined) {
+              this.HeroCard(this.latestChecklist());
+            } else {
+              this.EmptyHero();
+            }
+            this.QuickEntries();
+            this.HistoryTimeline();
           }
-          this.QuickEntries();
-          this.HistoryTimeline();
+          .width('100%')
+          .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 80 })
         }
         .width('100%')
-        .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 108 })
+        .height('100%')
+        .edgeEffect(EdgeEffect.Spring)
+        .scrollBar(BarState.Off)
+        .onDidScroll(() => {
+          const raw = this.scroller.currentOffset().yOffset;
+          this.scrollOffset = raw;
+          this.getUIContext().animateTo({
+            duration: DURATION_SCROLL_SMOOTH,
+            curve: SPRING_SCROLL()
+          }, () => {
+            this.smoothScrollOffset = raw;
+          });
+        })
+
+        if (this.scrollProgress() > 0.8) {
+          Row() {
+            Text('PackCheck')
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(TEXT_MAIN)
+            if (this.latestChecklist() !== undefined) {
+              Text(this.compactHeaderText())
+                .fontSize(13)
+                .fontColor(TEXT_TERTIARY)
+                .maxLines(1)
+                .margin({ left: 8 })
+            }
+          }
+          .width('100%')
+          .height(HOME_HEADER_COLLAPSED)
+          .padding({ left: PAGE_PADDING, right: PAGE_PADDING })
+          .alignItems(VerticalAlign.Center)
+          .backgroundColor(BLUR_BG)
+          .backgroundBlurStyle(BlurStyle.Regular)
+          .position({ x: 0, y: 0 })
+          .animation({ duration: DURATION_SCROLL_SMOOTH, curve: SPRING_SCROLL() })
+        }
       }
-      .edgeEffect(EdgeEffect.Spring)
       .layoutWeight(1)
-      .scrollBar(BarState.Off)
-      .onScroll((xOffset: number, yOffset: number) => {
-        this.scrollOffset = yOffset;
-      })
     }
     .width('100%')
     .height('100%')
@@ -352,7 +418,7 @@ export struct HomePage {
     .width('100%')
     .alignItems(VerticalAlign.Center)
     .padding({ top: 20, bottom: this.titlePaddingBottom() })
-    .animation({ duration: 80, curve: Curve.Linear })
+    .animation({ duration: DURATION_SCROLL_SMOOTH, curve: SPRING_SCROLL() })
   }
 
   @Builder
@@ -408,6 +474,18 @@ export struct HomePage {
       })
       .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
       .opacity(this.heroOpacity())
+      .scale({
+        x: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale(),
+        y: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale()
+      })
+      .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.heroPressed = true;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.heroPressed = false;
+        }
+      })
       .onClick(() => {
         if (this.heroOpacity() > 0.3) {
           this.onOpenChecklist(checklist.id);
@@ -449,9 +527,8 @@ export struct HomePage {
     Column({ space: 8 }) {
       Text('🏔️')
         .fontSize(56)
-      Text('还没有行程')
-        .fontSize(18)
-        .fontColor(TEXT_TERTIARY)
+        .scale({ x: this.emptyHeroBreathScale, y: this.emptyHeroBreathScale })
+        .animation({ duration: 2000, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
       Text('点击下方开始你的第一次出发')
         .fontSize(14)
         .fontColor('#CCCCCC')
@@ -506,6 +583,15 @@ export struct HomePage {
     .backgroundColor(bg)
     .borderRadius(16)
     .shadow({ radius: bg === CARD_BG ? 8 : 0, color: '#08000000', offsetX: 0, offsetY: 1 })
+    .scale({ x: this.quickEntryPressed === title ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.quickEntryPressed === title ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.quickEntryPressed = title;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.quickEntryPressed = '';
+      }
+    })
     .onClick(action)
   }
 
@@ -526,10 +612,13 @@ export struct HomePage {
           .textAlign(TextAlign.Center)
       } else {
         List() {
-          ForEach(this.checklists, (item: TripChecklist) => {
+          ForEach(this.checklists, (item: TripChecklist, index: number) => {
             ListItem() {
               this.HistoryRow(item);
             }
+            .opacity(this.historyStaggerReady ? 1 : 0)
+            .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
+            .animation({ duration: DURATION_NORMAL + index * STAGGER_DELAY_LIST, curve: SPRING_GENERAL() })
             .onClick(() => {
               this.onOpenChecklist(item.id);
             })
@@ -595,6 +684,15 @@ export struct HomePage {
     .height(72)
     .padding({ left: 16, right: 16 })
     .backgroundColor(CARD_BG)
+    .scale({ x: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.historyPressedId = item.id;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.historyPressedId = '';
+      }
+    })
   }
 
   @Builder
