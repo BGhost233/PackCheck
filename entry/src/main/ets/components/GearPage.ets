@@ -4,9 +4,12 @@ import { GearItem } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import { WeightGauge } from './WeightGauge';
 import {
+  BLUR_BG,
   CARD_BG,
   DANGER_COLOR,
   DIVIDER_COLOR,
+  GEAR_HEADER_COLLAPSED,
+  GEAR_HEADER_EXPANDED,
   GEAR_SORT_GROUP,
   GEAR_SORT_PRICE,
   GEAR_SORT_TIME,
@@ -23,7 +26,18 @@ import {
   TEXT_SECONDARY,
   TEXT_TERTIARY
 } from '../constants/DesignTokens';
+import {
+  SPRING_PRESS,
+  SPRING_GENERAL,
+  DURATION_NORMAL,
+  DURATION_SLOW,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST,
+  STAGGER_OFFSET_Y,
+  STAGGER_DELAY_LIST
+} from '../constants/AnimationTokens';
 import { getGroupColor } from '../utils/ColorUtils';
+
 
 @Component
 export struct GearPage {
@@ -36,23 +50,39 @@ export struct GearPage {
   @Prop multiSelectMode: boolean = false;
   @Prop selectedMultiGearIds: string[] = [];
 
-  @State private gearHeaderCollapsed: boolean = false;
-  @State private gearHeaderAnimating: boolean = false;
   @State private pressedGearId: string = '';
   @State private searchExpanded: boolean = false;
   @State private showWeightEditor: boolean = false;
   @State private targetWeightInput: string = '';
   @State private targetWeightError: string = '';
   @State private fabBreathScale: number = 1.0;
+  @State private fabShadowOpacity: number = 0.3;
   @State private fabPressed: boolean = false;
+  @State private gearScrollOffset: number = 0;
 
   private store: PackStore = new PackStore();
   private gearListScroller: Scroller = new Scroller();
-  private readonly gearCollapseThreshold: number = 180;
-  private readonly gearExpandThreshold: number = 120;
 
   aboutToAppear(): void {
     this.fabBreathScale = 1.04;
+    this.startFabBreath();
+  }
+
+  private startFabBreath(): void {
+    const runPulse = () => {
+      this.getUIContext().animateTo({
+        duration: 2000,
+        curve: Curve.EaseInOut,
+        onFinish: () => {
+          if (this.fabShadowOpacity > 0) {
+            runPulse();
+          }
+        }
+      }, () => {
+        this.fabShadowOpacity = this.fabShadowOpacity < 0.5 ? 0.6 : 0.3;
+      });
+    };
+    runPulse();
   }
 
   onSearchChange: (keyword: string) => void = (keyword: string): void => {};
@@ -289,98 +319,104 @@ export struct GearPage {
     }
   }
 
-  private updateGearHeaderCollapsed(offset: number): void {
-    let nextCollapsed = this.gearHeaderCollapsed;
-    if (!this.gearHeaderCollapsed && offset > this.gearCollapseThreshold) {
-      nextCollapsed = true;
-    } else if (this.gearHeaderCollapsed && offset < this.gearExpandThreshold) {
-      nextCollapsed = false;
-    }
-    if (nextCollapsed === this.gearHeaderCollapsed || this.gearHeaderAnimating) {
-      return;
-    }
-    this.gearHeaderAnimating = true;
-    this.getUIContext().animateTo({
-      duration: 250,
-      curve: Curve.EaseInOut,
-      onFinish: () => {
-        this.gearHeaderAnimating = false;
-      }
-    }, () => {
-      this.gearHeaderCollapsed = nextCollapsed;
-    });
+  private gearTitleFontSize(): number {
+    return 28 - this.gearScrollProgress() * 10;
   }
 
-  private resetGearHeaderCollapsed(): void {
-    if (!this.gearHeaderCollapsed && !this.gearHeaderAnimating) {
-      return;
+  private gearRingOpacity(): number {
+    return Math.max(0, 1 - this.gearScrollProgress() * 2.5);
+  }
+
+  private gearRingScale(): number {
+    return 1 - this.gearScrollProgress() * 0.4;
+  }
+
+  private gearPillOpacity(): number {
+    return Math.max(0, 1 - this.gearScrollProgress() * 2);
+  }
+
+  private gearCollapsedOpacity(): number {
+    const p = this.gearScrollProgress();
+    if (p < 0.5) {
+      return 0;
     }
-    this.gearHeaderAnimating = true;
-    this.getUIContext().animateTo({
-      duration: 250,
-      curve: Curve.EaseInOut,
-      onFinish: () => {
-        this.gearHeaderAnimating = false;
-      }
-    }, () => {
-      this.gearHeaderCollapsed = false;
-    });
+    return Math.min(1, (p - 0.5) * 2);
+  }
+
+  private gearScrollProgress(): number {
+    const range = GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED;
+    if (range <= 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(1, this.gearScrollOffset / range));
   }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        this.Header();
+        if (this.searchExpanded) {
+          this.SearchBar();
+        }
         if (this.multiSelectMode) {
           this.MultiSelectBar();
         }
-        this.CompactActionBar();
-        List({ space: 8, scroller: this.gearListScroller }) {
-          ListItem() {
-            this.WeightSummaryCard();
-          }
-          if (this.gears.length === 0) {
+        Stack() {
+          List({ space: 8, scroller: this.gearListScroller }) {
             ListItem() {
-              this.EmptyState();
+              Column()
+                .width('100%')
+                .height(GEAR_HEADER_EXPANDED)
             }
-          } else if (this.filteredGears().length === 0) {
-            ListItem() {
-              this.EmptyText('未找到相关装备');
-            }
-          } else {
-            ForEach(this.filteredGearGroups(), (group: string) => {
+            if (this.gears.length === 0) {
               ListItem() {
-                this.GroupHeader(group);
+                this.EmptyState();
               }
-              ForEach(this.filteredGearsByGroup(group), (item: GearItem) => {
+            } else if (this.filteredGears().length === 0) {
+              ListItem() {
+                this.EmptyText('未找到相关装备');
+              }
+            } else {
+              ForEach(this.filteredGearGroups(), (group: string) => {
                 ListItem() {
-                  this.GearRow(item);
+                  this.GroupHeader(group);
                 }
-                .swipeAction({
-                  end: {
-                    builder: this.DeleteAction(item),
-                    actionAreaDistance: 80,
-                    onAction: () => {
-                      this.onConfirmDeleteGear(item);
-                    }
+                ForEach(this.filteredGearsByGroup(group), (item: GearItem) => {
+                  ListItem() {
+                    this.GearRow(item);
                   }
-                })
-              }, (item: GearItem) => item.id)
-            }, (group: string) => group)
+                  .swipeAction({
+                    end: {
+                      builder: this.DeleteAction(item),
+                      actionAreaDistance: 80,
+                      onAction: () => {
+                        this.onConfirmDeleteGear(item);
+                      }
+                    }
+                  })
+                }, (item: GearItem) => item.id)
+              }, (group: string) => group)
+            }
+            ListItem() {
+              Column()
+                .width('100%')
+                .height(80)
+            }
           }
+          .width('100%')
+          .height('100%')
+          .edgeEffect(EdgeEffect.Spring)
+          .backgroundColor(CARD_BG)
+          .onDidScroll(() => {
+            this.gearScrollOffset = this.gearListScroller.currentOffset().yOffset;
+          })
+          .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
         }
-        .edgeEffect(EdgeEffect.Spring)
-        .onDidScroll((scrollOffset: number, scrollState: ScrollState) => {
-          this.updateGearHeaderCollapsed(this.gearListScroller.currentOffset().yOffset);
-        })
-        .onReachStart(() => {
-          this.resetGearHeaderCollapsed();
-        })
-        .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6, bottom: 112 })
         .layoutWeight(1)
       }
       .width('100%')
       .height('100%')
+
+      this.CollapsingHeader();
 
       if (!this.multiSelectMode) {
         this.Fab();
@@ -395,50 +431,100 @@ export struct GearPage {
   }
 
   @Builder
-  private Header() {
-    Row() {
-      Text('我的装备库')
-        .fontSize(this.gearHeaderCollapsed ? 21 : 24)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(TEXT_MAIN)
-        .layoutWeight(1)
-      if (this.gearHeaderCollapsed) {
-        Text(this.gearSummaryText())
-          .fontSize(13)
-          .fontColor(TEXT_TERTIARY)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .onClick(() => {
-            this.resetGearHeaderCollapsed();
-          })
-      }
-    }
-    .width('100%')
-    .height(52)
-    .alignItems(VerticalAlign.Center)
-    .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
-    .backgroundColor(PAGE_BG)
-    .shadow(this.gearHeaderCollapsed ?
-      { radius: 4, color: '#0A000000', offsetX: 0, offsetY: 2 } :
-      { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 })
-    .animation({ duration: 250, curve: Curve.EaseInOut })
-  }
+  private CollapsingHeader() {
+    Stack({ alignContent: Alignment.Top }) {
+      Column()
+        .width('100%')
+        .height(GEAR_HEADER_EXPANDED)
+        .backgroundColor(this.gearScrollProgress() > 0.5 ? BLUR_BG : Color.Transparent)
+        .backgroundBlurStyle(this.gearScrollProgress() > 0.5 ?
+          BlurStyle.Regular : BlurStyle.NONE)
 
-  @Builder
-  private WeightSummaryCard() {
-    Column() {
-      WeightGauge({
-        currentWeight: this.totalGearWeight(),
-        targetWeight: this.targetWeightGram,
-        gearCount: this.gears.length,
-        totalPrice: this.totalGearPrice(),
-        onEditTargetWeight: () => {
-          this.openWeightEditor();
+      Column() {
+        Row() {
+          Text('我的装备库')
+            .fontSize(this.gearTitleFontSize())
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+          if (this.gearScrollProgress() > 0.6) {
+            Text(this.gearSummaryText())
+              .fontSize(13)
+              .fontColor(TEXT_TERTIARY)
+              .maxLines(1)
+              .constraintSize({ maxWidth: 140 })
+              .margin({ left: 8 })
+          }
+          Blank()
+          Row() {
+            SymbolGlyph($r('sys.symbol.magnifyingglass'))
+              .fontSize(20)
+              .fontColor([this.gearSearchKeyword.length > 0 ? PRIMARY_COLOR : TEXT_SECONDARY])
+          }
+          .width(36)
+          .height(36)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor(PRIMARY_TINT_COLOR)
+          .borderRadius(18)
+          .onClick(() => {
+            this.searchExpanded = true;
+          })
+          Row() {
+            SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
+              .fontSize(18)
+              .fontColor([TEXT_SECONDARY])
+          }
+          .width(36)
+          .height(36)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor(PRIMARY_TINT_COLOR)
+          .borderRadius(18)
+          .margin({ left: 10 })
+          .onClick(() => {
+            this.onOpenSort();
+          })
         }
-      })
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
+
+        Row({ space: 4 }) {
+          Text(this.activeCategoryText())
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor(PRIMARY_COLOR)
+            .maxLines(1)
+          SymbolGlyph($r('sys.symbol.chevron_down'))
+            .fontSize(12)
+            .fontColor([PRIMARY_COLOR])
+        }
+        .height(32)
+        .padding({ left: 12, right: 12 })
+        .backgroundColor(PRIMARY_TINT_COLOR)
+        .borderRadius(16)
+        .margin({ top: 6, bottom: 4 })
+        .opacity(this.gearPillOpacity())
+        .onClick(() => {
+          this.onOpenFilterPanel();
+        })
+
+        WeightGauge({
+          currentWeight: this.totalGearWeight(),
+          targetWeight: this.targetWeightGram,
+          gearCount: this.gears.length,
+          totalPrice: this.totalGearPrice(),
+          onEditTargetWeight: () => {
+            this.openWeightEditor();
+          }
+        })
+          .opacity(this.gearRingOpacity())
+          .scale({ x: this.gearRingScale(), y: this.gearRingScale() })
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
-    .padding({ bottom: 8 })
+    .position({ x: 0, y: 0 })
+    .hitTestBehavior(HitTestMode.Transparent)
   }
 
   @Builder
@@ -471,88 +557,35 @@ export struct GearPage {
   }
 
   @Builder
-  private CompactActionBar() {
-    if (this.searchExpanded) {
-      Row({ space: 10 }) {
-        TextInput({ placeholder: '搜索装备', text: this.gearSearchKeyword })
-          .height(36)
-          .fontSize(14)
-          .fontColor(TEXT_MAIN)
-          .placeholderColor(TEXT_TERTIARY)
-          .backgroundColor(CARD_BG)
-          .borderRadius(18)
-          .padding({ left: 14, right: 14 })
-          .layoutWeight(1)
-          .onChange((value: string) => {
-            this.onSearchChange(value);
-          })
-        Text('取消')
-          .fontSize(14)
-          .fontColor(TEXT_SECONDARY)
-          .height(36)
-          .padding({ left: 8, right: 8 })
-          .onClick(() => {
-            this.searchExpanded = false;
-            this.onSearchChange('');
-          })
-      }
-      .width('100%')
-      .height(44)
-      .alignItems(VerticalAlign.Center)
-      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
-    } else {
-      Row({ space: 10 }) {
-        Row({ space: 4 }) {
-          Text(this.activeCategoryText())
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(PRIMARY_COLOR)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          SymbolGlyph($r('sys.symbol.chevron_down'))
-            .fontSize(12)
-            .fontColor([PRIMARY_COLOR])
-        }
-        .height(32)
-        .padding({ left: 12, right: 12 })
-        .backgroundColor(PRIMARY_TINT_COLOR)
-        .borderRadius(16)
-        .onClick(() => {
-          this.onOpenFilterPanel();
-        })
-        Blank()
-        Row() {
-          SymbolGlyph($r('sys.symbol.magnifyingglass'))
-            .fontSize(20)
-            .fontColor([this.gearSearchKeyword.length > 0 ? PRIMARY_COLOR : TEXT_SECONDARY])
-        }
-        .width(36)
+  private SearchBar() {
+    Row({ space: 10 }) {
+      TextInput({ placeholder: '搜索装备', text: this.gearSearchKeyword })
         .height(36)
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor(PRIMARY_TINT_COLOR)
+        .fontSize(14)
+        .fontColor(TEXT_MAIN)
+        .placeholderColor(TEXT_TERTIARY)
+        .backgroundColor(CARD_BG)
         .borderRadius(18)
-        .onClick(() => {
-          this.searchExpanded = true;
+        .padding({ left: 14, right: 14 })
+        .layoutWeight(1)
+        .onChange((value: string) => {
+          this.onSearchChange(value);
         })
-        Row() {
-          SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
-            .fontSize(18)
-            .fontColor([TEXT_SECONDARY])
-        }
-        .width(36)
+      Text('取消')
+        .fontSize(14)
+        .fontColor(TEXT_SECONDARY)
         .height(36)
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor(PRIMARY_TINT_COLOR)
-        .borderRadius(18)
+        .padding({ left: 8, right: 8 })
         .onClick(() => {
-          this.onOpenSort();
+          this.searchExpanded = false;
+          this.onSearchChange('');
         })
-      }
-      .width('100%')
-      .height(44)
-      .alignItems(VerticalAlign.Center)
-      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
     }
+    .width('100%')
+    .height(44)
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
+    .backgroundColor(PAGE_BG)
   }
 
   @Builder
@@ -754,14 +787,14 @@ export struct GearPage {
     .borderRadius(28)
     .scale({ x: this.fabPressed ? 0.9 : this.fabBreathScale, y: this.fabPressed ? 0.9 : this.fabBreathScale })
     .shadow({
-      radius: this.fabPressed ? 24 : 16,
+      radius: this.fabPressed ? 24 : (this.fabShadowOpacity > 0.5 ? 18 : 14),
       color: this.fabPressed ? '#6B2D7D46' : '#4D2D7D46',
       offsetX: 0,
       offsetY: this.fabPressed ? 6 : 4
     })
     .animation({
-      duration: this.fabPressed ? 400 : 2000,
-      curve: this.fabPressed ? curves.springMotion(0.22, 0.82) : Curve.EaseInOut,
+      duration: this.fabPressed ? DURATION_NORMAL : 2000,
+      curve: this.fabPressed ? SPRING_PRESS() : Curve.EaseInOut,
       iterations: this.fabPressed ? 1 : -1,
       playMode: PlayMode.Alternate
     })
