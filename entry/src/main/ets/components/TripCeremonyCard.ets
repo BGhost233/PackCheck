@@ -126,33 +126,33 @@ export struct TripCeremonyCard {
 
     // 内容错落入场：紧跟翻转，不等完全 settle
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
         this.contentStep = 1;
       });
       // 标题入场完成后 300ms 启动标题 shimmer
       setTimeout(() => {
         this.startTitleShimmer();
       }, 300);
-    }, 420);
+    }, 300);
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
         this.contentStep = 2;
       });
-    }, 490);
+    }, 360);
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
         this.contentStep = 3;
       });
-    }, 560);
+    }, 420);
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
         this.contentStep = 4;
       });
       // 入场完毕后启动 shimmer
       setTimeout(() => {
         this.startShimmer();
       }, 200);
-    }, 630);
+    }, 480);
   }
 
   // ============================================================
@@ -461,7 +461,8 @@ export struct TripCeremonyCard {
         .layoutWeight(1)
       }
       .width('85%')
-      .constraintSize({ maxWidth: 340, maxHeight: 380 })
+      .height(330)
+      .constraintSize({ maxWidth: 340 })
       .borderRadius(24)
       .clip(true)
       .shadow({
@@ -636,7 +637,7 @@ export struct TripCeremonyCard {
       .clip(true)
       .opacity(this.contentStep >= 1 ? 1 : 0)
       .translate({ y: this.contentStep >= 1 ? 0 : 6 })
-      .margin({ top: 32, bottom: 28 })
+      .margin({ top: 24, bottom: 20 })
 
       // 行程名称输入（3D 内凹）
       this.InsetInput('给这次旅途取个名字吧', this.tripTitle, false, 2,
@@ -661,8 +662,8 @@ export struct TripCeremonyCard {
           });
         })
 
-      // 跨组间距 36vp
-      Column().height(36)
+      // 跨组间距 24vp
+      Column().height(24)
 
       // ========== 滑动出发滑轨 ==========
       Stack({ alignContent: Alignment.Start }) {
@@ -833,7 +834,7 @@ export struct TripCeremonyCard {
       })
     }
     .width('100%')
-    .padding({ left: 24, right: 24, bottom: 28 })
+    .padding({ left: 24, right: 24, bottom: 20 })
     .backgroundColor('#FFFFFF')
     .justifyContent(FlexAlign.Start)
     .alignItems(HorizontalAlign.Center)
