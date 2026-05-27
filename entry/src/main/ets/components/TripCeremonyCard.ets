@@ -54,9 +54,9 @@ export struct TripCeremonyCard {
   @State private sliderBounceScale: number = 1.0;
 
   // 配置
-  private readonly SLIDER_WIDTH: number = 64;
-  private readonly SLIDER_HEIGHT: number = 44;
-  private readonly TRACK_HEIGHT: number = 52;
+  private readonly SLIDER_WIDTH: number = 56;
+  private readonly SLIDER_HEIGHT: number = 36;
+  private readonly TRACK_HEIGHT: number = 44;
   private readonly TRACK_PADDING: number = 4;
   private readonly MAGNET_THRESHOLD: number = 0.85;
   private trackWidth: number = 0;
@@ -461,7 +461,7 @@ export struct TripCeremonyCard {
         .layoutWeight(1)
       }
       .width('85%')
-      .height(330)
+      .height(300)
       .constraintSize({ maxWidth: 340 })
       .borderRadius(24)
       .clip(true)
@@ -513,82 +513,40 @@ export struct TripCeremonyCard {
   @Builder
   private InsetInput(placeholder: string, text: string, showCalendar: boolean, stepIndex: number,
     onTextChange?: (value: string) => void, onTap?: () => void) {
-    Stack() {
-      // 主体背景
-      Column()
+    // 简洁输入框：浅色背景 + 圆角，无 3D 效果
+    if (onTextChange) {
+      TextInput({ placeholder: placeholder, text: text })
         .width('100%')
-        .height(52)
-        .borderRadius(14)
-        .backgroundColor('#F0F2F0')
-        .border({ width: 1, color: '#12000000' })
-
-      // 顶部内阴影（模拟凹陷）
-      Column()
-        .width('100%')
-        .height(10)
-        .linearGradient({
-          angle: 180,
-          colors: [['#00000018', 0], ['#00000000', 1]]
-        })
-        .borderRadius({ topLeft: 14, topRight: 14 })
-
-      // 左侧内阴影（增强立体感）
-      Column()
-        .width(3)
-        .height('100%')
-        .linearGradient({
-          angle: 90,
-          colors: [['#00000008', 0], ['#00000000', 1]]
-        })
-        .borderRadius({ topLeft: 14, bottomLeft: 14 })
-
-      // 底部高光线（反光）
-      Column()
-        .width('85%')
-        .height(1)
-        .backgroundColor('#FFFFFF')
-        .opacity(0.8)
-        .borderRadius(1)
-        .position({ x: '7.5%', bottom: 7 })
-
-      // 内容层
-      if (onTextChange) {
-        TextInput({ placeholder: placeholder, text: text })
-          .width('100%')
-          .height(52)
-          .fontSize(15)
-          .fontColor(TEXT_MAIN)
-          .placeholderColor('#AAAAAA')
-          .backgroundColor('#00FFFFFF')
-          .borderRadius(14)
-          .padding({ left: 16, right: 16 })
-          .onChange((value: string) => {
-            onTextChange(value);
-          })
-      } else {
-        Row() {
-          Text(text.length > 0 ? text : placeholder)
-            .fontSize(15)
-            .fontColor(text.length > 0 ? TEXT_MAIN : '#AAAAAA')
-            .layoutWeight(1)
-          if (showCalendar) {
-            Text('日历')
-              .fontSize(12)
-              .fontColor('#999999')
-          }
-        }
-        .width('100%')
-        .height(52)
+        .height(48)
+        .fontSize(15)
+        .fontColor(TEXT_MAIN)
+        .placeholderColor('#BBBBBB')
+        .backgroundColor('#F7F8F7')
+        .borderRadius(12)
         .padding({ left: 16, right: 16 })
-        .onClick(() => {
-          if (onTap) onTap();
+        .opacity(this.contentStep >= stepIndex ? 1 : 0)
+        .translate({ y: this.contentStep >= stepIndex ? 0 : 8 })
+        .onChange((value: string) => {
+          onTextChange(value);
         })
+    } else {
+      Row() {
+        Text(text.length > 0 ? text : placeholder)
+          .fontSize(15)
+          .fontColor(text.length > 0 ? TEXT_MAIN : '#BBBBBB')
+          .layoutWeight(1)
       }
+      .width('100%')
+      .height(48)
+      .padding({ left: 16, right: 16 })
+      .backgroundColor('#F7F8F7')
+      .borderRadius(12)
+      .opacity(this.contentStep >= stepIndex ? 1 : 0)
+      .translate({ y: this.contentStep >= stepIndex ? 0 : 8 })
+      .onClick(() => {
+        if (onTap) onTap();
+      })
     }
-    .width('100%')
-    .height(52)
-    .opacity(this.contentStep >= stepIndex ? 1 : 0)
-    .translate({ y: this.contentStep >= stepIndex ? 0 : 8 })
   }
 
   @Builder
@@ -755,9 +713,9 @@ export struct TripCeremonyCard {
         .height('100%')
         .clip(true)
 
-        // 液态胶囊滑块（视觉层）
+        // 滑块
         Stack({ alignContent: Alignment.Center }) {
-          // 主体渐变胶囊（含外发光 shadow）
+          // 主体渐变胶囊
           Column()
             .width(this.SLIDER_WIDTH)
             .height(this.SLIDER_HEIGHT)
@@ -766,30 +724,17 @@ export struct TripCeremonyCard {
               angle: 135,
               colors: [['#3A9D5B', 0], ['#2D7D46', 0.6], ['#236B38', 1.0]]
             })
-            .border({ width: 1, color: '#FFFFFF2E' })
             .shadow({
-              radius: 14,
-              color: '#2D7D4640',
+              radius: 8,
+              color: '#332D7D46',
               offsetX: 0,
               offsetY: 2
             })
 
-          // 顶部内高光弧（玻璃质感）
-          Column()
-            .width('80%')
-            .height('40%')
-            .borderRadius(16)
-            .linearGradient({
-              angle: 180,
-              colors: [['#38FFFFFF', 0], ['#00FFFFFF', 1]]
-            })
-            .position({ x: '10%', top: 3 })
-
-          // 简洁箭头
-          Text('›')
-            .fontSize(22)
-            .fontWeight(FontWeight.Normal)
-            .fontColor('#FFFFFFDD')
+          // 飞机图标
+          SymbolGlyph($r('sys.symbol.airplane'))
+            .fontSize(18)
+            .fontColor([Color.White])
         }
         .width(this.SLIDER_WIDTH)
         .height(this.SLIDER_HEIGHT)
