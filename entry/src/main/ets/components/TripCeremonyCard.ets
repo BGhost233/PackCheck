@@ -1,5 +1,6 @@
 import { curves } from '@kit.ArkUI';
 import { vibrator } from '@kit.SensorServiceKit';
+import { inputMethod } from '@kit.IMEKit';
 import {
   CARD_BG,
   PRIMARY_COLOR,
@@ -32,6 +33,10 @@ export struct TripCeremonyCard {
   @State private titleShimmerX: number = -60;
   private titleShimmerTimer: number = -1;
   private titleRowWidth: number = 200;
+
+  // === 输入框抖动 ===
+  @State private titleShakeX: number = 0;
+  @State private titleBorderHighlight: boolean = false;
 
   // === 滑动状态 ===
   @State private slideX: number = 0;
@@ -211,7 +216,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
   private onSlideStart(x: number): void {
     if (this.isSlideComplete) return;
     if (this.tripTitle.trim().length === 0) {
-      this.shakeEmpty();
+      this.shakeTitle();
       return;
     }
 
@@ -364,27 +369,31 @@ return this.trackWidth - this.SLIDER_WIDTH;
   }
 
   // ============================================================
-  // 空输入抖动
+  // 输入框抖动提示
   // ============================================================
-  private shakeEmpty(): void {
-    this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseInOut }, () => {
-      this.cardRotateZ = 2.5;
+  private shakeTitle(): void {
+    // 水平抖动序列
+    const sequence: number[] = [-8, 8, -5, 5, 0];
+    let delay = 0;
+    sequence.forEach((x) => {
+      setTimeout(() => {
+        this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseOut }, () => {
+          this.titleShakeX = x;
+        });
+      }, delay);
+      delay += 80;
     });
+
+    // 边框闪红
+    this.titleBorderHighlight = true;
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseInOut }, () => {
-        this.cardRotateZ = -2.5;
+      this.getUIContext().animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
+        this.titleBorderHighlight = false;
       });
-    }, 80);
-    setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseInOut }, () => {
-        this.cardRotateZ = 1.5;
-      });
-    }, 160);
-    setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseOut }, () => {
-        this.cardRotateZ = 0;
-      });
-    }, 240);
+    }, 600);
+
+    // 触觉反馈
+    this.vibratePreset('haptic.tick');
   }
 
   // ============================================================
@@ -438,6 +447,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         .backgroundColor(`rgba(0, 0, 0, ${this.overlayOpacity})`)
         .backdropBlur(this.overlayOpacity > 0 ? 25 : 0)
         .onClick(() => {
+          inputMethod.getController().stopInputSession();
           this.handleDismiss();
         })
 
@@ -598,9 +608,18 @@ return this.trackWidth - this.SLIDER_WIDTH;
       .translate({ y: this.contentStep >= 1 ? 0 : 6 })
       .margin({ top: 24, bottom: 20 })
 
-      // 行程名称输入（3D 内凹）
-      this.InsetInput('给这次旅途取个名字吧', this.tripTitle, false, 2,
-        (value: string) => { this.onTitleChange(value); })
+      // 行程名称输入
+      Column() {
+        this.InsetInput('给这次旅途取个名字吧', this.tripTitle, false, 2,
+          (value: string) => { this.onTitleChange(value); })
+      }
+      .translate({ x: this.titleShakeX })
+      .border({
+        width: this.titleBorderHighlight ? 1.5 : 0,
+        color: this.titleBorderHighlight ? '#FF4444' : '#00FFFFFF',
+        radius: 12
+      })
+      .animation({ duration: 200, curve: Curve.EaseOut })
 
       // 间距 16vp（同组内）
       Column().height(16)
@@ -708,6 +727,9 @@ return this.trackWidth - this.SLIDER_WIDTH;
     .alignItems(HorizontalAlign.Center)
     .borderRadius(24)
     .clip(true)
+    .onClick(() => {
+      inputMethod.getController().stopInputSession();
+    })
     .opacity(this.cardRotateY <= 90 ? 1 : 0)
     .hitTestBehavior(this.cardRotateY <= 90 ? HitTestMode.Default : HitTestMode.None)
   }
