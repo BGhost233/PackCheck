@@ -54,10 +54,10 @@ export struct TripCeremonyCard {
   @State private sliderBounceScale: number = 1.0;
 
   // 配置
-  private readonly SLIDER_WIDTH: number = 56;
-  private readonly SLIDER_HEIGHT: number = 36;
-  private readonly TRACK_HEIGHT: number = 44;
-  private readonly TRACK_PADDING: number = 4;
+  private readonly SLIDER_WIDTH: number = 48;
+  private readonly SLIDER_HEIGHT: number = 48;
+  private readonly TRACK_HEIGHT: number = 36;
+  private readonly TRACK_PADDING: number = 0;
   private readonly MAGNET_THRESHOLD: number = 0.85;
   private trackWidth: number = 0;
   private touchStartX: number = 0;
@@ -81,10 +81,10 @@ export struct TripCeremonyCard {
   // ============================================================
   // 计算属性
   // ============================================================
-  private getMaxSlide(): number {
-    // 滑轨内部可用宽度 - 滑块宽度
-    return this.trackWidth - this.SLIDER_WIDTH - this.TRACK_PADDING * 2;
-  }
+private getMaxSlide(): number {
+// 滑块左缘最大位移 = 轨道宽度 - 滑块直径
+return this.trackWidth - this.SLIDER_WIDTH;
+}
 
   private getProgress(): number {
     const max = this.getMaxSlide();
@@ -625,95 +625,29 @@ export struct TripCeremonyCard {
       Column().height(24)
 
       // ========== 滑动出发滑轨 ==========
-      Stack({ alignContent: Alignment.Start }) {
-        // 轨道背景（内凹层次）
-        Stack() {
-          // 渐变背景
-          Column()
-            .width('100%')
-            .height('100%')
-            .borderRadius(this.TRACK_HEIGHT / 2)
-            .linearGradient({
-              angle: 180,
-              colors: [['#E8F5E9', 0], ['#F1F8F2', 1]]
-            })
-
-          // 顶部内阴影
-          Column()
-            .width('100%')
-            .height(4)
-            .linearGradient({
-              angle: 180,
-              colors: [['#00000008', 0], ['#00000000', 1]]
-            })
-            .borderRadius({ topLeft: this.TRACK_HEIGHT / 2, topRight: this.TRACK_HEIGHT / 2 })
-
-          // 底部内高光
-          Column()
-            .width('80%')
-            .height(1)
-            .backgroundColor('#FFFFFF')
-            .opacity(0.5)
-            .borderRadius(1)
-            .position({ x: '10%', bottom: 5 })
-        }
-        .width('100%')
-        .height('100%')
-        .borderRadius(this.TRACK_HEIGHT / 2)
-        .border({ width: 1, color: '#2D7D4610' })
-        .clip(true)
-
-        // 已滑过区域（动态宽度 + clip）
-        Column()
-          .width(this.slideX + this.TRACK_PADDING)
-          .height('100%')
+      Stack({ alignContent: Alignment.Center }) {
+        // ① 轨道背景（最底层）
+        Row()
+          .width('100%')
+          .height(this.TRACK_HEIGHT)
           .borderRadius(this.TRACK_HEIGHT / 2)
-          .linearGradient({
-            angle: 90,
-            colors: [['#2D7D4620', 0], ['#2D7D4632', 1]]
-          })
-          .clip(true)
-          .opacity(this.slideX > 0 ? 1 : 0)
+          .backgroundColor('#F0F4F0')
 
-        // 终点虚影（右端胶囊）
-        Column()
-          .width(this.SLIDER_WIDTH)
-          .height(this.SLIDER_HEIGHT)
-          .borderRadius(this.SLIDER_HEIGHT / 2)
-          .backgroundColor('#2D7D46')
-          .opacity(this.targetGlowOpacity)
-          .scale({ x: this.targetGlowScale, y: this.targetGlowScale })
-          .position({
-            x: Math.max(0, this.getMaxSlide()) + this.TRACK_PADDING,
-            y: (this.TRACK_HEIGHT - this.SLIDER_HEIGHT) / 2
-          })
-          .animation({ duration: 200, curve: Curve.EaseOut })
+        // ② 文案（轨道内居中）
+        Text('滑动出发')
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#802D7D46')
 
-        // 文案 + shimmer
-        Stack({ alignContent: Alignment.Center }) {
-          Text('滑动出发')
-            .fontSize(13)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#702D7D46')
-            .opacity(1 - this.getProgress())
+        // ③ 白色遮罩（盖住左侧轨道 + 文字）
+        Row()
+          .width(this.slideX + this.SLIDER_WIDTH / 2)
+          .height(this.TRACK_HEIGHT)
+          .backgroundColor('#FFFFFF')
+          .borderRadius({ topLeft: this.TRACK_HEIGHT / 2, bottomLeft: this.TRACK_HEIGHT / 2 })
+          .position({ x: 0, y: (this.SLIDER_HEIGHT - this.TRACK_HEIGHT) / 2 })
 
-          // shimmer 高光条
-          Row()
-            .width(50)
-            .height(18)
-            .borderRadius(9)
-            .linearGradient({
-              angle: 90,
-              colors: [['#00FFFFFF', 0], ['#60FFFFFF', 0.5], ['#00FFFFFF', 1.0]]
-            })
-            .translate({ x: this.shimmerX })
-            .opacity(this.isSliding ? 0 : (1 - this.getProgress()))
-        }
-        .width('100%')
-        .height('100%')
-        .clip(true)
-
-        // 滑块：纯色绿底 + 轻微顶部高光 + 白色飞机
+        // ④ 滑块：纯色正圆 + 白色飞机
         Stack({ alignContent: Alignment.Center }) {
           Column()
             .width(this.SLIDER_WIDTH)
@@ -722,32 +656,30 @@ export struct TripCeremonyCard {
             .backgroundColor('#2D7D46')
 
           SymbolGlyph($r('sys.symbol.airplane'))
-            .fontSize(18)
+            .fontSize(20)
             .fontColor([Color.White])
         }
         .width(this.SLIDER_WIDTH)
         .height(this.SLIDER_HEIGHT)
-        .translate({
-          x: this.slideX + this.TRACK_PADDING,
-          y: (this.TRACK_HEIGHT - this.SLIDER_HEIGHT) / 2
-        })
+        .position({ x: this.slideX, y: 0 })
         .scale({
           x: this.sliderPressed ? 0.92 : this.sliderBounceScale,
           y: this.sliderPressed ? 0.92 : this.sliderBounceScale
         })
 
-        // 触摸热区（72×52，透明扩展）
+        // ⑤ 触摸热区（56×56，透明扩展）
         Column()
-          .width(72)
-          .height(this.TRACK_HEIGHT)
+          .width(56)
+          .height(56)
           .backgroundColor('#00FFFFFF')
           .position({
-            x: this.slideX + this.TRACK_PADDING - (72 - this.SLIDER_WIDTH) / 2,
-            y: 0
+            x: this.slideX - (56 - this.SLIDER_WIDTH) / 2,
+            y: (this.SLIDER_HEIGHT - 56) / 2
           })
       }
       .width('100%')
-      .height(this.TRACK_HEIGHT)
+      .height(this.SLIDER_HEIGHT)
+      .clip(false)
       .opacity(this.contentStep >= 4 ? 1 : 0)
       .scale({
         x: this.contentStep >= 4 ? 1.0 : 0.9,
