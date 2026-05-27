@@ -624,21 +624,34 @@ return this.trackWidth - this.SLIDER_WIDTH;
       // 间距 16vp（同组内）
       Column().height(16)
 
-      // 日期选择（3D 内凹）
-      this.InsetInput('什么时候出发？', this.tripDate, true, 3, undefined,
-        () => {
-          DatePickerDialog.show({
-            start: new Date('2020-1-1'),
-            end: new Date('2030-12-31'),
-            selected: new Date(),
-            lunar: false,
-            onDateAccept: (value: Date) => {
-              const month = value.getMonth() + 1;
-              const day = value.getDate();
-              this.onDateChange(month.toString() + '月' + day.toString() + '日');
-            }
-          });
-        })
+      // 日期选择 — 直接内联避免 @Builder 回调 this 丢失
+      Row() {
+        Text(this.tripDate.length > 0 ? this.tripDate : '什么时候出发？')
+          .fontSize(14)
+          .fontColor(this.tripDate.length > 0 ? TEXT_MAIN : '#BBBBBB')
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .height(48)
+      .padding({ left: 16, right: 16 })
+      .backgroundColor('#F7F8F7')
+      .borderRadius(12)
+      .opacity(this.contentStep >= 3 ? 1 : 0)
+      .translate({ y: this.contentStep >= 3 ? 0 : 8 })
+      .onClick(() => {
+        DatePickerDialog.show({
+          start: new Date('2020-1-1'),
+          end: new Date('2030-12-31'),
+          selected: new Date(),
+          lunar: false,
+          onDateAccept: (value: Date) => {
+            const month = value.getMonth() + 1;
+            const day = value.getDate();
+            const dateStr = month.toString() + '月' + day.toString() + '日';
+            this.onDateChange(dateStr);
+          }
+        });
+      })
 
       // 跨组间距 24vp
       Column().height(24)
