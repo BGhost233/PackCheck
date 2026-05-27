@@ -150,16 +150,17 @@ export struct TripCeremonyCard {
   // ============================================================
   private startShimmer(): void {
     if (this.isSlideComplete) return;
+    const endX = Math.max(280, this.trackWidth + 50);
     this.shimmerX = -80;
     this.getUIContext().animateTo({
       duration: 1200,
       curve: Curve.EaseInOut
     }, () => {
-      this.shimmerX = 280;
+      this.shimmerX = endX;
     });
     this.shimmerTimer = setTimeout(() => {
       this.startShimmer();
-    }, 3700) as number;
+    }, 2500) as number;
   }
 
   private stopShimmer(): void {
@@ -303,7 +304,7 @@ export struct TripCeremonyCard {
   private flyAway(): void {
     this.getUIContext().animateTo({
       duration: 400,
-      curve: curves.springMotion(0.3, 0.75)
+      curve: curves.springMotion(0.35, 0.78)
     }, () => {
       this.launchTranslateY = -800;
       this.launchScale = 0.85;
@@ -318,6 +319,11 @@ export struct TripCeremonyCard {
     }, () => {
       this.overlayOpacity = 0;
     });
+
+    // 飘走完成后移除组件
+    setTimeout(() => {
+      this.onDismiss();
+    }, 500);
   }
 
   // ============================================================
@@ -476,7 +482,7 @@ export struct TripCeremonyCard {
         .height(52)
         .borderRadius(14)
         .backgroundColor('#F5F7F5')
-        .border({ width: 1, color: '#0000000006' })
+        .border({ width: 1, color: '#06000000' })
 
       // 顶部内阴影（模拟凹陷）
       Column()
@@ -495,8 +501,7 @@ export struct TripCeremonyCard {
         .backgroundColor('#FFFFFF')
         .opacity(0.6)
         .borderRadius(1)
-        .position({ bottom: 7 })
-        .alignSelf(ItemAlign.Center)
+        .position({ x: '7.5%', bottom: 7 })
 
       // 内容层
       if (onTextChange) {
@@ -506,7 +511,7 @@ export struct TripCeremonyCard {
           .fontSize(15)
           .fontColor(TEXT_MAIN)
           .placeholderColor('#AAAAAA')
-          .backgroundColor(Color.Transparent)
+          .backgroundColor('#00FFFFFF')
           .borderRadius(14)
           .padding({ left: 16, right: 16 })
           .onChange((value: string) => {
@@ -606,8 +611,7 @@ export struct TripCeremonyCard {
             .backgroundColor('#FFFFFF')
             .opacity(0.5)
             .borderRadius(1)
-            .position({ bottom: 5 })
-            .alignSelf(ItemAlign.Center)
+            .position({ x: '10%', bottom: 5 })
         }
         .width('100%')
         .height('100%')
@@ -645,8 +649,8 @@ export struct TripCeremonyCard {
           Text('滑动出发')
             .fontSize(13)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#2D7D46')
-            .opacity(0.7 * (1 - this.getProgress()))
+            .fontColor('#702D7D46')
+            .opacity(1 - this.getProgress())
 
           // shimmer 高光条
           Row()
@@ -666,16 +670,7 @@ export struct TripCeremonyCard {
 
         // 液态胶囊滑块（视觉层）
         Stack({ alignContent: Alignment.Center }) {
-          // 外发光 glow
-          Column()
-            .width(this.SLIDER_WIDTH + 10)
-            .height(this.SLIDER_HEIGHT + 10)
-            .borderRadius((this.SLIDER_HEIGHT + 10) / 2)
-            .backgroundColor('#2D7D46')
-            .opacity(0.2)
-            .blur(8)
-
-          // 主体渐变胶囊
+          // 主体渐变胶囊（含外发光 shadow）
           Column()
             .width(this.SLIDER_WIDTH)
             .height(this.SLIDER_HEIGHT)
@@ -701,8 +696,7 @@ export struct TripCeremonyCard {
               angle: 180,
               colors: [['#38FFFFFF', 0], ['#00FFFFFF', 1]]
             })
-            .position({ top: 3 })
-            .alignSelf(ItemAlign.Center)
+            .position({ x: '10%', top: 3 })
 
           // 简洁箭头
           Text('›')
@@ -710,11 +704,11 @@ export struct TripCeremonyCard {
             .fontWeight(FontWeight.Normal)
             .fontColor('#FFFFFFDD')
         }
-        .width(this.SLIDER_WIDTH + 10)
-        .height(this.SLIDER_HEIGHT + 10)
+        .width(this.SLIDER_WIDTH)
+        .height(this.SLIDER_HEIGHT)
         .translate({
-          x: this.slideX + this.TRACK_PADDING - 5,
-          y: (this.TRACK_HEIGHT - this.SLIDER_HEIGHT - 10) / 2
+          x: this.slideX + this.TRACK_PADDING,
+          y: (this.TRACK_HEIGHT - this.SLIDER_HEIGHT) / 2
         })
         .scale({
           x: this.sliderPressed ? 0.92 : this.sliderBounceScale,
@@ -725,9 +719,9 @@ export struct TripCeremonyCard {
         Column()
           .width(72)
           .height(this.TRACK_HEIGHT)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor('#00FFFFFF')
           .position({
-            x: this.slideX + this.TRACK_PADDING - 6 - 5,
+            x: this.slideX + this.TRACK_PADDING - (72 - this.SLIDER_WIDTH) / 2,
             y: 0
           })
       }
