@@ -157,7 +157,7 @@ export struct TripCeremonyCard {
     });
     this.shimmerTimer = setTimeout(() => {
       this.startShimmer();
-    }, 2500) as number;
+    }, 3700) as number;
   }
 
   private stopShimmer(): void {
@@ -496,8 +496,9 @@ export struct TripCeremonyCard {
           .fontSize(16)
           .fontColor(this.tripDate.length > 0 ? TEXT_MAIN : '#BBBBBB')
           .layoutWeight(1)
-        Text('📅')
-          .fontSize(20)
+        Text('日历')
+          .fontSize(12)
+          .fontColor('#999999')
       }
       .width('100%')
       .height(48)
@@ -532,7 +533,7 @@ export struct TripCeremonyCard {
             .fill('#2D7D46')
             .opacity(this.targetGlowOpacity)
             .scale({ x: this.targetGlowScale, y: this.targetGlowScale })
-            .position({ x: this.getMaxSlide() + this.TRACK_PADDING, y: this.TRACK_PADDING })
+            .position({ x: Math.max(0, this.getMaxSlide()) + this.TRACK_PADDING, y: this.TRACK_PADDING })
             .animation({
               duration: 200,
               curve: Curve.EaseOut
@@ -613,10 +614,6 @@ export struct TripCeremonyCard {
           .scale({
             x: this.sliderPressed ? 0.92 : this.sliderBounceScale,
             y: this.sliderPressed ? 0.92 : this.sliderBounceScale
-          })
-          .animation({
-            duration: 150,
-            curve: curves.springMotion(0.25, 0.7)
           })
         }
         .width('100%')
