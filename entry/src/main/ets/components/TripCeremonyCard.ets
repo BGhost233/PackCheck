@@ -713,25 +713,14 @@ export struct TripCeremonyCard {
         .height('100%')
         .clip(true)
 
-        // 滑块
+        // 滑块：纯色绿底 + 轻微顶部高光 + 白色飞机
         Stack({ alignContent: Alignment.Center }) {
-          // 主体渐变胶囊
           Column()
             .width(this.SLIDER_WIDTH)
             .height(this.SLIDER_HEIGHT)
             .borderRadius(this.SLIDER_HEIGHT / 2)
-            .linearGradient({
-              angle: 135,
-              colors: [['#3A9D5B', 0], ['#2D7D46', 0.6], ['#236B38', 1.0]]
-            })
-            .shadow({
-              radius: 8,
-              color: '#332D7D46',
-              offsetX: 0,
-              offsetY: 2
-            })
+            .backgroundColor('#2D7D46')
 
-          // 飞机图标
           SymbolGlyph($r('sys.symbol.airplane'))
             .fontSize(18)
             .fontColor([Color.White])
