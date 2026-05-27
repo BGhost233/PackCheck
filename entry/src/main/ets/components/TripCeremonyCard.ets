@@ -834,6 +834,7 @@ export struct TripCeremonyCard {
       })
     }
     .width('100%')
+    .height('100%')
     .padding({ left: 24, right: 24, bottom: 20 })
     .backgroundColor('#FFFFFF')
     .justifyContent(FlexAlign.Start)
