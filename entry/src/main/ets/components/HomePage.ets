@@ -1,7 +1,6 @@
 import { curves } from '@kit.ArkUI';
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import {
-  BLUR_BG,
   CARD_BG,
   CARD_RADIUS,
   COUNTDOWN_ORANGE,
@@ -21,11 +20,9 @@ import {
 import {
   SPRING_PRESS,
   SPRING_GENERAL,
-  SPRING_SCROLL,
   DURATION_NORMAL,
   DURATION_SLOW,
   DURATION_COUNTER,
-  DURATION_SCROLL_SMOOTH,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
@@ -363,8 +360,11 @@ export struct HomePage {
     Column() {
       Stack() {
         Scroll(this.scroller) {
-          Column({ space: 24 }) {
-            this.DynamicHeader();
+          Column({ space: 20 }) {
+            // Spacer: reserve height for the fixed CollapsingHeader
+            Column()
+              .width('100%')
+              .height(HOME_HEADER_COLLAPSED - 12)
             if (this.latestChecklist() !== undefined) {
               this.HeroCard(this.latestChecklist());
             } else {
@@ -383,37 +383,10 @@ export struct HomePage {
         .onDidScroll(() => {
           const raw = this.scroller.currentOffset().yOffset;
           this.scrollOffset = raw;
-          this.getUIContext().animateTo({
-            duration: DURATION_SCROLL_SMOOTH,
-            curve: SPRING_SCROLL()
-          }, () => {
-            this.smoothScrollOffset = raw;
-          });
+          this.smoothScrollOffset = raw;
         })
 
-        if (this.scrollProgress() > 0.8) {
-          Row() {
-            Text('PackCheck')
-              .fontSize(18)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(TEXT_MAIN)
-            if (this.latestChecklist() !== undefined) {
-              Text(this.compactHeaderText())
-                .fontSize(13)
-                .fontColor(TEXT_TERTIARY)
-                .maxLines(1)
-                .margin({ left: 8 })
-            }
-          }
-          .width('100%')
-          .height(HOME_HEADER_COLLAPSED)
-          .padding({ left: PAGE_PADDING, right: PAGE_PADDING })
-          .alignItems(VerticalAlign.Center)
-          .backgroundColor(BLUR_BG)
-          .backgroundBlurStyle(BlurStyle.Regular)
-          .position({ x: 0, y: 0 })
-          .animation({ duration: DURATION_SCROLL_SMOOTH, curve: SPRING_SCROLL() })
-        }
+        this.HomeCollapsingHeader()
       }
       .layoutWeight(1)
     }
@@ -422,35 +395,62 @@ export struct HomePage {
     .backgroundColor(PAGE_BG)
   }
 
+  // 渐进式模糊
+  private homeHeaderBlurStyle(): BlurStyle {
+    const p = this.scrollProgress();
+    if (p < 0.3) {
+      return BlurStyle.NONE;
+    } else if (p < 0.7) {
+      return BlurStyle.Thin;
+    }
+    return BlurStyle.Regular;
+  }
+
+  private homeHeaderBgColor(): string {
+    const p = this.scrollProgress();
+    if (p < 0.2) {
+      return PAGE_BG;
+    }
+    const t = Math.min(1, (p - 0.2) / 0.8);
+    const alpha = Math.round(t * 0xCC);
+    const hex = alpha < 16 ? '0' + alpha.toString(16).toUpperCase() : alpha.toString(16).toUpperCase();
+    return '#' + hex + 'F8F9FA';
+  }
+
   @Builder
-  private DynamicHeader() {
+  private HomeCollapsingHeader() {
     Row() {
-      Column({ space: 2 }) {
-        Text('PackCheck')
-          .fontSize(this.titleFontSize())
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-        if (this.scrollProgress() > 0.6) {
-          Text(this.compactHeaderText())
-            .fontSize(12)
-            .fontColor(TEXT_TERTIARY)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
+      Text('PackCheck')
+        .fontSize(this.titleFontSize())
+        .fontWeight(FontWeight.Bold)
+        .fontColor(TEXT_MAIN)
+        .animation({ duration: 80, curve: Curve.EaseOut })
+      if (this.latestChecklist() !== undefined) {
+        Text(this.compactHeaderText())
+          .fontSize(13)
+          .fontColor(TEXT_TERTIARY)
+          .maxLines(1)
+          .margin({ left: 8 })
+          .opacity(this.scrollProgress() < 0.5 ? 0 : Math.min(1, (this.scrollProgress() - 0.5) * 2))
+          .translate({ x: this.scrollProgress() < 0.5 ? -8 : 0 })
+          .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
       }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
-      if (this.scrollProgress() < 0.5) {
+      Blank()
+      if (this.scrollProgress() < 0.6) {
         Text(this.homeStatusText())
           .fontSize(13)
           .fontColor(TEXT_TERTIARY)
           .opacity(1 - this.scrollProgress() * 2)
+          .animation({ duration: 80, curve: Curve.EaseOut })
       }
     }
     .width('100%')
+    .height(HOME_HEADER_COLLAPSED)
+    .padding({ left: PAGE_PADDING, right: PAGE_PADDING + 4 })
     .alignItems(VerticalAlign.Center)
-    .padding({ top: 20, bottom: this.titlePaddingBottom() })
-    .animation({ duration: DURATION_SCROLL_SMOOTH, curve: SPRING_SCROLL() })
+    .backgroundColor(this.homeHeaderBgColor())
+    .backgroundBlurStyle(this.homeHeaderBlurStyle())
+    .position({ x: 0, y: 0 })
   }
 
   @Builder
@@ -560,8 +560,9 @@ export struct HomePage {
   @Builder
   private EmptyHero() {
     Column({ space: 8 }) {
-      Text('🏔️')
-        .fontSize(56)
+      SymbolGlyph($r('sys.symbol.camp'))
+        .fontSize(48)
+        .fontColor([PRIMARY_COLOR])
         .scale({ x: this.emptyHeroBreathScale, y: this.emptyHeroBreathScale })
         .animation({ duration: 2000, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
       Text('点击下方开始你的第一次出发')
@@ -590,10 +591,10 @@ export struct HomePage {
   @Builder
   private QuickEntries() {
     Row({ space: 12 }) {
-      this.QuickEntry('+', '新建行程', PRIMARY_TINT_COLOR, PRIMARY_COLOR, () => {
+      this.QuickEntry($r('sys.symbol.plus_circle'), '新建行程', PRIMARY_TINT_COLOR, PRIMARY_COLOR, () => {
         this.onOpenTrip();
       });
-      this.QuickEntry('🎒', '装备库', CARD_BG, TEXT_SECONDARY, () => {
+      this.QuickEntry($r('sys.symbol.bag'), '装备库', CARD_BG, TEXT_SECONDARY, () => {
         this.onOpenGear();
       });
     }
@@ -601,11 +602,11 @@ export struct HomePage {
   }
 
   @Builder
-  private QuickEntry(icon: string, title: string, bg: string, color: string, action: () => void) {
+  private QuickEntry(icon: Resource, title: string, bg: string, color: string, action: () => void) {
     Column({ space: 5 }) {
-      Text(icon)
-        .fontSize(24)
-        .fontColor(color)
+      SymbolGlyph(icon)
+        .fontSize(22)
+        .fontColor([color])
       Text(title)
         .fontSize(14)
         .fontWeight(FontWeight.Medium)

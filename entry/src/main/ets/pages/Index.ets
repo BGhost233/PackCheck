@@ -1,10 +1,15 @@
 import { common } from '@kit.AbilityKit';
 import { curves, LengthMetrics } from '@kit.ArkUI';
 import { sensor, vibrator } from '@kit.SensorServiceKit';
+import { HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
 import { ChecklistDetail } from '../components/ChecklistDetail';
 import { GearPage } from '../components/GearPage';
 import { HomePage } from '../components/HomePage';
 import { ReviewPage } from '../components/ReviewPage';
+import { TripCeremonyCard } from '../components/TripCeremonyCard';
+import { EditItemPanel } from '../components/EditItemPanel';
+import { EditGearPanel } from '../components/EditGearPanel';
+import { GearFilterPanel } from '../components/GearFilterPanel';
 import {
   ARROW_COLOR,
   BORDER_COLOR,
@@ -33,31 +38,77 @@ import {
   SHEET_TRIP,
   TEXT_MAIN,
   TEXT_SECONDARY,
-  TEXT_TERTIARY,
-  VIEW_CHECKLIST,
-  VIEW_GEAR,
-  VIEW_HOME,
-  VIEW_REVIEW
+  TEXT_TERTIARY
 } from '../constants/DesignTokens';
 import {
   SPRING_GENERAL,
-  SPRING_PRESS,
   SPRING_TAB,
-  SPRING_COUNTER,
-  DURATION_FAST,
   DURATION_NORMAL,
-  DURATION_SLOW,
-  DURATION_COUNTER,
-  STAGGER_DELAY_MENU,
-  STAGGER_DELAY_LIST,
-  STAGGER_OFFSET_Y,
-  PRESS_SCALE_DOWN,
   PRESS_SCALE_BOUNCE,
   PRESS_SCALE_REST,
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
 import { ChecklistItem, DEFAULT_CATEGORIES, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
+import {
+  numberOrZero as gsNumberOrZero,
+  gearTripCount as gsGearTripCount,
+  gearValueRatio as gsGearValueRatio,
+  sortedGears as gsSortedGears,
+  filterGears as gsFilterGears,
+  normalizeGearCategories as gsNormalizeGearCategories,
+  gearSortLabel as gsGearSortLabel,
+  filteredGearGroups as gsFilteredGearGroups,
+  filteredGearsByGroup as gsFilteredGearsByGroup,
+  totalGearWeight as gsTotalGearWeight,
+  totalGearPrice as gsTotalGearPrice,
+  averageGearValueRatio as gsAverageGearValueRatio,
+  heaviestGearText as gsHeaviestGearText,
+  mostExpensiveGearText as gsMostExpensiveGearText,
+  mostFrequentGearText as gsMostFrequentGearText,
+  formatKg as gsFormatKg,
+  gearStatsText as gsGearStatsText,
+  gearById as gsGearById,
+  presetCategories as gsPresetCategories,
+  categoryTabs as gsCategoryTabs,
+  uniqueGearIds as gsUniqueGearIds,
+  importGearMetaText as gsImportGearMetaText,
+  filteredImportGears as gsFilteredImportGears,
+} from '../services/GearService';
+import {
+  checkedCount as csCheckedCount,
+  progressPercent as csProgressPercent,
+  progressValue as csProgressValue,
+  progressTotal as csProgressTotal,
+  progressText as csProgressText,
+  checklistMetaText as csChecklistMetaText,
+  isChecklistDone as csIsChecklistDone,
+  activeChecklistCount as csActiveChecklistCount,
+  homeStatusText as csHomeStatusText,
+  parseTripDateAt as csParseTripDateAt,
+  startOfDay as csStartOfDay,
+  checklistDateAt as csChecklistDateAt,
+  countdownText as csCountdownText,
+  checklistItemWeight as csChecklistItemWeight,
+  checklistItemPrice as csChecklistItemPrice,
+  checklistTotalWeight as csChecklistTotalWeight,
+  checklistCheckedWeight as csChecklistCheckedWeight,
+  progressStartColor as csProgressStartColor,
+  progressEndColor as csProgressEndColor,
+  checklistGroups as csChecklistGroups,
+  checklistItemsByGroup as csChecklistItemsByGroup,
+  isGroupDone as csIsGroupDone,
+  formatTripDate as csFormatTripDate,
+  formatDateText as csFormatDateText,
+  numberInputText as csNumberInputText,
+  isChecklistItemInGear as csIsChecklistItemInGear,
+  hasGearMarker as csHasGearMarker,
+  checklistHasGear as csChecklistHasGear,
+  countableGearIds as csCountableGearIds,
+  addItemsToChecklist as csAddItemsToChecklist,
+  latestChecklistHomeSubtitle as csLatestChecklistHomeSubtitle,
+  matchingGearForChecklistItem as csMatchingGearForChecklistItem
+} from '../services/ChecklistService';
 
 @Entry
 @Component
@@ -67,15 +118,13 @@ struct Index {
   @State private gears: GearItem[] = [];
   @State private checklists: TripChecklist[] = [];
   @State private categories: string[] = [];
-  @State private currentView: string = VIEW_HOME;
   @State private selectedGearCategories: string[] = ['全部'];
-  @State private tempGearFilterCategories: string[] = ['全部'];
   @State private gearFilterPanelExpanded: boolean = false;
-  @State private filterPanelTranslateY: number = -600;
-  @State private filterPanelOverlayOpacity: number = 0;
-  @State private tabPillOffsetX: number = 4;
   @State private currentTabIndex: number = 0;
-  private tabsController: TabsController = new TabsController();
+  @State private contentBlur: number = 0;
+  @State private contentScale: number = 1.0;
+  private isClickSwitching: boolean = false;
+  private tabsController: HdsTabsController = new HdsTabsController();
   private navPathStack: NavPathStack = new NavPathStack();
   private lastBackPressTime: number = 0;
   @State private gearSearchKeyword: string = '';
@@ -108,11 +157,7 @@ struct Index {
   @State private editingItemWeight: string = '';
   @State private editingItemPrice: string = '';
   @State private showEditItemPanel: boolean = false;
-  @State private editItemPanelScale: number = 0.85;
-  @State private editItemPanelOpacity: number = 0;
   @State private showEditGearPanel: boolean = false;
-  @State private editGearPanelScale: number = 0.85;
-  @State private editGearPanelOpacity: number = 0;
   @State private showCompletionToast: boolean = false;
   @State private showTempAddNotice: boolean = false;
   @State private progressPulse: boolean = false;
@@ -121,9 +166,10 @@ struct Index {
   @State private reviewDragX: number = 0;
   @State private highlightedItemId: string = '';
   @State private checklistRenderNonce: number = 0;
-  @State private pressedTabIndex: number = -1;
-  @State private tabPillWidth: number = 94;
-  @State private tabContentOpacity: number = 1.0;
+  // ===== 新建行程仪式感 =====
+  @State private showTripCeremony: boolean = false;
+  @State private ceremonyTripTitle: string = '';
+  @State private ceremonyTripDate: string = '';
 
   private shakeListening: boolean = false;
   private lastShakeAt: number = 0;
@@ -318,217 +364,48 @@ struct Index {
   }
 
   private filteredGears(): GearItem[] {
-    const filtered: GearItem[] = [];
-    const keyword = this.gearSearchKeyword.trim().toLowerCase();
-    const activeCategories = this.normalizeGearCategories(this.selectedGearCategories);
-    const showAllCategories = activeCategories.indexOf('全部') >= 0;
-    for (let index = 0; index < this.gears.length; index++) {
-      const item = this.gears[index];
-      const categoryMatched = showAllCategories || activeCategories.indexOf(item.category) >= 0;
-      const note = item.note === undefined ? '' : item.note;
-      const keywordMatched = keyword.length === 0 ||
-        item.name.toLowerCase().indexOf(keyword) >= 0 ||
-        item.category.toLowerCase().indexOf(keyword) >= 0 ||
-        note.toLowerCase().indexOf(keyword) >= 0;
-      if (categoryMatched && keywordMatched) {
-        filtered.push(item);
-      }
-    }
-    return this.sortedGears(filtered);
+    return gsFilterGears(this.gears, this.gearSearchKeyword, gsNormalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
   }
 
   private normalizeGearCategories(categories: string[]): string[] {
-    if (categories.length === 0 || categories.indexOf('全部') >= 0) {
-      return ['全部'];
-    }
-    const normalized: string[] = [];
-    for (let index = 0; index < categories.length; index++) {
-      const category = categories[index];
-      if (category.length > 0 && normalized.indexOf(category) < 0) {
-        normalized.push(category);
-      }
-    }
-    if (normalized.length === 0) {
-      return ['全部'];
-    }
-    return normalized;
-  }
-
-  private allGearFilterCategories(): string[] {
-    const result: string[] = ['全部'];
-    for (let index = 0; index < DEFAULT_CATEGORIES.length; index++) {
-      result.push(DEFAULT_CATEGORIES[index]);
-    }
-    for (let index = 0; index < this.categories.length; index++) {
-      if (result.indexOf(this.categories[index]) < 0) {
-        result.push(this.categories[index]);
-      }
-    }
-    return result;
-  }
-
-  private gearCategoryCount(category: string): number {
-    if (category === '全部') {
-      return this.gears.length;
-    }
-    let count = 0;
-    for (let index = 0; index < this.gears.length; index++) {
-      if (this.gears[index].category === category) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  private isTempGearCategorySelected(category: string): boolean {
-    return this.normalizeGearCategories(this.tempGearFilterCategories).indexOf(category) >= 0;
-  }
-
-  private tempGearFilterText(): string {
-    const categories = this.normalizeGearCategories(this.tempGearFilterCategories);
-    if (categories.indexOf('全部') >= 0) {
-      return '全部';
-    }
-    if (categories.length === 1) {
-      return categories[0];
-    }
-    if (categories.length === 2) {
-      return categories[0] + ' +1';
-    }
-    return categories.length.toString() + '个分组';
+    return gsNormalizeGearCategories(categories);
   }
 
   private openGearFilterPanel(): void {
-    this.tempGearFilterCategories = this.normalizeGearCategories(this.selectedGearCategories);
     this.gearFilterPanelExpanded = true;
-    this.filterPanelTranslateY = -600;
-    this.filterPanelOverlayOpacity = 0;
-    this.getUIContext().animateTo({
-      duration: DURATION_SLOW,
-      curve: SPRING_GENERAL()
-    }, (): void => {
-      this.filterPanelTranslateY = 0;
-      this.filterPanelOverlayOpacity = 1;
-    });
   }
 
-  private applyGearFilterPanel(): void {
-    this.selectedGearCategories = this.normalizeGearCategories(this.tempGearFilterCategories);
-    this.getUIContext().animateTo({
-      duration: DURATION_NORMAL,
-      curve: Curve.EaseIn,
-      onFinish: (): void => {
-        this.gearFilterPanelExpanded = false;
-      }
-    }, (): void => {
-      this.filterPanelTranslateY = -600;
-      this.filterPanelOverlayOpacity = 0;
-    });
-  }
-
-  private clearGearFilterPanel(): void {
-    this.tempGearFilterCategories = ['全部'];
-  }
-
-  private toggleTempGearCategory(category: string): void {
-    if (category === '全部') {
-      this.tempGearFilterCategories = ['全部'];
-      return;
-    }
-    const nextCategories: string[] = [];
-    const normalized = this.normalizeGearCategories(this.tempGearFilterCategories);
-    for (let index = 0; index < normalized.length; index++) {
-      if (normalized[index] !== '全部' && normalized[index] !== category) {
-        nextCategories.push(normalized[index]);
-      }
-    }
-    if (normalized.indexOf(category) < 0) {
-      nextCategories.push(category);
-    }
-    this.tempGearFilterCategories = nextCategories.length === 0 ? ['全部'] : nextCategories;
+  private closeGearFilterPanel(categories: string[]): void {
+    this.selectedGearCategories = this.normalizeGearCategories(categories);
+    this.gearFilterPanelExpanded = false;
   }
 
   private sortedGears(items: GearItem[]): GearItem[] {
-    const sorted: GearItem[] = [];
-    for (let index = 0; index < items.length; index++) {
-      sorted.push(items[index]);
-    }
-    sorted.sort((left: GearItem, right: GearItem): number => {
-      if (this.gearSortMode === GEAR_SORT_PRICE) {
-        return this.numberOrZero(right.price) - this.numberOrZero(left.price);
-      }
-      if (this.gearSortMode === GEAR_SORT_WEIGHT) {
-        return this.numberOrZero(right.weight) - this.numberOrZero(left.weight);
-      }
-      if (this.gearSortMode === GEAR_SORT_TIME) {
-        return right.createdAt - left.createdAt;
-      }
-      if (this.gearSortMode === GEAR_SORT_VALUE) {
-        return this.gearValueRatio(right) - this.gearValueRatio(left);
-      }
-      if (this.gearSortMode === GEAR_SORT_TRIP_COUNT) {
-        return this.gearTripCount(right) - this.gearTripCount(left);
-      }
-      if (left.category === right.category) {
-        return right.createdAt - left.createdAt;
-      }
-      return left.category.localeCompare(right.category);
-    });
-    return sorted;
+    return gsSortedGears(items, this.gearSortMode);
   }
 
   private numberOrZero(value: number | undefined): number {
-    return value === undefined ? 0 : value;
+    return gsNumberOrZero(value);
   }
 
   private gearValueRatio(item: GearItem): number {
-    if (item.price === undefined || item.weight === undefined || item.weight <= 0) {
-      return 0;
-    }
-    return item.price / item.weight;
+    return gsGearValueRatio(item);
   }
 
   private filteredGearGroups(): string[] {
-    const items = this.filteredGears();
-    const groups: string[] = [];
-    for (let index = 0; index < items.length; index++) {
-      const group = this.gearSortMode === GEAR_SORT_GROUP ? items[index].category : this.gearSortLabel();
-      if (groups.indexOf(group) < 0) {
-        groups.push(group);
-      }
-    }
-    return groups;
+    return gsFilteredGearGroups(this.gears, this.gearSearchKeyword, gsNormalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
   }
 
   private filteredGearsByGroup(group: string): GearItem[] {
-    const items = this.filteredGears();
-    if (this.gearSortMode !== GEAR_SORT_GROUP) {
-      return items;
-    }
-    return items.filter((item: GearItem) => item.category === group);
+    return gsFilteredGearsByGroup(this.gears, this.gearSearchKeyword, gsNormalizeGearCategories(this.selectedGearCategories), this.gearSortMode, group);
   }
 
   private gearSortLabel(): string {
-    if (this.gearSortMode === GEAR_SORT_PRICE) {
-      return '按价格';
-    }
-    if (this.gearSortMode === GEAR_SORT_WEIGHT) {
-      return '按重量';
-    }
-    if (this.gearSortMode === GEAR_SORT_TIME) {
-      return '按添加时间';
-    }
-    if (this.gearSortMode === GEAR_SORT_VALUE) {
-      return '按克单价';
-    }
-    if (this.gearSortMode === GEAR_SORT_TRIP_COUNT) {
-      return '按出行次数';
-    }
-    return '按分组';
+    return gsGearSortLabel(this.gearSortMode);
   }
 
   private gearTripCount(item: GearItem): number {
-    return item.tripCount === undefined ? 0 : item.tripCount;
+    return gsGearTripCount(item);
   }
 
   private gearGroupCount(group: string): number {
@@ -536,130 +413,51 @@ struct Index {
   }
 
   private gearStatsText(): string {
-    return this.gears.length.toString() + ' 件 · ' + this.formatKg(this.totalGearWeight()) +
-      ' · ¥' + this.totalGearPrice().toString();
+    return gsGearStatsText(this.gears);
   }
 
   private totalGearWeight(): number {
-    let total = 0;
-    for (let index = 0; index < this.gears.length; index++) {
-      total += this.numberOrZero(this.gears[index].weight);
-    }
-    return total;
+    return gsTotalGearWeight(this.gears);
   }
 
   private totalGearPrice(): number {
-    let total = 0;
-    for (let index = 0; index < this.gears.length; index++) {
-      total += this.numberOrZero(this.gears[index].price);
-    }
-    return total;
+    return gsTotalGearPrice(this.gears);
   }
 
   private averageGearValueRatio(): number {
-    let totalPrice = 0;
-    let totalWeight = 0;
-    for (let index = 0; index < this.gears.length; index++) {
-      if (this.gears[index].price !== undefined && this.gears[index].weight !== undefined) {
-        totalPrice += this.numberOrZero(this.gears[index].price);
-        totalWeight += this.numberOrZero(this.gears[index].weight);
-      }
-    }
-    if (totalWeight <= 0) {
-      return 0;
-    }
-    return Math.round(totalPrice * 100 / totalWeight) / 100;
+    return gsAverageGearValueRatio(this.gears);
   }
 
   private heaviestGearText(): string {
-    let item: GearItem | undefined = undefined;
-    for (let index = 0; index < this.gears.length; index++) {
-      if (this.gears[index].weight !== undefined &&
-        (item === undefined || this.numberOrZero(this.gears[index].weight) > this.numberOrZero(item.weight))) {
-        item = this.gears[index];
-      }
-    }
-    if (item === undefined || item.weight === undefined) {
-      return '暂无';
-    }
-    return item.name + ' (' + item.weight.toString() + 'g)';
+    return gsHeaviestGearText(this.gears);
   }
 
   private mostExpensiveGearText(): string {
-    let item: GearItem | undefined = undefined;
-    for (let index = 0; index < this.gears.length; index++) {
-      if (this.gears[index].price !== undefined &&
-        (item === undefined || this.numberOrZero(this.gears[index].price) > this.numberOrZero(item.price))) {
-        item = this.gears[index];
-      }
-    }
-    if (item === undefined || item.price === undefined) {
-      return '暂无';
-    }
-    return item.name + ' (¥' + item.price.toString() + ')';
+    return gsMostExpensiveGearText(this.gears);
   }
 
   private mostFrequentGearText(): string {
-    let item: GearItem | undefined = undefined;
-    for (let index = 0; index < this.gears.length; index++) {
-      if (this.gearTripCount(this.gears[index]) > 0 &&
-        (item === undefined || this.gearTripCount(this.gears[index]) > this.gearTripCount(item))) {
-        item = this.gears[index];
-      }
-    }
-    return item === undefined ? '暂无' : item.name + ' (×' + this.gearTripCount(item).toString() + '次)';
+    return gsMostFrequentGearText(this.gears);
   }
 
   private formatKg(weightGram: number): string {
-    if (weightGram <= 0) {
-      return '0kg';
-    }
-    return (Math.round(weightGram / 100) / 10).toString() + 'kg';
+    return gsFormatKg(weightGram);
   }
 
   private categoryTabs(): string[] {
-    const tabs: string[] = ['全部'];
-    const categories = this.presetCategories();
-    for (let index = 0; index < categories.length; index++) {
-      tabs.push(categories[index]);
-    }
-    return tabs;
+    return gsCategoryTabs(this.categories);
   }
 
   private presetCategories(): string[] {
-    const nextCategories: string[] = [];
-    for (let index = 0; index < DEFAULT_CATEGORIES.length; index++) {
-      nextCategories.push(DEFAULT_CATEGORIES[index]);
-    }
-    for (let index = 0; index < this.categories.length; index++) {
-      if (nextCategories.indexOf(this.categories[index]) < 0) {
-        nextCategories.push(this.categories[index]);
-      }
-    }
-    return nextCategories;
+    return gsPresetCategories(this.categories);
   }
 
   private checklistGroups(): string[] {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return [];
-    }
-    const groups: string[] = [];
-    for (let index = 0; index < checklist.items.length; index++) {
-      const group = checklist.items[index].group;
-      if (groups.indexOf(group) < 0) {
-        groups.push(group);
-      }
-    }
-    return groups;
+    return csChecklistGroups(this.currentChecklist());
   }
 
   private checklistItemsByGroup(group: string): ChecklistItem[] {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return [];
-    }
-    return checklist.items.filter((item: ChecklistItem) => item.group === group);
+    return csChecklistItemsByGroup(this.currentChecklist(), group);
   }
 
   private groupItemCount(group: string): number {
@@ -667,16 +465,7 @@ struct Index {
   }
 
   private isGroupDone(group: string): boolean {
-    const items = this.checklistItemsByGroup(group);
-    if (items.length === 0) {
-      return false;
-    }
-    for (let index = 0; index < items.length; index++) {
-      if (!items[index].checked) {
-        return false;
-      }
-    }
-    return true;
+    return csIsGroupDone(this.currentChecklist(), group);
   }
 
   private isGroupCollapsed(group: string): boolean {
@@ -700,57 +489,35 @@ struct Index {
   }
 
   private checkedCount(checklist: TripChecklist): number {
-    let count = 0;
-    for (let index = 0; index < checklist.items.length; index++) {
-      if (checklist.items[index].checked) {
-        count++;
-      }
-    }
-    return count;
+    return csCheckedCount(checklist);
   }
 
   private progressPercent(checklist: TripChecklist): number {
-    if (checklist.items.length === 0) {
-      return 0;
-    }
-    return Math.floor(this.checkedCount(checklist) * 100 / checklist.items.length);
+    return csProgressPercent(checklist);
   }
 
   private progressValue(checklist: TripChecklist): number {
-    if (checklist.items.length === 0) {
-      return 0;
-    }
-    return this.checkedCount(checklist);
+    return csProgressValue(checklist);
   }
 
   private progressTotal(checklist: TripChecklist): number {
-    if (checklist.items.length === 0) {
-      return 1;
-    }
-    return checklist.items.length;
+    return csProgressTotal(checklist);
   }
 
   private progressText(checklist: TripChecklist): string {
-    return this.checkedCount(checklist).toString() + '/' + checklist.items.length.toString();
+    return csProgressText(checklist);
   }
 
   private checklistMetaText(checklist: TripChecklist): string {
-    const progress = this.progressText(checklist);
-    if (checklist.date === undefined || checklist.date.length === 0) {
-      return progress;
-    }
-    return checklist.date + ' · ' + progress;
+    return csChecklistMetaText(checklist);
   }
 
   private homeStatusText(): string {
-    if (this.checklists.length === 0) {
-      return '还没有行程，创建一个吧';
-    }
-    return this.activeChecklistCount().toString() + ' 个行程进行中';
+    return csHomeStatusText(this.checklists);
   }
 
   private isChecklistDone(checklist: TripChecklist): boolean {
-    return checklist.items.length > 0 && this.checkedCount(checklist) === checklist.items.length;
+    return csIsChecklistDone(checklist);
   }
 
   private isCurrentChecklistDone(): boolean {
@@ -758,163 +525,63 @@ struct Index {
     if (checklist === undefined) {
       return false;
     }
-    return this.isChecklistDone(checklist);
+    return csIsChecklistDone(checklist);
   }
 
   private activeChecklistCount(): number {
-    let count = 0;
-    for (let index = 0; index < this.checklists.length; index++) {
-      if (!this.isChecklistDone(this.checklists[index])) {
-        count++;
-      }
-    }
-    return count;
+    return csActiveChecklistCount(this.checklists);
   }
 
   private parseTripDateAt(text: string): number | undefined {
-    const value = text.trim();
-    if (value.length === 0) {
-      return undefined;
-    }
-    const monthIndex = value.indexOf('月');
-    const dayIndex = value.indexOf('日');
-    if (monthIndex > 0 && dayIndex > monthIndex) {
-      const month = Number(value.substring(0, monthIndex));
-      const day = Number(value.substring(monthIndex + 1, dayIndex));
-      if (!Number.isNaN(month) && !Number.isNaN(day)) {
-        return new Date(new Date().getFullYear(), month - 1, day).getTime();
-      }
-    }
-    return undefined;
+    return csParseTripDateAt(text);
   }
 
   private startOfDay(date: Date): number {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    return csStartOfDay(date);
   }
 
   private checklistDateAt(checklist: TripChecklist): number | undefined {
-    if (checklist.dateAt !== undefined) {
-      return checklist.dateAt;
-    }
-    if (checklist.date !== undefined) {
-      return this.parseTripDateAt(checklist.date);
-    }
-    return undefined;
+    return csChecklistDateAt(checklist);
   }
 
   private countdownText(checklist: TripChecklist): string {
-    const dateAt = this.checklistDateAt(checklist);
-    if (dateAt === undefined) {
-      return '';
-    }
-    const today = this.startOfDay(new Date());
-    const dayDiff = Math.floor((dateAt - today) / 86400000);
-    if (dayDiff > 0) {
-      return '还有 ' + dayDiff.toString() + ' 天出发';
-    }
-    if (dayDiff === 0) {
-      return '今天出发！';
-    }
-    return '已出发 ' + Math.abs(dayDiff).toString() + ' 天';
+    return csCountdownText(checklist);
   }
 
   private checklistTotalWeight(checklist: TripChecklist): number {
-    let total = 0;
-    for (let index = 0; index < checklist.items.length; index++) {
-      const item = checklist.items[index];
-      const weight = this.checklistItemWeight(item);
-      if (weight !== undefined) {
-        total += weight;
-      }
-    }
-    return total;
+    return csChecklistTotalWeight(checklist, this.gears);
   }
 
   private checklistCheckedWeight(checklist: TripChecklist): number {
-    let total = 0;
-    for (let index = 0; index < checklist.items.length; index++) {
-      const item = checklist.items[index];
-      const weight = this.checklistItemWeight(item);
-      if (item.checked && weight !== undefined) {
-        total += weight;
-      }
-    }
-    return total;
+    return csChecklistCheckedWeight(checklist, this.gears);
   }
 
   private progressStartColor(percent: number): string {
-    if (percent < 30) {
-      return '#90A4AE';
-    }
-    return PRIMARY_COLOR;
+    return csProgressStartColor(percent);
   }
 
   private progressEndColor(percent: number): string {
-    if (percent < 30) {
-      return '#90A4AE';
-    }
-    if (percent < 60) {
-      return '#4CAF50';
-    }
-    return PROGRESS_END_COLOR;
+    return csProgressEndColor(percent);
   }
 
   private gearById(id: string): GearItem | undefined {
-    for (let index = 0; index < this.gears.length; index++) {
-      if (this.gears[index].id === id) {
-        return this.gears[index];
-      }
-    }
-    return undefined;
+    return gsGearById(this.gears, id);
   }
 
   private checklistItemWeight(item: ChecklistItem): number | undefined {
-    if (item.weight !== undefined) {
-      return item.weight;
-    }
-    if (item.fromGearId !== undefined) {
-      const gear = this.gearById(item.fromGearId);
-      if (gear !== undefined) {
-        return gear.weight;
-      }
-    }
-    return undefined;
+    return csChecklistItemWeight(item, this.gears);
   }
 
   private checklistItemPrice(item: ChecklistItem): number | undefined {
-    if (item.price !== undefined) {
-      return item.price;
-    }
-    if (item.fromGearId !== undefined) {
-      const gear = this.gearById(item.fromGearId);
-      if (gear !== undefined) {
-        return gear.price;
-      }
-    }
-    return undefined;
+    return csChecklistItemPrice(item, this.gears);
   }
 
   private numberInputText(value: number | undefined): string {
-    return value === undefined ? '' : value.toString();
+    return csNumberInputText(value);
   }
 
   private latestChecklistHomeSubtitle(): string {
-    const latest = this.latestChecklist();
-    if (latest === undefined) {
-      return '';
-    }
-    const countdown = this.countdownText(latest);
-    const weight = this.checklistTotalWeight(latest);
-    if (countdown.length > 0 && weight > 0) {
-      return countdown + ' · ' + this.formatKg(weight);
-    }
-    if (countdown.length > 0) {
-      return countdown;
-    }
-    if (weight > 0) {
-      return this.formatKg(weight);
-    }
-    return this.checklistMetaText(latest);
+    return csLatestChecklistHomeSubtitle(this.latestChecklist(), this.gears);
   }
 
   private resetGearForm(): void {
@@ -947,27 +614,12 @@ struct Index {
     this.gearNote = item.note === undefined ? '' : item.note;
     this.errorText = '';
     this.showEditGearPanel = true;
-    this.editGearPanelScale = 0.85;
-    this.editGearPanelOpacity = 0;
-    this.getUIContext().animateTo({ duration: DURATION_SLOW, curve: SPRING_GENERAL() }, () => {
-      this.editGearPanelScale = 1;
-      this.editGearPanelOpacity = 1;
-    });
   }
 
   private closeEditGearPanel(): void {
-    this.getUIContext().animateTo({
-      duration: 200,
-      curve: Curve.EaseIn,
-      onFinish: () => {
-        this.showEditGearPanel = false;
-        this.resetGearForm();
-        this.errorText = '';
-      }
-    }, () => {
-      this.editGearPanelScale = 0.9;
-      this.editGearPanelOpacity = 0;
-    });
+    this.showEditGearPanel = false;
+    this.resetGearForm();
+    this.errorText = '';
   }
 
   private async saveGear(): Promise<void> {
@@ -1116,33 +768,15 @@ struct Index {
   }
 
   private uniqueGearIds(ids: string[]): string[] {
-    const dedupedIds: string[] = [];
-    for (let index = 0; index < ids.length; index++) {
-      if (ids[index].length > 0 && dedupedIds.indexOf(ids[index]) < 0) {
-        dedupedIds.push(ids[index]);
-      }
-    }
-    return dedupedIds;
+    return gsUniqueGearIds(ids);
   }
 
   private checklistHasGear(checklist: TripChecklist, gearId: string): boolean {
-    for (let index = 0; index < checklist.items.length; index++) {
-      if (checklist.items[index].fromGearId === gearId) {
-        return true;
-      }
-    }
-    return false;
+    return csChecklistHasGear(checklist, gearId);
   }
 
   private countableGearIds(checklist: TripChecklist, gearIds: string[]): string[] {
-    const dedupedIds = this.uniqueGearIds(gearIds);
-    const nextIds: string[] = [];
-    for (let index = 0; index < dedupedIds.length; index++) {
-      if (!this.checklistHasGear(checklist, dedupedIds[index])) {
-        nextIds.push(dedupedIds[index]);
-      }
-    }
-    return nextIds;
+    return csCountableGearIds(checklist, gearIds);
   }
 
   private async incrementGearTripCounts(gearIds: string[]): Promise<void> {
@@ -1174,29 +808,40 @@ struct Index {
   }
 
   private isChecklistItemInGear(item: ChecklistItem): boolean {
-    return item.fromGearId !== undefined && item.fromGearId.length > 0;
+    return csIsChecklistItemInGear(item);
   }
 
   private hasGearMarker(item: ChecklistItem): boolean {
-    return this.isChecklistItemInGear(item);
+    return csHasGearMarker(item);
   }
 
   private matchingGearForChecklistItem(item: ChecklistItem): GearItem | undefined {
-    const name = item.name.trim();
-    const group = item.group.trim().length === 0 ? '其他' : item.group.trim();
-    for (let index = 0; index < this.gears.length; index++) {
-      const gear = this.gears[index];
-      if (gear.name.trim() === name && gear.category.trim() === group) {
-        return gear;
-      }
-    }
-    return undefined;
+    return csMatchingGearForChecklistItem(item, this.gears);
   }
 
   private openTripSheet(): void {
     this.tripTitle = '';
     this.tripDate = '';
     this.sheetMode = SHEET_TRIP;
+  }
+
+  // ===== 新建行程仪式感方法 =====
+  private startTripCeremony(): void {
+    this.ceremonyTripTitle = '';
+    this.ceremonyTripDate = '';
+    this.errorText = '';
+    this.showTripCeremony = true;
+  }
+
+  private async finishTripCeremony(): Promise<void> {
+    this.tripTitle = this.ceremonyTripTitle;
+    this.tripDate = this.ceremonyTripDate;
+    await this.createChecklist();
+    this.showTripCeremony = false;
+  }
+
+  private dismissTripCeremony(): void {
+    this.showTripCeremony = false;
   }
 
   private async createChecklist(): Promise<void> {
@@ -1349,31 +994,16 @@ struct Index {
     this.editingItemPrice = this.numberInputText(this.checklistItemPrice(item));
     this.errorText = '';
     this.showEditItemPanel = true;
-    this.editItemPanelScale = 0.85;
-    this.editItemPanelOpacity = 0;
-    this.getUIContext().animateTo({ duration: DURATION_SLOW, curve: SPRING_GENERAL() }, () => {
-      this.editItemPanelScale = 1;
-      this.editItemPanelOpacity = 1;
-    });
   }
 
   private closeEditItemPanel(): void {
-    this.getUIContext().animateTo({
-      duration: 200,
-      curve: Curve.EaseIn,
-      onFinish: () => {
-        this.showEditItemPanel = false;
-        this.editingItemId = '';
-        this.editingItemName = '';
-        this.editingItemGroup = '其他';
-        this.editingItemWeight = '';
-        this.editingItemPrice = '';
-        this.errorText = '';
-      }
-    }, () => {
-      this.editItemPanelScale = 0.9;
-      this.editItemPanelOpacity = 0;
-    });
+    this.showEditItemPanel = false;
+    this.editingItemId = '';
+    this.editingItemName = '';
+    this.editingItemGroup = '其他';
+    this.editingItemWeight = '';
+    this.editingItemPrice = '';
+    this.errorText = '';
   }
 
   private async saveChecklistItemToGear(item: ChecklistItem): Promise<void> {
@@ -1476,12 +1106,11 @@ struct Index {
   }
 
   private formatTripDate(date: Date): string {
-    return (date.getMonth() + 1).toString() + '月' + date.getDate().toString() + '日';
+    return csFormatTripDate(date);
   }
 
   private formatDateText(timestamp: number): string {
-    const date = new Date(timestamp);
-    return date.getFullYear().toString() + '-' + (date.getMonth() + 1).toString() + '-' + date.getDate().toString();
+    return csFormatDateText(timestamp);
   }
 
   private async addTempItem(): Promise<void> {
@@ -1600,24 +1229,11 @@ struct Index {
   }
 
   private filteredImportGears(): GearItem[] {
-    if (this.importGearCategory === '全部') {
-      return this.gears;
-    }
-    return this.gears.filter((item: GearItem) => item.category === this.importGearCategory);
+    return gsFilteredImportGears(this.gears, this.importGearCategory);
   }
 
   private importGearMetaText(item: GearItem): string {
-    let text = '';
-    if (item.weight !== undefined) {
-      text = text + item.weight.toString() + 'g';
-    }
-    if (item.price !== undefined) {
-      if (text.length > 0) {
-        text = text + '  ';
-      }
-      text = text + '¥' + item.price.toString();
-    }
-    return text;
+    return gsImportGearMetaText(item);
   }
 
   private hasImportSelection(id: string): boolean {
@@ -1713,31 +1329,7 @@ struct Index {
   }
 
   private addItemsToChecklist(checklistId: string, items: ChecklistItem[]): TripChecklist[] {
-    const nextChecklists: TripChecklist[] = [];
-    for (let index = 0; index < this.checklists.length; index++) {
-      const checklist = this.checklists[index];
-      if (checklist.id === checklistId) {
-        const nextItems: ChecklistItem[] = [];
-        for (let itemIndex = 0; itemIndex < checklist.items.length; itemIndex++) {
-          nextItems.push(checklist.items[itemIndex]);
-        }
-        for (let newIndex = 0; newIndex < items.length; newIndex++) {
-          nextItems.push(items[newIndex]);
-        }
-        const updated: TripChecklist = {
-          id: checklist.id,
-          title: checklist.title,
-          date: checklist.date,
-          dateAt: checklist.dateAt,
-          items: nextItems,
-          createdAt: checklist.createdAt
-        };
-        nextChecklists.push(updated);
-      } else {
-        nextChecklists.push(checklist);
-      }
-    }
-    return nextChecklists;
+    return csAddItemsToChecklist(this.checklists, checklistId, items);
   }
 
   private currentReviewItem(): ChecklistItem | undefined {
@@ -1953,7 +1545,11 @@ struct Index {
     this.returnToImportAfterGear = false;
     this.editingItemId = '';
     this.showTempAddNotice = false;
-    this.sheetMode = SHEET_NONE;
+    this.getUIContext().animateTo({
+      duration: 250, curve: Curve.EaseOut
+    }, () => {
+      this.sheetMode = SHEET_NONE;
+    });
   }
 
   @Builder
@@ -2032,6 +1628,11 @@ struct Index {
   }
 
   onBackPress(): boolean | void {
+    // 仪式卡片展开时，返回键关闭卡片
+    if (this.showTripCeremony) {
+      this.dismissTripCeremony();
+      return true;
+    }
     if (this.navPathStack.size() > 0) {
       if (this.navPathStack.size() === 1) {
         this.stopShakeListening();
@@ -2047,19 +1648,83 @@ struct Index {
     return true;
   }
 
+  private triggerBlurPulse(targetIndex: number): void {
+    this.isClickSwitching = true;
+    // 立即更新 tabIndex 让 TabBar 指示器同步响应
+    this.currentTabIndex = targetIndex;
+    // 散焦 + 按压 + 切换一气呵成（50ms 下沉）
+    this.getUIContext().animateTo({
+      duration: 50, curve: Curve.EaseOut
+    }, () => {
+      this.contentBlur = 6;
+      this.contentScale = 0.96;
+    });
+    // 极短延迟后切换内容 + 弹回
+    setTimeout(() => {
+      this.tabsController.changeIndex(targetIndex);
+      this.getUIContext().animateTo({
+        duration: 120, curve: Curve.EaseOut
+      }, () => {
+        this.contentBlur = 0;
+      });
+      this.getUIContext().animateTo({
+        curve: curves.springMotion(0.3, 0.82)
+      }, () => {
+        this.contentScale = 1.0;
+      });
+      setTimeout(() => { this.isClickSwitching = false; }, 200);
+    }, 50);
+  }
+
+  @Builder
+  customTabBar(index: number, icon: Resource, label: string) {
+    Column() {
+      SymbolGlyph(icon)
+        .fontSize(22)
+        .fontColor([this.currentTabIndex === index ? PRIMARY_COLOR : TEXT_TERTIARY])
+      Text(label)
+        .fontSize(11)
+        .fontWeight(this.currentTabIndex === index ? FontWeight.Medium : FontWeight.Regular)
+        .fontColor(this.currentTabIndex === index ? PRIMARY_COLOR : TEXT_TERTIARY)
+        .margin({ top: 2 })
+      // 液态指示器小横条
+      Row()
+        .width(this.currentTabIndex === index ? 18 : 0)
+        .height(3)
+        .borderRadius(1.5)
+        .backgroundColor(PRIMARY_COLOR)
+        .margin({ top: 3 })
+        .opacity(this.currentTabIndex === index ? 1.0 : 0)
+    }
+    .justifyContent(FlexAlign.Center)
+    .width(64)
+    .height(48)
+    .scale({
+      x: this.currentTabIndex === index ? 1.0 : 0.92,
+      y: this.currentTabIndex === index ? 1.0 : 0.92
+    })
+    .opacity(this.currentTabIndex === index ? 1.0 : 0.6)
+    .animation({ duration: 0, curve: SPRING_TAB() })
+    .onClick(() => {
+      if (this.currentTabIndex !== index) {
+        this.triggerBlurPulse(index);
+      }
+    })
+  }
+
   build() {
     Navigation(this.navPathStack) {
       Stack({ alignContent: Alignment.Bottom }) {
-        Tabs({ barPosition: BarPosition.End, index: this.currentTabIndex, controller: this.tabsController }) {
+        HdsTabs({ controller: this.tabsController }) {
           TabContent() {
             HomePage({
               checklists: this.checklists,
               gears: this.gears,
               onOpenTrip: () => {
-                this.openTripSheet();
+                this.startTripCeremony();
               },
               onOpenGear: () => {
-                this.tabsController.changeIndex(1);
+                this.triggerBlurPulse(1);
               },
               onOpenChecklist: (id: string) => {
                 this.openChecklist(id);
@@ -2069,6 +1734,7 @@ struct Index {
               }
             });
           }
+          .tabBar(this.customTabBar(0, $r('sys.symbol.list_checkmark'), '清单'))
 
           TabContent() {
             GearPage({
@@ -2119,38 +1785,142 @@ struct Index {
               }
             });
           }
+          .tabBar(this.customTabBar(1, $r('sys.symbol.bag'), '装备库'))
         }
-        .barHeight(0)
-        .barBackgroundColor(Color.Transparent)
+        .animationDuration(200)
+        .barOverlap(true)
+        .vertical(false)
+        .barPosition(BarPosition.End)
+        .barFloatingStyle({
+          barBottomMargin: 28,
+          gradientMask: {
+            maskColor: '#66F8F9FA',
+            maskHeight: 72
+          },
+          systemMaterialEffect: {
+            materialType: hdsMaterial.MaterialType.IMMERSIVE,
+            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+          }
+        })
         .width('100%')
         .height('100%')
         .backgroundColor(Color.Transparent)
+        .blur(this.contentBlur)
+        .scale({ x: this.contentScale, y: this.contentScale })
+        .onAnimationStart((_from: number, _to: number) => {
+          // 仅滑动触发时执行按压脉冲，点击切换已由 triggerBlurPulse 处理
+          if (this.isClickSwitching) {
+            return;
+          }
+          // 滑动松手 — 轻按压 + blur 脉冲
+          this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseOut }, () => {
+            this.contentScale = 0.97;
+            this.contentBlur = 4;
+          });
+          setTimeout(() => {
+            this.getUIContext().animateTo({ duration: 140, curve: Curve.EaseOut }, () => {
+              this.contentBlur = 0;
+            });
+            this.getUIContext().animateTo({
+              curve: curves.springMotion(0.35, 0.8)
+            }, () => {
+              this.contentScale = 1.0;
+            });
+          }, 80);
+        })
         .onChange((index: number) => {
           this.currentTabIndex = index;
-          if (index === 0) {
-            this.currentView = VIEW_HOME;
-            this.tabPillOffsetX = 4;
-          } else {
-            this.currentView = VIEW_GEAR;
-            this.tabPillOffsetX = 102;
-          }
         })
-        .opacity(this.tabContentOpacity)
-        .animation({ duration: DURATION_FAST, curve: SPRING_GENERAL() })
 
         if (this.gearFilterPanelExpanded) {
-          this.GearFilterPanelOverlay();
+          GearFilterPanel({
+            categories: this.categories,
+            gears: this.gears,
+            selectedCategories: this.selectedGearCategories,
+            onApply: (categories: string[]) => {
+              this.closeGearFilterPanel(categories);
+            },
+            onDismiss: () => {
+              this.gearFilterPanelExpanded = false;
+            }
+          })
         }
-        this.BottomEdgeFade()
-        this.CapsuleTabBar()
         if (this.sheetMode !== SHEET_NONE) {
           this.SheetOverlay();
         }
         if (this.showEditItemPanel) {
-          this.EditItemPanelOverlay();
+          EditItemPanel({
+            editingItemName: this.editingItemName,
+            editingItemGroup: this.editingItemGroup,
+            editingItemWeight: this.editingItemWeight,
+            editingItemPrice: this.editingItemPrice,
+            errorText: this.errorText,
+            categories: this.categories,
+            onNameChange: (value: string) => { this.editingItemName = value; },
+            onGroupChange: (value: string) => { this.editingItemGroup = value; },
+            onWeightChange: (value: string) => { this.editingItemWeight = value; },
+            onPriceChange: (value: string) => { this.editingItemPrice = value; },
+            onSave: () => { this.saveEditedItem(); },
+            onClose: () => {
+              this.showEditItemPanel = false;
+              this.editingItemId = '';
+              this.editingItemName = '';
+              this.editingItemGroup = '其他';
+              this.editingItemWeight = '';
+              this.editingItemPrice = '';
+              this.errorText = '';
+            }
+          })
         }
         if (this.showEditGearPanel) {
-          this.EditGearPanelOverlay();
+          EditGearPanel({
+            gearName: this.gearName,
+            gearCategory: this.gearCategory,
+            gearWeight: this.gearWeight,
+            gearPrice: this.gearPrice,
+            gearNote: this.gearNote,
+            errorText: this.errorText,
+            categories: this.categories,
+            onNameChange: (value: string) => {
+              this.gearName = value;
+            },
+            onCategoryChange: (value: string) => {
+              this.gearCategory = value;
+            },
+            onWeightChange: (value: string) => {
+              this.gearWeight = value;
+            },
+            onPriceChange: (value: string) => {
+              this.gearPrice = value;
+            },
+            onNoteChange: (value: string) => {
+              this.gearNote = value;
+            },
+            onSave: () => {
+              this.saveGear();
+            },
+            onClose: () => {
+              this.closeEditGearPanel();
+            }
+          })
+        }
+        if (this.showTripCeremony) {
+          TripCeremonyCard({
+            tripTitle: this.ceremonyTripTitle,
+            tripDate: this.ceremonyTripDate,
+            onTitleChange: (value: string) => {
+              this.ceremonyTripTitle = value;
+            },
+            onDateChange: (value: string) => {
+              this.ceremonyTripDate = value;
+            },
+            onFinish: () => {
+              this.finishTripCeremony();
+            },
+            onDismiss: () => {
+              this.dismissTripCeremony();
+            }
+          })
         }
         if (this.showCompletionToast) {
           this.CompletionToast();
@@ -2160,214 +1930,12 @@ struct Index {
       .height('100%')
     }
     .navDestination(this.NavDestinationMap)
+    .mode(NavigationMode.Stack)
     .hideTitleBar(true)
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 
-  @Builder
-  private BottomEdgeFade() {
-    Row()
-      .width('100%')
-      .height(24)
-      .linearGradient({
-        angle: 0,
-        direction: GradientDirection.Bottom,
-        colors: [[Color.Transparent, 0.0], [CARD_BG, 1.0]]
-      })
-      .hitTestBehavior(HitTestMode.Transparent)
-      .margin({ bottom: 72 })
-  }
 
-  @Builder
-  private CapsuleTabBar() {
-    Stack({ alignContent: Alignment.Center }) {
-      Row()
-        .width(this.tabPillWidth)
-        .height(40)
-        .backgroundColor(PRIMARY_COLOR)
-        .borderRadius(20)
-        .position({ x: this.tabPillOffsetX, y: 4 })
-        .shadow({ radius: 8, color: '#332D7D46', offsetX: 0, offsetY: 2 })
-        .animation({ duration: DURATION_SLOW, curve: SPRING_TAB() })
-
-      Row() {
-        this.CapsuleTabItem('清单', 0);
-        this.CapsuleTabItem('装备库', 1);
-      }
-      .width(200)
-      .height(48)
-      .justifyContent(FlexAlign.SpaceAround)
-      .alignItems(VerticalAlign.Center)
-    }
-    .width(200)
-    .height(48)
-    .backgroundColor('#F0FFFFFF')
-    .borderRadius(24)
-    .shadow({ radius: 12, color: '#1A000000', offsetX: 0, offsetY: 4 })
-    .margin({ bottom: 24 })
-  }
-
-  @Builder
-  private CapsuleTabItem(title: string, tabIndex: number) {
-    Text(title)
-      .fontSize(14)
-      .fontSize(this.currentTabIndex === tabIndex ? 15 : 14)
-      .fontWeight(this.currentTabIndex === tabIndex ? FontWeight.Medium : FontWeight.Normal)
-      .fontColor(this.currentTabIndex === tabIndex ? '#FFFFFF' : TEXT_TERTIARY)
-      .textAlign(TextAlign.Center)
-      .layoutWeight(1)
-      .height(44)
-      .scale({ x: this.pressedTabIndex === tabIndex ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.pressedTabIndex === tabIndex ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
-      .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
-      .onTouch((event: TouchEvent) => {
-        if (event.type === TouchType.Down) {
-          this.pressedTabIndex = tabIndex;
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          this.pressedTabIndex = -1;
-        }
-      })
-      .onClick(() => {
-        if (this.currentTabIndex === tabIndex) {
-          return;
-        }
-        this.gearFilterPanelExpanded = false;
-        this.getUIContext().animateTo({
-          duration: 200,
-          curve: SPRING_TAB()
-        }, () => {
-          this.tabPillWidth = 110;
-          this.tabContentOpacity = 0;
-        });
-        setTimeout(() => {
-          this.tabsController.changeIndex(tabIndex);
-          this.getUIContext().animateTo({
-            duration: 350,
-            curve: SPRING_GENERAL()
-          }, () => {
-            this.tabPillWidth = 94;
-            this.tabContentOpacity = 1.0;
-          });
-        }, 200);
-      })
-  }
-
-  @Builder
-  private GearFilterPanelOverlay() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Column() {
-      }
-      .width('100%')
-      .height('100%')
-      .backgroundColor('#4D000000')
-      .backdropBlur(20)
-      .opacity(this.filterPanelOverlayOpacity)
-      .onClick(() => {
-        this.applyGearFilterPanel();
-      })
-
-      Column({ space: 10 }) {
-        Row() {
-          Text('分组筛选')
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(TEXT_MAIN)
-          Blank()
-          Text('清除')
-            .fontSize(14)
-            .fontColor(TEXT_TERTIARY)
-            .height(32)
-            .padding({ left: 10, right: 10 })
-            .onClick(() => {
-              this.clearGearFilterPanel();
-            })
-          Button('确认')
-            .height(32)
-            .fontSize(14)
-            .fontColor('#FFFFFF')
-            .backgroundColor(PRIMARY_COLOR)
-            .borderRadius(16)
-            .margin({ left: 8 })
-            .onClick(() => {
-              this.applyGearFilterPanel();
-            })
-        }
-        .width('100%')
-        .padding({ left: 16, right: 16, top: 14, bottom: 4 })
-        .alignItems(VerticalAlign.Center)
-
-        Text('已选：' + this.tempGearFilterText())
-          .fontSize(12)
-          .fontColor(TEXT_TERTIARY)
-          .width('100%')
-          .padding({ left: 16, right: 16 })
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-        Scroll() {
-          Flex({ wrap: FlexWrap.Wrap }) {
-            ForEach(this.allGearFilterCategories(), (category: string) => {
-              this.GearFilterCategoryCard(category, this.isTempGearCategorySelected(category));
-            }, (category: string) => category)
-          }
-          .width('100%')
-          .padding({ left: 16, right: 6, bottom: 18, top: 4 })
-        }
-        .scrollBar(BarState.Off)
-        .edgeEffect(EdgeEffect.Spring)
-        .layoutWeight(1)
-      }
-      .width('100%')
-      .height('52%')
-      .backgroundColor('#EBFFFFFF')
-      .backdropBlur(20)
-      .borderRadius({ bottomLeft: 20, bottomRight: 20 })
-      .shadow({ radius: 20, color: '#1A000000', offsetX: 0, offsetY: 4 })
-      .translate({ y: this.filterPanelTranslateY })
-      .onClick(() => {
-      })
-    }
-    .width('100%')
-    .height('100%')
-  }
-
-  @Builder
-  private GearFilterCategoryCard(category: string, isActive: boolean) {
-    Stack({ alignContent: Alignment.TopEnd }) {
-      Text(category)
-        .fontSize(14)
-        .fontWeight(isActive ? FontWeight.Medium : FontWeight.Normal)
-        .fontColor(isActive ? '#FFFFFF' : TEXT_MAIN)
-        .textAlign(TextAlign.Center)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-        .height(42)
-        .padding({ left: 8, right: 8 })
-        .backgroundColor(isActive ? PRIMARY_COLOR : '#F5F7F5')
-        .borderRadius(12)
-        .animation({ duration: 150, curve: Curve.EaseInOut })
-
-      if (this.gearCategoryCount(category) > 0) {
-        Text(this.gearCategoryCount(category).toString())
-          .fontSize(10)
-          .fontColor('#FFFFFF')
-          .textAlign(TextAlign.Center)
-          .width(this.gearCategoryCount(category) > 9 ? 24 : 18)
-          .height(18)
-          .padding({ left: 4, right: 4 })
-          .backgroundColor(isActive ? '#FF6B6B' : PRIMARY_COLOR)
-          .borderRadius(9)
-          .margin({ top: -6, right: -6 })
-      }
-    }
-    .width('30.5%')
-    .height(42)
-    .margin({ right: 10, bottom: 10 })
-    .transition({ type: TransitionType.Insert, translate: { y: STAGGER_OFFSET_Y }, opacity: 0 })
-    .onClick(() => {
-      this.toggleTempGearCategory(category);
-    })
-  }
 
   @Builder
   private CompletionToast() {
@@ -2451,10 +2019,17 @@ struct Index {
       .padding({ left: 16, right: 16, top: 16, bottom: 20 })
       .backgroundColor(CARD_BG)
       .borderRadius({ topLeft: 24, topRight: 24 })
-      .transition({ type: TransitionType.Insert, translate: { y: 320 }, scale: { x: PANEL_SCALE_START, y: PANEL_SCALE_START }, opacity: 0 })
+      .transition(TransitionEffect.asymmetric(
+        TransitionEffect.translate({ y: 320 }).combine(TransitionEffect.scale({ x: PANEL_SCALE_START, y: PANEL_SCALE_START })).combine(TransitionEffect.opacity(0)),
+        TransitionEffect.translate({ y: 320 }).combine(TransitionEffect.opacity(0))
+      ))
     }
     .width('100%')
     .height('100%')
+    .transition(TransitionEffect.asymmetric(
+      TransitionEffect.opacity(0),
+      TransitionEffect.opacity(0)
+    ))
     .backgroundColor('#66000000')
   }
 
@@ -2594,9 +2169,7 @@ struct Index {
       this.FormInput('行程名称', this.tripTitle, (value: string) => {
         this.tripTitle = value;
       });
-      this.FormInput('出发日期（可选）', this.tripDate, (value: string) => {
-        this.tripDate = value;
-      });
+      this.DatePickerField('出发日期（可选）', this.tripDate);
       Button('确认保存')
         .height(48)
         .fontSize(14)
@@ -2615,9 +2188,7 @@ struct Index {
       this.FormInput('行程名称', this.tripTitle, (value: string) => {
         this.tripTitle = value;
       });
-      this.FormInput('出发日期（可选）', this.tripDate, (value: string) => {
-        this.tripDate = value;
-      });
+      this.DatePickerField('出发日期（可选）', this.tripDate);
       Button('创建')
         .height(48)
         .fontSize(14)
@@ -2665,217 +2236,7 @@ struct Index {
     }
   }
 
-  @Builder
-  private EditItemPanelOverlay() {
-    Stack({ alignContent: Alignment.Center }) {
-      Column() {
-      }
-      .width('100%')
-      .height('100%')
-      .backgroundColor('#66000000')
-      .backdropBlur(20)
-      .opacity(this.editItemPanelOpacity)
-      .onClick(() => {
-        this.closeEditItemPanel();
-      })
 
-      Column({ space: 16 }) {
-        Row() {
-          Text('编辑物品')
-            .fontSize(18)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-          Blank()
-          Row() {
-            SymbolGlyph($r('sys.symbol.xmark'))
-              .fontSize(20)
-              .fontColor([TEXT_SECONDARY])
-          }
-          .width(36)
-          .height(36)
-          .justifyContent(FlexAlign.Center)
-          .onClick(() => {
-            this.closeEditItemPanel();
-          })
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        this.FormInput('物品名称', this.editingItemName, (value: string) => {
-          this.editingItemName = value;
-        });
-
-        Text('所属分组')
-          .fontSize(12)
-          .fontColor(TEXT_SECONDARY)
-          .width('100%')
-        this.EditItemCategoryTags()
-
-        Row({ space: 12 }) {
-          this.EditMetricInput('重量', this.editingItemWeight, 'g', (value: string) => {
-            this.editingItemWeight = value;
-          });
-          this.EditMetricInput('价格', this.editingItemPrice, '¥', (value: string) => {
-            this.editingItemPrice = value;
-          });
-        }
-        .width('100%')
-
-        if (this.errorText.length > 0) {
-          Text(this.errorText)
-            .fontSize(12)
-            .fontColor(DANGER_COLOR)
-            .width('100%')
-        }
-
-        Button('保存修改')
-          .height(48)
-          .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor(this.editingItemName.trim().length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
-          .width('100%')
-          .enabled(this.editingItemName.trim().length > 0)
-          .borderRadius(12)
-          .onClick(() => {
-            this.saveEditedItem();
-          })
-      }
-      .width('85%')
-      .padding({ left: 24, right: 24, top: 24, bottom: 24 })
-      .backgroundColor(CARD_BG)
-      .borderRadius(24)
-      .shadow({ radius: 24, color: '#14000000', offsetX: 0, offsetY: 8 })
-      .scale({ x: this.editItemPanelScale, y: this.editItemPanelScale })
-      .opacity(this.editItemPanelOpacity)
-    }
-    .width('100%')
-    .height('100%')
-  }
-
-  @Builder
-  private EditGearPanelOverlay() {
-    Stack({ alignContent: Alignment.Center }) {
-      Column() {
-      }
-      .width('100%')
-      .height('100%')
-      .backgroundColor('#66000000')
-      .backdropBlur(20)
-      .opacity(this.editGearPanelOpacity)
-      .onClick(() => {
-        this.closeEditGearPanel();
-      })
-
-      Column({ space: 16 }) {
-        Row() {
-          Text('编辑装备')
-            .fontSize(18)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-          Blank()
-          Row() {
-            SymbolGlyph($r('sys.symbol.xmark'))
-              .fontSize(20)
-              .fontColor([TEXT_SECONDARY])
-          }
-          .width(36)
-          .height(36)
-          .justifyContent(FlexAlign.Center)
-          .onClick(() => {
-            this.closeEditGearPanel();
-          })
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        this.FormInput('装备名称（必填）', this.gearName, (value: string) => {
-          this.gearName = value;
-        });
-
-        Text('选择分组')
-          .fontSize(12)
-          .fontColor(TEXT_SECONDARY)
-          .width('100%')
-        Scroll() {
-          this.GearCategoryTags()
-        }
-        .height(96)
-        .edgeEffect(EdgeEffect.Spring)
-
-        Row({ space: 12 }) {
-          this.EditMetricInput('重量', this.gearWeight, 'g', (value: string) => {
-            this.gearWeight = value;
-          });
-          this.EditMetricInput('价格', this.gearPrice, '¥', (value: string) => {
-            this.gearPrice = value;
-          });
-        }
-        .width('100%')
-
-        this.FormInput('备注（一行，可选）', this.gearNote, (value: string) => {
-          this.gearNote = value;
-        });
-
-        if (this.errorText.length > 0) {
-          Text(this.errorText)
-            .fontSize(12)
-            .fontColor(DANGER_COLOR)
-            .width('100%')
-        }
-
-        Button('保存修改')
-          .height(48)
-          .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor(this.gearName.trim().length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
-          .width('100%')
-          .enabled(this.gearName.trim().length > 0)
-          .borderRadius(12)
-          .onClick(() => {
-            this.saveGear();
-          })
-      }
-      .width('85%')
-      .padding({ left: 24, right: 24, top: 24, bottom: 24 })
-      .backgroundColor(CARD_BG)
-      .borderRadius(24)
-      .shadow({ radius: 24, color: '#14000000', offsetX: 0, offsetY: 8 })
-      .scale({ x: this.editGearPanelScale, y: this.editGearPanelScale })
-      .opacity(this.editGearPanelOpacity)
-    }
-    .width('100%')
-    .height('100%')
-  }
-
-  @Builder
-  private EditMetricInput(label: string, textValue: string, unit: string, onValueChange: (value: string) => void) {
-    Column({ space: 6 }) {
-      Text(label)
-        .fontSize(12)
-        .fontColor(TEXT_SECONDARY)
-        .width('100%')
-      Row({ space: 6 }) {
-        TextInput({ placeholder: '可选', text: textValue })
-          .type(InputType.Number)
-          .fontSize(14)
-          .fontColor(TEXT_MAIN)
-          .placeholderColor(TEXT_SECONDARY)
-          .backgroundColor('#00000000')
-          .layoutWeight(1)
-          .onChange((value: string) => {
-            onValueChange(value);
-          })
-        Text(unit)
-          .fontSize(13)
-          .fontColor(TEXT_SECONDARY)
-      }
-      .height(48)
-      .padding({ left: 12, right: 12 })
-      .backgroundColor(PAGE_BG)
-      .borderRadius(12)
-    }
-    .layoutWeight(1)
-  }
 
   @Builder
   private GearCategoryTags() {
@@ -2915,24 +2276,6 @@ struct Index {
     .width('100%')
   }
 
-  @Builder
-  private EditItemCategoryTags() {
-    Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-      ForEach(this.presetCategories(), (category: string) => {
-        Text(category)
-          .fontSize(13)
-          .fontColor(this.editingItemGroup === category ? '#FFFFFF' : '#666666')
-          .padding({ left: 12, right: 12, top: 7, bottom: 7 })
-          .backgroundColor(this.editingItemGroup === category ? PRIMARY_COLOR : CARD_BG)
-          .border({ width: 1, color: this.editingItemGroup === category ? PRIMARY_COLOR : '#E0E0E0' })
-          .borderRadius(12)
-          .onClick(() => {
-            this.editingItemGroup = category;
-          })
-      }, (category: string) => category)
-    }
-    .width('100%')
-  }
 
   @Builder
   private ImportSheet() {
@@ -3022,6 +2365,37 @@ struct Index {
         })
     }
     .height('100%')
+  }
+
+  @Builder
+  private DatePickerField(placeholder: string, dateText: string) {
+    Row() {
+      Text(dateText.length > 0 ? dateText : placeholder)
+        .fontSize(14)
+        .fontColor(dateText.length > 0 ? TEXT_MAIN : TEXT_SECONDARY)
+        .layoutWeight(1)
+      SymbolGlyph($r('sys.symbol.calendar'))
+        .fontSize(18)
+        .fontColor([TEXT_TERTIARY])
+    }
+    .width('100%')
+    .height(48)
+    .padding({ left: 12, right: 12 })
+    .backgroundColor(PAGE_BG)
+    .borderRadius(12)
+    .onClick(() => {
+      DatePickerDialog.show({
+        start: new Date('2020-1-1'),
+        end: new Date('2030-12-31'),
+        selected: new Date(),
+        lunar: false,
+        onDateAccept: (value: Date) => {
+          const month = value.getMonth() + 1;
+          const day = value.getDate();
+          this.tripDate = month.toString() + '\u6708' + day.toString() + '\u65e5';
+        }
+      });
+    })
   }
 
   @Builder

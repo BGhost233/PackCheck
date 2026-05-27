@@ -2,7 +2,8 @@
   "modelVersion": "5.0.0",
   "description": "Please describe the basic information.",
   "dependencies": {
+    "hds_button": "^1.0.1"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {},
+  "dynamicDependencies": {}
 }

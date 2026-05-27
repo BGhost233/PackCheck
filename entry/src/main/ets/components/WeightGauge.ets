@@ -33,8 +33,6 @@ export struct WeightGauge {
   @Prop totalPrice: number = 0;
   @Prop budget: number = 0;
 
-  onEditTargetWeight: () => void = (): void => {};
-
   @State private gaugeMode: GaugeMode = GaugeMode.WEIGHT;
   @State private displayWeight: number = 0;
   @State private displayGearCount: number = 0;
@@ -208,20 +206,6 @@ export struct WeightGauge {
       .onClick(() => {
         this.toggleGaugeMode();
       })
-
-      Text(this.gaugeMode === GaugeMode.WEIGHT
-        ? (this.isOverTarget()
-          ? '目标 ' + this.formatKg(this.targetWeight) + ' · 超出 ' +
-            this.formatKg(this.currentWeight - this.targetWeight)
-          : '目标 ' + this.formatKg(this.targetWeight))
-        : '预算 ¥' + this.budget.toString())
-        .fontSize(12)
-        .fontColor(this.isOverTarget() ? DANGER_COLOR : TEXT_TERTIARY)
-        .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-        .borderRadius(12)
-        .onClick(() => {
-          this.onEditTargetWeight();
-        })
 
       Row() {
         this.StatPill('件数', this.getDisplayGearCount().toString(), this.gearCountPopScale, 0);

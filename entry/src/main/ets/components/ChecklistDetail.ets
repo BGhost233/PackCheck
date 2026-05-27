@@ -16,6 +16,16 @@ import {
   TEXT_SECONDARY,
   TEXT_TERTIARY
 } from '../constants/DesignTokens';
+import {
+  SPRING_PRESS,
+  SPRING_GENERAL,
+  DURATION_NORMAL,
+  DURATION_SLOW,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST,
+  STAGGER_OFFSET_Y,
+  STAGGER_DELAY_LIST
+} from '../constants/AnimationTokens';
 import { getGroupColor } from '../utils/ColorUtils';
 
 @Component
@@ -374,7 +384,6 @@ export struct ChecklistDetail {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(PAGE_BG)
   }
 
   @Builder
@@ -703,9 +712,9 @@ export struct ChecklistDetail {
     .padding({ left: 16, right: 16 })
     .backgroundColor(this.highlightedItemId === item.id ? LIGHT_PRIMARY_COLOR : CARD_BG)
     .borderRadius(12)
-    .scale({ x: this.pressedItemId === item.id ? 0.97 : 1, y: this.pressedItemId === item.id ? 0.97 : 1 })
-    .opacity(this.pressedItemId === item.id ? 0.85 : 1)
-    .animation({ duration: 260, curve: curves.springMotion(0.22, 0.82) })
+    .scale({ x: this.pressedItemId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.pressedItemId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .opacity(this.pressedItemId === item.id ? 0.9 : 1)
+    .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedItemId = item.id;
@@ -747,7 +756,7 @@ export struct ChecklistDetail {
     .onClick(() => {
       this.onToggleChecklistItem(itemId);
     })
-    .animation({ duration: 260, curve: curves.springMotion(0.22, 0.82) })
+    .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
   }
 
   @Builder
