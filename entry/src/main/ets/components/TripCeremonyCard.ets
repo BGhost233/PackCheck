@@ -500,27 +500,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
   // Builders
   // ============================================================
   @Builder
-  private CeremonyCardBack() {
-    Column({ space: 8 }) {
-      Text('PackCheck')
-        .fontSize(20)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#FFFFFF')
-        .opacity(0.9)
-      Text('装备清单 · 轻装出发')
-        .fontSize(12)
-        .fontColor('#FFFFFF')
-        .opacity(0.6)
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(PRIMARY_COLOR)
-    .justifyContent(FlexAlign.Center)
-    .borderRadius(24)
-    .rotate({ x: 0, y: 1, z: 0, angle: 180 })
-  }
-
-  @Builder
   private InsetInput(placeholder: string, text: string, showCalendar: boolean, stepIndex: number,
     onTextChange?: (value: string) => void, onTap?: () => void) {
     // 简洁输入框：浅色背景 + 圆角，无 3D 效果
@@ -557,6 +536,27 @@ return this.trackWidth - this.SLIDER_WIDTH;
         if (onTap) onTap();
       })
     }
+  }
+
+  @Builder
+  private CeremonyCardBack() {
+    Column({ space: 8 }) {
+      Text('PackCheck')
+        .fontSize(20)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#FFFFFF')
+        .opacity(0.9)
+      Text('装备清单 · 轻装出发')
+        .fontSize(12)
+        .fontColor('#FFFFFF')
+        .opacity(0.6)
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(PRIMARY_COLOR)
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(24)
+    .rotate({ x: 0, y: 1, z: 0, angle: 180 })
   }
 
   @Builder
