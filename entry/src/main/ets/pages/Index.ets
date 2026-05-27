@@ -1932,6 +1932,7 @@ struct Index {
     .navDestination(this.NavDestinationMap)
     .mode(NavigationMode.Stack)
     .hideTitleBar(true)
+    .backgroundColor('#F8F9FA')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
   }
 

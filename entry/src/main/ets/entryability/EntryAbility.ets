@@ -22,6 +22,20 @@ export default class EntryAbility extends UIAbility {
     // Main window is created, set main page for this ability
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
 
+    // 设置全屏沉浸式 + 窗口背景色统一为 PAGE_BG
+    try {
+      const mainWindow = windowStage.getMainWindowSync();
+      mainWindow.setWindowLayoutFullScreen(true);
+      mainWindow.setWindowBackgroundColor('#F8F9FA');
+      // 状态栏/导航栏文字颜色适配浅色背景
+      mainWindow.setWindowSystemBarProperties({
+        statusBarContentColor: '#000000',
+        navigationBarContentColor: '#000000'
+      });
+    } catch (error) {
+      hilog.warn(DOMAIN, 'PackCheck', 'Failed to set window properties. Cause: %{public}s', JSON.stringify(error));
+    }
+
     windowStage.loadContent('pages/Index', (err) => {
       if (err.code) {
         hilog.error(DOMAIN, 'testTag', 'Failed to load the content. Cause: %{public}s', JSON.stringify(err));
