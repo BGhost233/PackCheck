@@ -528,7 +528,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       TextInput({ placeholder: placeholder, text: text })
         .width('100%')
         .height(48)
-        .fontSize(15)
+        .fontSize(14)
         .fontColor(TEXT_MAIN)
         .placeholderColor('#BBBBBB')
         .backgroundColor('#F7F8F7')
@@ -542,7 +542,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     } else {
       Row() {
         Text(text.length > 0 ? text : placeholder)
-          .fontSize(15)
+          .fontSize(14)
           .fontColor(text.length > 0 ? TEXT_MAIN : '#BBBBBB')
           .layoutWeight(1)
       }
@@ -727,8 +727,10 @@ return this.trackWidth - this.SLIDER_WIDTH;
     .alignItems(HorizontalAlign.Center)
     .borderRadius(24)
     .clip(true)
-    .onClick(() => {
-      inputMethod.getController().stopInputSession();
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        inputMethod.getController().stopInputSession();
+      }
     })
     .opacity(this.cardRotateY <= 90 ? 1 : 0)
     .hitTestBehavior(this.cardRotateY <= 90 ? HitTestMode.Default : HitTestMode.None)
