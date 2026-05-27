@@ -634,6 +634,7 @@ export struct TripCeremonyCard {
           })
           .translate({ x: this.titleShimmerX })
       }
+      .height(20)
       .clip(true)
       .opacity(this.contentStep >= 1 ? 1 : 0)
       .translate({ y: this.contentStep >= 1 ? 0 : 6 })
