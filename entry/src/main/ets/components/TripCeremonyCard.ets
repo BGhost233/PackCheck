@@ -115,23 +115,24 @@ export struct TripCeremonyCard {
       }, () => {
         this.shineX = 350;
       });
-    }, 550);
+    }, 350);
 
+    // 内容错落入场：紧跟翻转，不等完全 settle
     setTimeout(() => {
       this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
         this.contentStep = 1;
       });
-    }, 750);
+    }, 420);
     setTimeout(() => {
       this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
         this.contentStep = 2;
       });
-    }, 830);
+    }, 490);
     setTimeout(() => {
       this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
         this.contentStep = 3;
       });
-    }, 910);
+    }, 560);
     setTimeout(() => {
       this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
         this.contentStep = 4;
@@ -140,7 +141,7 @@ export struct TripCeremonyCard {
       setTimeout(() => {
         this.startShimmer();
       }, 200);
-    }, 990);
+    }, 630);
   }
 
   // ============================================================
