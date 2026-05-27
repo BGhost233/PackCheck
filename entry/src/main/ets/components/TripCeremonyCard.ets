@@ -49,10 +49,10 @@ export struct TripCeremonyCard {
   @State private sliderBounceScale: number = 1.0;
 
   // 配置
-  private readonly SLIDER_WIDTH: number = 60;
-  private readonly SLIDER_HEIGHT: number = 40;
+  private readonly SLIDER_WIDTH: number = 64;
+  private readonly SLIDER_HEIGHT: number = 44;
   private readonly TRACK_HEIGHT: number = 52;
-  private readonly TRACK_PADDING: number = 6;
+  private readonly TRACK_PADDING: number = 4;
   private readonly MAGNET_THRESHOLD: number = 0.85;
   private trackWidth: number = 0;
   private touchStartX: number = 0;
@@ -481,25 +481,35 @@ export struct TripCeremonyCard {
         .width('100%')
         .height(52)
         .borderRadius(14)
-        .backgroundColor('#F5F7F5')
-        .border({ width: 1, color: '#06000000' })
+        .backgroundColor('#F0F2F0')
+        .border({ width: 1, color: '#12000000' })
 
       // 顶部内阴影（模拟凹陷）
       Column()
         .width('100%')
-        .height(8)
+        .height(10)
         .linearGradient({
           angle: 180,
-          colors: [['#0000000A', 0], ['#00000000', 1]]
+          colors: [['#00000018', 0], ['#00000000', 1]]
         })
         .borderRadius({ topLeft: 14, topRight: 14 })
+
+      // 左侧内阴影（增强立体感）
+      Column()
+        .width(3)
+        .height('100%')
+        .linearGradient({
+          angle: 90,
+          colors: [['#00000008', 0], ['#00000000', 1]]
+        })
+        .borderRadius({ topLeft: 14, bottomLeft: 14 })
 
       // 底部高光线（反光）
       Column()
         .width('85%')
         .height(1)
         .backgroundColor('#FFFFFF')
-        .opacity(0.6)
+        .opacity(0.8)
         .borderRadius(1)
         .position({ x: '7.5%', bottom: 7 })
 
@@ -621,14 +631,15 @@ export struct TripCeremonyCard {
 
         // 已滑过区域（动态宽度 + clip）
         Column()
-          .width(this.slideX + this.SLIDER_WIDTH / 2 + this.TRACK_PADDING)
+          .width(this.slideX + this.TRACK_PADDING)
           .height('100%')
           .borderRadius(this.TRACK_HEIGHT / 2)
           .linearGradient({
             angle: 90,
-            colors: [['#2D7D4612', 0], ['#2D7D4628', 1]]
+            colors: [['#2D7D4620', 0], ['#2D7D4632', 1]]
           })
           .clip(true)
+          .opacity(this.slideX > 0 ? 1 : 0)
 
         // 终点虚影（右端胶囊）
         Column()
