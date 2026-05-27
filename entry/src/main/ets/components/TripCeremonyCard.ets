@@ -28,6 +28,11 @@ export struct TripCeremonyCard {
   @State private contentStep: number = 0;
   @State private cardElevation: number = 0;
 
+  // === 标题 shimmer ===
+  @State private titleShimmerX: number = -60;
+  private titleShimmerTimer: number = -1;
+  private titleRowWidth: number = 200;
+
   // === 滑动状态 ===
   @State private slideX: number = 0;
   @State private isSliding: boolean = false;
@@ -70,6 +75,7 @@ export struct TripCeremonyCard {
       clearTimeout(this.shimmerTimer);
       this.shimmerTimer = -1;
     }
+    this.stopTitleShimmer();
   }
 
   // ============================================================
@@ -123,6 +129,10 @@ export struct TripCeremonyCard {
       this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
         this.contentStep = 1;
       });
+      // 标题入场完成后 300ms 启动标题 shimmer
+      setTimeout(() => {
+        this.startTitleShimmer();
+      }, 300);
     }, 420);
     setTimeout(() => {
       this.getUIContext().animateTo({ duration: 180, curve: Curve.EaseOut }, () => {
@@ -167,6 +177,31 @@ export struct TripCeremonyCard {
     if (this.shimmerTimer !== -1) {
       clearTimeout(this.shimmerTimer);
       this.shimmerTimer = -1;
+    }
+  }
+
+  // ============================================================
+  // 标题 Shimmer
+  // ============================================================
+  private startTitleShimmer(): void {
+    if (this.isSlideComplete) return;
+    const endX = this.titleRowWidth + 60;
+    this.titleShimmerX = -60;
+    this.getUIContext().animateTo({
+      duration: 1200,
+      curve: Curve.EaseInOut
+    }, () => {
+      this.titleShimmerX = endX;
+    });
+    this.titleShimmerTimer = setTimeout(() => {
+      this.startTitleShimmer();
+    }, 3000) as number;
+  }
+
+  private stopTitleShimmer(): void {
+    if (this.titleShimmerTimer !== -1) {
+      clearTimeout(this.titleShimmerTimer);
+      this.titleShimmerTimer = -1;
     }
   }
 
@@ -259,6 +294,7 @@ export struct TripCeremonyCard {
     this.isSlideComplete = true;
     this.isSliding = false;
     this.stopShimmer();
+    this.stopTitleShimmer();
 
     // 吸附到终点
     const maxSlide = this.getMaxSlide();
@@ -302,6 +338,7 @@ export struct TripCeremonyCard {
   // 卡片飘走
   // ============================================================
   private flyAway(): void {
+    this.stopTitleShimmer();
     this.getUIContext().animateTo({
       duration: 400,
       curve: curves.springMotion(0.35, 0.78)
@@ -556,13 +593,50 @@ export struct TripCeremonyCard {
   @Builder
   private CeremonyCardFront() {
     Column() {
-      // 情绪化标题
-      Text('新的冒险即将开始')
-        .fontSize(14)
-        .fontColor('#999999')
-        .opacity(this.contentStep >= 1 ? 1 : 0)
-        .translate({ y: this.contentStep >= 1 ? 0 : 6 })
-        .margin({ top: 32, bottom: 28 })
+      // 情绪化标题（圆点 + 文字 + shimmer）
+      Stack() {
+        Row({ space: 0 }) {
+          // 左侧圆点组
+          Circle({ width: 6, height: 6 })
+            .fill(PRIMARY_COLOR)
+          Circle({ width: 4, height: 4 })
+            .fill('#2D7D4660')
+            .margin({ left: 4 })
+
+          // 标题文字
+          Text('新的冒险即将开始')
+            .fontSize(14)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#1A1A1A')
+            .margin({ left: 10, right: 10 })
+
+          // 右侧圆点组
+          Circle({ width: 4, height: 4 })
+            .fill('#2D7D4660')
+          Circle({ width: 6, height: 6 })
+            .fill(PRIMARY_COLOR)
+            .margin({ left: 4 })
+        }
+        .alignItems(VerticalAlign.Center)
+        .onAreaChange((_oldValue: Area, newValue: Area) => {
+          this.titleRowWidth = newValue.width as number;
+        })
+
+        // shimmer 高光条
+        Row()
+          .width(40)
+          .height('100%')
+          .borderRadius(20)
+          .linearGradient({
+            angle: 90,
+            colors: [['#00FFFFFF', 0], ['#40FFFFFF', 0.5], ['#00FFFFFF', 1.0]]
+          })
+          .translate({ x: this.titleShimmerX })
+      }
+      .clip(true)
+      .opacity(this.contentStep >= 1 ? 1 : 0)
+      .translate({ y: this.contentStep >= 1 ? 0 : 6 })
+      .margin({ top: 32, bottom: 28 })
 
       // 行程名称输入（3D 内凹）
       this.InsetInput('给这次旅途取个名字吧', this.tripTitle, false, 2,
