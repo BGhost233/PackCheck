@@ -645,9 +645,10 @@ return this.trackWidth - this.SLIDER_WIDTH;
           selected: new Date(),
           lunar: false,
           onDateAccept: (value: Date) => {
+            const year = value.getFullYear();
             const month = value.getMonth() + 1;
             const day = value.getDate();
-            const dateStr = month.toString() + '月' + day.toString() + '日';
+            const dateStr = year.toString() + '年' + month.toString() + '月' + day.toString() + '日';
             this.onDateChange(dateStr);
           }
         });
