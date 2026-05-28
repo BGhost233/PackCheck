@@ -59,6 +59,24 @@ export struct TripCeremonyCard {
   // === 滑块到达膨胀 ===
   @State private sliderBounceScale: number = 1.0;
 
+  // === 按压增强 ===
+  @State private sliderBgColor: string = '#2D7D46';
+  @State private trackSinkY: number = 0;
+  @State private airplaneRotate: number = 0;
+  private lastRatchetProgress: number = 0;
+
+  // === 仪式感状态 ===
+  @State private ceremonyPhase: number = 0;
+  @State private ripple1Scale: number = 0.5;
+  @State private ripple1Opacity: number = 0;
+  @State private ripple2Scale: number = 0.5;
+  @State private ripple2Opacity: number = 0;
+  @State private ceremonyCardScale: number = 1.0;
+  @State private ceremonyCardSinkY: number = 0;
+  @State private trackTextOpacity: number = 1.0;
+  @State private readyTextOpacity: number = 0;
+  @State private glowLayerOpacity: number = 0;
+
   // 配置
   private readonly SLIDER_WIDTH: number = 48;
   private readonly SLIDER_HEIGHT: number = 48;
@@ -224,17 +242,20 @@ return this.trackWidth - this.SLIDER_WIDTH;
     this.isSliding = true;
     this.touchStartX = x;
     this.slideStartX = this.slideX;
+    this.lastRatchetProgress = 0;
 
-    // 按压态
+    // 按压态：缩小 + 颜色加深 + 轨道下沉
     this.getUIContext().animateTo({
       duration: 120,
       curve: curves.springMotion(0.25, 0.7)
     }, () => {
       this.sliderPressed = true;
+      this.sliderBgColor = '#256B3A';
+      this.trackSinkY = 1.5;
     });
 
-    // 轻触确认
-    this.vibratePreset('haptic.tick');
+    // 柔和抓握反馈
+    this.vibratePreset('haptic.effect.soft');
     this.stopShimmer();
   }
 
@@ -257,6 +278,15 @@ return this.trackWidth - this.SLIDER_WIDTH;
       this.targetGlowOpacity = 0.05;
     }
 
+    // 棘轮振动：每 25% 进度触发一次
+    const ratchetThresholds: number[] = [0.25, 0.50, 0.75];
+    for (const threshold of ratchetThresholds) {
+      if (progress >= threshold && this.lastRatchetProgress < threshold) {
+        this.vibratePreset('haptic.clock.timer');
+      }
+    }
+    this.lastRatchetProgress = progress;
+
     // 磁吸：超过 85% 自动吸附
     if (progress >= this.MAGNET_THRESHOLD) {
       this.completeSlide();
@@ -267,13 +297,16 @@ return this.trackWidth - this.SLIDER_WIDTH;
     if (!this.isSliding || this.isSlideComplete) return;
     this.isSliding = false;
 
-    // 松开按压态
+    // 松开按压态 + 恢复颜色/下沉
     this.getUIContext().animateTo({
       duration: 120,
       curve: curves.springMotion(0.25, 0.7)
     }, () => {
       this.sliderPressed = false;
+      this.sliderBgColor = '#2D7D46';
+      this.trackSinkY = 0;
     });
+    this.lastRatchetProgress = 0;
 
     // 未到磁吸点，弹回
     if (this.getProgress() < this.MAGNET_THRESHOLD) {
@@ -293,7 +326,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
   }
 
   // ============================================================
-  // 滑动完成
+  // 滑动完成 → 三阶段仪式序列
   // ============================================================
   private completeSlide(): void {
     if (this.isSlideComplete) return;
@@ -302,7 +335,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     this.stopShimmer();
     this.stopTitleShimmer();
 
-    // 吸附到终点
+    // 吸附到终点 + 恢复按压态
     const maxSlide = this.getMaxSlide();
     this.getUIContext().animateTo({
       duration: 100,
@@ -310,18 +343,89 @@ return this.trackWidth - this.SLIDER_WIDTH;
     }, () => {
       this.slideX = maxSlide;
       this.sliderPressed = false;
+      this.sliderBgColor = '#2D7D46';
+      this.trackSinkY = 0;
     });
 
-    // 到达膨胀 + haptic
-    this.vibratePreset('haptic.sharp.strong');
+    // 启动仪式 Phase 1
+    this.startCeremonyPhase1();
+  }
+
+  // ============================================================
+  // Phase 1：锁定确认（0~150ms）
+  // ============================================================
+  private startCeremonyPhase1(): void {
+    this.ceremonyPhase = 1;
+
+    // 滑块放大 1.15
+    this.getUIContext().animateTo({
+      duration: 150,
+      curve: curves.springMotion(0.25, 0.7)
+    }, () => {
+      this.sliderBounceScale = 1.15;
+    });
+
+    // 双击锁定振动
+    this.vibratePresetWithCount('haptic.effect.sharp', 2);
+
+    // 波纹扩散
+    this.ripple1Scale = 0.5;
+    this.ripple1Opacity = 0.5;
+    this.ripple2Scale = 0.5;
+    this.ripple2Opacity = 0;
+
+    // 波纹1 展开
     setTimeout(() => {
-      this.getUIContext().animateTo({
-        duration: 150,
-        curve: curves.springMotion(0.25, 0.7)
-      }, () => {
-        this.sliderBounceScale = 1.08;
-      });
-    }, 80);
+      this.ripple1Scale = 1.8;
+      this.ripple1Opacity = 0;
+    }, 10);
+
+    // 波纹2 延迟 60ms 展开
+    setTimeout(() => {
+      this.ripple2Opacity = 0.35;
+      setTimeout(() => {
+        this.ripple2Scale = 1.5;
+        this.ripple2Opacity = 0;
+      }, 10);
+    }, 60);
+
+    // 150ms 后进入 Phase 2
+    setTimeout(() => {
+      this.startCeremonyPhase2();
+    }, 150);
+  }
+
+  // ============================================================
+  // Phase 2：充能蓄力（150~550ms）
+  // ============================================================
+  private startCeremonyPhase2(): void {
+    this.ceremonyPhase = 2;
+
+    // 卡片收缩蓄力
+    this.getUIContext().animateTo({
+      duration: 300,
+      curve: curves.springMotion(0.3, 0.8)
+    }, () => {
+      this.ceremonyCardScale = 0.97;
+      this.ceremonyCardSinkY = 3;
+    });
+
+    // 文字切换：「滑动出发」→「准备出发！」
+    this.trackTextOpacity = 0;
+    this.readyTextOpacity = 1;
+
+    // 飞机旋转朝上
+    this.airplaneRotate = -45;
+
+    // 光晕显现
+    this.getUIContext().animateTo({
+      duration: 200,
+      curve: Curve.EaseOut
+    }, () => {
+      this.glowLayerOpacity = 0.10;
+    });
+
+    // 滑块从 1.15 恢复到 1.0
     setTimeout(() => {
       this.getUIContext().animateTo({
         duration: 200,
@@ -329,23 +433,57 @@ return this.trackWidth - this.SLIDER_WIDTH;
       }, () => {
         this.sliderBounceScale = 1.0;
       });
-    }, 200);
+    }, 100);
 
-    // 数据先于动画
-    this.onFinish();
-
-    // 卡片飘走（延迟 350ms 让用户看到咬合反馈）
+    // 400ms 后进入 Phase 3
     setTimeout(() => {
-      this.flyAway();
-    }, 380);
+      this.startCeremonyPhase3();
+    }, 400);
   }
 
   // ============================================================
-  // 卡片飘走
+  // Phase 3：弹射升空（550~1050ms）
+  // ============================================================
+  private startCeremonyPhase3(): void {
+    this.ceremonyPhase = 3;
+
+    // 弹射预备：微放大
+    this.getUIContext().animateTo({
+      duration: 100,
+      curve: curves.springMotion(0.25, 0.7)
+    }, () => {
+      this.ceremonyCardScale = 1.03;
+      this.ceremonyCardSinkY = 0;
+    });
+
+    // 推力振动
+    this.vibratePreset('haptic.effect.hard');
+
+    // 数据创建
+    this.onFinish();
+
+    // 100ms 后飞走
+    setTimeout(() => {
+      this.flyAway();
+    }, 100);
+  }
+
+  // ============================================================
+  // 卡片飘走（改进版）
   // ============================================================
   private flyAway(): void {
     this.onExitStart();
     this.stopTitleShimmer();
+
+    // 光晕消散
+    this.getUIContext().animateTo({
+      duration: 200,
+      curve: Curve.EaseOut
+    }, () => {
+      this.glowLayerOpacity = 0;
+    });
+
+    // 卡片飘走
     this.getUIContext().animateTo({
       duration: 400,
       curve: curves.springMotion(0.35, 0.78)
@@ -410,6 +548,15 @@ return this.trackWidth - this.SLIDER_WIDTH;
     } catch (e) { /* ignore */ }
   }
 
+  private vibratePresetWithCount(effectId: string, count: number): void {
+    try {
+      vibrator.startVibration(
+        { type: 'preset', effectId: effectId, count: count },
+        { usage: 'touch' }
+      );
+    } catch (e) { /* ignore */ }
+  }
+
   // ============================================================
   // 退出
   // ============================================================
@@ -454,6 +601,25 @@ return this.trackWidth - this.SLIDER_WIDTH;
           this.handleDismiss();
         })
 
+      // ===== 光晕层（卡片之下）=====
+      Column()
+        .width('87%')
+        .height(308)
+        .constraintSize({ maxWidth: 348 })
+        .borderRadius(28)
+        .backgroundColor('#2D7D46')
+        .opacity(this.glowLayerOpacity)
+        .blur(16)
+        .animation({ duration: 200, curve: Curve.EaseOut })
+        .scale({
+          x: this.cardScale * this.launchScale * this.ceremonyCardScale,
+          y: this.cardScale * this.launchScale * this.ceremonyCardScale
+        })
+        .translate({
+          x: 0,
+          y: this.cardTranslateY + this.launchTranslateY + this.ceremonyCardSinkY
+        })
+
       // ===== 主卡片 =====
       Column() {
         Stack() {
@@ -484,14 +650,14 @@ return this.trackWidth - this.SLIDER_WIDTH;
         offsetY: this.cardElevation / 3
       })
       .scale({
-        x: this.cardScale * this.launchScale,
-        y: this.cardScale * this.launchScale
+        x: this.cardScale * this.launchScale * this.ceremonyCardScale,
+        y: this.cardScale * this.launchScale * this.ceremonyCardScale
       })
       .rotate({ x: 0, y: 1, z: 0, angle: this.cardRotateY, perspective: 800 })
       .rotate({ x: 0, y: 0, z: 1, angle: this.cardRotateZ + this.launchRotate })
       .translate({
         x: 0,
-        y: this.cardTranslateY + this.launchTranslateY
+        y: this.cardTranslateY + this.launchTranslateY + this.ceremonyCardSinkY
       })
       .opacity(this.cardOpacity * this.launchOpacity)
     }
@@ -669,11 +835,32 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .borderRadius(this.TRACK_HEIGHT / 2)
           .backgroundColor('#F0F4F0')
 
-        // ② 文案（轨道内居中）
-        Text('滑动出发')
-          .fontSize(14)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#802D7D46')
+        // ①.5 绿色进度填充条
+        Row()
+          .width(this.slideX + this.SLIDER_WIDTH / 2)
+          .height(this.TRACK_HEIGHT)
+          .borderRadius({ topLeft: this.TRACK_HEIGHT / 2, bottomLeft: this.TRACK_HEIGHT / 2 })
+          .linearGradient({
+            angle: 0,
+            colors: [['#1F2D7D46', 0.0], ['#4D2D7D46', 1.0]]
+          })
+          .position({ x: 0, y: (this.SLIDER_HEIGHT - this.TRACK_HEIGHT) / 2 })
+
+        // ② 文案（双层叠加，支持仪式感文字切换）
+        Stack() {
+          Text('滑动出发')
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#802D7D46')
+            .opacity(this.trackTextOpacity)
+            .animation({ duration: 150, curve: Curve.EaseOut })
+          Text('准备出发！')
+            .fontSize(14)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(PRIMARY_COLOR)
+            .opacity(this.readyTextOpacity)
+            .animation({ duration: 150, curve: Curve.EaseOut })
+        }
 
         // ③ 白色遮罩（盖住左侧轨道 + 文字）
         Row()
@@ -683,17 +870,34 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .borderRadius({ topLeft: this.TRACK_HEIGHT / 2, bottomLeft: this.TRACK_HEIGHT / 2 })
           .position({ x: 0, y: (this.SLIDER_HEIGHT - this.TRACK_HEIGHT) / 2 })
 
-        // ④ 滑块：纯色正圆 + 白色飞机
+        // ④ 波纹层（仪式感 Phase1 用）
+        Circle({ width: 48, height: 48 })
+          .fill('#2D7D46')
+          .position({ x: this.getMaxSlide(), y: 0 })
+          .scale({ x: this.ripple1Scale, y: this.ripple1Scale })
+          .opacity(this.ripple1Opacity)
+          .animation({ duration: 400, curve: Curve.EaseOut })
+        Circle({ width: 48, height: 48 })
+          .fill('#2D7D46')
+          .position({ x: this.getMaxSlide(), y: 0 })
+          .scale({ x: this.ripple2Scale, y: this.ripple2Scale })
+          .opacity(this.ripple2Opacity)
+          .animation({ duration: 350, curve: Curve.EaseOut })
+
+        // ⑤ 滑块：纯色正圆 + 白色飞机
         Stack({ alignContent: Alignment.Center }) {
           Column()
             .width(this.SLIDER_WIDTH)
             .height(this.SLIDER_HEIGHT)
             .borderRadius(this.SLIDER_HEIGHT / 2)
-            .backgroundColor('#2D7D46')
+            .backgroundColor(this.sliderBgColor)
+            .animation({ duration: 150, curve: Curve.EaseOut })
 
           SymbolGlyph($r('sys.symbol.airplane'))
             .fontSize(20)
             .fontColor([Color.White])
+            .rotate({ angle: this.airplaneRotate })
+            .animation({ duration: 300, curve: curves.springMotion(0.3, 0.75) })
         }
         .width(this.SLIDER_WIDTH)
         .height(this.SLIDER_HEIGHT)
@@ -703,7 +907,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           y: this.sliderPressed ? 0.92 : this.sliderBounceScale
         })
 
-        // ⑤ 触摸热区（56×56，透明扩展）
+        // ⑥ 触摸热区（56×56，透明扩展）
         Column()
           .width(56)
           .height(56)
@@ -716,12 +920,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
       .width('100%')
       .height(this.SLIDER_HEIGHT)
       .clip(false)
+      .translate({ y: (this.contentStep >= 4 ? 0 : 10) + this.trackSinkY })
+      .animation({ duration: 120, curve: Curve.EaseOut })
       .opacity(this.contentStep >= 4 ? 1 : 0)
       .scale({
         x: this.contentStep >= 4 ? 1.0 : 0.9,
         y: this.contentStep >= 4 ? 1.0 : 0.9
       })
-      .translate({ y: this.contentStep >= 4 ? 0 : 10 })
       .onAreaChange((_oldValue: Area, newValue: Area) => {
         this.trackWidth = newValue.width as number;
       })
