@@ -53,9 +53,9 @@ NavDestination() {
 2. `pop(false)` — 同上
 3. NavDestination 本身加 `.transition(TransitionEffect.OPACITY)`
 4. 目标组件可以加 `.transition(TransitionEffect.opacity(0.99))` 辅助（避免 opacity 完全为 1 导致 geometryTransition 不生效的 edge case）
-5. `{ follow: true }` — 标记始终在树上的组件跟随做共享动画
+5. `.onBackPressed()` 拦截系统手势返回，统一走 animateTo + pop(false)
 
-### GeometryTransitionOptions
+### GeometryTransitionOptions — follow: true 的坑
 
 ```typescript
 interface GeometryTransitionOptions {
@@ -63,6 +63,12 @@ interface GeometryTransitionOptions {
   // true: 始终在树上的组件跟随做共享动画
 }
 ```
+
+**实测结论（2025-06-16）**：
+- `{ follow: true }` 会让组件**脱离文档流**，在 Scroll + Column({ space }) 布局中导致卡片消失或重叠
+- 官方示例中源页面用 `{ follow: true }` 但目标页面不用 — 这在简单场景可行，但在复杂滚动列表中不稳定
+- **PackCheck 最终方案**：源页面和目标页面都用无参 `.geometryTransition(id)`，不加 `{ follow: true }`
+- 无参形式只在转场瞬间接管组件位置，常态下不影响文档流布局
 
 ### 推荐动画曲线
 

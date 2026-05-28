@@ -12,7 +12,8 @@
 - 确认出发采用「滑动出发」交互（正圆滑块骑在轨道上 + 白色遮罩吞噬已滑区域 + 磁吸吸附 + 卡片飘走）
 - 主题色 `#2D7D46` 山野绿
 - 所有动画使用 Spring 弹性曲线，严禁 linear/ease
-- 页面转场使用 `geometryTransition`（非 sharedTransition，后者不支持 Navigation 路由）
+- 页面转场使用 `geometryTransition(id)` 无参形式（非 sharedTransition；禁止 `{ follow: true }` — 会破坏文档流布局）
+- NavDestination 加 `.onBackPressed()` 拦截系统手势返回，统一走 `animateTo { pop(false) }` 保证 geometryTransition 生效
 - Sheet 面板使用 `animateTo` + state 驱动 `translateY`（非 TransitionEffect，后者不支持 Spring 曲线）
 - Sheet 弹起 dampingFraction 0.72（有过冲回弹），收回 0.88（干脆无回弹）
 

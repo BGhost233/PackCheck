@@ -26,11 +26,11 @@
 ```typescript
 // HomePage 侧 — HeroCard
 Column() { ... }
-  .geometryTransition('trip-' + checklist.id, { follow: true })
+  .geometryTransition('trip-' + checklist.id)
 
 // ChecklistDetail 侧 — 头部区域
 Column() { ... }
-  .geometryTransition('trip-' + this.selectedChecklistId, { follow: true })
+  .geometryTransition('trip-' + this.selectedChecklistId)
 
 // 触发导航（Index.ets）
 this.getUIContext().animateTo({
@@ -119,13 +119,13 @@ private closeSheetAnimated(): void {
 - 构建验证 → commit
 
 ### 阶段 2：共享元素转场 — HomePage 侧 [status: done]
-- HeroCard 组件添加 `.geometryTransition('trip-' + checklist.id, { follow: true })`
-- HistoryRow 组件添加 `.geometryTransition('trip-' + item.id, { follow: true })`
+- HeroCard 组件添加 `.geometryTransition('trip-' + checklist.id)`
+- HistoryRow 组件添加 `.geometryTransition('trip-' + item.id)`
 - 确保卡片有明确的 borderRadius（16vp）以便转场时圆角过渡
 - 构建验证 → commit
 
 ### 阶段 3：共享元素转场 — ChecklistDetail 侧 [status: done]
-- ChecklistDetail 头部容器添加匹配的 `.geometryTransition('trip-' + selectedChecklistId, { follow: true })`
+- ChecklistDetail 头部容器添加匹配的 `.geometryTransition('trip-' + selectedChecklistId)`
 - NavDestination 添加 `.transition(TransitionEffect.OPACITY)`
 - 头部容器确保有初始 borderRadius(16vp)，展开到全屏后为 0
 - 构建验证 → commit
@@ -134,7 +134,7 @@ private closeSheetAnimated(): void {
 - `openChecklist()` 改为 `animateTo(SPRING_HERO_EXPAND) { pushPath(..., false) }`
 - 所有 `pushPathByName('ChecklistDetail', undefined, true)` 替换为新方式
 - `returnToHome()` 改为 `animateTo(SPRING_HERO_COLLAPSE) { pop(false) }`
-- ChecklistDetail 的 `onBackPressed` 回调改为 `animateTo + pop(false)`
+- ChecklistDetail NavDestination 加 `.onBackPressed()` 拦截系统手势返回，统一走 `returnToHome()`
 - 展开时背景内容加 scale(0.97) 联动（可选，视效果调整）
 - 构建验证 → commit
 
