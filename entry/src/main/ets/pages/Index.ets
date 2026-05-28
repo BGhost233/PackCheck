@@ -43,6 +43,8 @@ import {
 import {
   SPRING_GENERAL,
   SPRING_TAB,
+  SPRING_HERO_EXPAND,
+  SPRING_HERO_COLLAPSE,
   DURATION_NORMAL,
   PRESS_SCALE_BOUNCE,
   PRESS_SCALE_REST,
@@ -867,21 +869,33 @@ struct Index {
     this.selectedChecklistId = created.id;
     this.closeSheet();
     this.startShakeListening();
-    this.navPathStack.pushPathByName('ChecklistDetail', undefined, true);
+    this.pushChecklistDetail();
   }
 
   private openChecklist(checklistId: string): void {
     this.selectedChecklistId = checklistId;
     this.collapsedGroups = [];
     this.startShakeListening();
-    this.navPathStack.pushPathByName('ChecklistDetail', undefined, true);
+    this.pushChecklistDetail();
+  }
+
+  private pushChecklistDetail(): void {
+    this.getUIContext().animateTo({
+      curve: SPRING_HERO_EXPAND()
+    }, () => {
+      this.navPathStack.pushPath({ name: 'ChecklistDetail' }, false);
+    });
   }
 
   private returnToHome(): void {
     this.stopShakeListening();
     this.tabsController.changeIndex(0);
     if (this.navPathStack.size() > 0) {
-      this.navPathStack.pop(true);
+      this.getUIContext().animateTo({
+        curve: SPRING_HERO_COLLAPSE()
+      }, () => {
+        this.navPathStack.pop(false);
+      });
     }
   }
 
@@ -1325,7 +1339,7 @@ struct Index {
     this.cancelGearMultiSelect();
     this.closeSheet();
     this.startShakeListening();
-    this.navPathStack.pushPathByName('ChecklistDetail', undefined, true);
+    this.pushChecklistDetail();
   }
 
   private addItemsToChecklist(checklistId: string, items: ChecklistItem[]): TripChecklist[] {
