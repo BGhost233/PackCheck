@@ -45,6 +45,8 @@ import {
   SPRING_TAB,
   SPRING_HERO_EXPAND,
   SPRING_HERO_COLLAPSE,
+  SPRING_PANEL_ENTER,
+  SPRING_PANEL_EXIT,
   DURATION_NORMAL,
   PRESS_SCALE_BOUNCE,
   PRESS_SCALE_REST,
@@ -138,6 +140,8 @@ struct Index {
   @State private generateTripTitle: string = '';
   @State private selectedChecklistId: string = '';
   @State private sheetMode: string = SHEET_NONE;
+  @State private sheetTranslateY: number = 800;
+  @State private sheetOverlayOpacity: number = 0;
   @State private editingGearId: string = '';
   @State private gearName: string = '';
   @State private gearCategory: string = '其他';
@@ -599,12 +603,14 @@ struct Index {
     this.resetGearForm();
     this.returnToImportAfterGear = false;
     this.sheetMode = SHEET_GEAR;
+    this.openSheetAnimated();
   }
 
   private openAddGearFromImport(): void {
     this.resetGearForm();
     this.returnToImportAfterGear = true;
     this.sheetMode = SHEET_GEAR;
+    this.openSheetAnimated();
   }
 
   private openEditGear(item: GearItem): void {
@@ -767,6 +773,7 @@ struct Index {
     }
     this.generateTripTitle = '';
     this.sheetMode = SHEET_GENERATE_TRIP;
+    this.openSheetAnimated();
   }
 
   private uniqueGearIds(ids: string[]): string[] {
@@ -825,6 +832,7 @@ struct Index {
     this.tripTitle = '';
     this.tripDate = '';
     this.sheetMode = SHEET_TRIP;
+    this.openSheetAnimated();
   }
 
   // ===== 新建行程仪式感方法 =====
@@ -998,6 +1006,7 @@ struct Index {
     this.tempItemGroup = '其他';
     this.showTempAddNotice = false;
     this.sheetMode = SHEET_TEMP_ITEM;
+    this.openSheetAnimated();
   }
 
   private openEditItemSheet(item: ChecklistItem): void {
@@ -1069,6 +1078,7 @@ struct Index {
     this.tripTitle = checklist.title;
     this.tripDate = checklist.date === undefined ? '' : checklist.date;
     this.sheetMode = SHEET_EDIT_TRIP;
+    this.openSheetAnimated();
   }
 
   private async saveTripInfo(): Promise<void> {
@@ -1240,6 +1250,7 @@ struct Index {
     this.importGearIds = [];
     this.importGearCategory = '全部';
     this.sheetMode = SHEET_IMPORT;
+    this.openSheetAnimated();
   }
 
   private filteredImportGears(): GearItem[] {
@@ -1554,15 +1565,30 @@ struct Index {
     await this.store.saveChecklists(nextChecklists);
   }
 
+  private openSheetAnimated(): void {
+    this.sheetTranslateY = 800;
+    this.sheetOverlayOpacity = 0;
+    this.getUIContext().animateTo({
+      curve: SPRING_PANEL_ENTER()
+    }, () => {
+      this.sheetTranslateY = 0;
+      this.sheetOverlayOpacity = 1;
+    });
+  }
+
   private closeSheet(): void {
     this.errorText = '';
     this.returnToImportAfterGear = false;
     this.editingItemId = '';
     this.showTempAddNotice = false;
     this.getUIContext().animateTo({
-      duration: 250, curve: Curve.EaseOut
+      curve: SPRING_PANEL_EXIT(),
+      onFinish: () => {
+        this.sheetMode = SHEET_NONE;
+      }
     }, () => {
-      this.sheetMode = SHEET_NONE;
+      this.sheetTranslateY = 800;
+      this.sheetOverlayOpacity = 0;
     });
   }
 
@@ -1769,6 +1795,7 @@ struct Index {
               },
               onOpenSort: () => {
                 this.sheetMode = SHEET_GEAR_SORT;
+                this.openSheetAnimated();
               },
               onStartMultiSelect: () => {
                 this.multiSelectMode = true;
@@ -2035,18 +2062,13 @@ struct Index {
       .padding({ left: 16, right: 16, top: 16, bottom: 20 })
       .backgroundColor(CARD_BG)
       .borderRadius({ topLeft: 24, topRight: 24 })
-      .transition(TransitionEffect.asymmetric(
-        TransitionEffect.translate({ y: 320 }).combine(TransitionEffect.scale({ x: PANEL_SCALE_START, y: PANEL_SCALE_START })).combine(TransitionEffect.opacity(0)),
-        TransitionEffect.translate({ y: 320 }).combine(TransitionEffect.opacity(0))
-      ))
+      .translate({ y: this.sheetTranslateY })
     }
     .width('100%')
     .height('100%')
-    .transition(TransitionEffect.asymmetric(
-      TransitionEffect.opacity(0),
-      TransitionEffect.opacity(0)
-    ))
-    .backgroundColor('#66000000')
+    .opacity(this.sheetOverlayOpacity)
+    .backgroundColor('#26000000')
+    .backdropBlur(16)
   }
 
   private sheetTitle(): string {
