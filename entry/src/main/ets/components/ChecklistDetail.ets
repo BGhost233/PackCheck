@@ -386,7 +386,7 @@ export struct ChecklistDetail {
     .height('100%')
     .backgroundColor(PAGE_BG)
     .borderRadius(0)
-    .geometryTransition('trip-' + this.selectedChecklistId, { follow: true })
+    .geometryTransition('trip-' + this.selectedChecklistId)
     .transition(TransitionEffect.opacity(0.99))
   }
 
