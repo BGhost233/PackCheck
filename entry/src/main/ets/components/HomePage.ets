@@ -229,7 +229,11 @@ export struct HomePage {
     if (this.checklists.length === 0) {
       return '还没有行程，创建一个吧';
     }
-    return this.activeChecklistCount().toString() + ' 个行程进行中';
+    const futureCount = this.futureTrips().length;
+    if (futureCount > 0) {
+      return futureCount.toString() + ' 个行程待出发';
+    }
+    return '已完成 ' + this.pastTrips().length.toString() + ' 个行程';
   }
 
   private startOfDay(date: Date): number {
@@ -371,7 +375,7 @@ export struct HomePage {
       return PRIMARY_COLOR;
     }
     if (dayDiff >= 1 && dayDiff <= 3) {
-      return DANGER_COLOR;
+      return COUNTDOWN_ORANGE;
     }
     if (dayDiff > 3) {
       return PRIMARY_COLOR;
@@ -573,9 +577,9 @@ export struct HomePage {
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
-          Text(this.isChecklistDone(checklist) ? '已完成' : '准备中')
+          Text(this.daysLeft(checklist) !== undefined && this.daysLeft(checklist)! >= 0 ? '准备中' : '已完成')
             .fontSize(13)
-            .fontColor(this.isChecklistDone(checklist) ? PRIMARY_COLOR : COUNTDOWN_ORANGE)
+            .fontColor(this.daysLeft(checklist) !== undefined && this.daysLeft(checklist)! >= 0 ? COUNTDOWN_ORANGE : PRIMARY_COLOR)
         }
         .width('100%')
 
@@ -584,7 +588,7 @@ export struct HomePage {
             .fontSize(this.daysLeft(checklist) === 0 ? 36 : 48)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.daysLeft(checklist) === undefined ? TEXT_TERTIARY :
-              (this.daysLeft(checklist)! <= 3 && this.daysLeft(checklist)! > 0 ? DANGER_COLOR : PRIMARY_COLOR))
+              (this.daysLeft(checklist)! <= 3 && this.daysLeft(checklist)! > 0 ? COUNTDOWN_ORANGE : PRIMARY_COLOR))
           Text(this.countdownSuffix(checklist))
             .fontSize(16)
             .fontColor(TEXT_SECONDARY)
@@ -743,46 +747,12 @@ export struct HomePage {
     .onClick(action)
   }
 
-  @Builder
-  private SectionHeader(title: string) {
-    Text(title)
-      .fontSize(12)
-      .fontColor(TEXT_TERTIARY)
-      .letterSpacing(1)
-      .width('100%')
-      .padding({ top: 8, bottom: 4 })
-  }
-
-  @Builder
-  private TripListSection(trips: TripChecklist[], indexOffset: number) {
-    List() {
-      ForEach(trips, (item: TripChecklist, index: number) => {
-        ListItem() {
-          this.HistoryRow(item);
-        }
-        .opacity(this.historyStaggerReady ? 1 : 0)
-        .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
-        .animation({ duration: DURATION_NORMAL + (indexOffset + index) * STAGGER_DELAY_LIST, curve: SPRING_GENERAL() })
-        .onClick(() => {
-          this.onOpenChecklist(item.id);
-        })
-        .swipeAction({
-          end: {
-            builder: this.HistoryDeleteAction(item),
-            actionAreaDistance: 80,
-            onAction: () => {
-              this.onConfirmDeleteChecklist(item);
-            }
-          }
-        })
-      }, (item: TripChecklist) => item.id)
+  private historyListHeight(): number {
+    if (this.checklists.length === 0) {
+      return 64;
     }
-    .edgeEffect(EdgeEffect.None)
-    .width('100%')
-    .height(trips.length * 72)
-    .scrollBar(BarState.Off)
-    .backgroundColor(CARD_BG)
-    .borderRadius(16)
+    const hasBoth = this.futureTrips().length > 0 && this.pastTrips().length > 0;
+    return this.checklists.length * 72 + (hasBoth ? 56 : 0);
   }
 
   @Builder
@@ -800,13 +770,79 @@ export struct HomePage {
           .width('100%')
           .height(64)
           .textAlign(TextAlign.Center)
-      } else if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
-        this.SectionHeader('即将启程');
-        this.TripListSection(this.futureTrips(), 0);
-        this.SectionHeader('走过的路');
-        this.TripListSection(this.pastTrips(), this.futureTrips().length);
       } else {
-        this.TripListSection(this.futureTrips().length > 0 ? this.futureTrips() : this.pastTrips(), 0);
+        List() {
+          if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
+            ListItem() {
+              Text('即将启程')
+                .fontSize(12)
+                .fontColor(TEXT_TERTIARY)
+                .letterSpacing(1)
+                .width('100%')
+                .padding({ top: 4, bottom: 4 })
+            }
+            .height(28)
+            .selectable(false)
+          }
+          ForEach(this.futureTrips(), (item: TripChecklist, index: number) => {
+            ListItem() {
+              this.HistoryRow(item);
+            }
+            .opacity(this.historyStaggerReady ? 1 : 0)
+            .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
+            .animation({ duration: DURATION_NORMAL + index * STAGGER_DELAY_LIST, curve: SPRING_GENERAL() })
+            .onClick(() => {
+              this.onOpenChecklist(item.id);
+            })
+            .swipeAction({
+              end: {
+                builder: this.HistoryDeleteAction(item),
+                actionAreaDistance: 80,
+                onAction: () => {
+                  this.onConfirmDeleteChecklist(item);
+                }
+              }
+            })
+          }, (item: TripChecklist) => item.id)
+          if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
+            ListItem() {
+              Text('走过的路')
+                .fontSize(12)
+                .fontColor(TEXT_TERTIARY)
+                .letterSpacing(1)
+                .width('100%')
+                .padding({ top: 4, bottom: 4 })
+            }
+            .height(28)
+            .selectable(false)
+          }
+          ForEach(this.pastTrips(), (item: TripChecklist, index: number) => {
+            ListItem() {
+              this.HistoryRow(item);
+            }
+            .opacity(this.historyStaggerReady ? 1 : 0)
+            .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
+            .animation({ duration: DURATION_NORMAL + (this.futureTrips().length + index) * STAGGER_DELAY_LIST, curve: SPRING_GENERAL() })
+            .onClick(() => {
+              this.onOpenChecklist(item.id);
+            })
+            .swipeAction({
+              end: {
+                builder: this.HistoryDeleteAction(item),
+                actionAreaDistance: 80,
+                onAction: () => {
+                  this.onConfirmDeleteChecklist(item);
+                }
+              }
+            })
+          }, (item: TripChecklist) => item.id)
+        }
+        .edgeEffect(EdgeEffect.Spring)
+        .width('100%')
+        .height(this.historyListHeight())
+        .scrollBar(BarState.Off)
+        .backgroundColor(CARD_BG)
+        .borderRadius(16)
       }
     }
     .width('100%')
