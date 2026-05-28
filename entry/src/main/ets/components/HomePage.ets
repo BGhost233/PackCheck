@@ -456,75 +456,79 @@ export struct HomePage {
   @Builder
   private HeroCard(checklist: TripChecklist | undefined) {
     if (checklist !== undefined) {
-      Column({ space: 16 }) {
-        Row() {
-          Text(checklist.title)
-            .fontSize(24)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-            .layoutWeight(1)
-          Text(this.isChecklistDone(checklist) ? '已完成' : '准备中')
-            .fontSize(13)
-            .fontColor(this.isChecklistDone(checklist) ? PRIMARY_COLOR : COUNTDOWN_ORANGE)
-        }
-        .width('100%')
+      // 外层占位容器：参与父 Column(space:20) 的正常布局流
+      Column() {
+        Column({ space: 16 }) {
+          Row() {
+            Text(checklist.title)
+              .fontSize(24)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(TEXT_MAIN)
+              .layoutWeight(1)
+            Text(this.isChecklistDone(checklist) ? '已完成' : '准备中')
+              .fontSize(13)
+              .fontColor(this.isChecklistDone(checklist) ? PRIMARY_COLOR : COUNTDOWN_ORANGE)
+          }
+          .width('100%')
 
-        Row() {
-          Text(this.getAnimatedHeroLead(checklist))
-            .fontSize(this.daysLeft(checklist) === 0 ? 36 : 48)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(this.daysLeft(checklist) !== undefined && this.daysLeft(checklist) !== undefined &&
-              this.daysLeft(checklist)! <= 3 && this.daysLeft(checklist)! > 0 ? DANGER_COLOR : PRIMARY_COLOR)
-          Text(this.countdownSuffix(checklist))
-            .fontSize(16)
-            .fontColor(TEXT_SECONDARY)
-            .margin({ bottom: 8 })
+          Row() {
+            Text(this.getAnimatedHeroLead(checklist))
+              .fontSize(this.daysLeft(checklist) === 0 ? 36 : 48)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(this.daysLeft(checklist) !== undefined && this.daysLeft(checklist) !== undefined &&
+                this.daysLeft(checklist)! <= 3 && this.daysLeft(checklist)! > 0 ? DANGER_COLOR : PRIMARY_COLOR)
+            Text(this.countdownSuffix(checklist))
+              .fontSize(16)
+              .fontColor(TEXT_SECONDARY)
+              .margin({ bottom: 8 })
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Bottom)
+          .onAppear((): void => {
+            this.startHeroNumberAnimation();
+          })
+
+          Row() {
+            Text((checklist.date !== undefined && checklist.date.length > 0 ? checklist.date : '未设置日期') +
+              ' · ' + this.formatKg(this.checklistTotalWeight(checklist)))
+              .fontSize(13)
+              .fontColor(TEXT_TERTIARY)
+              .layoutWeight(1)
+            this.RingProgress(checklist);
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
         }
         .width('100%')
-        .alignItems(VerticalAlign.Bottom)
-        .onAppear((): void => {
-          this.startHeroNumberAnimation();
+        .padding(20)
+        .borderRadius(CARD_RADIUS)
+        .linearGradient({
+          angle: 135,
+          colors: [[heroGradientStart(this.daysLeft(checklist)), 0], [CARD_BG, 1]]
         })
-
-        Row() {
-          Text((checklist.date !== undefined && checklist.date.length > 0 ? checklist.date : '未设置日期') +
-            ' · ' + this.formatKg(this.checklistTotalWeight(checklist)))
-            .fontSize(13)
-            .fontColor(TEXT_TERTIARY)
-            .layoutWeight(1)
-          this.RingProgress(checklist);
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
+        .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
+        .geometryTransition('trip-' + checklist.id, { follow: true })
+        .transition(TransitionEffect.opacity(0.99))
+        .opacity(this.heroOpacity())
+        .scale({
+          x: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale(),
+          y: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale()
+        })
+        .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.heroPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.heroPressed = false;
+          }
+        })
+        .onClick(() => {
+          if (this.heroOpacity() > 0.3) {
+            this.onOpenChecklist(checklist.id);
+          }
+        })
       }
       .width('100%')
-      .padding(20)
-      .borderRadius(CARD_RADIUS)
-      .linearGradient({
-        angle: 135,
-        colors: [[heroGradientStart(this.daysLeft(checklist)), 0], [CARD_BG, 1]]
-      })
-      .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
-      .geometryTransition('trip-' + checklist.id, { follow: true })
-      .transition(TransitionEffect.opacity(0.99))
-      .opacity(this.heroOpacity())
-      .scale({
-        x: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale(),
-        y: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale()
-      })
-      .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
-      .onTouch((event: TouchEvent) => {
-        if (event.type === TouchType.Down) {
-          this.heroPressed = true;
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          this.heroPressed = false;
-        }
-      })
-      .onClick(() => {
-        if (this.heroOpacity() > 0.3) {
-          this.onOpenChecklist(checklist.id);
-        }
-      })
     }
   }
 
@@ -684,56 +688,60 @@ export struct HomePage {
 
   @Builder
   private HistoryRow(item: TripChecklist) {
-    Row({ space: 12 }) {
-      Column() {
-        Row()
-          .width(2)
-          .height(24)
-          .backgroundColor(DIVIDER_COLOR)
-        Circle({ width: 10, height: 10 })
-          .fill(this.isChecklistDone(item) ? PRIMARY_COLOR : '#00000000')
-          .stroke(PRIMARY_COLOR)
-          .strokeWidth(2)
-        Row()
-          .width(2)
-          .height(28)
-          .backgroundColor(DIVIDER_COLOR)
-      }
-      .width(20)
-      .alignItems(HorizontalAlign.Center)
-      Column({ space: 4 }) {
-        Row({ space: 8 }) {
-          Text(item.title)
-            .fontSize(16)
-            .fontColor(TEXT_MAIN)
-            .layoutWeight(1)
-          Text(this.progressText(item))
+    // 外层占位容器：确保 geometryTransition 不影响 ListItem 布局
+    Column() {
+      Row({ space: 12 }) {
+        Column() {
+          Row()
+            .width(2)
+            .height(24)
+            .backgroundColor(DIVIDER_COLOR)
+          Circle({ width: 10, height: 10 })
+            .fill(this.isChecklistDone(item) ? PRIMARY_COLOR : '#00000000')
+            .stroke(PRIMARY_COLOR)
+            .strokeWidth(2)
+          Row()
+            .width(2)
+            .height(28)
+            .backgroundColor(DIVIDER_COLOR)
+        }
+        .width(20)
+        .alignItems(HorizontalAlign.Center)
+        Column({ space: 4 }) {
+          Row({ space: 8 }) {
+            Text(item.title)
+              .fontSize(16)
+              .fontColor(TEXT_MAIN)
+              .layoutWeight(1)
+            Text(this.progressText(item))
+              .fontSize(13)
+              .fontColor(TEXT_TERTIARY)
+          }
+          Text(item.date !== undefined && item.date.length > 0 ? item.date : this.formatDateText(item.createdAt))
             .fontSize(13)
             .fontColor(TEXT_TERTIARY)
         }
-        Text(item.date !== undefined && item.date.length > 0 ? item.date : this.formatDateText(item.createdAt))
-          .fontSize(13)
-          .fontColor(TEXT_TERTIARY)
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
       }
-      .alignItems(HorizontalAlign.Start)
-      .layoutWeight(1)
+      .width('100%')
+      .height(72)
+      .padding({ left: 16, right: 16 })
+      .backgroundColor(CARD_BG)
+      .borderRadius(12)
+      .geometryTransition('trip-' + item.id, { follow: true })
+      .transition(TransitionEffect.opacity(0.99))
+      .scale({ x: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+      .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.historyPressedId = item.id;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.historyPressedId = '';
+        }
+      })
     }
     .width('100%')
-    .height(72)
-    .padding({ left: 16, right: 16 })
-    .backgroundColor(CARD_BG)
-    .borderRadius(12)
-    .geometryTransition('trip-' + item.id, { follow: true })
-    .transition(TransitionEffect.opacity(0.99))
-    .scale({ x: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.historyPressedId = item.id;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.historyPressedId = '';
-      }
-    })
   }
 
   @Builder
