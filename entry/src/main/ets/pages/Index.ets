@@ -243,6 +243,34 @@ struct Index {
     if (this.checklists.length === 0) {
       return undefined;
     }
+    const today = csStartOfDay(new Date());
+    // 找最近的未来行程（dateAt >= 今天0点），按 dateAt 升序取第一个
+    let nearestFuture: TripChecklist | undefined = undefined;
+    for (let i = 0; i < this.checklists.length; i++) {
+      const dateAt = csChecklistDateAt(this.checklists[i]);
+      if (dateAt !== undefined && dateAt >= today) {
+        if (nearestFuture === undefined || dateAt < csChecklistDateAt(nearestFuture)!) {
+          nearestFuture = this.checklists[i];
+        }
+      }
+    }
+    if (nearestFuture !== undefined) {
+      return nearestFuture;
+    }
+    // 无未来行程，找最近的历史行程（dateAt < 今天0点），按 dateAt 降序取第一个
+    let latestPast: TripChecklist | undefined = undefined;
+    for (let i = 0; i < this.checklists.length; i++) {
+      const dateAt = csChecklistDateAt(this.checklists[i]);
+      if (dateAt !== undefined && dateAt < today) {
+        if (latestPast === undefined || dateAt > csChecklistDateAt(latestPast)!) {
+          latestPast = this.checklists[i];
+        }
+      }
+    }
+    if (latestPast !== undefined) {
+      return latestPast;
+    }
+    // 全部无日期，按 createdAt 降序取第一个（checklists 已按 createdAt 降序排列）
     return this.checklists[0];
   }
 

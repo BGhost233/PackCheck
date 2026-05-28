@@ -9,7 +9,9 @@
 ## 设计决策
 
 - 新建行程采用「宝可梦卡牌翻转」仪式感入场动画
-- 确认出发采用「滑动出发」交互（正圆滑块骑在轨道上 + 白色遮罩吞噬已滑区域 + 磁吸吸附 + 卡片飘走）
+- 确认出发采用「滑动出发」交互（正圆滑块骑在轨道上 + 白色遮罩吞噬已滑区域 + 磁吸吸附 + 三阶段仪式 + 卡片飘走）
+- 滑块到达后三阶段仪式：Phase1 锁定确认（150ms，放大+波纹+双击振动）→ Phase2 充能蓄力（400ms，卡片收缩+文字切换+飞机旋转+光晕）→ Phase3 弹射升空（微放大+推力振动+飘走），总计~1000ms
+- 滑动过程增强：按下 haptic.effect.soft + 颜色加深 + 轨道下沉；滑动中绿色进度条 + 25%/50%/75% 棘轮振动
 - 主题色 `#2D7D46` 山野绿
 - 所有动画使用 Spring 弹性曲线，严禁 linear/ease
 - 页面转场使用 `geometryTransition(id)` 无参形式（非 sharedTransition；禁止 `{ follow: true }` — 会破坏文档流布局）
@@ -27,6 +29,16 @@
 - AnimationTokens.ets 中定义了 8 个 Spring 预设：SPRING_GENERAL / PRESS / TAB / COUNTER / SCROLL / HERO_EXPAND / HERO_COLLAPSE / PANEL_ENTER / PANEL_EXIT + 时长/缩放常量
 - 导航架构：单 Page（Index.ets）+ Navigation NavPathStack，两个 NavDestination（ChecklistDetail、ReviewPage）
 - TripCeremonyCard 暴露 `onExitStart` 回调，退场动画启动第一帧触发，供父组件并行驱动背景恢复
+
+## 技术验证结论（避坑）
+
+- HarmonyOS vibrator 可用预设：`haptic.clock.timer`（轻 tick）、`haptic.effect.soft`（柔）、`haptic.effect.hard`（重）、`haptic.effect.sharp`（锐）；支持 `count` 参数做连击
+- `backgroundColor` 是 ArkUI 可动画属性，可用 `.animation()` 修饰器平滑过渡
+- 波纹效果用固定数量 Circle 组件 + `.animation()` 修饰器驱动 scale/opacity，不用 ForEach 动态创建（避免 state 数组变化时序问题）
+- 光晕层用独立 Column + blur + opacity 动画实现，`.shadow()` 的 color 插值不可靠
+- SymbolGlyph 支持 `.rotate()` 变换（GearPage.ets 已验证）
+- 文字切换用 Stack + 双 Text 的 opacity 交叉淡入实现，比条件渲染平滑
+- 棘轮振动模式：在连续手势中按进度阈值触发振动，需用 state 记录已触发阈值防重复
 
 ## 已知限制
 

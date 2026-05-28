@@ -158,6 +158,34 @@ export struct HomePage {
     if (this.checklists.length === 0) {
       return undefined;
     }
+    const today = this.startOfDay(new Date());
+    // 找最近的未来行程（dateAt >= 今天0点），按 dateAt 升序取第一个
+    let nearestFuture: TripChecklist | undefined = undefined;
+    for (let i = 0; i < this.checklists.length; i++) {
+      const dateAt = this.checklistDateAt(this.checklists[i]);
+      if (dateAt !== undefined && dateAt >= today) {
+        if (nearestFuture === undefined || dateAt < this.checklistDateAt(nearestFuture)!) {
+          nearestFuture = this.checklists[i];
+        }
+      }
+    }
+    if (nearestFuture !== undefined) {
+      return nearestFuture;
+    }
+    // 无未来行程，找最近的历史行程（dateAt < 今天0点），按 dateAt 降序取第一个
+    let latestPast: TripChecklist | undefined = undefined;
+    for (let i = 0; i < this.checklists.length; i++) {
+      const dateAt = this.checklistDateAt(this.checklists[i]);
+      if (dateAt !== undefined && dateAt < today) {
+        if (latestPast === undefined || dateAt > this.checklistDateAt(latestPast)!) {
+          latestPast = this.checklists[i];
+        }
+      }
+    }
+    if (latestPast !== undefined) {
+      return latestPast;
+    }
+    // 全部无日期，按 createdAt 降序取第一个（checklists 已按 createdAt 降序排列）
     return this.checklists[0];
   }
 
@@ -209,13 +237,27 @@ export struct HomePage {
   }
 
   private parseTripDateAt(text: string): number | undefined {
-    const monthIndex = text.indexOf('月');
-    const dayIndex = text.indexOf('日');
+    const value = text.trim();
+    if (value.length === 0) {
+      return undefined;
+    }
+    const yearIndex = value.indexOf('年');
+    let year = new Date().getFullYear();
+    let parseFrom = value;
+    if (yearIndex > 0) {
+      const parsedYear = Number(value.substring(0, yearIndex));
+      if (!Number.isNaN(parsedYear)) {
+        year = parsedYear;
+      }
+      parseFrom = value.substring(yearIndex + 1);
+    }
+    const monthIndex = parseFrom.indexOf('月');
+    const dayIndex = parseFrom.indexOf('日');
     if (monthIndex > 0 && dayIndex > monthIndex) {
-      const month = Number(text.substring(0, monthIndex));
-      const day = Number(text.substring(monthIndex + 1, dayIndex));
+      const month = Number(parseFrom.substring(0, monthIndex));
+      const day = Number(parseFrom.substring(monthIndex + 1, dayIndex));
       if (!Number.isNaN(month) && !Number.isNaN(day)) {
-        return new Date(new Date().getFullYear(), month - 1, day).getTime();
+        return new Date(year, month - 1, day).getTime();
       }
     }
     return undefined;
@@ -256,7 +298,7 @@ export struct HomePage {
   private countdownSuffix(checklist: TripChecklist): string {
     const days = this.daysLeft(checklist);
     if (days === undefined) {
-      return ' 设置出发日期';
+      return '';
     }
     if (days > 0) {
       return ' 天后出发';
@@ -304,11 +346,79 @@ export struct HomePage {
     return date.getFullYear().toString() + '-' + (date.getMonth() + 1).toString() + '-' + date.getDate().toString();
   }
 
-  private historyContentHeight(): number {
-    if (this.checklists.length === 0) {
-      return 64;
+  private rowDateText(item: TripChecklist): string {
+    const dateAt = this.checklistDateAt(item);
+    if (dateAt === undefined) {
+      return '日期待定';
     }
-    return this.checklists.length * 72;
+    const dayDiff = Math.floor((dateAt - this.startOfDay(new Date())) / 86400000);
+    if (dayDiff > 0) {
+      return '还有 ' + dayDiff.toString() + ' 天';
+    }
+    if (dayDiff === 0) {
+      return '今天出发';
+    }
+    return Math.abs(dayDiff).toString() + ' 天前';
+  }
+
+  private rowDateColor(item: TripChecklist): string {
+    const dateAt = this.checklistDateAt(item);
+    if (dateAt === undefined) {
+      return TEXT_TERTIARY;
+    }
+    const dayDiff = Math.floor((dateAt - this.startOfDay(new Date())) / 86400000);
+    if (dayDiff === 0) {
+      return PRIMARY_COLOR;
+    }
+    if (dayDiff >= 1 && dayDiff <= 3) {
+      return DANGER_COLOR;
+    }
+    if (dayDiff > 3) {
+      return PRIMARY_COLOR;
+    }
+    // dayDiff < 0，历史行程
+    return TEXT_TERTIARY;
+  }
+
+  private rowDateBold(item: TripChecklist): FontWeight {
+    const dateAt = this.checklistDateAt(item);
+    if (dateAt === undefined) {
+      return FontWeight.Normal;
+    }
+    const dayDiff = Math.floor((dateAt - this.startOfDay(new Date())) / 86400000);
+    return dayDiff === 0 ? FontWeight.Bold : FontWeight.Normal;
+  }
+
+  private futureTrips(): TripChecklist[] {
+    const today = this.startOfDay(new Date());
+    const result: TripChecklist[] = [];
+    for (let i = 0; i < this.checklists.length; i++) {
+      const dateAt = this.checklistDateAt(this.checklists[i]);
+      if (dateAt !== undefined && dateAt >= today) {
+        result.push(this.checklists[i]);
+      }
+    }
+    // 按 dateAt 升序排列（最近的在前）
+    result.sort((a, b) => this.checklistDateAt(a)! - this.checklistDateAt(b)!);
+    return result;
+  }
+
+  private pastTrips(): TripChecklist[] {
+    const today = this.startOfDay(new Date());
+    const withDate: TripChecklist[] = [];
+    const noDate: TripChecklist[] = [];
+    for (let i = 0; i < this.checklists.length; i++) {
+      const dateAt = this.checklistDateAt(this.checklists[i]);
+      if (dateAt === undefined) {
+        noDate.push(this.checklists[i]);
+      } else if (dateAt < today) {
+        withDate.push(this.checklists[i]);
+      }
+    }
+    // 有日期的按 dateAt 降序（最近的在前），无日期的按 createdAt 降序排后面
+    withDate.sort((a, b) => this.checklistDateAt(b)! - this.checklistDateAt(a)!);
+    noDate.sort((a, b) => b.createdAt - a.createdAt);
+    return [...withDate, ...noDate];
   }
 
   private checkCelebration(): void {
@@ -473,8 +583,8 @@ export struct HomePage {
           Text(this.getAnimatedHeroLead(checklist))
             .fontSize(this.daysLeft(checklist) === 0 ? 36 : 48)
             .fontWeight(FontWeight.Bold)
-            .fontColor(this.daysLeft(checklist) !== undefined && this.daysLeft(checklist) !== undefined &&
-              this.daysLeft(checklist)! <= 3 && this.daysLeft(checklist)! > 0 ? DANGER_COLOR : PRIMARY_COLOR)
+            .fontColor(this.daysLeft(checklist) === undefined ? TEXT_TERTIARY :
+              (this.daysLeft(checklist)! <= 3 && this.daysLeft(checklist)! > 0 ? DANGER_COLOR : PRIMARY_COLOR))
           Text(this.countdownSuffix(checklist))
             .fontSize(16)
             .fontColor(TEXT_SECONDARY)
@@ -634,49 +744,69 @@ export struct HomePage {
   }
 
   @Builder
+  private SectionHeader(title: string) {
+    Text(title)
+      .fontSize(12)
+      .fontColor(TEXT_TERTIARY)
+      .letterSpacing(1)
+      .width('100%')
+      .padding({ top: 8, bottom: 4 })
+  }
+
+  @Builder
+  private TripListSection(trips: TripChecklist[], indexOffset: number) {
+    List() {
+      ForEach(trips, (item: TripChecklist, index: number) => {
+        ListItem() {
+          this.HistoryRow(item);
+        }
+        .opacity(this.historyStaggerReady ? 1 : 0)
+        .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
+        .animation({ duration: DURATION_NORMAL + (indexOffset + index) * STAGGER_DELAY_LIST, curve: SPRING_GENERAL() })
+        .onClick(() => {
+          this.onOpenChecklist(item.id);
+        })
+        .swipeAction({
+          end: {
+            builder: this.HistoryDeleteAction(item),
+            actionAreaDistance: 80,
+            onAction: () => {
+              this.onConfirmDeleteChecklist(item);
+            }
+          }
+        })
+      }, (item: TripChecklist) => item.id)
+    }
+    .edgeEffect(EdgeEffect.None)
+    .width('100%')
+    .height(trips.length * 72)
+    .scrollBar(BarState.Off)
+    .backgroundColor(CARD_BG)
+    .borderRadius(16)
+  }
+
+  @Builder
   private HistoryTimeline() {
     Column({ space: 12 }) {
-      Text('历史行程')
+      Text('我的行程')
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
         .width('100%')
       if (this.checklists.length === 0) {
-        Text('暂无历史行程')
+        Text('暂无行程，创建一个吧')
           .fontSize(13)
           .fontColor(TEXT_TERTIARY)
           .width('100%')
           .height(64)
           .textAlign(TextAlign.Center)
+      } else if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
+        this.SectionHeader('即将启程');
+        this.TripListSection(this.futureTrips(), 0);
+        this.SectionHeader('走过的路');
+        this.TripListSection(this.pastTrips(), this.futureTrips().length);
       } else {
-        List() {
-          ForEach(this.checklists, (item: TripChecklist, index: number) => {
-            ListItem() {
-              this.HistoryRow(item);
-            }
-            .opacity(this.historyStaggerReady ? 1 : 0)
-            .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
-            .animation({ duration: DURATION_NORMAL + index * STAGGER_DELAY_LIST, curve: SPRING_GENERAL() })
-            .onClick(() => {
-              this.onOpenChecklist(item.id);
-            })
-            .swipeAction({
-              end: {
-                builder: this.HistoryDeleteAction(item),
-                actionAreaDistance: 80,
-                onAction: () => {
-                  this.onConfirmDeleteChecklist(item);
-                }
-              }
-            })
-          }, (item: TripChecklist) => item.id)
-        }
-        .edgeEffect(EdgeEffect.Spring)
-        .width('100%')
-        .height(this.historyContentHeight())
-        .scrollBar(BarState.Off)
-        .backgroundColor(CARD_BG)
-        .borderRadius(16)
+        this.TripListSection(this.futureTrips().length > 0 ? this.futureTrips() : this.pastTrips(), 0);
       }
     }
     .width('100%')
@@ -711,9 +841,10 @@ export struct HomePage {
             .fontSize(13)
             .fontColor(TEXT_TERTIARY)
         }
-        Text(item.date !== undefined && item.date.length > 0 ? item.date : this.formatDateText(item.createdAt))
+        Text(this.rowDateText(item))
           .fontSize(13)
-          .fontColor(TEXT_TERTIARY)
+          .fontColor(this.rowDateColor(item))
+          .fontWeight(this.rowDateBold(item))
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)

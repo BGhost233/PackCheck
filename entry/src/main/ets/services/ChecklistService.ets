@@ -74,13 +74,23 @@ export function parseTripDateAt(text: string): number | undefined {
   if (value.length === 0) {
     return undefined;
   }
-  const monthIndex = value.indexOf('月');
-  const dayIndex = value.indexOf('日');
+  const yearIndex = value.indexOf('年');
+  let year = new Date().getFullYear();
+  let parseFrom = value;
+  if (yearIndex > 0) {
+    const parsedYear = Number(value.substring(0, yearIndex));
+    if (!Number.isNaN(parsedYear)) {
+      year = parsedYear;
+    }
+    parseFrom = value.substring(yearIndex + 1);
+  }
+  const monthIndex = parseFrom.indexOf('月');
+  const dayIndex = parseFrom.indexOf('日');
   if (monthIndex > 0 && dayIndex > monthIndex) {
-    const month = Number(value.substring(0, monthIndex));
-    const day = Number(value.substring(monthIndex + 1, dayIndex));
+    const month = Number(parseFrom.substring(0, monthIndex));
+    const day = Number(parseFrom.substring(monthIndex + 1, dayIndex));
     if (!Number.isNaN(month) && !Number.isNaN(day)) {
-      return new Date(new Date().getFullYear(), month - 1, day).getTime();
+      return new Date(year, month - 1, day).getTime();
     }
   }
   return undefined;
