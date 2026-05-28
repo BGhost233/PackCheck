@@ -841,6 +841,13 @@ struct Index {
     this.ceremonyTripDate = '';
     this.errorText = '';
     this.showTripCeremony = true;
+    // 背景下沉 + 模糊，营造空间纵深
+    this.getUIContext().animateTo({
+      curve: SPRING_PANEL_ENTER()
+    }, () => {
+      this.contentScale = 0.94;
+      this.contentBlur = 12;
+    });
   }
 
   private async finishTripCeremony(): Promise<void> {
@@ -848,10 +855,24 @@ struct Index {
     this.tripDate = this.ceremonyTripDate;
     await this.createChecklist();
     this.showTripCeremony = false;
+    // 背景弹回
+    this.getUIContext().animateTo({
+      curve: SPRING_PANEL_EXIT()
+    }, () => {
+      this.contentScale = 1.0;
+      this.contentBlur = 0;
+    });
   }
 
   private dismissTripCeremony(): void {
     this.showTripCeremony = false;
+    // 背景弹回
+    this.getUIContext().animateTo({
+      curve: SPRING_PANEL_EXIT()
+    }, () => {
+      this.contentScale = 1.0;
+      this.contentBlur = 0;
+    });
   }
 
   private async createChecklist(): Promise<void> {
