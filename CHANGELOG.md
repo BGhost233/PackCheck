@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.4.2 (2025-06-18)
+
+结构重构：可读性与可维护性优化。
+
+- Sheet 组件化提取：6 个 inline @Builder Sheet 提取为独立组件到 `components/sheets/`，新增 SheetOverlay 容器组件
+- 命名空间导出优化：GearService/ChecklistService 新增 `GearCalc`/`CheckCalc` class 聚合导出，Index.ets import 区从 58 行别名缩减为 2 行
+- Index.ets 从 2514 行精简至 2045 行（-18.6%），零功能/UI 变化
+- CLAUDE.md 新增第 16 条避坑：ArkTS `arkts-no-untyped-obj-literals` 规则
+
 ## v0.4.1 (2025-06-17)
 
 首页行程展示修复 & 装备库折叠屏适配。

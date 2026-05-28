@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.4.0
+## 当前版本：v0.4.2
 
 ### 已实现功能
 
@@ -39,7 +39,7 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（~2045 行）
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
@@ -61,8 +61,8 @@ entry/src/main/ets/
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
 │   ├── PackStore.ets        — Preferences 持久化封装
-│   ├── GearService.ets      — 装备业务逻辑
-│   └── ChecklistService.ets — 清单业务逻辑
+│   ├── GearService.ets      — 装备业务逻辑（export class GearCalc 聚合导出）
+│   └── ChecklistService.ets — 清单业务逻辑（export class CheckCalc 聚合导出）
 ├── constants/               — 设计 Token
 │   ├── DesignTokens.ets     — 颜色/间距/圆角
 │   └── AnimationTokens.ets  — Spring 曲线/时长/缩放
@@ -107,7 +107,8 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.2.0 | ✅ 已完成 | 首页体验升级（折叠头部 + 沉浸式布局 + 数据排序） |
 | v0.3.0 | ✅ 已完成 | 动效 & 微交互全面升级（Spring 体系 + Tab 果冻 + 错落入场） |
 | v0.3.1 | ✅ 已完成 | 仪式卡片交互完善（日期选择 + 抖动提示 + 键盘收起） |
-| v0.4.0 | ✅ 当前 | 动效与转场优化（共享元素一镜到底 + Sheet 弹性动画） |
+| v0.4.0 | ✅ 已完成 | 动效与转场优化（共享元素一镜到底 + Sheet 弹性动画） |
+| v0.4.2 | ✅ 当前 | 结构重构（Sheet 组件化 + 命名空间导出，Index.ets -18.6%） |
 
 ## 开发约定
 
