@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.1 (2025-06-17)
+
+首页行程展示修复 & 装备库折叠屏适配。
+
+- HeroCard 响应式修复：去参数化改为内部直接读 `latestChecklist()`，删除行程后卡片立即刷新
+- 分区标题视觉优化："即将启程"/"走过的路" fontSize 13 + FontWeight.Medium + TEXT_SECONDARY + left padding
+- 颜色系统统一：`heroGradientStart()` 全改为绿色深浅色阶，移除 COUNTDOWN_ORANGE，整体视觉从多色警告收拢为山野绿单色系
+- 行程列表紧凑化：行高 72→60vp，时间轴圆点/竖线等比缩小，底部 padding 80→32vp 让内容穿透 TabBar 毛玻璃
+- FAB 折叠屏适配：根容器 onAreaChange 监听尺寸变化，折叠/展开时 FAB 自动 spring 动画吸附到正确边缘
+
 ## v0.4.0 (2025-06-16)
 
 动效与转场优化。

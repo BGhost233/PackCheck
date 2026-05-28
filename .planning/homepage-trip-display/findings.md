@@ -1,25 +1,40 @@
-# 调研发现（第二轮）
+# 调研发现（最终总结）
 
-## Bug 根因：@Builder 参数值快照
+## 核心发现：@Builder 参数是值快照
 
-ArkTS `@Builder` 的参数是值传递快照。`TripListSection(trips)` 中 ForEach 绑定的是调用时刻的数组副本，后续 `@Prop checklists` 变化不触发该 Builder 重渲染。
+ArkTS `@Builder` 的参数是值传递快照，不是响应式绑定。传入的数据在调用时刻固化，后续 `@Prop`/`@State` 变化不触发该 Builder 重渲染。
 
-修复：ForEach 直接写在 HistoryTimeline 内部，通过 `this.futureTrips()` / `this.pastTrips()` 访问组件实例，ArkUI 依赖追踪正常工作。
+**修复模式**：
+- 删除 @Builder 参数，内部直接引用 `this.xxx()` 访问组件实例的响应式数据
+- ForEach 必须写在与 @State 同一层级的 @Builder 中，不能封装到带参数的子 @Builder
 
-## List 内多段 ForEach 可行性
+**额外限制**：`@Builder` 方法体不允许 `const`/`let`/`var` 声明，只能写 UI 描述语法。需要中间值时只能内联 `this.method()` 调用。
 
-ArkUI List 支持：多个 ForEach（独立数据源）+ 独立 ListItem + if/else 条件渲染。渲染顺序即声明顺序。Header ListItem 不加 swipeAction/onClick 即可。
+## 折叠屏适配发现
 
-## 高度计算
+`display.getDefaultDisplaySync()` 获取的是物理屏幕尺寸，只在调用时有效。折叠屏展开/折叠后屏幕尺寸变化，用 `position(x, y)` 定位的浮动组件坐标不会自动更新。
 
-Header ListItem 高度 28vp。Trip row 高度 72vp。
-总高度 = `checklists.length * 72 + (hasBoth ? 56 : 0)`
+**修复模式**：根容器 `.onAreaChange()` 监听实际布局尺寸变化 → 重新计算坐标 → spring 动画吸附。
 
-## 颜色选择
+## 颜色系统决策
 
-| 天数 | 优化后颜色 |
-|------|-----------|
-| >3天 | PRIMARY_COLOR 绿 |
-| 1~3天 | COUNTDOWN_ORANGE 暖橙 (#FF8C42) |
-| 今天 | PRIMARY_COLOR 绿 + Bold |
-| 已过/待定 | TEXT_TERTIARY 灰 |
+最终采用绿色单色系深浅变化表达紧迫感，而非多色警告（橙/红）：
+- `>14天` / `undefined`：`#F1F8F3`（极浅绿）
+- `8~14天`：`#E8F5E9`（浅绿）
+- `4~7天`：`#DCF1E3`（中浅绿）
+- `1~3天`：`#C8E6C9`（深浅绿）+ 数字用 `#1B5E20`（深绿强调）
+- 已过期：`#E8F5E9`
+
+## 列表紧凑化数据
+
+| 元素 | 改前 | 改后 |
+|------|------|------|
+| 行高 | 72vp | 60vp |
+| 时间轴上竖线 | 24vp | 16vp |
+| 时间轴圆点 | 10×10 | 8×8 |
+| 时间轴下竖线 | 28vp | 20vp |
+| 时间轴列宽 | 20vp | 16vp |
+| 内容间距 | 4vp | 2vp |
+| 标题字号 | 16 | 15 |
+| 副文字号 | 13 | 12 |
+| 底部 padding | 80vp | 32vp |
