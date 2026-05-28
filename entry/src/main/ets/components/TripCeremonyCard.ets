@@ -17,6 +17,7 @@ export struct TripCeremonyCard {
   onDateChange: (value: string) => void = () => {};
   onFinish: () => void = () => {};
   onDismiss: () => void = () => {};
+  onExitStart: () => void = () => {};
 
   // === 入场动画状态 ===
   @State private overlayOpacity: number = 0;
@@ -343,6 +344,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
   // 卡片飘走
   // ============================================================
   private flyAway(): void {
+    this.onExitStart();
     this.stopTitleShimmer();
     this.getUIContext().animateTo({
       duration: 400,
@@ -414,6 +416,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
   private handleDismiss(): void {
     if (this.isSliding || this.isSlideComplete) return;
 
+    this.onExitStart();
     this.stopShimmer();
     this.getUIContext().animateTo({
       duration: 250,

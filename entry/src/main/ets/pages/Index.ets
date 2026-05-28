@@ -855,20 +855,16 @@ struct Index {
     this.tripDate = this.ceremonyTripDate;
     await this.createChecklist();
     this.showTripCeremony = false;
-    // 背景弹回
-    this.getUIContext().animateTo({
-      curve: SPRING_PANEL_EXIT()
-    }, () => {
-      this.contentScale = 1.0;
-      this.contentBlur = 0;
-    });
   }
 
   private dismissTripCeremony(): void {
     this.showTripCeremony = false;
-    // 背景弹回
+  }
+
+  private recoverTripBackground(duration: number = 280): void {
     this.getUIContext().animateTo({
-      curve: SPRING_PANEL_EXIT()
+      duration: duration,
+      curve: Curve.EaseOut
     }, () => {
       this.contentScale = 1.0;
       this.contentBlur = 0;
@@ -1992,6 +1988,9 @@ struct Index {
             },
             onDismiss: () => {
               this.dismissTripCeremony();
+            },
+            onExitStart: () => {
+              this.recoverTripBackground(400);
             }
           })
         }
