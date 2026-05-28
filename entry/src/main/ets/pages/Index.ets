@@ -891,6 +891,8 @@ struct Index {
     this.getUIContext().animateTo({
       curve: SPRING_HERO_EXPAND()
     }, () => {
+      this.contentBlur = 12;
+      this.contentScale = 0.94;
       this.navPathStack.pushPath({ name: 'ChecklistDetail' }, false);
     });
   }
@@ -902,6 +904,8 @@ struct Index {
       this.getUIContext().animateTo({
         curve: SPRING_HERO_COLLAPSE()
       }, () => {
+        this.contentBlur = 0;
+        this.contentScale = 1.0;
         this.navPathStack.pop(false);
       });
     }
