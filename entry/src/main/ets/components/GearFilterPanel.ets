@@ -12,6 +12,7 @@ import {
   DURATION_NORMAL,
   DURATION_SLOW,
   SPRING_GENERAL,
+  SPRING_PANEL_EXIT,
   STAGGER_OFFSET_Y
 } from '../constants/AnimationTokens';
 import { GearItem } from '../models/PackModels';
@@ -96,8 +97,7 @@ export struct GearFilterPanel {
   private applyAndClose(): void {
     const result = this.normalizeCategories(this.tempCategories);
     this.getUIContext().animateTo({
-      duration: DURATION_NORMAL,
-      curve: Curve.EaseIn,
+      curve: SPRING_PANEL_EXIT(),
       onFinish: () => {
         this.onApply(result);
       }

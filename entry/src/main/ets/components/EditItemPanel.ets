@@ -8,9 +8,10 @@ import {
   TEXT_SECONDARY
 } from '../constants/DesignTokens';
 import {
-  DURATION_SLOW
+  DURATION_SLOW,
+  SPRING_PANEL_ENTER,
+  SPRING_PANEL_EXIT
 } from '../constants/AnimationTokens';
-import { curves } from '@kit.ArkUI';
 
 @Component
 export struct EditItemPanel {
@@ -35,8 +36,7 @@ export struct EditItemPanel {
   aboutToAppear(): void {
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: DURATION_SLOW,
-        curve: curves.springMotion(0.35, 0.8)
+        curve: SPRING_PANEL_ENTER()
       }, () => {
         this.panelScale = 1;
         this.panelOpacity = 1;
@@ -46,8 +46,7 @@ export struct EditItemPanel {
 
   private handleClose(): void {
     this.getUIContext().animateTo({
-      duration: 200,
-      curve: Curve.EaseIn,
+      curve: SPRING_PANEL_EXIT(),
       onFinish: () => {
         this.onClose();
       }

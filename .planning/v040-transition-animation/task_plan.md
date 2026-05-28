@@ -111,26 +111,26 @@ private closeSheetAnimated(): void {
 
 ## 执行阶段
 
-### 阶段 1：AnimationTokens 扩展 [status: pending]
+### 阶段 1：AnimationTokens 扩展 [status: done]
 - 新增 `SPRING_HERO_EXPAND`：`springMotion(0.35, 0.78)` — 卡片展开
 - 新增 `SPRING_HERO_COLLAPSE`：`springMotion(0.32, 0.82)` — 卡片收回
 - 新增 `SPRING_PANEL_ENTER`：`springMotion(0.38, 0.72)` — 面板弹起
 - 新增 `SPRING_PANEL_EXIT`：`springMotion(0.30, 0.88)` — 面板收回
 - 构建验证 → commit
 
-### 阶段 2：共享元素转场 — HomePage 侧 [status: pending]
+### 阶段 2：共享元素转场 — HomePage 侧 [status: done]
 - HeroCard 组件添加 `.geometryTransition('trip-' + checklist.id, { follow: true })`
 - HistoryRow 组件添加 `.geometryTransition('trip-' + item.id, { follow: true })`
 - 确保卡片有明确的 borderRadius（16vp）以便转场时圆角过渡
 - 构建验证 → commit
 
-### 阶段 3：共享元素转场 — ChecklistDetail 侧 [status: pending]
+### 阶段 3：共享元素转场 — ChecklistDetail 侧 [status: done]
 - ChecklistDetail 头部容器添加匹配的 `.geometryTransition('trip-' + selectedChecklistId, { follow: true })`
 - NavDestination 添加 `.transition(TransitionEffect.OPACITY)`
 - 头部容器确保有初始 borderRadius(16vp)，展开到全屏后为 0
 - 构建验证 → commit
 
-### 阶段 4：共享元素转场 — 导航逻辑改造 [status: pending]
+### 阶段 4：共享元素转场 — 导航逻辑改造 [status: done]
 - `openChecklist()` 改为 `animateTo(SPRING_HERO_EXPAND) { pushPath(..., false) }`
 - 所有 `pushPathByName('ChecklistDetail', undefined, true)` 替换为新方式
 - `returnToHome()` 改为 `animateTo(SPRING_HERO_COLLAPSE) { pop(false) }`
@@ -138,7 +138,7 @@ private closeSheetAnimated(): void {
 - 展开时背景内容加 scale(0.97) 联动（可选，视效果调整）
 - 构建验证 → commit
 
-### 阶段 5：Sheet 弹性动画改造 [status: pending]
+### 阶段 5：Sheet 弹性动画改造 [status: done]
 - 新增 `@State sheetTranslateY` 和 `@State sheetOverlayOpacity`
 - 移除 SheetOverlay 上的 `TransitionEffect` 和 closeSheet 中的 `Curve.EaseOut`
 - `openAddGear()` 等入口设置 sheetMode 后调用 `openSheetAnimated()`
@@ -210,4 +210,4 @@ private closeSheetAnimated(): void {
 
 | 错误 | 尝试次数 | 解决方案 |
 |------|---------|---------|
-| （待填充） | | |
+| hvigorw 不在 PATH 中，无法从命令行构建 | 1 | 使用 lint 检查 + 代码审查确认正确性，实际编译需在 DevEco Studio 中验证 |
