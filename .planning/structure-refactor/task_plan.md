@@ -12,6 +12,15 @@
 - 实际效果：Index.ets 2514→2103 行（减少 ~400 行）
 - 构建验证通过，已 commit
 
+### Phase 1.5: 命名空间导出优化 [done]
+- GearService.ets 添加 `export class GearCalc` 聚合 26 个 static 函数
+- ChecklistService.ets 添加 `export class CheckCalc` 聚合 33 个 static 函数
+- Index.ets 58 行别名 import → 2 行 namespace import，所有调用点 `gsXxx(` → `GearCalc.xxx(`
+- GearFilterPanel.ets 同步更新
+- 踩坑：ArkTS `arkts-no-untyped-obj-literals` 禁止对象字面量导出，改用 class + static
+- 实际效果：Index.ets 2103→2045 行（再减 58 行），import 区可读性大幅提升
+- 构建验证通过，已 commit
+
 ### Phase 2: ViewModel 分层 [deferred]
 - 创建 `viewmodels/` 目录
 - 提取 AppState（UI 编排状态）
