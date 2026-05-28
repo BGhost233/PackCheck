@@ -51,3 +51,17 @@
 - `geometryTransition({ follow: true })` 在复杂滚动列表场景下不可用，会破坏文档流
 - 无参形式 `geometryTransition(id)` 只在转场瞬间接管组件，不影响常态布局
 - Navigation 的系统手势返回不经过组件逻辑，必须通过 `.onBackPressed()` 拦截
+
+## 会话 4 — 转场参数调优 & 背景下沉动效
+
+### 完成的工作
+1. **转场参数调优**：增大 response + 降低 damping 获得更慢更弹的转场感（最终 expand 0.42/0.73，collapse 0.36/0.78）
+2. **转场时源页面消散效果**：pushChecklistDetail 时 contentBlur=12 + contentScale=0.94，returnToHome 时恢复
+3. **新建行程背景下沉**：TripCeremonyCard 弹出时背景 scale(0.94) + blur(12)，与装备页 Sheet 效果统一设计语言
+4. **退场同步恢复**：新增 `onExitStart` 回调，卡片退场动画启动第一帧即触发背景恢复（EaseOut 400ms），消除"卡片走了背景还糊着"的延迟感
+
+### 关键经验
+- 全屏覆盖型组件（如仪式卡片）的背景下沉比半屏面板更深（0.94 vs 0.97），空间反差更有戏剧性
+- 退场恢复动画必须与退场动画**并行**而非**串行**，否则用户感知延迟 300~500ms
+- 用 `onExitStart` 回调模式解耦：子组件决定退场时机，父组件决定背景恢复逻辑
+- Spring 曲线的 damping 每 0.05 的调整在实机上手感差异明显，需要反复真机调试

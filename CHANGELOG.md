@@ -5,9 +5,13 @@
 动效与转场优化。
 
 - 共享元素一镜到底转场：HeroCard / 历史行程卡片 → ChecklistDetail 使用 `geometryTransition` 实现从卡片位置连续展开到全屏，返回时收缩回原位
+- geometryTransition 修复：移除 `{ follow: true }`（破坏文档流），改用无参形式；NavDestination 加 `.onBackPressed()` 拦截系统手势返回
+- 转场参数调优：expand `springMotion(0.42, 0.73)`、collapse `springMotion(0.36, 0.78)`，兼顾弹性感和克制
+- 转场时源页面 blur(12) + scale(0.94) 消散效果，增强空间纵深
 - Sheet 面板 Spring 弹性动画：底部面板使用 `animateTo` + state 驱动 `translateY`，弹起带过冲回弹（dampingFraction 0.72），收回干脆无回弹（0.88）
 - Sheet 背景遮罩改为毛玻璃效果（`backdropBlur(16)` + 浅色半透明）
 - Sheet 展开时主内容 `scale(0.97)` 景深联动
+- 新建行程仪式卡片弹出时背景 scale(0.94) + blur(12) 下沉效果，退场时与卡片动画同步恢复（通过 `onExitStart` 回调实现并行）
 - EditGearPanel / EditItemPanel / GearFilterPanel 退出动画统一为 `SPRING_PANEL_EXIT`
 - AnimationTokens 新增 4 个 Spring 预设：SPRING_HERO_EXPAND / HERO_COLLAPSE / PANEL_ENTER / PANEL_EXIT
 - 移除所有面板级 `Curve.EaseIn` 残留，微交互短 duration 保持 EaseOut 不变
