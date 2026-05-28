@@ -336,3 +336,39 @@ export function matchingGearForChecklistItem(item: ChecklistItem, gears: GearIte
   }
   return undefined;
 }
+
+/** Namespace 聚合导出 — 调用方用 CheckCalc.xxx() 避免命名空间污染 */
+export class CheckCalc {
+  static checkedCount = checkedCount;
+  static progressPercent = progressPercent;
+  static progressValue = progressValue;
+  static progressTotal = progressTotal;
+  static progressText = progressText;
+  static checklistMetaText = checklistMetaText;
+  static isChecklistDone = isChecklistDone;
+  static activeChecklistCount = activeChecklistCount;
+  static homeStatusText = homeStatusText;
+  static parseTripDateAt = parseTripDateAt;
+  static startOfDay = startOfDay;
+  static checklistDateAt = checklistDateAt;
+  static countdownText = countdownText;
+  static checklistItemWeight = checklistItemWeight;
+  static checklistItemPrice = checklistItemPrice;
+  static checklistTotalWeight = checklistTotalWeight;
+  static checklistCheckedWeight = checklistCheckedWeight;
+  static progressStartColor = progressStartColor;
+  static progressEndColor = progressEndColor;
+  static checklistGroups = checklistGroups;
+  static checklistItemsByGroup = checklistItemsByGroup;
+  static isGroupDone = isGroupDone;
+  static formatTripDate = formatTripDate;
+  static formatDateText = formatDateText;
+  static numberInputText = numberInputText;
+  static isChecklistItemInGear = isChecklistItemInGear;
+  static hasGearMarker = hasGearMarker;
+  static checklistHasGear = checklistHasGear;
+  static countableGearIds = countableGearIds;
+  static addItemsToChecklist = addItemsToChecklist;
+  static latestChecklistHomeSubtitle = latestChecklistHomeSubtitle;
+  static matchingGearForChecklistItem = matchingGearForChecklistItem;
+}

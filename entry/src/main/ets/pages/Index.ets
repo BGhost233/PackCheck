@@ -46,65 +46,8 @@ import {
 } from '../constants/AnimationTokens';
 import { ChecklistItem, DEFAULT_CATEGORIES, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
-import {
-  numberOrZero as gsNumberOrZero,
-  gearTripCount as gsGearTripCount,
-  gearValueRatio as gsGearValueRatio,
-  sortedGears as gsSortedGears,
-  filterGears as gsFilterGears,
-  normalizeGearCategories as gsNormalizeGearCategories,
-  gearSortLabel as gsGearSortLabel,
-  filteredGearGroups as gsFilteredGearGroups,
-  filteredGearsByGroup as gsFilteredGearsByGroup,
-  totalGearWeight as gsTotalGearWeight,
-  totalGearPrice as gsTotalGearPrice,
-  averageGearValueRatio as gsAverageGearValueRatio,
-  heaviestGearText as gsHeaviestGearText,
-  mostExpensiveGearText as gsMostExpensiveGearText,
-  mostFrequentGearText as gsMostFrequentGearText,
-  formatKg as gsFormatKg,
-  gearStatsText as gsGearStatsText,
-  gearById as gsGearById,
-  presetCategories as gsPresetCategories,
-  categoryTabs as gsCategoryTabs,
-  uniqueGearIds as gsUniqueGearIds,
-  importGearMetaText as gsImportGearMetaText,
-  filteredImportGears as gsFilteredImportGears,
-} from '../services/GearService';
-import {
-  checkedCount as csCheckedCount,
-  progressPercent as csProgressPercent,
-  progressValue as csProgressValue,
-  progressTotal as csProgressTotal,
-  progressText as csProgressText,
-  checklistMetaText as csChecklistMetaText,
-  isChecklistDone as csIsChecklistDone,
-  activeChecklistCount as csActiveChecklistCount,
-  homeStatusText as csHomeStatusText,
-  parseTripDateAt as csParseTripDateAt,
-  startOfDay as csStartOfDay,
-  checklistDateAt as csChecklistDateAt,
-  countdownText as csCountdownText,
-  checklistItemWeight as csChecklistItemWeight,
-  checklistItemPrice as csChecklistItemPrice,
-  checklistTotalWeight as csChecklistTotalWeight,
-  checklistCheckedWeight as csChecklistCheckedWeight,
-  progressStartColor as csProgressStartColor,
-  progressEndColor as csProgressEndColor,
-  checklistGroups as csChecklistGroups,
-  checklistItemsByGroup as csChecklistItemsByGroup,
-  isGroupDone as csIsGroupDone,
-  formatTripDate as csFormatTripDate,
-  formatDateText as csFormatDateText,
-  numberInputText as csNumberInputText,
-  isChecklistItemInGear as csIsChecklistItemInGear,
-  hasGearMarker as csHasGearMarker,
-  checklistHasGear as csChecklistHasGear,
-  countableGearIds as csCountableGearIds,
-  addItemsToChecklist as csAddItemsToChecklist,
-  latestChecklistHomeSubtitle as csLatestChecklistHomeSubtitle,
-  matchingGearForChecklistItem as csMatchingGearForChecklistItem
-} from '../services/ChecklistService';
+import { GearCalc } from '../services/GearService';
+import { CheckCalc } from '../services/ChecklistService';
 
 @Entry
 @Component
@@ -235,13 +178,13 @@ struct Index {
     if (this.checklists.length === 0) {
       return undefined;
     }
-    const today = csStartOfDay(new Date());
+    const today = CheckCalc.startOfDay(new Date());
     // 找最近的未来行程（dateAt >= 今天0点），按 dateAt 升序取第一个
     let nearestFuture: TripChecklist | undefined = undefined;
     for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = csChecklistDateAt(this.checklists[i]);
+      const dateAt = CheckCalc.checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt >= today) {
-        if (nearestFuture === undefined || dateAt < csChecklistDateAt(nearestFuture)!) {
+        if (nearestFuture === undefined || dateAt < CheckCalc.checklistDateAt(nearestFuture)!) {
           nearestFuture = this.checklists[i];
         }
       }
@@ -252,9 +195,9 @@ struct Index {
     // 无未来行程，找最近的历史行程（dateAt < 今天0点），按 dateAt 降序取第一个
     let latestPast: TripChecklist | undefined = undefined;
     for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = csChecklistDateAt(this.checklists[i]);
+      const dateAt = CheckCalc.checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt < today) {
-        if (latestPast === undefined || dateAt > csChecklistDateAt(latestPast)!) {
+        if (latestPast === undefined || dateAt > CheckCalc.checklistDateAt(latestPast)!) {
           latestPast = this.checklists[i];
         }
       }
@@ -390,11 +333,11 @@ struct Index {
   }
 
   private filteredGears(): GearItem[] {
-    return gsFilterGears(this.gears, this.gearSearchKeyword, gsNormalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
+    return GearCalc.filterGears(this.gears, this.gearSearchKeyword, GearCalc.normalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
   }
 
   private normalizeGearCategories(categories: string[]): string[] {
-    return gsNormalizeGearCategories(categories);
+    return GearCalc.normalizeGearCategories(categories);
   }
 
   private openGearFilterPanel(): void {
@@ -407,31 +350,31 @@ struct Index {
   }
 
   private sortedGears(items: GearItem[]): GearItem[] {
-    return gsSortedGears(items, this.gearSortMode);
+    return GearCalc.sortedGears(items, this.gearSortMode);
   }
 
   private numberOrZero(value: number | undefined): number {
-    return gsNumberOrZero(value);
+    return GearCalc.numberOrZero(value);
   }
 
   private gearValueRatio(item: GearItem): number {
-    return gsGearValueRatio(item);
+    return GearCalc.gearValueRatio(item);
   }
 
   private filteredGearGroups(): string[] {
-    return gsFilteredGearGroups(this.gears, this.gearSearchKeyword, gsNormalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
+    return GearCalc.filteredGearGroups(this.gears, this.gearSearchKeyword, GearCalc.normalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
   }
 
   private filteredGearsByGroup(group: string): GearItem[] {
-    return gsFilteredGearsByGroup(this.gears, this.gearSearchKeyword, gsNormalizeGearCategories(this.selectedGearCategories), this.gearSortMode, group);
+    return GearCalc.filteredGearsByGroup(this.gears, this.gearSearchKeyword, GearCalc.normalizeGearCategories(this.selectedGearCategories), this.gearSortMode, group);
   }
 
   private gearSortLabel(): string {
-    return gsGearSortLabel(this.gearSortMode);
+    return GearCalc.gearSortLabel(this.gearSortMode);
   }
 
   private gearTripCount(item: GearItem): number {
-    return gsGearTripCount(item);
+    return GearCalc.gearTripCount(item);
   }
 
   private gearGroupCount(group: string): number {
@@ -439,51 +382,51 @@ struct Index {
   }
 
   private gearStatsText(): string {
-    return gsGearStatsText(this.gears);
+    return GearCalc.gearStatsText(this.gears);
   }
 
   private totalGearWeight(): number {
-    return gsTotalGearWeight(this.gears);
+    return GearCalc.totalGearWeight(this.gears);
   }
 
   private totalGearPrice(): number {
-    return gsTotalGearPrice(this.gears);
+    return GearCalc.totalGearPrice(this.gears);
   }
 
   private averageGearValueRatio(): number {
-    return gsAverageGearValueRatio(this.gears);
+    return GearCalc.averageGearValueRatio(this.gears);
   }
 
   private heaviestGearText(): string {
-    return gsHeaviestGearText(this.gears);
+    return GearCalc.heaviestGearText(this.gears);
   }
 
   private mostExpensiveGearText(): string {
-    return gsMostExpensiveGearText(this.gears);
+    return GearCalc.mostExpensiveGearText(this.gears);
   }
 
   private mostFrequentGearText(): string {
-    return gsMostFrequentGearText(this.gears);
+    return GearCalc.mostFrequentGearText(this.gears);
   }
 
   private formatKg(weightGram: number): string {
-    return gsFormatKg(weightGram);
+    return GearCalc.formatKg(weightGram);
   }
 
   private categoryTabs(): string[] {
-    return gsCategoryTabs(this.categories);
+    return GearCalc.categoryTabs(this.categories);
   }
 
   private presetCategories(): string[] {
-    return gsPresetCategories(this.categories);
+    return GearCalc.presetCategories(this.categories);
   }
 
   private checklistGroups(): string[] {
-    return csChecklistGroups(this.currentChecklist());
+    return CheckCalc.checklistGroups(this.currentChecklist());
   }
 
   private checklistItemsByGroup(group: string): ChecklistItem[] {
-    return csChecklistItemsByGroup(this.currentChecklist(), group);
+    return CheckCalc.checklistItemsByGroup(this.currentChecklist(), group);
   }
 
   private groupItemCount(group: string): number {
@@ -491,7 +434,7 @@ struct Index {
   }
 
   private isGroupDone(group: string): boolean {
-    return csIsGroupDone(this.currentChecklist(), group);
+    return CheckCalc.isGroupDone(this.currentChecklist(), group);
   }
 
   private isGroupCollapsed(group: string): boolean {
@@ -515,35 +458,35 @@ struct Index {
   }
 
   private checkedCount(checklist: TripChecklist): number {
-    return csCheckedCount(checklist);
+    return CheckCalc.checkedCount(checklist);
   }
 
   private progressPercent(checklist: TripChecklist): number {
-    return csProgressPercent(checklist);
+    return CheckCalc.progressPercent(checklist);
   }
 
   private progressValue(checklist: TripChecklist): number {
-    return csProgressValue(checklist);
+    return CheckCalc.progressValue(checklist);
   }
 
   private progressTotal(checklist: TripChecklist): number {
-    return csProgressTotal(checklist);
+    return CheckCalc.progressTotal(checklist);
   }
 
   private progressText(checklist: TripChecklist): string {
-    return csProgressText(checklist);
+    return CheckCalc.progressText(checklist);
   }
 
   private checklistMetaText(checklist: TripChecklist): string {
-    return csChecklistMetaText(checklist);
+    return CheckCalc.checklistMetaText(checklist);
   }
 
   private homeStatusText(): string {
-    return csHomeStatusText(this.checklists);
+    return CheckCalc.homeStatusText(this.checklists);
   }
 
   private isChecklistDone(checklist: TripChecklist): boolean {
-    return csIsChecklistDone(checklist);
+    return CheckCalc.isChecklistDone(checklist);
   }
 
   private isCurrentChecklistDone(): boolean {
@@ -551,63 +494,63 @@ struct Index {
     if (checklist === undefined) {
       return false;
     }
-    return csIsChecklistDone(checklist);
+    return CheckCalc.isChecklistDone(checklist);
   }
 
   private activeChecklistCount(): number {
-    return csActiveChecklistCount(this.checklists);
+    return CheckCalc.activeChecklistCount(this.checklists);
   }
 
   private parseTripDateAt(text: string): number | undefined {
-    return csParseTripDateAt(text);
+    return CheckCalc.parseTripDateAt(text);
   }
 
   private startOfDay(date: Date): number {
-    return csStartOfDay(date);
+    return CheckCalc.startOfDay(date);
   }
 
   private checklistDateAt(checklist: TripChecklist): number | undefined {
-    return csChecklistDateAt(checklist);
+    return CheckCalc.checklistDateAt(checklist);
   }
 
   private countdownText(checklist: TripChecklist): string {
-    return csCountdownText(checklist);
+    return CheckCalc.countdownText(checklist);
   }
 
   private checklistTotalWeight(checklist: TripChecklist): number {
-    return csChecklistTotalWeight(checklist, this.gears);
+    return CheckCalc.checklistTotalWeight(checklist, this.gears);
   }
 
   private checklistCheckedWeight(checklist: TripChecklist): number {
-    return csChecklistCheckedWeight(checklist, this.gears);
+    return CheckCalc.checklistCheckedWeight(checklist, this.gears);
   }
 
   private progressStartColor(percent: number): string {
-    return csProgressStartColor(percent);
+    return CheckCalc.progressStartColor(percent);
   }
 
   private progressEndColor(percent: number): string {
-    return csProgressEndColor(percent);
+    return CheckCalc.progressEndColor(percent);
   }
 
   private gearById(id: string): GearItem | undefined {
-    return gsGearById(this.gears, id);
+    return GearCalc.gearById(this.gears, id);
   }
 
   private checklistItemWeight(item: ChecklistItem): number | undefined {
-    return csChecklistItemWeight(item, this.gears);
+    return CheckCalc.checklistItemWeight(item, this.gears);
   }
 
   private checklistItemPrice(item: ChecklistItem): number | undefined {
-    return csChecklistItemPrice(item, this.gears);
+    return CheckCalc.checklistItemPrice(item, this.gears);
   }
 
   private numberInputText(value: number | undefined): string {
-    return csNumberInputText(value);
+    return CheckCalc.numberInputText(value);
   }
 
   private latestChecklistHomeSubtitle(): string {
-    return csLatestChecklistHomeSubtitle(this.latestChecklist(), this.gears);
+    return CheckCalc.latestChecklistHomeSubtitle(this.latestChecklist(), this.gears);
   }
 
   private resetGearForm(): void {
@@ -797,15 +740,15 @@ struct Index {
   }
 
   private uniqueGearIds(ids: string[]): string[] {
-    return gsUniqueGearIds(ids);
+    return GearCalc.uniqueGearIds(ids);
   }
 
   private checklistHasGear(checklist: TripChecklist, gearId: string): boolean {
-    return csChecklistHasGear(checklist, gearId);
+    return CheckCalc.checklistHasGear(checklist, gearId);
   }
 
   private countableGearIds(checklist: TripChecklist, gearIds: string[]): string[] {
-    return csCountableGearIds(checklist, gearIds);
+    return CheckCalc.countableGearIds(checklist, gearIds);
   }
 
   private async incrementGearTripCounts(gearIds: string[]): Promise<void> {
@@ -837,15 +780,15 @@ struct Index {
   }
 
   private isChecklistItemInGear(item: ChecklistItem): boolean {
-    return csIsChecklistItemInGear(item);
+    return CheckCalc.isChecklistItemInGear(item);
   }
 
   private hasGearMarker(item: ChecklistItem): boolean {
-    return csHasGearMarker(item);
+    return CheckCalc.hasGearMarker(item);
   }
 
   private matchingGearForChecklistItem(item: ChecklistItem): GearItem | undefined {
-    return csMatchingGearForChecklistItem(item, this.gears);
+    return CheckCalc.matchingGearForChecklistItem(item, this.gears);
   }
 
   private openTripSheet(): void {
@@ -1171,11 +1114,11 @@ struct Index {
   }
 
   private formatTripDate(date: Date): string {
-    return csFormatTripDate(date);
+    return CheckCalc.formatTripDate(date);
   }
 
   private formatDateText(timestamp: number): string {
-    return csFormatDateText(timestamp);
+    return CheckCalc.formatDateText(timestamp);
   }
 
   private async addTempItem(): Promise<void> {
@@ -1295,11 +1238,11 @@ struct Index {
   }
 
   private filteredImportGears(): GearItem[] {
-    return gsFilteredImportGears(this.gears, this.importGearCategory);
+    return GearCalc.filteredImportGears(this.gears, this.importGearCategory);
   }
 
   private importGearMetaText(item: GearItem): string {
-    return gsImportGearMetaText(item);
+    return GearCalc.importGearMetaText(item);
   }
 
   private hasImportSelection(id: string): boolean {
@@ -1395,7 +1338,7 @@ struct Index {
   }
 
   private addItemsToChecklist(checklistId: string, items: ChecklistItem[]): TripChecklist[] {
-    return csAddItemsToChecklist(this.checklists, checklistId, items);
+    return CheckCalc.addItemsToChecklist(this.checklists, checklistId, items);
   }
 
   private currentReviewItem(): ChecklistItem | undefined {

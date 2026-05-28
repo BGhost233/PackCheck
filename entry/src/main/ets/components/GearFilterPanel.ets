@@ -16,12 +16,7 @@ import {
   STAGGER_OFFSET_Y
 } from '../constants/AnimationTokens';
 import { GearItem } from '../models/PackModels';
-import {
-  allGearFilterCategories as gsAllGearFilterCategories,
-  gearCategoryCount as gsGearCategoryCount,
-  normalizeGearCategories as gsNormalizeGearCategories,
-  tempGearFilterText as gsTempGearFilterText
-} from '../services/GearService';
+import { GearCalc } from '../services/GearService';
 
 @Component
 export struct GearFilterPanel {
@@ -53,15 +48,15 @@ export struct GearFilterPanel {
   }
 
   private normalizeCategories(input: string[]): string[] {
-    return gsNormalizeGearCategories(input);
+    return GearCalc.normalizeGearCategories(input);
   }
 
   private allFilterCategories(): string[] {
-    return gsAllGearFilterCategories(this.categories);
+    return GearCalc.allGearFilterCategories(this.categories);
   }
 
   private categoryCount(category: string): number {
-    return gsGearCategoryCount(this.gears, category);
+    return GearCalc.gearCategoryCount(this.gears, category);
   }
 
   private isCategorySelected(category: string): boolean {
@@ -69,7 +64,7 @@ export struct GearFilterPanel {
   }
 
   private filterText(): string {
-    return gsTempGearFilterText(this.tempCategories);
+    return GearCalc.tempGearFilterText(this.tempCategories);
   }
 
   private toggleCategory(category: string): void {
