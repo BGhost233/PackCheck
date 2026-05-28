@@ -55,13 +55,13 @@ export function heroGradientStart(daysLeft: number | undefined): string {
     return '#F1F8F3';
   }
   if (daysLeft > 7) {
-    return '#FFF8E1';
+    return '#E8F5E9';
   }
   if (daysLeft > 3) {
-    return '#FFF3E0';
+    return '#DCF1E3';
   }
   if (daysLeft > 0) {
-    return '#FFEBEE';
+    return '#C8E6C9';
   }
   return '#E8F5E9';
 }

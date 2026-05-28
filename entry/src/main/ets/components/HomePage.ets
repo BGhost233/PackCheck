@@ -3,7 +3,6 @@ import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import {
   CARD_BG,
   CARD_RADIUS,
-  COUNTDOWN_ORANGE,
   DANGER_COLOR,
   DIVIDER_COLOR,
   HOME_COLLAPSE_MAX,
@@ -375,7 +374,7 @@ export struct HomePage {
       return PRIMARY_COLOR;
     }
     if (dayDiff >= 1 && dayDiff <= 3) {
-      return COUNTDOWN_ORANGE;
+      return PRIMARY_COLOR;
     }
     if (dayDiff > 3) {
       return PRIMARY_COLOR;
@@ -480,7 +479,7 @@ export struct HomePage {
               .width('100%')
               .height(HOME_HEADER_COLLAPSED - 12)
             if (this.latestChecklist() !== undefined) {
-              this.HeroCard(this.latestChecklist());
+              this.HeroCard();
             } else {
               this.EmptyHero();
             }
@@ -568,28 +567,28 @@ export struct HomePage {
   }
 
   @Builder
-  private HeroCard(checklist: TripChecklist | undefined) {
-    if (checklist !== undefined) {
+  private HeroCard() {
+    if (this.latestChecklist() !== undefined) {
       Column({ space: 16 }) {
         Row() {
-          Text(checklist.title)
+          Text(this.latestChecklist()!.title)
             .fontSize(24)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
-          Text(this.daysLeft(checklist) !== undefined && this.daysLeft(checklist)! >= 0 ? '准备中' : '已完成')
+          Text(this.daysLeft(this.latestChecklist()!) !== undefined && this.daysLeft(this.latestChecklist()!)! >= 0 ? '准备中' : '已完成')
             .fontSize(13)
-            .fontColor(this.daysLeft(checklist) !== undefined && this.daysLeft(checklist)! >= 0 ? COUNTDOWN_ORANGE : PRIMARY_COLOR)
+            .fontColor(this.daysLeft(this.latestChecklist()!) !== undefined && this.daysLeft(this.latestChecklist()!)! >= 0 ? PRIMARY_COLOR : TEXT_TERTIARY)
         }
         .width('100%')
 
         Row() {
-          Text(this.getAnimatedHeroLead(checklist))
-            .fontSize(this.daysLeft(checklist) === 0 ? 36 : 48)
+          Text(this.getAnimatedHeroLead(this.latestChecklist()!))
+            .fontSize(this.daysLeft(this.latestChecklist()!) === 0 ? 36 : 48)
             .fontWeight(FontWeight.Bold)
-            .fontColor(this.daysLeft(checklist) === undefined ? TEXT_TERTIARY :
-              (this.daysLeft(checklist)! <= 3 && this.daysLeft(checklist)! > 0 ? COUNTDOWN_ORANGE : PRIMARY_COLOR))
-          Text(this.countdownSuffix(checklist))
+            .fontColor(this.daysLeft(this.latestChecklist()!) === undefined ? TEXT_TERTIARY :
+              (this.daysLeft(this.latestChecklist()!)! <= 3 && this.daysLeft(this.latestChecklist()!)! > 0 ? '#1B5E20' : PRIMARY_COLOR))
+          Text(this.countdownSuffix(this.latestChecklist()!))
             .fontSize(16)
             .fontColor(TEXT_SECONDARY)
             .margin({ bottom: 8 })
@@ -601,12 +600,12 @@ export struct HomePage {
         })
 
         Row() {
-          Text((checklist.date !== undefined && checklist.date.length > 0 ? checklist.date : '未设置日期') +
-            ' · ' + this.formatKg(this.checklistTotalWeight(checklist)))
+          Text((this.latestChecklist()!.date !== undefined && this.latestChecklist()!.date!.length > 0 ? this.latestChecklist()!.date! : '未设置日期') +
+            ' · ' + this.formatKg(this.checklistTotalWeight(this.latestChecklist()!)))
             .fontSize(13)
             .fontColor(TEXT_TERTIARY)
             .layoutWeight(1)
-          this.RingProgress(checklist);
+          this.RingProgress(this.latestChecklist()!);
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
@@ -616,10 +615,10 @@ export struct HomePage {
       .borderRadius(CARD_RADIUS)
       .linearGradient({
         angle: 135,
-        colors: [[heroGradientStart(this.daysLeft(checklist)), 0], [CARD_BG, 1]]
+        colors: [[heroGradientStart(this.daysLeft(this.latestChecklist()!)), 0], [CARD_BG, 1]]
       })
       .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
-      .geometryTransition('trip-' + checklist.id)
+      .geometryTransition('trip-' + this.latestChecklist()!.id)
       .transition(TransitionEffect.opacity(0.99))
       .opacity(this.heroOpacity())
       .scale({
@@ -636,7 +635,7 @@ export struct HomePage {
       })
       .onClick(() => {
         if (this.heroOpacity() > 0.3) {
-          this.onOpenChecklist(checklist.id);
+          this.onOpenChecklist(this.latestChecklist()!.id);
         }
       })
     }
@@ -775,11 +774,12 @@ export struct HomePage {
           if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
             ListItem() {
               Text('即将启程')
-                .fontSize(12)
-                .fontColor(TEXT_TERTIARY)
+                .fontSize(13)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(TEXT_SECONDARY)
                 .letterSpacing(1)
                 .width('100%')
-                .padding({ top: 4, bottom: 4 })
+                .padding({ left: 16, top: 4, bottom: 4 })
             }
             .height(28)
             .selectable(false)
@@ -807,13 +807,15 @@ export struct HomePage {
           if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
             ListItem() {
               Text('走过的路')
-                .fontSize(12)
-                .fontColor(TEXT_TERTIARY)
+                .fontSize(13)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(TEXT_SECONDARY)
                 .letterSpacing(1)
                 .width('100%')
-                .padding({ top: 4, bottom: 4 })
+                .padding({ left: 16, top: 4, bottom: 4 })
             }
-            .height(28)
+            .height(36)
+            .margin({ top: 8 })
             .selectable(false)
           }
           ForEach(this.pastTrips(), (item: TripChecklist, index: number) => {
