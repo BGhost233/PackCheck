@@ -1645,6 +1645,10 @@ struct Index {
       .width('100%')
       .height('100%')
       .transition(TransitionEffect.OPACITY)
+      .onBackPressed(() => {
+        this.returnToHome();
+        return true;
+      })
     } else if (name === 'ReviewPage') {
       NavDestination() {
         ReviewPage({
