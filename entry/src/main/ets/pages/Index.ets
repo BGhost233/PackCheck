@@ -1602,6 +1602,7 @@ struct Index {
       .hideTitleBar(true)
       .width('100%')
       .height('100%')
+      .transition(TransitionEffect.OPACITY)
     } else if (name === 'ReviewPage') {
       NavDestination() {
         ReviewPage({
