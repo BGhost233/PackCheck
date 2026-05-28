@@ -487,7 +487,7 @@ export struct HomePage {
             this.HistoryTimeline();
           }
           .width('100%')
-          .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 80 })
+          .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 32 })
         }
         .width('100%')
         .height('100%')
@@ -751,7 +751,7 @@ export struct HomePage {
       return 64;
     }
     const hasBoth = this.futureTrips().length > 0 && this.pastTrips().length > 0;
-    return this.checklists.length * 72 + (hasBoth ? 56 : 0);
+    return this.checklists.length * 60 + (hasBoth ? 56 : 0);
   }
 
   @Builder
@@ -856,31 +856,31 @@ export struct HomePage {
       Column() {
         Row()
           .width(2)
-          .height(24)
+          .height(16)
           .backgroundColor(DIVIDER_COLOR)
-        Circle({ width: 10, height: 10 })
+        Circle({ width: 8, height: 8 })
           .fill(this.isChecklistDone(item) ? PRIMARY_COLOR : '#00000000')
           .stroke(PRIMARY_COLOR)
-          .strokeWidth(2)
+          .strokeWidth(1.5)
         Row()
           .width(2)
-          .height(28)
+          .height(20)
           .backgroundColor(DIVIDER_COLOR)
       }
-      .width(20)
+      .width(16)
       .alignItems(HorizontalAlign.Center)
-      Column({ space: 4 }) {
+      Column({ space: 2 }) {
         Row({ space: 8 }) {
           Text(item.title)
-            .fontSize(16)
+            .fontSize(15)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
           Text(this.progressText(item))
-            .fontSize(13)
+            .fontSize(12)
             .fontColor(TEXT_TERTIARY)
         }
         Text(this.rowDateText(item))
-          .fontSize(13)
+          .fontSize(12)
           .fontColor(this.rowDateColor(item))
           .fontWeight(this.rowDateBold(item))
       }
@@ -888,7 +888,7 @@ export struct HomePage {
       .layoutWeight(1)
     }
     .width('100%')
-    .height(72)
+    .height(60)
     .padding({ left: 16, right: 16 })
     .backgroundColor(CARD_BG)
     .borderRadius(12)

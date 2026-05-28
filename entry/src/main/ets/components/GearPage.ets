@@ -520,6 +520,29 @@ export struct GearPage {
     .width('100%')
     .height('100%')
     .backgroundColor(PAGE_BG)
+    .onAreaChange((_oldArea: Area, newArea: Area) => {
+      const newWidth = newArea.width as number;
+      const newHeight = newArea.height as number;
+      if (newWidth > 0 && newHeight > 0 &&
+        (Math.abs(newWidth - this.screenWidth) > 1 || Math.abs(newHeight - this.screenHeight) > 1)) {
+        const oldWidth = this.screenWidth;
+        this.screenWidth = newWidth;
+        this.screenHeight = newHeight;
+        // 按比例映射 FAB X 到新屏幕宽度，保持相对边缘位置
+        const fabSize = 50;
+        const wasOnRight = (this.fabX + fabSize / 2) > oldWidth / 2;
+        const targetX = wasOnRight ? newWidth - fabSize - 16 : 16;
+        const maxY = newHeight - fabSize - 140;
+        const targetY = Math.max(80, Math.min(maxY, this.fabY));
+        this.getUIContext().animateTo({
+          duration: 300,
+          curve: curves.springMotion(0.3, 0.8)
+        }, () => {
+          this.fabX = targetX;
+          this.fabY = targetY;
+        });
+      }
+    })
   }
 
   @Builder
