@@ -25,6 +25,14 @@ export const PRESS_SCALE_DOWN = 0.96;
 export const PRESS_SCALE_BOUNCE = 1.02;
 export const PRESS_SCALE_REST = 1.0;
 
+// 共享元素转场 — 卡片展开/收回
+export const SPRING_HERO_EXPAND = (): ICurve => curves.springMotion(0.35, 0.78);
+export const SPRING_HERO_COLLAPSE = (): ICurve => curves.springMotion(0.32, 0.82);
+
+// 面板弹性升起/收回
+export const SPRING_PANEL_ENTER = (): ICurve => curves.springMotion(0.38, 0.72);
+export const SPRING_PANEL_EXIT = (): ICurve => curves.springMotion(0.30, 0.88);
+
 // 面板动画
 export const PANEL_SCALE_START = 0.9;
 export const PANEL_SCALE_DISMISS = 0.95;
