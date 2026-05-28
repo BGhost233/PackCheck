@@ -505,6 +505,8 @@ export struct HomePage {
         colors: [[heroGradientStart(this.daysLeft(checklist)), 0], [CARD_BG, 1]]
       })
       .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
+      .geometryTransition('trip-' + checklist.id, { follow: true })
+      .transition(TransitionEffect.opacity(0.99))
       .opacity(this.heroOpacity())
       .scale({
         x: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale(),
@@ -720,6 +722,9 @@ export struct HomePage {
     .height(72)
     .padding({ left: 16, right: 16 })
     .backgroundColor(CARD_BG)
+    .borderRadius(12)
+    .geometryTransition('trip-' + item.id, { follow: true })
+    .transition(TransitionEffect.opacity(0.99))
     .scale({ x: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
     .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
     .onTouch((event: TouchEvent) => {
