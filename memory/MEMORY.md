@@ -3,7 +3,7 @@
 ## 工作流约定
 
 - **每次改动即 commit**：每次修改构建验证通过后，立即 `git add -A && git commit`，保持细粒度回滚点，方便随时回滚。
-- **构建命令**：`export PATH="/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin:$PATH" && hvigorw assembleApp --no-daemon`
+- **构建命令**：`DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk /Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleApp --no-daemon`
 - **先出方案再动手**：任何需求先输出理解+方案+理由，确认后才写代码。
 
 ## 设计决策
@@ -25,6 +25,7 @@
 ## 架构
 
 - 已从 Index.ets 提取独立组件：TripCeremonyCard、EditGearPanel、EditItemPanel、GearFilterPanel
+- 已提取 Sheet 面板组件到 `components/sheets/`：SheetOverlay（容器）、GearSortSheet、GenerateTripSheet、GearFormSheet、TripFormSheet、TempItemSheet、ImportSheet
 - 已删除废弃组件：EdgeFade.ets
 - AnimationTokens.ets 中定义了 8 个 Spring 预设：SPRING_GENERAL / PRESS / TAB / COUNTER / SCROLL / HERO_EXPAND / HERO_COLLAPSE / PANEL_ENTER / PANEL_EXIT + 时长/缩放常量
 - 导航架构：单 Page（Index.ets）+ Navigation NavPathStack，两个 NavDestination（ChecklistDetail、ReviewPage）
@@ -42,4 +43,4 @@
 
 ## 已知限制
 
-- hvigorw 不在默认 shell PATH 中，需 `export PATH="/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin:$PATH"` 后使用
+- hvigorw 不在默认 shell PATH 中，需设置 `DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk` 后使用完整路径 `/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleApp`

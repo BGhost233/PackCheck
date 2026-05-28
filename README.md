@@ -40,7 +40,7 @@
 ```
 entry/src/main/ets/
 ├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理
-├── components/              — UI 组件（9 个）
+├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
 │   ├── ReviewPage.ets       — 核查复盘
@@ -49,7 +49,15 @@ entry/src/main/ets/
 │   ├── EditGearPanel.ets    — 装备编辑半屏面板
 │   ├── EditItemPanel.ets    — 清单项编辑面板
 │   ├── GearFilterPanel.ets  — 装备筛选面板
-│   └── WeightGauge.ets      — 重量/价格环形仪表
+│   ├── WeightGauge.ets      — 重量/价格环形仪表
+│   └── sheets/              — Sheet 面板组件（从 Index.ets 提取）
+│       ├── SheetOverlay.ets — 遮罩容器 + Sheet 路由
+│       ├── GearSortSheet.ets
+│       ├── GenerateTripSheet.ets
+│       ├── GearFormSheet.ets
+│       ├── TripFormSheet.ets
+│       ├── TempItemSheet.ets
+│       └── ImportSheet.ets
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
 │   ├── PackStore.ets        — Preferences 持久化封装
