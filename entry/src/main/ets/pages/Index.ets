@@ -1,5 +1,5 @@
 import { common } from '@kit.AbilityKit';
-import { curves, LengthMetrics } from '@kit.ArkUI';
+import { curves } from '@kit.ArkUI';
 import { sensor, vibrator } from '@kit.SensorServiceKit';
 import { HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
 import { ChecklistDetail } from '../components/ChecklistDetail';
@@ -10,23 +10,17 @@ import { TripCeremonyCard } from '../components/TripCeremonyCard';
 import { EditItemPanel } from '../components/EditItemPanel';
 import { EditGearPanel } from '../components/EditGearPanel';
 import { GearFilterPanel } from '../components/GearFilterPanel';
+import { SheetOverlay } from '../components/sheets/SheetOverlay';
 import {
-  ARROW_COLOR,
-  BORDER_COLOR,
-  CARD_BG,
   DANGER_COLOR,
-  DIVIDER_COLOR,
   GEAR_SORT_GROUP,
   GEAR_SORT_PRICE,
   GEAR_SORT_TIME,
   GEAR_SORT_TRIP_COUNT,
   GEAR_SORT_VALUE,
   GEAR_SORT_WEIGHT,
-  GROUP_HEADER_BG,
   LIGHT_PRIMARY_COLOR,
-  PAGE_BG,
   PRIMARY_COLOR,
-  PROGRESS_END_COLOR,
   SHEET_EDIT_ITEM,
   SHEET_EDIT_TRIP,
   SHEET_GEAR,
@@ -36,8 +30,6 @@ import {
   SHEET_NONE,
   SHEET_TEMP_ITEM,
   SHEET_TRIP,
-  TEXT_MAIN,
-  TEXT_SECONDARY,
   TEXT_TERTIARY
 } from '../constants/DesignTokens';
 import {
@@ -1943,7 +1935,54 @@ struct Index {
           })
         }
         if (this.sheetMode !== SHEET_NONE) {
-          this.SheetOverlay();
+          SheetOverlay({
+            sheetMode: this.sheetMode,
+            sheetTranslateY: this.sheetTranslateY,
+            sheetOverlayOpacity: this.sheetOverlayOpacity,
+            errorText: this.errorText,
+            gearSortMode: this.gearSortMode,
+            gearName: this.gearName,
+            gearCategory: this.gearCategory,
+            gearWeight: this.gearWeight,
+            gearPrice: this.gearPrice,
+            gearNote: this.gearNote,
+            editingGearId: this.editingGearId,
+            categories: this.presetCategories(),
+            tripTitle: this.tripTitle,
+            tripDate: this.tripDate,
+            tempItemName: this.tempItemName,
+            tempItemGroup: this.tempItemGroup,
+            showTempAddNotice: this.showTempAddNotice,
+            gears: this.gears,
+            importGearIds: this.importGearIds,
+            importGearCategory: this.importGearCategory,
+            generateTripTitle: this.generateTripTitle,
+            selectedMultiGearCount: this.selectedMultiGearIds.length,
+            onClose: () => { this.closeSheet(); },
+            onSelectSort: (mode: string) => {
+              this.gearSortMode = mode;
+              this.closeSheet();
+            },
+            onGearNameChange: (value: string) => { this.gearName = value; },
+            onGearCategoryChange: (value: string) => { this.gearCategory = value; },
+            onGearWeightChange: (value: string) => { this.gearWeight = value; },
+            onGearPriceChange: (value: string) => { this.gearPrice = value; },
+            onGearNoteChange: (value: string) => { this.gearNote = value; },
+            onSaveGear: () => { this.saveGear(); },
+            onTripTitleChange: (value: string) => { this.tripTitle = value; },
+            onTripDateChange: (value: string) => { this.tripDate = value; },
+            onCreateTrip: () => { this.createChecklist(); },
+            onSaveTrip: () => { this.saveTripInfo(); },
+            onTempItemNameChange: (value: string) => { this.tempItemName = value; },
+            onTempItemGroupChange: (value: string) => { this.tempItemGroup = value; },
+            onAddTempItem: () => { this.addTempItem(); },
+            onImportCategoryChange: (value: string) => { this.importGearCategory = value; },
+            onToggleImportSelection: (id: string, checked: boolean) => { this.toggleImportSelection(id, checked); },
+            onImportSelectedGear: () => { this.importSelectedGear(); },
+            onAddGearFromImport: () => { this.openAddGearFromImport(); },
+            onGenerateTripTitleChange: (value: string) => { this.generateTripTitle = value; },
+            onGenerateTrip: () => { this.generateChecklistFromSelectedGears(); }
+          })
         }
         if (this.showEditItemPanel) {
           EditItemPanel({
@@ -2059,455 +2098,5 @@ struct Index {
     .height('100%')
     .padding({ top: 78 })
     .alignItems(HorizontalAlign.Center)
-  }
-
-  @Builder
-  private SheetOverlay() {
-    Column() {
-      Blank()
-        .layoutWeight(1)
-        .onClick(() => {
-          this.closeSheet();
-        })
-      Column({ space: 14 }) {
-        Row() {
-          Text(this.sheetTitle())
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(TEXT_MAIN)
-            .layoutWeight(1)
-          if (this.sheetMode === SHEET_IMPORT && this.gears.length > 0) {
-            Button('+ 添加装备')
-              .fontSize(14)
-              .fontColor(PRIMARY_COLOR)
-              .backgroundColor('#00000000')
-              .onClick(() => {
-                this.openAddGearFromImport();
-              })
-          }
-          Button(this.sheetMode === SHEET_TEMP_ITEM ? '完成' : '关闭')
-            .fontSize(13)
-            .fontColor(TEXT_SECONDARY)
-            .backgroundColor('#00000000')
-            .onClick(() => {
-              this.closeSheet();
-            })
-        }
-        if (this.errorText.length > 0) {
-          Text(this.errorText)
-            .fontSize(12)
-            .fontColor(DANGER_COLOR)
-            .width('100%')
-        }
-        if (this.sheetMode === SHEET_GEAR) {
-          this.GearSheet();
-        } else if (this.sheetMode === SHEET_TRIP) {
-          this.TripSheet();
-        } else if (this.sheetMode === SHEET_EDIT_TRIP) {
-          this.EditTripSheet();
-        } else if (this.sheetMode === SHEET_TEMP_ITEM) {
-          this.TempItemSheet();
-        } else if (this.sheetMode === SHEET_IMPORT) {
-          this.ImportSheet();
-        } else if (this.sheetMode === SHEET_GEAR_SORT) {
-          this.GearSortSheet();
-        } else if (this.sheetMode === SHEET_GENERATE_TRIP) {
-          this.GenerateTripSheet();
-        }
-      }
-      .width('100%')
-      .height('72%')
-      .padding({ left: 16, right: 16, top: 16, bottom: 20 })
-      .backgroundColor(CARD_BG)
-      .borderRadius({ topLeft: 24, topRight: 24 })
-      .translate({ y: this.sheetTranslateY })
-    }
-    .width('100%')
-    .height('100%')
-    .opacity(this.sheetOverlayOpacity)
-    .backgroundColor('#26000000')
-    .backdropBlur(16)
-  }
-
-  private sheetTitle(): string {
-    if (this.sheetMode === SHEET_GEAR) {
-      return this.editingGearId.length === 0 ? '添加装备' : '编辑装备';
-    }
-    if (this.sheetMode === SHEET_TRIP) {
-      return '新建行程';
-    }
-    if (this.sheetMode === SHEET_EDIT_TRIP) {
-      return '编辑行程';
-    }
-    if (this.sheetMode === SHEET_TEMP_ITEM) {
-      return '添加物品';
-    }
-    if (this.sheetMode === SHEET_EDIT_ITEM) {
-      return '编辑物品';
-    }
-    if (this.sheetMode === SHEET_IMPORT) {
-      return '从装备库导入';
-    }
-    if (this.sheetMode === SHEET_GEAR_SORT) {
-      return '排序方式';
-    }
-    if (this.sheetMode === SHEET_GENERATE_TRIP) {
-      return '生成清单';
-    }
-    return '';
-  }
-
-  @Builder
-  private GearSortSheet() {
-    Column({ space: 10 }) {
-      this.SortOption('按分组（默认）', GEAR_SORT_GROUP);
-      this.SortOption('按价格（高→低）', GEAR_SORT_PRICE);
-      this.SortOption('按重量（重→轻）', GEAR_SORT_WEIGHT);
-      this.SortOption('按添加时间（新→旧）', GEAR_SORT_TIME);
-      this.SortOption('按克单价（高→低）', GEAR_SORT_VALUE);
-      this.SortOption('按出行次数（高→低）', GEAR_SORT_TRIP_COUNT);
-    }
-    .width('100%')
-  }
-
-  @Builder
-  private SortOption(title: string, mode: string) {
-    Row() {
-      Text(title)
-        .fontSize(14)
-        .fontColor(this.gearSortMode === mode ? PRIMARY_COLOR : TEXT_MAIN)
-        .fontWeight(this.gearSortMode === mode ? FontWeight.Bold : FontWeight.Normal)
-        .layoutWeight(1)
-      if (this.gearSortMode === mode) {
-        SymbolGlyph($r('sys.symbol.checkmark'))
-          .fontSize(14)
-          .fontColor([PRIMARY_COLOR])
-      }
-    }
-    .height(44)
-    .padding({ left: 12, right: 12 })
-    .backgroundColor(this.gearSortMode === mode ? LIGHT_PRIMARY_COLOR : PAGE_BG)
-    .borderRadius(12)
-    .scale({ x: this.gearSortMode === mode ? PRESS_SCALE_BOUNCE : PRESS_SCALE_REST, y: this.gearSortMode === mode ? PRESS_SCALE_BOUNCE : PRESS_SCALE_REST })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
-    .onClick(() => {
-      this.gearSortMode = mode;
-      this.closeSheet();
-    })
-  }
-
-  @Builder
-  private GenerateTripSheet() {
-    Column({ space: 12 }) {
-      Text('已选择 ' + this.selectedMultiGearIds.length.toString() + ' 件装备')
-        .fontSize(12)
-        .fontColor(TEXT_SECONDARY)
-        .width('100%')
-      this.FormInput('行程名称', this.generateTripTitle, (value: string) => {
-        this.generateTripTitle = value;
-      });
-      Button('确认生成')
-        .height(48)
-        .fontSize(14)
-        .fontColor('#FFFFFF')
-        .backgroundColor(this.generateTripTitle.trim().length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
-        .width('100%')
-        .enabled(this.generateTripTitle.trim().length > 0)
-        .onClick(() => {
-          this.generateChecklistFromSelectedGears();
-        })
-    }
-    .width('100%')
-  }
-
-  @Builder
-  private GearSheet() {
-    Scroll() {
-      Column({ space: 12 }) {
-        this.FormInput('装备名称（必填）', this.gearName, (value: string) => {
-          this.gearName = value;
-        });
-        Text('选择分组')
-          .fontSize(12)
-          .fontColor(TEXT_SECONDARY)
-          .width('100%')
-        this.GearCategoryTags()
-        Row({ space: 12 }) {
-          this.FormInput('重量(g)', this.gearWeight, (value: string) => {
-            this.gearWeight = value;
-          }, InputType.Number);
-          this.FormInput('价格(¥)', this.gearPrice, (value: string) => {
-            this.gearPrice = value;
-          }, InputType.Number);
-        }
-        this.FormInput('备注（一行，可选）', this.gearNote, (value: string) => {
-          this.gearNote = value;
-        });
-        Button(this.editingGearId.length === 0 ? '确认添加' : '确认保存')
-          .height(48)
-          .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor(this.gearName.trim().length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
-          .width('100%')
-          .enabled(this.gearName.trim().length > 0)
-          .onClick(() => {
-            this.saveGear();
-          })
-      }
-    }
-    .edgeEffect(EdgeEffect.Spring)
-    .layoutWeight(1)
-  }
-
-  @Builder
-  private EditTripSheet() {
-    Column({ space: 12 }) {
-      this.FormInput('行程名称', this.tripTitle, (value: string) => {
-        this.tripTitle = value;
-      });
-      this.DatePickerField('出发日期（可选）', this.tripDate);
-      Button('确认保存')
-        .height(48)
-        .fontSize(14)
-        .fontColor('#FFFFFF')
-        .backgroundColor(PRIMARY_COLOR)
-        .width('100%')
-        .onClick(() => {
-          this.saveTripInfo();
-        })
-    }
-  }
-
-  @Builder
-  private TripSheet() {
-    Column({ space: 12 }) {
-      this.FormInput('行程名称', this.tripTitle, (value: string) => {
-        this.tripTitle = value;
-      });
-      this.DatePickerField('出发日期（可选）', this.tripDate);
-      Button('创建')
-        .height(48)
-        .fontSize(14)
-        .fontColor('#FFFFFF')
-        .backgroundColor(PRIMARY_COLOR)
-        .width('100%')
-        .onClick(() => {
-          this.createChecklist();
-        })
-    }
-  }
-
-  @Builder
-  private TempItemSheet() {
-    Column({ space: 12 }) {
-      this.FormInput('输入物品名称', this.tempItemName, (value: string) => {
-        this.tempItemName = value;
-      });
-      Text('选择分组')
-        .fontSize(12)
-        .fontColor(TEXT_SECONDARY)
-        .width('100%')
-      this.TempItemCategoryTags()
-      if (this.showTempAddNotice) {
-        Row({ space: 4 }) {
-          SymbolGlyph($r('sys.symbol.checkmark'))
-            .fontSize(12)
-            .fontColor([PRIMARY_COLOR])
-          Text('已添加')
-            .fontSize(12)
-            .fontColor(PRIMARY_COLOR)
-        }
-        .width('100%')
-      }
-      Button('确认添加')
-        .height(48)
-        .fontSize(14)
-        .fontColor('#FFFFFF')
-        .backgroundColor(this.tempItemName.trim().length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
-        .width('100%')
-        .enabled(this.tempItemName.trim().length > 0)
-        .onClick(() => {
-          this.addTempItem();
-        })
-    }
-  }
-
-
-
-  @Builder
-  private GearCategoryTags() {
-    Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-      ForEach(this.presetCategories(), (category: string) => {
-        Text(category)
-          .fontSize(13)
-          .fontColor(this.gearCategory === category ? '#FFFFFF' : '#666666')
-          .padding({ left: 12, right: 12, top: 7, bottom: 7 })
-          .backgroundColor(this.gearCategory === category ? PRIMARY_COLOR : CARD_BG)
-          .border({ width: 1, color: this.gearCategory === category ? PRIMARY_COLOR : '#E0E0E0' })
-          .borderRadius(12)
-          .onClick(() => {
-            this.gearCategory = category;
-          })
-      }, (category: string) => category)
-    }
-    .width('100%')
-  }
-
-  @Builder
-  private TempItemCategoryTags() {
-    Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-      ForEach(this.presetCategories(), (category: string) => {
-        Text(category)
-          .fontSize(13)
-          .fontColor(this.tempItemGroup === category ? '#FFFFFF' : '#666666')
-          .padding({ left: 12, right: 12, top: 7, bottom: 7 })
-          .backgroundColor(this.tempItemGroup === category ? PRIMARY_COLOR : CARD_BG)
-          .border({ width: 1, color: this.tempItemGroup === category ? PRIMARY_COLOR : '#E0E0E0' })
-          .borderRadius(12)
-          .onClick(() => {
-            this.tempItemGroup = category;
-          })
-      }, (category: string) => category)
-    }
-    .width('100%')
-  }
-
-
-  @Builder
-  private ImportSheet() {
-    Column({ space: 12 }) {
-      if (this.gears.length === 0) {
-        Column({ space: 10 }) {
-          Text('装备库还是空的')
-            .fontSize(14)
-            .fontColor(TEXT_MAIN)
-          Text('添加你的第一件装备吧')
-            .fontSize(12)
-            .fontColor(TEXT_SECONDARY)
-          Button('添加装备')
-            .width(160)
-            .height(44)
-            .fontSize(14)
-            .fontColor('#FFFFFF')
-            .backgroundColor(PRIMARY_COLOR)
-            .borderRadius(12)
-            .onClick(() => {
-              this.openAddGearFromImport();
-            })
-        }
-        .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-      } else {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(this.categoryTabs(), (category: string) => {
-            Text(category)
-              .fontSize(13)
-              .fontColor(this.importGearCategory === category ? '#FFFFFF' : '#666666')
-              .padding({ left: 12, right: 12, top: 7, bottom: 7 })
-              .backgroundColor(this.importGearCategory === category ? PRIMARY_COLOR : CARD_BG)
-              .border({ width: 1, color: this.importGearCategory === category ? PRIMARY_COLOR : '#E0E0E0' })
-              .borderRadius(12)
-              .margin({ right: 8, bottom: 8 })
-              .onClick(() => {
-                this.importGearCategory = category;
-              })
-          }, (category: string) => category)
-        }
-        .width('100%')
-
-        List({ space: 8 }) {
-          ForEach(this.filteredImportGears(), (item: GearItem) => {
-            ListItem() {
-              Row({ space: 10 }) {
-                Checkbox()
-                  .select(this.hasImportSelection(item.id))
-                  .onChange((checked: boolean) => {
-                    this.toggleImportSelection(item.id, checked);
-                  })
-                Column({ space: 4 }) {
-                  Text(item.name)
-                    .fontSize(14)
-                    .fontColor(TEXT_MAIN)
-                  if (this.importGearMetaText(item).length > 0) {
-                    Text(this.importGearMetaText(item))
-                      .fontSize(12)
-                      .fontColor(TEXT_SECONDARY)
-                  }
-                }
-                .alignItems(HorizontalAlign.Start)
-                .layoutWeight(1)
-              }
-              .width('100%')
-              .padding(12)
-              .backgroundColor(PAGE_BG)
-              .borderRadius(12)
-            }
-          }, (item: GearItem) => item.id)
-        }
-        .edgeEffect(EdgeEffect.Spring)
-        .layoutWeight(1)
-      }
-      Button('导入选中 (' + this.importGearIds.length.toString() + ')')
-        .height(48)
-        .fontSize(14)
-        .fontColor('#FFFFFF')
-        .backgroundColor(this.importGearIds.length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
-        .width('100%')
-        .enabled(this.importGearIds.length > 0)
-        .onClick(() => {
-          this.importSelectedGear();
-        })
-    }
-    .height('100%')
-  }
-
-  @Builder
-  private DatePickerField(placeholder: string, dateText: string) {
-    Row() {
-      Text(dateText.length > 0 ? dateText : placeholder)
-        .fontSize(14)
-        .fontColor(dateText.length > 0 ? TEXT_MAIN : TEXT_SECONDARY)
-        .layoutWeight(1)
-      SymbolGlyph($r('sys.symbol.calendar'))
-        .fontSize(18)
-        .fontColor([TEXT_TERTIARY])
-    }
-    .width('100%')
-    .height(48)
-    .padding({ left: 12, right: 12 })
-    .backgroundColor(PAGE_BG)
-    .borderRadius(12)
-    .onClick(() => {
-      DatePickerDialog.show({
-        start: new Date('2020-1-1'),
-        end: new Date('2030-12-31'),
-        selected: new Date(),
-        lunar: false,
-        onDateAccept: (value: Date) => {
-          const month = value.getMonth() + 1;
-          const day = value.getDate();
-          this.tripDate = month.toString() + '\u6708' + day.toString() + '\u65e5';
-        }
-      });
-    })
-  }
-
-  @Builder
-  private FormInput(placeholder: string, textValue: string, onValueChange: (value: string) => void,
-    inputType: InputType = InputType.Normal) {
-    TextInput({ placeholder: placeholder, text: textValue })
-      .type(inputType)
-      .height(48)
-      .fontSize(14)
-      .fontColor(TEXT_MAIN)
-      .placeholderColor(TEXT_SECONDARY)
-      .backgroundColor(PAGE_BG)
-      .borderRadius(12)
-      .padding({ left: 12, right: 12 })
-      .onChange((value: string) => {
-        onValueChange(value);
-      })
   }
 }
