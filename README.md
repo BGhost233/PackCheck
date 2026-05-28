@@ -1,76 +1,111 @@
-# PackCheck 🏔️
+# PackCheck
 
-鸿蒙原生户外装备管理 & 出行清单核查 App。
+鸿蒙原生户外装备管理 & 出行清单核查 App。为户外爱好者打造的「装备整理 → 清单打勾 → 轻装出发」完整工作流，追求 Apple 级别的转场流畅度和微交互密度。
+
+## 项目背景
+
+户外出行前的装备整理是一件繁琐但关键的事——忘带一样东西可能毁掉整趟旅程。PackCheck 用极致的交互体验把这个过程变得愉悦：翻转卡片创建行程、滑动出发确认、Spring 弹性动效贯穿全局。不是工具，是仪式。
 
 ## 技术栈
 
-- HarmonyOS NEXT
-- ArkTS + ArkUI
-- API 23
-- 本地 Preferences 存储
+- HarmonyOS NEXT / ArkTS + ArkUI
+- DevEco Studio，API 23（SDK 6.1.0）
+- 本地持久化：Preferences
+- 构建：hvigor
 
-## 设计风格
+## 当前版本：v0.3.1
 
-PackCheck 采用「光透极简」视觉方向，以山野绿 `#2D7D46` 作为主题色，搭配浅绿状态面、留白卡片、柔和圆角和轻量动效，突出装备核查场景里的清晰、克制和可靠感。
+### 已实现功能
 
-## 文件结构
+**装备库管理**：装备 CRUD（名称/分类/重量/价格/备注）、分组折叠展开、筛选面板、重量/价格环形仪表切换。
 
-```text
+**出行清单**：创建行程清单、从装备库导入物品、打勾核查、分组折叠、100% 完成庆祝动画、清单编辑（重命名/改日期）。
+
+**仪式感交互**：宝可梦卡牌翻转入场动画、滑动出发确认（正圆滑块骑在轨道上 + 白色遮罩吞噬已滑区域 + 磁吸吸附 + 卡片飘走）、未填名称时输入框抖动+边框闪红、点击空白收起键盘。
+
+**动效体系**：Spring 弹性曲线统一全局、底部胶囊 Tab 果冻 pill 切换、列表 staggered 错落入场、折叠头部滚动驱动、共享元素转场、按压三段式反馈。
+
+**基础体验**：全屏沉浸式布局、窗口背景色统一消除闪屏色差、数据持久化。
+
+## 设计规范
+
+**色彩**：主题色 `#2D7D46` 山野绿，背景 `#F8F9FA` 羽白，卡片纯白无边框，圆角 16vp。
+
+**动效**：所有动画使用 Spring 弹性曲线（`response: 0.35, dampingFraction: 0.8`），严禁 linear/ease。按压用 `0.25/0.7`，Tab 滑动用 `0.4/0.75`。
+
+**交互**：所有可点击元素必须有按压反馈（scale 三段式）。二级菜单/弹窗必须有过渡动画。列表入场必须 staggered 错落。数字变化必须 counter 滚动。
+
+## 架构概览
+
+```
 entry/src/main/ets/
-├── pages/
-│   └── Index.ets                    # 应用主入口，集中管理页面状态、弹窗、装备库与清单交互流程
-├── components/
-│   ├── HomePage.ets                 # 首页概览，展示出行清单入口、进度和快捷操作
-│   ├── GearPage.ets                 # 装备库页面，负责装备列表、分组筛选、统计和目标重量编辑
-│   ├── ChecklistDetail.ets          # 出行清单详情，负责打勾核查、分组折叠和清单明细展示
-│   ├── ReviewPage.ets               # 核查复盘/逐项确认视图
-│   └── WeightGauge.ets              # 重量仪表组件，用于装备总重与目标重量的可视化
-├── services/
-│   └── PackStore.ets                # Preferences 持久化服务，保存装备、清单、分类和目标重量
-├── models/
-│   └── PackModels.ets               # GearItem、ChecklistItem、TripChecklist 等核心数据模型
-├── constants/
-│   └── DesignTokens.ets             # 颜色、间距、圆角、视图标识和弹窗类型等设计/业务常量
-├── utils/
-│   └── ColorUtils.ets               # 分组颜色与头图渐变辅助方法
-├── entryability/
-│   └── EntryAbility.ets             # Stage 模型入口 Ability
-└── entrybackupability/
-    └── EntryBackupAbility.ets       # 备份恢复 Ability
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理
+├── components/              — UI 组件（9 个）
+│   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
+│   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
+│   ├── ReviewPage.ets       — 核查复盘
+│   ├── ChecklistDetail.ets  — 清单详情（打勾核查）
+│   ├── TripCeremonyCard.ets — 新建行程仪式卡片（翻转 + 滑动出发）
+│   ├── EditGearPanel.ets    — 装备编辑半屏面板
+│   ├── EditItemPanel.ets    — 清单项编辑面板
+│   ├── GearFilterPanel.ets  — 装备筛选面板
+│   └── WeightGauge.ets      — 重量/价格环形仪表
+├── models/PackModels.ets    — 数据模型定义
+├── services/                — 业务逻辑层
+│   ├── PackStore.ets        — Preferences 持久化封装
+│   ├── GearService.ets      — 装备业务逻辑
+│   └── ChecklistService.ets — 清单业务逻辑
+├── constants/               — 设计 Token
+│   ├── DesignTokens.ets     — 颜色/间距/圆角
+│   └── AnimationTokens.ets  — Spring 曲线/时长/缩放
+└── utils/ColorUtils.ets     — 分组颜色辅助函数
 ```
 
-## 本地开发
+## 目录结构
 
-使用 DevEco Studio 打开项目根目录即可开发、预览和构建。
+```
+PackCheck/
+├── AppScope/                — 应用级配置 & 资源
+├── entry/                   — 主模块源码
+├── docs/
+│   ├── design/              — 设计文档
+│   │   ├── plans/           — 版本实施计划
+│   │   └── specs/           — 设计规格说明
+│   └── archive/             — 已完成的历史文档
+├── hvigor/                  — 构建配置
+├── CLAUDE.md                — AI 协作规范 & 动效避坑清单
+├── CHANGELOG.md             — 版本变更记录
+└── README.md                — 本文件
+```
 
-命令行构建可使用 DevEco Studio 自带的 Hvigor：
+## 构建 & 运行
 
 ```bash
-cd /Users/bghost233/Documents/PackCheck
-JAVA_HOME=/Applications/DevEco-Studio.app/Contents/jbr/Contents/Home \
+# 构建（需要 DevEco Studio 环境）
+hvigorw assembleApp
+
+# 或指定 SDK 路径
 DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
-PATH=/Applications/DevEco-Studio.app/Contents/tools/node/bin:/Applications/DevEco-Studio.app/Contents/tools/ohpm/bin:/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin:$PATH \
-/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleApp --no-daemon
+  /Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleApp
 ```
 
-## 设计规范速查表
+构建产物位于 `build/` 目录，可通过 DevEco Studio 直接部署到设备或模拟器。
 
-| Token | Value |
-| --- | --- |
-| 主色 | `#2D7D46` |
-| 浅绿 | `#E8F5E9` |
-| 超浅绿 | `#F1F8F3` |
-| 背景 | `#F8F9FA` |
-| 圆角 | `16vp` |
-| 动画 | `250ms EaseInOut` |
+## 版本路线图
 
-## 版本历史
+| 版本 | 状态 | 主题 |
+|------|------|------|
+| v0.1.0 | ✅ 已完成 | 核心闭环（装备 CRUD + 清单打勾 + 持久化） |
+| v0.2.0 | ✅ 已完成 | 首页体验升级（折叠头部 + 沉浸式布局 + 数据排序） |
+| v0.3.0 | ✅ 已完成 | 动效 & 微交互全面升级（Spring 体系 + Tab 果冻 + 错落入场） |
+| v0.3.1 | ✅ 当前 | 仪式卡片交互完善（日期选择 + 抖动提示 + 键盘收起） |
+| v0.4.0 | 📋 规划中 | 待定 |
 
-### v0.1.0
+## 开发约定
 
-当前版本已完成 PackCheck 的核心闭环：
+详见 [CLAUDE.md](./CLAUDE.md)，核心原则：
 
-- 装备库 CRUD、分组管理、重量/价格记录与统计面板
-- 出行清单创建、打勾核查、装备库导入
-- 折叠头部、标签筛选、弹性回弹和 spring 动效
-- 本地 Preferences 持久化
+- 用户体验 > 技术偏好 > 代码整洁 > 架构优雅
+- 先出方案等确认，再动手写代码
+- 每次改动构建验证通过后立即 commit
+- 所有动画统一 Spring 弹性曲线，严禁 linear/ease

@@ -12,6 +12,9 @@ local.properties
 # Tools
 .superpowers/
 
+# AI Memory
+memory/
+
 # OS
 .DS_Store
 Thumbs.db
