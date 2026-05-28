@@ -12,11 +12,25 @@
 - 确定 Sheet 方案：animateTo + state 驱动 translateY 替代 TransitionEffect
 - 创建了完整的 task_plan.md、findings.md
 
-### 当前状态
-- 阶段 1-6 全部 pending，等待用户确认后开始执行
-
 ### 关键决策
 1. 选择 geometryTransition 而非 sharedTransition（后者不支持 Navigation 路由）
 2. 选择 geometryTransition 而非 Overlay Layer 手动方案（前者更简洁，API 23 应该稳定）
 3. Sheet 改为 animateTo + state 驱动而非 TransitionEffect.animation(spring)（后者对 Spring 支持有 bug）
 4. 保留 Overlay Layer 作为 fallback 方案
+
+## 会话 2 — 执行阶段
+
+### 完成的工作
+- 阶段 1：AnimationTokens 新增 4 个 Spring 预设（HERO_EXPAND/COLLAPSE/PANEL_ENTER/EXIT）
+- 阶段 2：HomePage HeroCard + HistoryRow 绑定 geometryTransition
+- 阶段 3：ChecklistDetail 外层容器绑定 geometryTransition + NavDestination 加 transition
+- 阶段 4：所有导航操作改为 animateTo 包裹 pushPath/pop(false)
+- 阶段 5：SheetOverlay 移除 TransitionEffect，改为 state 驱动 translateY + opacity + backdropBlur
+- 阶段 6：contentScale 联动、EditGearPanel/EditItemPanel/GearFilterPanel Spring 统一、全局 Curve 审计
+
+### 当前状态
+- **全部 6 阶段完成** ✅
+- 待用户在 DevEco Studio 中实机验证
+
+### 遇到的问题
+- hvigorw 不在命令行 PATH 中，无法从终端构建验证，改用代码审查确认正确性

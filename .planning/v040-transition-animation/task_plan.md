@@ -147,7 +147,7 @@ private closeSheetAnimated(): void {
 - 背景遮罩 `.opacity(sheetOverlayOpacity)` + `backdropBlur(16)` + 颜色改为 `#26000000`
 - 构建验证 → commit
 
-### 阶段 6：细节打磨与验证 [status: pending]
+### 阶段 6：细节打磨与验证 [status: done]
 - 展开时主内容 scale 缩小联动效果调试
 - EditGearPanel / EditItemPanel 的 Spring 参数统一为 SPRING_PANEL_ENTER/EXIT
 - 全局检查：确保无 linear/ease 曲线残留
