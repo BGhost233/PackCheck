@@ -1,4 +1,5 @@
 import {
+  FONT_FEATURE_TNUM,
   PAGE_BG,
   PRIMARY_COLOR,
   TEXT_MAIN,
@@ -17,6 +18,7 @@ export struct GenerateTripSheet {
       Text('已选择 ' + this.selectedCount.toString() + ' 件装备')
         .fontSize(12)
         .fontColor(TEXT_SECONDARY)
+        .fontFeature(FONT_FEATURE_TNUM)
         .width('100%')
       TextInput({ placeholder: '行程名称', text: this.generateTripTitle })
         .type(InputType.Normal)

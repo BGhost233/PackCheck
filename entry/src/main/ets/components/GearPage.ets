@@ -5,8 +5,11 @@ import { PackStore } from '../services/PackStore';
 import { WeightGauge } from './WeightGauge';
 import {
   CARD_BG,
+  CARD_BORDER_BOTTOM_COLOR,
+  CARD_BORDER_BOTTOM_WIDTH,
   DANGER_COLOR,
   DIVIDER_COLOR,
+  FONT_FEATURE_TNUM,
   GEAR_HEADER_COLLAPSED,
   GEAR_HEADER_EXPANDED,
   GEAR_SORT_GROUP,
@@ -557,6 +560,7 @@ export struct GearPage {
         Text(this.gearSummaryText())
           .fontSize(13)
           .fontColor(TEXT_TERTIARY)
+          .fontFeature(FONT_FEATURE_TNUM)
           .maxLines(1)
           .constraintSize({ maxWidth: 160 })
           .margin({ left: 8 })
@@ -648,6 +652,7 @@ export struct GearPage {
       Text('选中 ' + this.selectedMultiGearIds.length.toString() + ' 件')
         .fontSize(13)
         .fontColor(TEXT_MAIN)
+        .fontFeature(FONT_FEATURE_TNUM)
         .layoutWeight(1)
       Button('生成清单')
         .height(34)
@@ -715,6 +720,7 @@ export struct GearPage {
         .fontSize(15)
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
+        .fontFeature(FONT_FEATURE_TNUM)
         .layoutWeight(1)
       SymbolGlyph($r('sys.symbol.chevron_down'))
         .fontSize(14)
@@ -766,16 +772,19 @@ export struct GearPage {
             Text(item.weight.toString() + 'g')
               .fontSize(13)
               .fontColor(TEXT_SECONDARY)
+              .fontFeature(FONT_FEATURE_TNUM)
           }
           if (item.price !== undefined && item.price > 0) {
             Text('¥' + item.price.toString())
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
+              .fontFeature(FONT_FEATURE_TNUM)
           }
           if (this.gearTripCount(item) > 0) {
             Text('×' + this.gearTripCount(item).toString())
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
+              .fontFeature(FONT_FEATURE_TNUM)
           }
         }
         .alignItems(HorizontalAlign.End)
@@ -809,6 +818,7 @@ export struct GearPage {
     .padding({ left: 16, right: 16, top: 14, bottom: 14 })
     .backgroundColor(CARD_BG)
     .borderRadius(12)
+    .border({ width: { bottom: CARD_BORDER_BOTTOM_WIDTH }, color: { bottom: CARD_BORDER_BOTTOM_COLOR } })
     .shadow({ radius: 8, color: '#08000000', offsetX: 0, offsetY: 1 })
     .scale({ x: this.pressedGearId === item.id ? 0.97 : 1, y: this.pressedGearId === item.id ? 0.97 : 1 })
     .opacity(this.pressedGearId === item.id ? 0.85 : 1)

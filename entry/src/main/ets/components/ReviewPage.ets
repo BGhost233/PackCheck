@@ -1,6 +1,7 @@
 import { ChecklistItem, TripChecklist } from '../models/PackModels';
 import {
   CARD_BG,
+  FONT_FEATURE_TNUM,
   PAGE_BG,
   PRIMARY_COLOR,
   TEXT_MAIN,
@@ -138,6 +139,7 @@ export struct ReviewPage {
       Text((this.reviewIndex + 1).toString() + ' / ' + this.currentChecklistItemCount().toString())
         .fontSize(14)
         .fontColor(TEXT_TERTIARY)
+        .fontFeature(FONT_FEATURE_TNUM)
         .padding({ top: 28, bottom: 18 })
       Row({ space: 12 }) {
         this.ReviewButton('未带', false);
@@ -178,6 +180,7 @@ export struct ReviewPage {
         Text(this.reviewSummaryText())
           .fontSize(14)
           .fontColor(TEXT_TERTIARY)
+          .fontFeature(FONT_FEATURE_TNUM)
       }
       Button('返回清单')
         .height(46)

@@ -20,6 +20,11 @@ export const STAGGER_DELAY_MENU = 30;
 export const STAGGER_DELAY_LIST = 40;
 export const STAGGER_DELAY_SWIPE = 50;
 
+// 加速度曲线错落延迟（涟漪感：首项快、末项慢，400ms 封顶）
+export function staggerDelay(index: number, base: number = 30, accel: number = 4, cap: number = 400): number {
+  return Math.min(cap, index * base + index * index * accel);
+}
+
 // 按压三段式缩放值
 export const PRESS_SCALE_DOWN = 0.96;
 export const PRESS_SCALE_BOUNCE = 1.02;

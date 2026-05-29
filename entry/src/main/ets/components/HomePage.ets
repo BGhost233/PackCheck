@@ -2,9 +2,12 @@ import { curves } from '@kit.ArkUI';
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import {
   CARD_BG,
+  CARD_BORDER_BOTTOM_COLOR,
+  CARD_BORDER_BOTTOM_WIDTH,
   CARD_RADIUS,
   DANGER_COLOR,
   DIVIDER_COLOR,
+  FONT_FEATURE_TNUM,
   HOME_COLLAPSE_MAX,
   HOME_HEADER_COLLAPSED,
   LIGHT_PRIMARY_COLOR,
@@ -25,7 +28,7 @@ import {
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
-  STAGGER_DELAY_LIST
+  staggerDelay
 } from '../constants/AnimationTokens';
 import { heroGradientStart } from '../utils/ColorUtils';
 
@@ -588,6 +591,7 @@ export struct HomePage {
             .fontWeight(FontWeight.Bold)
             .fontColor(this.daysLeft(this.latestChecklist()!) === undefined ? TEXT_TERTIARY :
               (this.daysLeft(this.latestChecklist()!)! <= 3 && this.daysLeft(this.latestChecklist()!)! > 0 ? '#1B5E20' : PRIMARY_COLOR))
+            .fontFeature(FONT_FEATURE_TNUM)
           Text(this.countdownSuffix(this.latestChecklist()!))
             .fontSize(16)
             .fontColor(TEXT_SECONDARY)
@@ -662,6 +666,7 @@ export struct HomePage {
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.ringCelebrateColor)
+        .fontFeature(FONT_FEATURE_TNUM)
         .animation({ duration: 500, curve: SPRING_GENERAL() })
     }
     .width(52)
@@ -790,7 +795,7 @@ export struct HomePage {
             }
             .opacity(this.historyStaggerReady ? 1 : 0)
             .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
-            .animation({ duration: DURATION_NORMAL + index * STAGGER_DELAY_LIST, curve: SPRING_GENERAL() })
+            .animation({ duration: DURATION_NORMAL + staggerDelay(index), curve: SPRING_GENERAL() })
             .onClick(() => {
               this.onOpenChecklist(item.id);
             })
@@ -824,7 +829,7 @@ export struct HomePage {
             }
             .opacity(this.historyStaggerReady ? 1 : 0)
             .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
-            .animation({ duration: DURATION_NORMAL + (this.futureTrips().length + index) * STAGGER_DELAY_LIST, curve: SPRING_GENERAL() })
+            .animation({ duration: DURATION_NORMAL + staggerDelay(this.futureTrips().length + index), curve: SPRING_GENERAL() })
             .onClick(() => {
               this.onOpenChecklist(item.id);
             })
@@ -878,11 +883,13 @@ export struct HomePage {
           Text(this.progressText(item))
             .fontSize(12)
             .fontColor(TEXT_TERTIARY)
+            .fontFeature(FONT_FEATURE_TNUM)
         }
         Text(this.rowDateText(item))
           .fontSize(12)
           .fontColor(this.rowDateColor(item))
           .fontWeight(this.rowDateBold(item))
+          .fontFeature(FONT_FEATURE_TNUM)
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
@@ -892,6 +899,7 @@ export struct HomePage {
     .padding({ left: 16, right: 16 })
     .backgroundColor(CARD_BG)
     .borderRadius(12)
+    .border({ width: { bottom: CARD_BORDER_BOTTOM_WIDTH }, color: { bottom: CARD_BORDER_BOTTOM_COLOR } })
     .geometryTransition('trip-' + item.id)
     .transition(TransitionEffect.opacity(0.99))
     .scale({ x: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })

@@ -1,5 +1,6 @@
 import { GearItem } from '../../models/PackModels';
 import {
+  FONT_FEATURE_TNUM,
   PAGE_BG,
   PRIMARY_COLOR,
   CARD_BG,
@@ -83,6 +84,7 @@ export struct ImportSheet {
                     Text(importGearMetaText(item))
                       .fontSize(12)
                       .fontColor(TEXT_SECONDARY)
+                      .fontFeature(FONT_FEATURE_TNUM)
                   }
                 }
                 .alignItems(HorizontalAlign.Start)

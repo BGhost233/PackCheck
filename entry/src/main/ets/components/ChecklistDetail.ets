@@ -5,6 +5,7 @@ import {
   CARD_BG,
   DANGER_COLOR,
   DIVIDER_COLOR,
+  FONT_FEATURE_TNUM,
   GROUP_HEADER_BG,
   LIGHT_PRIMARY_COLOR,
   PAGE_BG,
@@ -24,7 +25,7 @@ import {
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
-  STAGGER_DELAY_LIST
+  staggerDelay
 } from '../constants/AnimationTokens';
 import { getGroupColor } from '../utils/ColorUtils';
 
@@ -427,6 +428,7 @@ export struct ChecklistDetail {
           .fontSize(18)
           .fontWeight(FontWeight.Bold)
           .fontColor(TEXT_MAIN)
+          .fontFeature(FONT_FEATURE_TNUM)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
@@ -529,6 +531,7 @@ export struct ChecklistDetail {
           Text(this.countdownText(checklist))
             .fontSize(12)
             .fontColor(this.countdownText(checklist) === '今天出发！' ? PRIMARY_COLOR : TEXT_SECONDARY)
+            .fontFeature(FONT_FEATURE_TNUM)
         }
         if (this.checkedWeight(checklist) > 0) {
           Row({ space: 3 }) {
@@ -539,6 +542,7 @@ export struct ChecklistDetail {
               .fontSize(14)
               .fontWeight(FontWeight.Medium)
               .fontColor(TEXT_SECONDARY)
+              .fontFeature(FONT_FEATURE_TNUM)
           }
         }
       }
@@ -578,6 +582,7 @@ export struct ChecklistDetail {
             .fontSize(11)
             .fontWeight(FontWeight.Bold)
             .fontColor(PRIMARY_COLOR)
+            .fontFeature(FONT_FEATURE_TNUM)
         }
         .width(44)
         .height(44)
@@ -610,6 +615,7 @@ export struct ChecklistDetail {
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor(PRIMARY_COLOR)
+        .fontFeature(FONT_FEATURE_TNUM)
     }
     .width('100%')
   }
@@ -665,6 +671,7 @@ export struct ChecklistDetail {
       Text(this.groupCheckedCount(group).toString() + '/' + this.groupItemCount(group).toString())
         .fontSize(12)
         .fontColor(TEXT_TERTIARY)
+        .fontFeature(FONT_FEATURE_TNUM)
         .margin({ left: 6 })
       Blank()
       SymbolGlyph($r('sys.symbol.chevron_down'))
@@ -703,6 +710,7 @@ export struct ChecklistDetail {
           Text(this.checklistItemWeight(item)!.toString() + 'g')
             .fontSize(12)
             .fontColor('#CCCCCC')
+            .fontFeature(FONT_FEATURE_TNUM)
         }
         if (this.hasGearMarker(item)) {
           Circle({ width: 6, height: 6 })

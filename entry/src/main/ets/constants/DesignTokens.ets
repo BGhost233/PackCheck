@@ -38,6 +38,13 @@ export const GEAR_SORT_TIME = 'time';
 export const GEAR_SORT_VALUE = 'value';
 export const GEAR_SORT_TRIP_COUNT = 'trip_count';
 
+// 字体特性
+export const FONT_FEATURE_TNUM: string = "'tnum'";
+
+// 卡片底部微边框（0.5vp 物理单像素线，增加层次感）
+export const CARD_BORDER_BOTTOM_WIDTH: number = 0.5;
+export const CARD_BORDER_BOTTOM_COLOR: string = '#E8E8E8';
+
 export const PAGE_PADDING = 20;
 export const CARD_PADDING = 20;
 export const SECTION_GAP = 24;

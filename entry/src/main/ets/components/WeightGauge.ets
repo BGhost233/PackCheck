@@ -3,6 +3,7 @@ import {
   CARD_BG,
   DANGER_COLOR,
   DIVIDER_COLOR,
+  FONT_FEATURE_TNUM,
   LIGHT_PRIMARY_COLOR,
   PRICE_COLOR,
   PRIMARY_COLOR,
@@ -181,6 +182,7 @@ export struct WeightGauge {
               .fontSize(28)
               .fontWeight(FontWeight.Bold)
               .fontColor(this.isOverTarget() ? DANGER_COLOR : this.gaugeColor())
+              .fontFeature(FONT_FEATURE_TNUM)
             Text(this.isOverTarget() ? '超出目标' : '当前总重')
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
@@ -189,6 +191,7 @@ export struct WeightGauge {
               .fontSize(28)
               .fontWeight(FontWeight.Bold)
               .fontColor(this.isOverTarget() ? DANGER_COLOR : this.gaugeColor())
+              .fontFeature(FONT_FEATURE_TNUM)
             Text(this.isOverTarget() ? '超出预算' : '当前总价')
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
@@ -256,6 +259,7 @@ export struct WeightGauge {
         .fontSize(13)
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
+        .fontFeature(FONT_FEATURE_TNUM)
         .scale({ x: label === '件数' ? popScale : 1.0, y: label === '件数' ? popScale : 1.0 })
         .animation({ duration: 400, curve: SPRING_GENERAL() })
     }
