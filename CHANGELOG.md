@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.5.0 (2025-06-19)
+
+质感跃迁：视觉细节打磨，从「功能完整」迈向「值得截图」。
+
+- 等宽数字：全局数字组件加 `.fontFeature("'tnum'")`，消除数字变化时宽度抖动（WeightGauge / HomePage 倒计时 / 清单进度 等 ~31 处）
+- 噪点纹理背景：64×64 grayscale noise PNG 全屏平铺覆盖层（opacity 0.025），赋予界面纸张质感
+- Section Breathing 分组呼吸：首个分组 marginTop 4vp、后续分组 20vp，列表组间有节奏性留白
+- 暖琥珀警示色系：新增 `AMBER_ACCENT #E8890C` / `AMBER_TINT #FFF5E6`，用于倒计时 ≤3 天 + WeightGauge 80-100% 接近目标/预算态
+- 卡片底部微边框：0.5vp `#F0F0F0` 底部边框，增强卡片层次感
+- 错落动画加速度曲线：staggerDelay 公式升级为 `index * 30 + index² * 4`（cap 400ms），首项极快末项从容
+- DesignTokens / AnimationTokens 新增多个设计常量
+- 已回滚：打勾墨水扩散效果（实机表现不佳）
+
 ## v0.4.2 (2025-06-18)
 
 结构重构：可读性与可维护性优化。

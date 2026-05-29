@@ -32,6 +32,7 @@ import {
   staggerDelay
 } from '../constants/AnimationTokens';
 import { heroGradientStart } from '../utils/ColorUtils';
+import { EmptyIllustration } from './EmptyIllustration';
 
 
 @Component
@@ -614,6 +615,22 @@ export struct HomePage {
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
+
+        // 山脊线装饰
+        Shape() {
+          Path()
+            .commands('M 0 35 C 15 28 25 32 40 24 C 55 16 65 22 80 18 C 95 14 105 20 120 16 ' +
+              'M 0 40 C 20 34 35 38 55 30 C 70 24 85 28 100 24 C 110 21 115 23 120 22')
+            .stroke('#262D7D46')
+            .strokeWidth(1)
+            .fill('#00000000')
+            .strokeLineCap(LineCapStyle.Round)
+            .antiAlias(true)
+        }
+        .viewPort({ x: 0, y: 0, width: 120, height: 44 })
+        .width('100%')
+        .height(32)
+        .margin({ top: 4 })
       }
       .width('100%')
       .padding(20)
@@ -681,14 +698,11 @@ export struct HomePage {
   @Builder
   private EmptyHero() {
     Column({ space: 8 }) {
-      SymbolGlyph($r('sys.symbol.camp'))
-        .fontSize(48)
-        .fontColor([PRIMARY_COLOR])
-        .scale({ x: this.emptyHeroBreathScale, y: this.emptyHeroBreathScale })
-        .animation({ duration: 2000, curve: Curve.EaseInOut, iterations: -1, playMode: PlayMode.Alternate })
+      EmptyIllustration({ type: 'trip' })
       Text('点击下方开始你的第一次出发')
         .fontSize(14)
-        .fontColor('#CCCCCC')
+        .fontColor(TEXT_TERTIARY)
+        .margin({ top: 4 })
       Button('创建第一个行程')
         .height(44)
         .fontSize(14)
@@ -701,7 +715,7 @@ export struct HomePage {
         })
     }
     .width('100%')
-    .height(220)
+    .height(240)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(CARD_BG)

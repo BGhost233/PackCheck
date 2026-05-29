@@ -3,6 +3,7 @@ import { curves, display } from '@kit.ArkUI';
 import { GearItem } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import { WeightGauge } from './WeightGauge';
+import { EmptyIllustration } from './EmptyIllustration';
 import {
   CARD_BG,
   CARD_BORDER_BOTTOM_COLOR,
@@ -555,96 +556,123 @@ export struct GearPage {
 
   @Builder
   private CollapsingHeader() {
-    Column() {
-      Row() {
-        Text('我的装备库')
-          .fontSize(this.gearTitleFontSize())
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-          .animation({ duration: 80 })
-        Text(this.gearSummaryText())
-          .fontSize(13)
-          .fontColor(TEXT_TERTIARY)
-          .fontFeature(FONT_FEATURE_TNUM)
-          .maxLines(1)
-          .constraintSize({ maxWidth: 160 })
-          .margin({ left: 8 })
-          .opacity(this.gearCollapsedOpacity())
-          .translate({ x: this.gearCollapsedOpacity() > 0 ? 0 : -12 })
-          .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
-        Blank()
-        Row() {
-          SymbolGlyph($r('sys.symbol.magnifyingglass'))
-            .fontSize(20)
-            .fontColor([this.gearSearchKeyword.length > 0 ? PRIMARY_COLOR : TEXT_SECONDARY])
-        }
-        .width(36)
-        .height(36)
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor(PRIMARY_TINT_COLOR)
-        .borderRadius(18)
-        .onClick(() => {
-          this.searchExpanded = true;
-        })
-        Row() {
-          SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
-            .fontSize(18)
-            .fontColor([TEXT_SECONDARY])
-        }
-        .width(36)
-        .height(36)
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor(PRIMARY_TINT_COLOR)
-        .borderRadius(18)
-        .margin({ left: 10 })
-        .onClick(() => {
-          this.onOpenSort();
-        })
+    Stack({ alignContent: Alignment.TopStart }) {
+      // 等高线视差装饰层（最底层）
+      Shape() {
+        Path()
+          .commands(
+            'M 0 60 C 30 55 60 65 90 58 C 120 51 150 62 180 56 C 210 50 240 60 270 54 C 300 48 330 58 360 52 ' +
+            'M 0 120 C 40 112 80 125 120 115 C 160 105 200 118 240 110 C 280 102 320 115 360 108 ' +
+            'M 0 180 C 35 172 70 182 105 175 C 140 168 175 178 210 170 C 245 162 280 174 315 166 C 340 160 355 168 360 165 ' +
+            'M 0 240 C 45 232 90 244 135 235 C 180 226 225 238 270 230 C 315 222 345 234 360 228'
+          )
+          .stroke('#0A2D7D46')
+          .strokeWidth(1)
+          .fill('#00000000')
+          .strokeLineCap(LineCapStyle.Round)
+          .antiAlias(true)
       }
+      .viewPort({ x: 0, y: 0, width: 360, height: 340 })
       .width('100%')
-      .height(GEAR_HEADER_COLLAPSED)
-      .alignItems(VerticalAlign.Center)
-      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
+      .height(GEAR_HEADER_EXPANDED)
+      .translate({ y: -(this.gearScrollOffset * 0.3) })
+      .animation({ duration: 80, curve: Curve.EaseOut })
+      .hitTestBehavior(HitTestMode.None)
 
-      if (this.gearScrollProgress() < 1) {
-        Column() {
-          Row({ space: 4 }) {
-            Text(this.activeCategoryText())
-              .fontSize(14)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(PRIMARY_COLOR)
-              .maxLines(1)
-            SymbolGlyph($r('sys.symbol.chevron_down'))
-              .fontSize(12)
-              .fontColor([PRIMARY_COLOR])
+      // 主内容层
+      Column() {
+        Row() {
+          Text('我的装备库')
+            .fontSize(this.gearTitleFontSize())
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+            .animation({ duration: 80 })
+          Text(this.gearSummaryText())
+            .fontSize(13)
+            .fontColor(TEXT_TERTIARY)
+            .fontFeature(FONT_FEATURE_TNUM)
+            .maxLines(1)
+            .constraintSize({ maxWidth: 160 })
+            .margin({ left: 8 })
+            .opacity(this.gearCollapsedOpacity())
+            .translate({ x: this.gearCollapsedOpacity() > 0 ? 0 : -12 })
+            .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
+          Blank()
+          Row() {
+            SymbolGlyph($r('sys.symbol.magnifyingglass'))
+              .fontSize(20)
+              .fontColor([this.gearSearchKeyword.length > 0 ? PRIMARY_COLOR : TEXT_SECONDARY])
           }
-          .height(32)
-          .padding({ left: 12, right: 12 })
+          .width(36)
+          .height(36)
+          .justifyContent(FlexAlign.Center)
           .backgroundColor(PRIMARY_TINT_COLOR)
-          .borderRadius(16)
-          .margin({ left: PAGE_PADDING, top: 6, bottom: 4 })
-          .opacity(this.gearPillOpacity())
+          .borderRadius(18)
           .onClick(() => {
-            this.onOpenFilterPanel();
+            this.searchExpanded = true;
           })
-
-          WeightGauge({
-            currentWeight: this.totalGearWeight(),
-            targetWeight: this.targetWeightGram,
-            gearCount: this.gears.length,
-            totalPrice: this.totalGearPrice(),
-            budget: this.gearBudget
+          Row() {
+            SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
+              .fontSize(18)
+              .fontColor([TEXT_SECONDARY])
+          }
+          .width(36)
+          .height(36)
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor(PRIMARY_TINT_COLOR)
+          .borderRadius(18)
+          .margin({ left: 10 })
+          .onClick(() => {
+            this.onOpenSort();
           })
-            .opacity(this.gearRingOpacity())
-            .scale({ x: this.gearRingScale(), y: this.gearRingScale() })
         }
         .width('100%')
-        .height((GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED) * (1 - this.gearScrollProgress()))
-        .clip(true)
-        .alignItems(HorizontalAlign.Start)
+        .height(GEAR_HEADER_COLLAPSED)
+        .alignItems(VerticalAlign.Center)
+        .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
+
+        if (this.gearScrollProgress() < 1) {
+          Column() {
+            Row({ space: 4 }) {
+              Text(this.activeCategoryText())
+                .fontSize(14)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(PRIMARY_COLOR)
+                .maxLines(1)
+              SymbolGlyph($r('sys.symbol.chevron_down'))
+                .fontSize(12)
+                .fontColor([PRIMARY_COLOR])
+            }
+            .height(32)
+            .padding({ left: 12, right: 12 })
+            .backgroundColor(PRIMARY_TINT_COLOR)
+            .borderRadius(16)
+            .margin({ left: PAGE_PADDING, top: 6, bottom: 4 })
+            .opacity(this.gearPillOpacity())
+            .onClick(() => {
+              this.onOpenFilterPanel();
+            })
+
+            WeightGauge({
+              currentWeight: this.totalGearWeight(),
+              targetWeight: this.targetWeightGram,
+              gearCount: this.gears.length,
+              totalPrice: this.totalGearPrice(),
+              budget: this.gearBudget
+            })
+              .opacity(this.gearRingOpacity())
+              .scale({ x: this.gearRingScale(), y: this.gearRingScale() })
+          }
+          .width('100%')
+          .height((GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED) * (1 - this.gearScrollProgress()))
+          .clip(true)
+          .alignItems(HorizontalAlign.Start)
+        }
       }
+      .width('100%')
     }
     .width('100%')
+    .clip(true)
     .backgroundColor(this.gearHeaderBgColor())
     .backgroundBlurStyle(this.gearHeaderBlurStyle())
     .position({ x: 0, y: 0 })
@@ -1061,6 +1089,7 @@ export struct GearPage {
   @Builder
   private EmptyState() {
     Column({ space: 12 }) {
+      EmptyIllustration({ type: 'gear' })
       Text('还没有装备，添加第一件吧')
         .fontSize(14)
         .fontColor(TEXT_TERTIARY)
@@ -1076,7 +1105,7 @@ export struct GearPage {
         })
     }
     .width('100%')
-    .height(240)
+    .height(260)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(CARD_BG)
