@@ -2016,9 +2016,21 @@ struct Index {
     .hideTitleBar(true)
     .backgroundColor('#F8F9FA')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+    .overlay(this.NoiseTextureLayer())
   }
 
 
+
+  @Builder
+  private NoiseTextureLayer() {
+    Image($r('app.media.noise_64'))
+      .width('100%')
+      .height('100%')
+      .objectRepeat(ImageRepeat.XY)
+      .objectFit(ImageFit.None)
+      .opacity(0.025)
+      .hitTestBehavior(HitTestMode.None)
+  }
 
   @Builder
   private CompletionToast() {
