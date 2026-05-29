@@ -820,7 +820,7 @@ export struct HomePage {
                 .padding({ left: 16, top: 4, bottom: 4 })
             }
             .height(36)
-            .margin({ top: 8 })
+            .margin({ top: 16 })
             .selectable(false)
           }
           ForEach(this.pastTrips(), (item: TripChecklist, index: number) => {

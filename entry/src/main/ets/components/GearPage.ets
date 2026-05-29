@@ -284,6 +284,11 @@ export struct GearPage {
     return this.collapsedGearGroups.indexOf(group) >= 0;
   }
 
+  private isFirstGearGroup(group: string): boolean {
+    const groups = this.filteredGearGroups();
+    return groups.length > 0 && groups[0] === group;
+  }
+
   private toggleGearGroupCollapse(group: string): void {
     const idx = this.collapsedGearGroups.indexOf(group);
     if (idx >= 0) {
@@ -732,7 +737,7 @@ export struct GearPage {
     .height(40)
     .alignItems(VerticalAlign.Center)
     .padding({ left: 12, right: 12 })
-    .margin({ top: 8, bottom: 2 })
+    .margin({ top: this.isFirstGearGroup(group) ? 4 : 20, bottom: 2 })
     .backgroundColor(GROUP_HEADER_BG)
     .borderRadius(10)
     .onClick(() => {

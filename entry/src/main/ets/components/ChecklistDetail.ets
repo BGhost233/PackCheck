@@ -248,6 +248,11 @@ export struct ChecklistDetail {
     return this.collapsedGroups.indexOf(group) >= 0;
   }
 
+  private isFirstGroup(group: string): boolean {
+    const groups = this.checklistGroups();
+    return groups.length > 0 && groups[0] === group;
+  }
+
   private currentChecklistItemById(itemId: string): ChecklistItem | undefined {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
@@ -687,7 +692,7 @@ export struct ChecklistDetail {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(GROUP_HEADER_BG)
     .borderRadius(10)
-    .margin({ top: 8, bottom: 2 })
+    .margin({ top: this.isFirstGroup(group) ? 4 : 20, bottom: 2 })
     .onClick(() => {
       this.onToggleGroup(group);
     })
