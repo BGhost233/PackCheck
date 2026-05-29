@@ -1,5 +1,6 @@
 import { curves } from '@kit.ArkUI';
 import {
+  AMBER_ACCENT,
   CARD_BG,
   DANGER_COLOR,
   DIVIDER_COLOR,
@@ -110,6 +111,23 @@ export struct WeightGauge {
     return this.currentWeight > this.targetWeight;
   }
 
+  private isNearTarget(): boolean {
+    if (this.gaugeMode === GaugeMode.PRICE) {
+      return this.budget > 0 && this.totalPrice >= this.budget * 0.8 && this.totalPrice <= this.budget;
+    }
+    return this.targetWeight > 0 && this.currentWeight >= this.targetWeight * 0.8 && this.currentWeight <= this.targetWeight;
+  }
+
+  private gaugeStatusColor(): string {
+    if (this.isOverTarget()) {
+      return DANGER_COLOR;
+    }
+    if (this.isNearTarget()) {
+      return AMBER_ACCENT;
+    }
+    return this.gaugeColor();
+  }
+
   private formatKg(weight: number): string {
     if (weight <= 0) {
       return '0kg';
@@ -173,7 +191,7 @@ export struct WeightGauge {
         })
           .width(132)
           .height(132)
-          .color(this.isOverTarget() ? DANGER_COLOR : this.gaugeColor())
+          .color(this.gaugeStatusColor())
           .style({ strokeWidth: 10, enableSmoothEffect: true })
           .animation({ duration: 600, curve: SPRING_GENERAL() })
         Column({ space: 2 }) {
@@ -181,20 +199,20 @@ export struct WeightGauge {
             Text(this.formatKg(this.getDisplayWeight()))
               .fontSize(28)
               .fontWeight(FontWeight.Bold)
-              .fontColor(this.isOverTarget() ? DANGER_COLOR : this.gaugeColor())
+              .fontColor(this.gaugeStatusColor())
               .fontFeature(FONT_FEATURE_TNUM)
-            Text(this.isOverTarget() ? '超出目标' : '当前总重')
+            Text(this.isOverTarget() ? '超出目标' : (this.isNearTarget() ? '接近目标' : '当前总重'))
               .fontSize(12)
-              .fontColor(TEXT_TERTIARY)
+              .fontColor(this.isOverTarget() ? DANGER_COLOR : (this.isNearTarget() ? AMBER_ACCENT : TEXT_TERTIARY))
           } else {
             Text('¥' + this.getDisplayTotalPrice().toString())
               .fontSize(28)
               .fontWeight(FontWeight.Bold)
-              .fontColor(this.isOverTarget() ? DANGER_COLOR : this.gaugeColor())
+              .fontColor(this.gaugeStatusColor())
               .fontFeature(FONT_FEATURE_TNUM)
-            Text(this.isOverTarget() ? '超出预算' : '当前总价')
+            Text(this.isOverTarget() ? '超出预算' : (this.isNearTarget() ? '接近预算' : '当前总价'))
               .fontSize(12)
-              .fontColor(TEXT_TERTIARY)
+              .fontColor(this.isOverTarget() ? DANGER_COLOR : (this.isNearTarget() ? AMBER_ACCENT : TEXT_TERTIARY))
           }
         }
         .alignItems(HorizontalAlign.Center)

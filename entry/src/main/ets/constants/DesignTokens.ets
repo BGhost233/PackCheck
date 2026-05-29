@@ -12,7 +12,8 @@ export const DIVIDER_COLOR = '#F0F0F0';
 export const ARROW_COLOR = '#CCCCCC';
 export const GROUP_HEADER_BG = '#F5F5F5';
 export const PROGRESS_END_COLOR = '#4CAF50';
-export const COUNTDOWN_ORANGE = '#FF8C42';
+export const AMBER_ACCENT = '#E8890C';
+export const AMBER_TINT = '#FFF5E6';
 export const PRICE_COLOR = '#4A90D9';
 export const BLUR_BG = '#CCF8F9FA';
 

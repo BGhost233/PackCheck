@@ -1,6 +1,7 @@
 import { curves } from '@kit.ArkUI';
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import {
+  AMBER_ACCENT,
   CARD_BG,
   CARD_BORDER_BOTTOM_COLOR,
   CARD_BORDER_BOTTOM_WIDTH,
@@ -590,7 +591,7 @@ export struct HomePage {
             .fontSize(this.daysLeft(this.latestChecklist()!) === 0 ? 36 : 48)
             .fontWeight(FontWeight.Bold)
             .fontColor(this.daysLeft(this.latestChecklist()!) === undefined ? TEXT_TERTIARY :
-              (this.daysLeft(this.latestChecklist()!)! <= 3 && this.daysLeft(this.latestChecklist()!)! > 0 ? '#1B5E20' : PRIMARY_COLOR))
+              (this.daysLeft(this.latestChecklist()!)! <= 3 && this.daysLeft(this.latestChecklist()!)! > 0 ? AMBER_ACCENT : PRIMARY_COLOR))
             .fontFeature(FONT_FEATURE_TNUM)
           Text(this.countdownSuffix(this.latestChecklist()!))
             .fontSize(16)
