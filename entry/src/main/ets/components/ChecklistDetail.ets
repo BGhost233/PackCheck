@@ -42,6 +42,7 @@ export struct ChecklistDetail {
   @State private headerCollapsed: boolean = false;
   @State private headerAnimating: boolean = false;
   @State private pressedItemId: string = '';
+  @State private rippleItemId: string = '';
 
   private listScroller: Scroller = new Scroller();
   private readonly collapseThreshold: number = 80;
@@ -749,10 +750,22 @@ export struct ChecklistDetail {
   private CheckMark(itemId: string) {
     Row() {
       Stack({ alignContent: Alignment.Center }) {
+        // Ink ripple circle — fixed component driven by rippleItemId state
+        Circle({ width: 28, height: 28 })
+          .fill(PRIMARY_COLOR)
+          .scale({
+            x: this.rippleItemId === itemId ? 1.6 : 0.5,
+            y: this.rippleItemId === itemId ? 1.6 : 0.5
+          })
+          .opacity(this.rippleItemId === itemId ? 0 : 0.45)
+          .animation({ duration: 420, curve: Curve.EaseOut })
+          .hitTestBehavior(HitTestMode.None)
+
         Circle({ width: 28, height: 28 })
           .fill(this.isChecklistItemChecked(itemId) ? PRIMARY_COLOR : '#00000000')
           .stroke(this.isChecklistItemChecked(itemId) ? PRIMARY_COLOR : ARROW_COLOR)
           .strokeWidth(2)
+          .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
         if (this.isChecklistItemChecked(itemId)) {
           SymbolGlyph($r('sys.symbol.checkmark'))
             .fontSize(15)
@@ -760,12 +773,19 @@ export struct ChecklistDetail {
             .fontWeight(FontWeight.Bold)
         }
       }
+      .clip(true)
     }
     .width(44)
     .height(44)
     .justifyContent(FlexAlign.Center)
     .alignItems(VerticalAlign.Center)
     .onClick(() => {
+      if (!this.isChecklistItemChecked(itemId)) {
+        this.rippleItemId = itemId;
+        setTimeout(() => {
+          this.rippleItemId = '';
+        }, 450);
+      }
       this.onToggleChecklistItem(itemId);
     })
     .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
