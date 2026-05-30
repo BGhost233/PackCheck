@@ -177,8 +177,8 @@ export struct GearFilterPanel {
         Scroll() {
           Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
             ForEach(this.allFilterCategories(), (category: string) => {
-              this.CategoryChip(category, this.isCategorySelected(category))
-            }, (category: string) => category + '_' + this.isCategorySelected(category).toString())
+              this.CategoryChip(category)
+            }, (category: string) => category)
           }
           .width('100%')
           .padding({ left: 16, right: 16, bottom: 12, top: 4 })
@@ -201,22 +201,22 @@ export struct GearFilterPanel {
   }
 
   @Builder
-  private CategoryChip(category: string, isActive: boolean) {
+  private CategoryChip(category: string) {
     Row({ space: 4 }) {
       Text(category)
         .fontSize(13)
-        .fontWeight(isActive ? FontWeight.Medium : FontWeight.Normal)
-        .fontColor(isActive ? '#FFFFFF' : TEXT_MAIN)
+        .fontWeight(this.isCategorySelected(category) ? FontWeight.Medium : FontWeight.Normal)
+        .fontColor(this.isCategorySelected(category) ? '#FFFFFF' : TEXT_MAIN)
         .maxLines(1)
       if (this.categoryCount(category) > 0) {
         Text(this.categoryCount(category).toString())
           .fontSize(11)
-          .fontColor(isActive ? '#CCFFFFFF' : TEXT_TERTIARY)
+          .fontColor(this.isCategorySelected(category) ? '#CCFFFFFF' : TEXT_TERTIARY)
       }
     }
     .height(32)
     .padding({ left: 12, right: 12 })
-    .backgroundColor(isActive ?
+    .backgroundColor(this.isCategorySelected(category) ?
       (this.pressedCategory === category ? '#1F5C32' : PRIMARY_COLOR) :
       (this.pressedCategory === category ? '#E8EBE8' : '#F5F7F5'))
     .borderRadius(16)

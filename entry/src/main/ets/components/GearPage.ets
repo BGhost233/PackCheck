@@ -452,15 +452,13 @@ export struct GearPage {
     return collapseRange - estimatedContentHeight + 80;
   }
 
-  // 渐进式模糊：0~0.3 无 | 0.3~0.7 Thin | >0.7 Regular
-  private gearHeaderBlurStyle(): BlurStyle {
+  // 渐进式模糊强度：0~0.3 无 | 0.3~1.0 线性增到 40
+  private gearHeaderBlurRadius(): number {
     const p = this.gearScrollProgress();
     if (p < 0.3) {
-      return BlurStyle.NONE;
-    } else if (p < 0.7) {
-      return BlurStyle.Thin;
+      return 0;
     }
-    return BlurStyle.Regular;
+    return Math.round(((p - 0.3) / 0.7) * 40);
   }
 
   // 渐进式背景色：PAGE_BG → BLUR_BG，alpha 从 00 到 CC 跟随 progress
@@ -697,21 +695,11 @@ export struct GearPage {
       }
       .width('100%')
 
-      // 底部渐融遮罩：让列表内容在 Header 底部自然淡出
-      Column()
-        .width('100%')
-        .height(16)
-        .linearGradient({
-          direction: GradientDirection.Bottom,
-          colors: [[this.gearHeaderBgColor(), 0], ['#00F8F9FA', 1]]
-        })
-        .hitTestBehavior(HitTestMode.None)
-        .position({ x: 0, y: '100%' })
     }
     .width('100%')
-    .clip(false)
+    .clip(true)
     .backgroundColor(this.gearHeaderBgColor())
-    .backgroundBlurStyle(this.gearHeaderBlurStyle())
+    .backdropBlur(this.gearHeaderBlurRadius())
     .position({ x: 0, y: 0 })
     .hitTestBehavior(HitTestMode.Transparent)
   }

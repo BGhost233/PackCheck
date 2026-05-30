@@ -9,7 +9,7 @@
 
 ---
 
-## Phase 1: 筛选面板空白修复 — `pending`
+## Phase 1: 筛选面板空白修复 — `complete`
 
 ### 问题
 面板固定 `height('52%')` 导致分组少时底部大量空白；分组多时上下 padding 松散。
@@ -30,7 +30,7 @@
 
 ---
 
-## Phase 2: 分组标签弹性按压反馈 — `pending`
+## Phase 2: 分组标签弹性按压反馈 — `complete`
 
 ### 问题
 现有按压只有 scale 0.93 缩小，无过冲回弹，视觉不够活泼。
@@ -50,7 +50,7 @@
 
 ---
 
-## Phase 3: 列表滑动遮挡修复（Header 底部渐融） — `pending`
+## Phase 3: 列表滑动遮挡修复（Header 底部渐融） — `complete`
 
 ### 问题
 CollapsingHeader 纯色背景在内容从下方滑入时硬切，视觉上像「被吃掉」。
@@ -71,7 +71,7 @@ CollapsingHeader 纯色背景在内容从下方滑入时硬切，视觉上像「
 
 ---
 
-## Phase 4: 长按预览动效优化 — `pending`
+## Phase 4: 长按预览动效优化 — `complete`
 
 ### 问题
 bindContextMenu 进入/退出动画僵硬，几乎硬切，缺乏弹性。
@@ -93,7 +93,7 @@ bindContextMenu 进入/退出动画僵硬，几乎硬切，缺乏弹性。
 
 ---
 
-## Phase 5: 预览卡片宽度自适应 — `pending`
+## Phase 5: 预览卡片宽度自适应 — `complete`
 
 ### 问题
 GearPreviewCard 固定 280vp 宽度，折叠屏/大屏偏窄。
@@ -110,7 +110,7 @@ GearPreviewCard 固定 280vp 宽度，折叠屏/大屏偏窄。
 
 ---
 
-## Phase 6: 构建验证 + Commit — `pending`
+## Phase 6: 构建验证 + Commit — `complete`
 
 ### 6.1 hvigorw assembleApp 通过
 ### 6.2 回归清单
