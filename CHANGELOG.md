@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.1 (2025-06-20)
+
+多选拖拽交互全面优化，达到 Apple/Linear 级流畅度。
+
+- 长按响应加速：多选模式下 LongPressGesture 400ms → 200ms，手指按下几乎立即触发拖拽
+- 多选原地化：进入/退出多选不再销毁/重建 Header（消除跳页感），CollapsingHeader 内部 if/else 切换内容
+- 拖拽跟手修复：去除手势坐标的 `px2vp` 误用 + DragGearStack 加 `.animation({duration:0})` 消除插值滞后
+- macOS Dock 磁吸动效：底部行程卡片基于距离实时计算 proximity，连续 scale/translateY 变化 + 命中时弹跳确认 + 40ms 振动反馈
+- 托盘视觉升级：capsule 拖拽指示器、`#E8FFFFFF` + backdropBlur(40)、border-radius 24、增强阴影
+- 手势返回：根 Stack 添加 SwipeGesture(Horizontal) 右滑退出多选模式
+- CLAUDE.md 新增第 18~20 条避坑：手势坐标单位/拖拽 duration:0/多选 Header 稳定性
+
 ## v0.5.0 (2025-06-19)
 
 质感跃迁：视觉细节打磨，从「功能完整」迈向「值得截图」。

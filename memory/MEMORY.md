@@ -22,6 +22,9 @@
 - Sheet 弹起 dampingFraction 0.72（有过冲回弹），收回 0.88（干脆无回弹）
 - 新建行程仪式卡片弹出时背景同样 scale(0.94) + blur(12) 下沉，退场通过 `onExitStart` 回调与卡片动画并行恢复（EaseOut 400ms），避免延迟感
 
+- 多选拖拽交互设计：长按 200ms 进入拖拽，Header 原地切换内容（不销毁/重建），浮动卡片 `duration:0` 即时跟手，底部托盘 macOS Dock 磁吸放大，右滑 SwipeGesture 退出多选
+- 磁吸动效参数：影响半径 140vp，scale 1.0~1.1 连续变化，translateY 0~-10vp 涌起，动画 duration 160 + EaseOut（不用 Spring 避免过度弹性）
+
 ## 架构
 
 - 已从 Index.ets 提取独立组件：TripCeremonyCard、EditGearPanel、EditItemPanel、GearFilterPanel
@@ -41,6 +44,10 @@
 - SymbolGlyph 支持 `.rotate()` 变换（GearPage.ets 已验证）
 - 文字切换用 Stack + 双 Text 的 opacity 交叉淡入实现，比条件渲染平滑
 - 棘轮振动模式：在连续手势中按进度阈值触发振动，需用 state 记录已触发阈值防重复
+- `GestureEvent.fingerList[].globalX/Y` 已经是 vp 单位，不需要 px2vp；`display.getDefaultDisplaySync()` 返回物理像素需要 px2vp
+- 拖拽跟手必须 `.animation({ duration: 0 })` 覆盖父级动画继承，否则 ArkUI 插值造成滞后
+- macOS Dock 风格磁吸效果：在 builder 中实时计算 proximity（基于 dragX/Y state），卡片数量有限时性能可接受（每个 TripCard 引用 dragX/Y 会触发重建）
+- SwipeGesture(Horizontal) 与垂直 List 滚动不冲突，可安全用于多选退出手势
 
 ## 已知限制
 
