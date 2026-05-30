@@ -180,11 +180,16 @@ export struct GearPage {
   }
 
   private completeDrag(): void {
-    if (this.dragOverTripId !== '' && this.selectedMultiGearIds.length > 0) {
-      if (this.dragOverTripId === '__new_trip__') {
+    const hitTarget = this.dragOverTripId;
+    if (hitTarget !== '' && this.selectedMultiGearIds.length > 0) {
+      // 成功释放：强振动确认
+      try {
+        vibrator.startVibration({ type: 'time', duration: 40 }, { usage: 'touch' });
+      } catch (e) { /* 静默 */ }
+      if (hitTarget === '__new_trip__') {
         this.onAddGearsToNewTrip(this.selectedMultiGearIds);
       } else {
-        this.onAddGearsToTrip(this.selectedMultiGearIds, this.dragOverTripId);
+        this.onAddGearsToTrip(this.selectedMultiGearIds, hitTarget);
       }
     }
     // 退出拖拽态
@@ -576,15 +581,12 @@ export struct GearPage {
         if (this.searchExpanded) {
           this.SearchBar();
         }
-        if (this.multiSelectMode) {
-          this.MultiSelectBar();
-        }
         Stack() {
           List({ space: 8, scroller: this.gearListScroller }) {
             ListItem() {
               Column()
                 .width('100%')
-                .height(this.multiSelectMode ? 8 : GEAR_HEADER_EXPANDED)
+                .height(this.multiSelectMode ? GEAR_HEADER_COLLAPSED : GEAR_HEADER_EXPANDED)
             }
             if (this.gears.length === 0) {
               ListItem() {
@@ -637,8 +639,8 @@ export struct GearPage {
       .width('100%')
       .height('100%')
 
+      this.CollapsingHeader();
       if (!this.multiSelectMode) {
-        this.CollapsingHeader();
         this.Fab();
       }
       if (this.showWeightEditor) {
@@ -690,133 +692,182 @@ export struct GearPage {
         });
       }
     })
+    .gesture(
+      SwipeGesture({ direction: SwipeDirection.Horizontal, speed: 80 })
+        .onAction((event: GestureEvent) => {
+          if (this.multiSelectMode && event.angle > -45 && event.angle < 45) {
+            // 右滑退出多选
+            this.onCancelGearMultiSelect();
+          }
+        })
+    )
   }
 
   @Builder
   private CollapsingHeader() {
-    Stack({ alignContent: Alignment.TopStart }) {
-      // 等高线视差装饰层（最底层）
-      Shape() {
-        Path()
-          .commands(
-            'M 0 60 C 30 55 60 65 90 58 C 120 51 150 62 180 56 C 210 50 240 60 270 54 C 300 48 330 58 360 52 ' +
-            'M 0 120 C 40 112 80 125 120 115 C 160 105 200 118 240 110 C 280 102 320 115 360 108 ' +
-            'M 0 180 C 35 172 70 182 105 175 C 140 168 175 178 210 170 C 245 162 280 174 315 166 C 340 160 355 168 360 165 ' +
-            'M 0 240 C 45 232 90 244 135 235 C 180 226 225 238 270 230 C 315 222 345 234 360 228'
-          )
-          .stroke('#0A2D7D46')
-          .strokeWidth(1)
-          .fill('#00000000')
-          .strokeLineCap(LineCapStyle.Round)
-          .antiAlias(true)
+    if (this.multiSelectMode) {
+      // 多选模式：固定收缩态，显示选中计数 + 操作按钮
+      Row() {
+        Text('已选 ' + this.selectedMultiGearIds.length.toString() + ' 件')
+          .fontSize(17)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+          .fontFeature(FONT_FEATURE_TNUM)
+          .layoutWeight(1)
+        Button('生成清单')
+          .height(32)
+          .fontSize(13)
+          .fontColor('#FFFFFF')
+          .backgroundColor(this.selectedMultiGearIds.length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
+          .borderRadius(16)
+          .padding({ left: 14, right: 14 })
+          .enabled(this.selectedMultiGearIds.length > 0)
+          .onClick(() => {
+            this.onOpenGenerateTripSheet();
+          })
+        Button('取消')
+          .height(32)
+          .fontSize(13)
+          .fontColor(TEXT_SECONDARY)
+          .backgroundColor('#00000000')
+          .padding({ left: 10, right: 10 })
+          .onClick(() => {
+            this.onCancelGearMultiSelect();
+          })
       }
-      .viewPort({ x: 0, y: 0, width: 360, height: 340 })
       .width('100%')
-      .height(GEAR_HEADER_EXPANDED)
-      .translate({ y: -(this.gearScrollOffset * 0.3) })
-      .animation({ duration: 80, curve: Curve.EaseOut })
-      .hitTestBehavior(HitTestMode.None)
-
-      // 主内容层
-      Column() {
-        Row() {
-          Text('我的装备库')
-            .fontSize(this.gearTitleFontSize())
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-            .animation({ duration: 80 })
-          Text(this.gearSummaryText())
-            .fontSize(13)
-            .fontColor(TEXT_TERTIARY)
-            .fontFeature(FONT_FEATURE_TNUM)
-            .maxLines(1)
-            .constraintSize({ maxWidth: 160 })
-            .margin({ left: 8 })
-            .opacity(this.gearCollapsedOpacity())
-            .translate({ x: this.gearCollapsedOpacity() > 0 ? 0 : -12 })
-            .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
-          Blank()
-          Row() {
-            SymbolGlyph($r('sys.symbol.magnifyingglass'))
-              .fontSize(20)
-              .fontColor([this.gearSearchKeyword.length > 0 ? PRIMARY_COLOR : TEXT_SECONDARY])
-          }
-          .width(36)
-          .height(36)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(PRIMARY_TINT_COLOR)
-          .borderRadius(18)
-          .onClick(() => {
-            this.searchExpanded = true;
-          })
-          Row() {
-            SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
-              .fontSize(18)
-              .fontColor([TEXT_SECONDARY])
-          }
-          .width(36)
-          .height(36)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(PRIMARY_TINT_COLOR)
-          .borderRadius(18)
-          .margin({ left: 10 })
-          .onClick(() => {
-            this.onOpenSort();
-          })
+      .height(GEAR_HEADER_COLLAPSED)
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
+      .backgroundColor(PAGE_BG)
+      .position({ x: 0, y: 0 })
+      .zIndex(10)
+    } else {
+      // 普通模式：可折叠 Header
+      Stack({ alignContent: Alignment.TopStart }) {
+        // 等高线视差装饰层（最底层）
+        Shape() {
+          Path()
+            .commands(
+              'M 0 60 C 30 55 60 65 90 58 C 120 51 150 62 180 56 C 210 50 240 60 270 54 C 300 48 330 58 360 52 ' +
+              'M 0 120 C 40 112 80 125 120 115 C 160 105 200 118 240 110 C 280 102 320 115 360 108 ' +
+              'M 0 180 C 35 172 70 182 105 175 C 140 168 175 178 210 170 C 245 162 280 174 315 166 C 340 160 355 168 360 165 ' +
+              'M 0 240 C 45 232 90 244 135 235 C 180 226 225 238 270 230 C 315 222 345 234 360 228'
+            )
+            .stroke('#0A2D7D46')
+            .strokeWidth(1)
+            .fill('#00000000')
+            .strokeLineCap(LineCapStyle.Round)
+            .antiAlias(true)
         }
+        .viewPort({ x: 0, y: 0, width: 360, height: 340 })
         .width('100%')
-        .height(GEAR_HEADER_COLLAPSED)
-        .alignItems(VerticalAlign.Center)
-        .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
+        .height(GEAR_HEADER_EXPANDED)
+        .translate({ y: -(this.gearScrollOffset * 0.3) })
+        .animation({ duration: 80, curve: Curve.EaseOut })
+        .hitTestBehavior(HitTestMode.None)
 
-        if (this.gearScrollProgress() < 1) {
-          Column() {
-            Row({ space: 4 }) {
-              Text(this.activeCategoryText())
-                .fontSize(14)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(PRIMARY_COLOR)
-                .maxLines(1)
-              SymbolGlyph($r('sys.symbol.chevron_down'))
-                .fontSize(12)
-                .fontColor([PRIMARY_COLOR])
+        // 主内容层
+        Column() {
+          Row() {
+            Text('我的装备库')
+              .fontSize(this.gearTitleFontSize())
+              .fontWeight(FontWeight.Bold)
+              .fontColor(TEXT_MAIN)
+              .animation({ duration: 80 })
+            Text(this.gearSummaryText())
+              .fontSize(13)
+              .fontColor(TEXT_TERTIARY)
+              .fontFeature(FONT_FEATURE_TNUM)
+              .maxLines(1)
+              .constraintSize({ maxWidth: 160 })
+              .margin({ left: 8 })
+              .opacity(this.gearCollapsedOpacity())
+              .translate({ x: this.gearCollapsedOpacity() > 0 ? 0 : -12 })
+              .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
+            Blank()
+            Row() {
+              SymbolGlyph($r('sys.symbol.magnifyingglass'))
+                .fontSize(20)
+                .fontColor([this.gearSearchKeyword.length > 0 ? PRIMARY_COLOR : TEXT_SECONDARY])
             }
-            .height(32)
-            .padding({ left: 12, right: 12 })
+            .width(36)
+            .height(36)
+            .justifyContent(FlexAlign.Center)
             .backgroundColor(PRIMARY_TINT_COLOR)
-            .borderRadius(16)
-            .margin({ left: PAGE_PADDING, top: 6, bottom: 4 })
-            .opacity(this.gearPillOpacity())
+            .borderRadius(18)
             .onClick(() => {
-              this.onOpenFilterPanel();
+              this.searchExpanded = true;
             })
-
-            WeightGauge({
-              currentWeight: this.totalGearWeight(),
-              targetWeight: this.targetWeightGram,
-              gearCount: this.gears.length,
-              totalPrice: this.totalGearPrice(),
-              budget: this.gearBudget
+            Row() {
+              SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
+                .fontSize(18)
+                .fontColor([TEXT_SECONDARY])
+            }
+            .width(36)
+            .height(36)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor(PRIMARY_TINT_COLOR)
+            .borderRadius(18)
+            .margin({ left: 10 })
+            .onClick(() => {
+              this.onOpenSort();
             })
-              .opacity(this.gearRingOpacity())
-              .scale({ x: this.gearRingScale(), y: this.gearRingScale() })
           }
           .width('100%')
-          .height((GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED) * (1 - this.gearScrollProgress()))
-          .clip(true)
-          .alignItems(HorizontalAlign.Start)
+          .height(GEAR_HEADER_COLLAPSED)
+          .alignItems(VerticalAlign.Center)
+          .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
+
+          if (this.gearScrollProgress() < 1) {
+            Column() {
+              Row({ space: 4 }) {
+                Text(this.activeCategoryText())
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(PRIMARY_COLOR)
+                  .maxLines(1)
+                SymbolGlyph($r('sys.symbol.chevron_down'))
+                  .fontSize(12)
+                  .fontColor([PRIMARY_COLOR])
+              }
+              .height(32)
+              .padding({ left: 12, right: 12 })
+              .backgroundColor(PRIMARY_TINT_COLOR)
+              .borderRadius(16)
+              .margin({ left: PAGE_PADDING, top: 6, bottom: 4 })
+              .opacity(this.gearPillOpacity())
+              .onClick(() => {
+                this.onOpenFilterPanel();
+              })
+
+              WeightGauge({
+                currentWeight: this.totalGearWeight(),
+                targetWeight: this.targetWeightGram,
+                gearCount: this.gears.length,
+                totalPrice: this.totalGearPrice(),
+                budget: this.gearBudget
+              })
+                .opacity(this.gearRingOpacity())
+                .scale({ x: this.gearRingScale(), y: this.gearRingScale() })
+            }
+            .width('100%')
+            .height((GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED) * (1 - this.gearScrollProgress()))
+            .clip(true)
+            .alignItems(HorizontalAlign.Start)
+          }
         }
+        .width('100%')
+
       }
       .width('100%')
-
+      .height(this.gearHeaderHeight())
+      .clip(true)
+      .backgroundColor(this.gearHeaderBgColor())
+      .backdropBlur(this.gearHeaderBlurRadius())
+      .position({ x: 0, y: 0 })
+      .hitTestBehavior(HitTestMode.Transparent)
     }
-    .width('100%')
-    .height(this.gearHeaderHeight())
-    .clip(true)
-    .backgroundColor(this.gearHeaderBgColor())
-    .backdropBlur(this.gearHeaderBlurRadius())
-    .position({ x: 0, y: 0 })
-    .hitTestBehavior(HitTestMode.Transparent)
   }
 
   @Builder
@@ -971,19 +1022,25 @@ export struct GearPage {
   @Builder
   private GearRow(item: GearItem) {
     if (this.multiSelectMode) {
-      // 多选模式：绑定拖拽手势，不绑定 Context Menu
+      // 多选模式：保持相同卡片布局，左侧渐入 Checkbox + 绑定拖拽手势
       Column() {
         Row({ space: 10 }) {
+          // Checkbox 动画渐入
+          Checkbox()
+            .select(this.hasMultiGearSelection(item.id))
+            .width(20)
+            .height(20)
+            .onChange((checked: boolean) => {
+              this.onToggleMultiGearSelection(item.id);
+            })
+            .transition(TransitionEffect.OPACITY.combine(
+              TransitionEffect.translate({ x: -16 })
+            ).animation({ duration: 260, curve: curves.springMotion(0.3, 0.8) }))
           Row()
             .width(3)
             .height(24)
             .borderRadius(1.5)
             .backgroundColor(getGroupColor(item.category))
-          Checkbox()
-            .select(this.hasMultiGearSelection(item.id))
-            .onChange((checked: boolean) => {
-              this.onToggleMultiGearSelection(item.id);
-            })
           this.GearNameText(item.name)
           if (item.weight !== undefined && item.weight > 0) {
             Text(item.weight.toString() + 'g')
@@ -1001,7 +1058,7 @@ export struct GearPage {
       }
       .width('100%')
       .padding({ left: 14, right: 14, top: 10, bottom: 10 })
-      .backgroundColor(CARD_BG)
+      .backgroundColor(this.hasMultiGearSelection(item.id) ? LIGHT_PRIMARY_COLOR : CARD_BG)
       .borderRadius(12)
       .border({ width: { bottom: CARD_BORDER_BOTTOM_WIDTH }, color: { bottom: CARD_BORDER_BOTTOM_COLOR } })
       .shadow({ radius: 8, color: '#08000000', offsetX: 0, offsetY: 1 })
@@ -1017,20 +1074,16 @@ export struct GearPage {
       })
       .gesture(
         GestureGroup(GestureMode.Sequence,
-          LongPressGesture({ fingers: 1, repeat: false, duration: 400 })
+          LongPressGesture({ fingers: 1, repeat: false, duration: 200 })
             .onAction((event: GestureEvent) => {
               if (this.hasMultiGearSelection(item.id)) {
-                const fingerX = event.fingerList[0].globalX;
-                const fingerY = event.fingerList[0].globalY;
-                this.enterDragMode(px2vp(fingerX), px2vp(fingerY));
+                this.enterDragMode(event.fingerList[0].globalX, event.fingerList[0].globalY);
               }
             }),
           PanGesture({ fingers: 1, distance: 0 })
             .onActionUpdate((event: GestureEvent) => {
               if (this.dragMode) {
-                const fingerX = event.fingerList[0].globalX;
-                const fingerY = event.fingerList[0].globalY;
-                this.updateDragPosition(px2vp(fingerX), px2vp(fingerY));
+                this.updateDragPosition(event.fingerList[0].globalX, event.fingerList[0].globalY);
               }
             })
             .onActionEnd(() => {
@@ -1425,6 +1478,14 @@ export struct GearPage {
   @Builder
   private TripDropTray() {
     Column() {
+      // 顶部拖拽指示器
+      Row()
+        .width(40)
+        .height(4)
+        .borderRadius(2)
+        .backgroundColor('#33000000')
+        .margin({ top: 10, bottom: 6 })
+
       // 标题行
       Row() {
         Text('拖入行程')
@@ -1436,7 +1497,7 @@ export struct GearPage {
           .fontColor(TEXT_TERTIARY)
       }
       .width('100%')
-      .padding({ left: 20, right: 20, top: 16, bottom: 12 })
+      .padding({ left: 20, right: 20, top: 4, bottom: 12 })
 
       // 横向行程卡片列表
       Scroll() {
@@ -1466,10 +1527,11 @@ export struct GearPage {
             style: this.dragOverTripId === '__new_trip__' ? BorderStyle.Solid : BorderStyle.Dashed
           })
           .scale({
-            x: this.dragOverTripId === '__new_trip__' ? 1.06 : 1,
-            y: this.dragOverTripId === '__new_trip__' ? 1.06 : 1
+            x: this.tripCardScale('__new_trip__'),
+            y: this.tripCardScale('__new_trip__')
           })
-          .animation({ duration: 260, curve: curves.springMotion(0.25, 0.8) })
+          .translate({ y: this.tripCardLift('__new_trip__') })
+          .animation({ duration: 160, curve: Curve.EaseOut })
           .onAreaChange((_old: Area, area: Area) => {
             const pos = area.globalPosition as Position;
             this.updateTripCardArea('__new_trip__',
@@ -1485,11 +1547,12 @@ export struct GearPage {
       .height(96)
     }
     .width('100%')
-    .backgroundColor('#F0FFFFFF')
-    .backdropBlur(30)
-    .borderRadius({ topLeft: 20, topRight: 20 })
-    .shadow({ radius: 16, color: '#14000000', offsetX: 0, offsetY: -4 })
-    .position({ x: 0, y: this.showTripTray ? this.screenHeight - 180 : this.screenHeight })
+    .alignItems(HorizontalAlign.Center)
+    .backgroundColor('#E8FFFFFF')
+    .backdropBlur(40)
+    .borderRadius({ topLeft: 24, topRight: 24 })
+    .shadow({ radius: 20, color: '#1A000000', offsetX: 0, offsetY: -6 })
+    .position({ x: 0, y: this.showTripTray ? this.screenHeight - 200 : this.screenHeight })
     .animation({ duration: 350, curve: curves.springMotion(0.35, 0.8) })
   }
 
@@ -1513,12 +1576,13 @@ export struct GearPage {
     .padding({ left: 10, right: 10 })
     .borderRadius(12)
     .backgroundColor(this.dragOverTripId === trip.id ? PRIMARY_COLOR : CARD_BG)
-    .shadow({ radius: this.dragOverTripId === trip.id ? 12 : 4, color: '#0A000000', offsetX: 0, offsetY: 2 })
+    .shadow({ radius: this.dragOverTripId === trip.id ? 16 : 4, color: '#0A000000', offsetX: 0, offsetY: 2 })
     .scale({
-      x: this.dragOverTripId === trip.id ? 1.06 : 1,
-      y: this.dragOverTripId === trip.id ? 1.06 : 1
+      x: this.tripCardScale(trip.id),
+      y: this.tripCardScale(trip.id)
     })
-    .animation({ duration: 260, curve: curves.springMotion(0.25, 0.8) })
+    .translate({ y: this.tripCardLift(trip.id) })
+    .animation({ duration: 160, curve: Curve.EaseOut })
     .onAreaChange((_old: Area, area: Area) => {
       const pos = area.globalPosition as Position;
       this.updateTripCardArea(trip.id,
@@ -1535,6 +1599,40 @@ export struct GearPage {
     } else {
       this.tripCardAreas.push(area);
     }
+  }
+
+  // 磁吸效果：计算卡片基于手指距离的 proximity (0~1)
+  private tripCardProximity(id: string): number {
+    if (!this.dragMode) {
+      return 0;
+    }
+    const area = this.tripCardAreas.find(a => a.id === id);
+    if (area === undefined) {
+      return 0;
+    }
+    const centerX = area.x + area.w / 2;
+    const centerY = area.y + area.h / 2;
+    const dx = this.dragX - centerX;
+    const dy = this.dragY - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const threshold = 140; // 影响半径 vp
+    return Math.max(0, 1 - distance / threshold);
+  }
+
+  // 基于 proximity 的 scale: 1.0 ~ 1.12
+  private tripCardScale(id: string): number {
+    if (this.dragOverTripId === id) {
+      return 1.1;
+    }
+    return 1 + 0.1 * this.tripCardProximity(id);
+  }
+
+  // 基于 proximity 的 translateY: 0 ~ -10vp (向上涌起)
+  private tripCardLift(id: string): number {
+    if (this.dragOverTripId === id) {
+      return -10;
+    }
+    return -8 * this.tripCardProximity(id);
   }
 
   // --- 浮动装备堆 ---
@@ -1565,8 +1663,9 @@ export struct GearPage {
     .backdropBlur(20)
     .borderRadius(12)
     .shadow({ radius: 20, color: '#28000000', offsetX: 0, offsetY: 6 })
-    .rotate({ angle: -3 })
-    .position({ x: this.dragX - 70, y: this.dragY - 50 })
+    .rotate({ angle: -2 })
+    .position({ x: this.dragX - 70, y: this.dragY - 56 })
+    .animation({ duration: 0 })
   }
 
   private dragGearFirstName(): string {
