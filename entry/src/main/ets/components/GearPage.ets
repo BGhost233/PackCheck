@@ -1,6 +1,7 @@
 import { common } from '@kit.AbilityKit';
 import { curves, display } from '@kit.ArkUI';
-import { GearItem } from '../models/PackModels';
+import { vibrator } from '@kit.SensorServiceKit';
+import { GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import { WeightGauge } from './WeightGauge';
 import { EmptyIllustration } from './EmptyIllustration';
@@ -31,6 +32,13 @@ import {
 } from '../constants/DesignTokens';
 import { getGroupColor } from '../utils/ColorUtils';
 
+interface TripCardArea {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 @Component
 export struct GearPage {
@@ -57,6 +65,14 @@ export struct GearPage {
   @State private gearScrollOffset: number = 0;
   @State private collapsedGearGroups: string[] = [];
   @State private gearGroupExpandTrigger: number = 0;
+
+  // --- 拖拽到行程 ---
+  @State private dragMode: boolean = false;
+  @State private dragX: number = 0;
+  @State private dragY: number = 0;
+  @State private dragOverTripId: string = '';
+  @State private showTripTray: boolean = false;
+  @Prop checklists: TripChecklist[] = [];
 
   private store: PackStore = new PackStore();
   private gearListScroller: Scroller = new Scroller();
@@ -121,6 +137,78 @@ export struct GearPage {
     });
   }
 
+  // --- 拖拽到行程: 碰撞检测区域 ---
+  private tripCardAreas: TripCardArea[] = [];
+
+  private enterDragMode(startX: number, startY: number): void {
+    this.dragMode = true;
+    this.dragX = startX;
+    this.dragY = startY;
+    // 触觉确认
+    try {
+      vibrator.startVibration({ type: 'time', duration: 30 }, { usage: 'touch' });
+    } catch (e) { /* 静默 */ }
+    // 弹出托盘 + 背景模糊
+    this.getUIContext().animateTo({
+      duration: 350,
+      curve: curves.springMotion(0.35, 0.8)
+    }, () => {
+      this.showTripTray = true;
+    });
+  }
+
+  private updateDragPosition(x: number, y: number): void {
+    this.dragX = x;
+    this.dragY = y;
+    // 碰撞检测
+    let hitId = '';
+    for (const area of this.tripCardAreas) {
+      if (x >= area.x && x <= area.x + area.w && y >= area.y && y <= area.y + area.h) {
+        hitId = area.id;
+        break;
+      }
+    }
+    if (hitId !== this.dragOverTripId) {
+      this.dragOverTripId = hitId;
+      if (hitId !== '') {
+        // 振动反馈：进入目标
+        try {
+          vibrator.startVibration({ type: 'time', duration: 15 }, { usage: 'touch' });
+        } catch (e) { /* 静默 */ }
+      }
+    }
+  }
+
+  private completeDrag(): void {
+    if (this.dragOverTripId !== '' && this.selectedMultiGearIds.length > 0) {
+      if (this.dragOverTripId === '__new_trip__') {
+        this.onAddGearsToNewTrip(this.selectedMultiGearIds);
+      } else {
+        this.onAddGearsToTrip(this.selectedMultiGearIds, this.dragOverTripId);
+      }
+    }
+    // 退出拖拽态
+    this.getUIContext().animateTo({
+      duration: 300,
+      curve: curves.springMotion(0.35, 0.8)
+    }, () => {
+      this.dragMode = false;
+      this.showTripTray = false;
+      this.dragOverTripId = '';
+    });
+  }
+
+  private cancelDrag(): void {
+    this.getUIContext().animateTo({
+      duration: 300,
+      curve: curves.springMotion(0.35, 0.8)
+    }, () => {
+      this.dragMode = false;
+      this.showTripTray = false;
+      this.dragOverTripId = '';
+    });
+  }
+
   onSearchChange: (keyword: string) => void = (keyword: string): void => {};
   onOpenFilterPanel: () => void = (): void => {};
   onOpenSort: () => void = (): void => {};
@@ -133,6 +221,8 @@ export struct GearPage {
   onToggleMultiGearSelection: (id: string) => void = (id: string): void => {};
   onCancelGearMultiSelect: () => void = (): void => {};
   onOpenGenerateTripSheet: () => void = (): void => {};
+  onAddGearsToTrip: (gearIds: string[], tripId: string) => void = (gearIds: string[], tripId: string): void => {};
+  onAddGearsToNewTrip: (gearIds: string[]) => void = (gearIds: string[]): void => {};
 
   private numberOrZero(value: number | undefined): number {
     return value === undefined ? 0 : value;
@@ -549,6 +639,25 @@ export struct GearPage {
       if (this.showWeightEditor) {
         this.WeightTargetEditor();
       }
+
+      // --- 拖拽覆盖层 ---
+      if (this.dragMode) {
+        // 背景遮罩 + 模糊
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor('#66000000')
+          .backdropBlur(20)
+          .onClick(() => {
+            this.cancelDrag();
+          })
+
+        // 底部行程托盘
+        this.TripDropTray()
+
+        // 浮动装备堆
+        this.DragGearStack()
+      }
     }
     .width('100%')
     .height('100%')
@@ -932,6 +1041,37 @@ export struct GearPage {
       placement: Placement.Bottom,
       borderRadius: 20
     })
+    .parallelGesture(
+      GestureGroup(GestureMode.Sequence,
+        LongPressGesture({ fingers: 1, repeat: false, duration: 400 })
+          .onAction((event: GestureEvent) => {
+            // 仅在多选模式且该装备已被选中时进入拖拽
+            if (this.multiSelectMode && this.hasMultiGearSelection(item.id)) {
+              const fingerX = event.fingerList[0].globalX;
+              const fingerY = event.fingerList[0].globalY;
+              this.enterDragMode(px2vp(fingerX), px2vp(fingerY));
+            }
+          }),
+        PanGesture({ fingers: 1, distance: 0 })
+          .onActionUpdate((event: GestureEvent) => {
+            if (this.dragMode) {
+              const fingerX = event.fingerList[0].globalX;
+              const fingerY = event.fingerList[0].globalY;
+              this.updateDragPosition(px2vp(fingerX), px2vp(fingerY));
+            }
+          })
+          .onActionEnd(() => {
+            if (this.dragMode) {
+              this.completeDrag();
+            }
+          })
+          .onActionCancel(() => {
+            if (this.dragMode) {
+              this.cancelDrag();
+            }
+          })
+      )
+    )
   }
 
   @Builder
@@ -1022,28 +1162,6 @@ export struct GearPage {
       this.DetailLine('备注', item.note === undefined || item.note.length === 0 ? '未填写' : item.note);
       this.DetailLine('添加时间', this.formatDateText(item.createdAt));
       this.DetailLine('出行次数', '×' + this.gearTripCount(item).toString());
-      Row() {
-        Button('编辑')
-          .height(36)
-          .fontSize(13)
-          .fontColor(PRIMARY_COLOR)
-          .backgroundColor(LIGHT_PRIMARY_COLOR)
-          .borderRadius(18)
-          .onClick(() => {
-            this.onOpenEditGear(item);
-          })
-        Blank()
-        Button('删除')
-          .height(36)
-          .fontSize(13)
-          .fontColor(DANGER_COLOR)
-          .backgroundColor('#FFF1F0')
-          .borderRadius(18)
-          .onClick(() => {
-            this.onConfirmDeleteGear(item);
-          })
-      }
-      .width('100%')
     }
     .width('100%')
     .padding({ top: 12 })
@@ -1261,5 +1379,164 @@ export struct GearPage {
       .padding(18)
       .backgroundColor(CARD_BG)
       .borderRadius(16)
+  }
+
+  // --- 行程托盘 ---
+  @Builder
+  private TripDropTray() {
+    Column() {
+      // 标题行
+      Row() {
+        Text('拖入行程')
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(TEXT_MAIN)
+        Text(' · ' + this.checklists.length.toString() + ' 个')
+          .fontSize(13)
+          .fontColor(TEXT_TERTIARY)
+      }
+      .width('100%')
+      .padding({ left: 20, right: 20, top: 16, bottom: 12 })
+
+      // 横向行程卡片列表
+      Scroll() {
+        Row({ space: 12 }) {
+          ForEach(this.checklists.slice(0, 10), (trip: TripChecklist) => {
+            this.TripCard(trip)
+          }, (trip: TripChecklist) => trip.id)
+
+          // 新建行程卡片
+          Column({ space: 6 }) {
+            SymbolGlyph($r('sys.symbol.plus'))
+              .fontSize(24)
+              .fontColor([this.dragOverTripId === '__new_trip__' ? '#FFFFFF' : PRIMARY_COLOR])
+            Text('新建')
+              .fontSize(12)
+              .fontColor(this.dragOverTripId === '__new_trip__' ? '#FFFFFF' : TEXT_SECONDARY)
+          }
+          .width(100)
+          .height(80)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .borderRadius(12)
+          .backgroundColor(this.dragOverTripId === '__new_trip__' ? PRIMARY_COLOR : '#00000000')
+          .border({
+            width: 1.5,
+            color: this.dragOverTripId === '__new_trip__' ? PRIMARY_COLOR : TEXT_TERTIARY,
+            style: this.dragOverTripId === '__new_trip__' ? BorderStyle.Solid : BorderStyle.Dashed
+          })
+          .scale({
+            x: this.dragOverTripId === '__new_trip__' ? 1.06 : 1,
+            y: this.dragOverTripId === '__new_trip__' ? 1.06 : 1
+          })
+          .animation({ duration: 260, curve: curves.springMotion(0.25, 0.8) })
+          .onAreaChange((_old: Area, area: Area) => {
+            const pos = area.globalPosition as Position;
+            this.updateTripCardArea('__new_trip__',
+              pos.x as number, pos.y as number,
+              area.width as number, area.height as number);
+          })
+        }
+        .padding({ left: 20, right: 20 })
+      }
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .width('100%')
+      .height(96)
+    }
+    .width('100%')
+    .backgroundColor('#F0FFFFFF')
+    .backdropBlur(30)
+    .borderRadius({ topLeft: 20, topRight: 20 })
+    .shadow({ radius: 16, color: '#14000000', offsetX: 0, offsetY: -4 })
+    .position({ x: 0, y: this.showTripTray ? this.screenHeight - 180 : this.screenHeight })
+    .animation({ duration: 350, curve: curves.springMotion(0.35, 0.8) })
+  }
+
+  @Builder
+  private TripCard(trip: TripChecklist) {
+    Column({ space: 4 }) {
+      Text(trip.title)
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(this.dragOverTripId === trip.id ? '#FFFFFF' : TEXT_MAIN)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+      Text(trip.items.length.toString() + ' 件装备')
+        .fontSize(11)
+        .fontColor(this.dragOverTripId === trip.id ? '#CCFFFFFF' : TEXT_TERTIARY)
+    }
+    .width(100)
+    .height(80)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .padding({ left: 10, right: 10 })
+    .borderRadius(12)
+    .backgroundColor(this.dragOverTripId === trip.id ? PRIMARY_COLOR : CARD_BG)
+    .shadow({ radius: this.dragOverTripId === trip.id ? 12 : 4, color: '#0A000000', offsetX: 0, offsetY: 2 })
+    .scale({
+      x: this.dragOverTripId === trip.id ? 1.06 : 1,
+      y: this.dragOverTripId === trip.id ? 1.06 : 1
+    })
+    .animation({ duration: 260, curve: curves.springMotion(0.25, 0.8) })
+    .onAreaChange((_old: Area, area: Area) => {
+      const pos = area.globalPosition as Position;
+      this.updateTripCardArea(trip.id,
+        pos.x as number, pos.y as number,
+        area.width as number, area.height as number);
+    })
+  }
+
+  private updateTripCardArea(id: string, x: number, y: number, w: number, h: number): void {
+    const area: TripCardArea = { id: id, x: x, y: y, w: w, h: h };
+    const idx = this.tripCardAreas.findIndex(a => a.id === id);
+    if (idx >= 0) {
+      this.tripCardAreas[idx] = area;
+    } else {
+      this.tripCardAreas.push(area);
+    }
+  }
+
+  // --- 浮动装备堆 ---
+  @Builder
+  private DragGearStack() {
+    Row({ space: 6 }) {
+      Text(this.dragGearFirstName())
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(TEXT_MAIN)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+      if (this.selectedMultiGearIds.length > 1) {
+        Text('×' + this.selectedMultiGearIds.length.toString())
+          .fontSize(12)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#FFFFFF')
+          .backgroundColor(PRIMARY_COLOR)
+          .borderRadius(10)
+          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+      }
+    }
+    .width(140)
+    .height(44)
+    .padding({ left: 12, right: 12 })
+    .backgroundColor('#EEFFFFFF')
+    .backdropBlur(20)
+    .borderRadius(12)
+    .shadow({ radius: 20, color: '#28000000', offsetX: 0, offsetY: 6 })
+    .rotate({ angle: -3 })
+    .position({ x: this.dragX - 70, y: this.dragY - 50 })
+  }
+
+  private dragGearFirstName(): string {
+    if (this.selectedMultiGearIds.length > 0) {
+      const firstId = this.selectedMultiGearIds[0];
+      const gear = this.gears.find(g => g.id === firstId);
+      if (gear !== undefined) {
+        return gear.name;
+      }
+    }
+    return '装备';
   }
 }

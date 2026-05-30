@@ -1341,6 +1341,35 @@ struct Index {
     return CheckCalc.addItemsToChecklist(this.checklists, checklistId, items);
   }
 
+  private async addGearsToExistingTrip(gearIds: string[], tripId: string): Promise<void> {
+    const uniqueIds = this.uniqueGearIds(gearIds);
+    const items: ChecklistItem[] = [];
+    for (let gearIndex = 0; gearIndex < this.gears.length; gearIndex++) {
+      const gear = this.gears[gearIndex];
+      if (uniqueIds.indexOf(gear.id) >= 0) {
+        const item: ChecklistItem = {
+          id: makeId('item'),
+          name: gear.name,
+          group: gear.category,
+          checked: false,
+          weight: gear.weight,
+          price: gear.price,
+          fromGearId: gear.id
+        };
+        items.push(item);
+      }
+    }
+    const updatedChecklists = this.addItemsToChecklist(tripId, items);
+    this.applyChecklistState(updatedChecklists);
+    await this.store.saveChecklists(updatedChecklists);
+    await this.incrementGearTripCounts(uniqueIds);
+    this.cancelGearMultiSelect();
+    // 找到目标行程名称做 toast
+    const targetTrip = updatedChecklists.find(c => c.id === tripId);
+    const tripName = targetTrip !== undefined ? targetTrip.title : '行程';
+    this.showToastMessage('已添加 ' + items.length.toString() + ' 件到「' + tripName + '」');
+  }
+
   private currentReviewItem(): ChecklistItem | undefined {
     const checklist = this.currentChecklist();
     if (checklist === undefined || this.reviewIndex < 0 || this.reviewIndex >= checklist.items.length) {
@@ -1777,6 +1806,7 @@ struct Index {
               targetWeightGram: $targetWeightGram,
               multiSelectMode: this.multiSelectMode,
               selectedMultiGearIds: this.selectedMultiGearIds,
+              checklists: this.checklists,
               onSearchChange: (keyword: string) => {
                 this.gearSearchKeyword = keyword;
               },
@@ -1813,6 +1843,12 @@ struct Index {
                 this.cancelGearMultiSelect();
               },
               onOpenGenerateTripSheet: () => {
+                this.openGenerateTripSheet();
+              },
+              onAddGearsToTrip: (gearIds: string[], tripId: string) => {
+                this.addGearsToExistingTrip(gearIds, tripId);
+              },
+              onAddGearsToNewTrip: (gearIds: string[]) => {
                 this.openGenerateTripSheet();
               }
             });
