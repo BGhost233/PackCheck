@@ -691,6 +691,58 @@ struct Index {
     });
   }
 
+  private batchDeleteGears(ids: string[]): void {
+    if (ids.length === 0) {
+      return;
+    }
+    AlertDialog.show({
+      message: '确定删除选中的 ' + ids.length.toString() + ' 件装备？',
+      primaryButton: {
+        value: '取消',
+        action: () => {
+        }
+      },
+      secondaryButton: {
+        value: '确定删除',
+        fontColor: DANGER_COLOR,
+        action: async () => {
+          const nextGears = this.gears.filter((item: GearItem) => ids.indexOf(item.id) < 0);
+          await this.store.saveGears(nextGears);
+          this.gears = nextGears;
+          this.cancelGearMultiSelect();
+        }
+      }
+    });
+  }
+
+  private async batchMoveGroup(ids: string[], targetGroup: string): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+    const nextGears: GearItem[] = [];
+    for (let i = 0; i < this.gears.length; i++) {
+      const gear = this.gears[i];
+      if (ids.indexOf(gear.id) >= 0) {
+        const updated: GearItem = {
+          id: gear.id,
+          name: gear.name,
+          category: targetGroup,
+          weight: gear.weight,
+          price: gear.price,
+          note: gear.note,
+          createdAt: gear.createdAt,
+          tripCount: gear.tripCount
+        };
+        nextGears.push(updated);
+      } else {
+        nextGears.push(gear);
+      }
+    }
+    await this.store.saveGears(nextGears);
+    this.gears = nextGears;
+    this.cancelGearMultiSelect();
+  }
+
   private toggleGearExpanded(id: string): void {
     this.expandedGearId = this.expandedGearId === id ? '' : id;
   }
@@ -1777,284 +1829,298 @@ struct Index {
   }
 
   build() {
-    Navigation(this.navPathStack) {
-      Stack({ alignContent: Alignment.Bottom }) {
-        HdsTabs({ controller: this.tabsController }) {
-          TabContent() {
-            HomePage({
-              checklists: this.checklists,
-              gears: this.gears,
-              onOpenTrip: () => {
-                this.startTripCeremony();
-              },
-              onOpenGear: () => {
-                this.triggerBlurPulse(1);
-              },
-              onOpenChecklist: (id: string) => {
-                this.openChecklist(id);
-              },
-              onConfirmDeleteChecklist: (item: TripChecklist) => {
-                this.confirmDeleteChecklist(item);
-              }
-            });
-          }
-          .tabBar(this.customTabBar(0, $r('sys.symbol.list_checkmark'), '清单'))
+    Stack() {
+      Navigation(this.navPathStack) {
+        Stack({ alignContent: Alignment.Bottom }) {
+          HdsTabs({ controller: this.tabsController }) {
+            TabContent() {
+              HomePage({
+                checklists: this.checklists,
+                gears: this.gears,
+                checklistRenderNonce: this.checklistRenderNonce,
+                onOpenTrip: () => {
+                  this.startTripCeremony();
+                },
+                onOpenGear: () => {
+                  this.triggerBlurPulse(1);
+                },
+                onOpenChecklist: (id: string) => {
+                  this.openChecklist(id);
+                },
+                onConfirmDeleteChecklist: (item: TripChecklist) => {
+                  this.confirmDeleteChecklist(item);
+                }
+              });
+            }
+            .tabBar(this.customTabBar(0, $r('sys.symbol.list_checkmark'), '清单'))
 
-          TabContent() {
-            GearPage({
-              gears: this.gears,
-              selectedGearCategories: this.selectedGearCategories,
-              gearSearchKeyword: this.gearSearchKeyword,
-              gearSortMode: this.gearSortMode,
-              expandedGearId: this.expandedGearId,
-              targetWeightGram: $targetWeightGram,
-              multiSelectMode: this.multiSelectMode,
-              selectedMultiGearIds: this.selectedMultiGearIds,
-              checklists: this.checklists,
-              onSearchChange: (keyword: string) => {
-                this.gearSearchKeyword = keyword;
-              },
-              onOpenFilterPanel: () => {
-                this.openGearFilterPanel();
-              },
-              onOpenSort: () => {
-                this.sheetMode = SHEET_GEAR_SORT;
-                this.openSheetAnimated();
-              },
-              onStartMultiSelect: () => {
-                this.multiSelectMode = true;
-                this.selectedMultiGearIds = [];
-              },
-              onOpenAddGear: () => {
-                this.openAddGear();
-              },
-              onOpenEditGear: (item: GearItem) => {
-                this.openEditGear(item);
-              },
-              onConfirmDeleteGear: (item: GearItem) => {
-                this.confirmDeleteGear(item);
-              },
-              onToggleGearExpanded: (id: string) => {
-                this.toggleGearExpanded(id);
-              },
-              onEnterGearMultiSelect: (id: string) => {
-                this.enterGearMultiSelect(id);
-              },
-              onToggleMultiGearSelection: (id: string) => {
-                this.toggleMultiGearSelection(id);
-              },
-              onCancelGearMultiSelect: () => {
-                this.cancelGearMultiSelect();
-              },
-              onOpenGenerateTripSheet: () => {
-                this.openGenerateTripSheet();
-              },
-              onAddGearsToTrip: (gearIds: string[], tripId: string) => {
-                this.addGearsToExistingTrip(gearIds, tripId);
-              },
-              onAddGearsToNewTrip: (gearIds: string[]) => {
-                this.openGenerateTripSheet();
-              }
+            TabContent() {
+              GearPage({
+                gears: this.gears,
+                selectedGearCategories: this.selectedGearCategories,
+                gearSearchKeyword: this.gearSearchKeyword,
+                gearSortMode: this.gearSortMode,
+                expandedGearId: this.expandedGearId,
+                targetWeightGram: $targetWeightGram,
+                multiSelectMode: this.multiSelectMode,
+                selectedMultiGearIds: this.selectedMultiGearIds,
+                checklists: this.checklists,
+                onSearchChange: (keyword: string) => {
+                  this.gearSearchKeyword = keyword;
+                },
+                onOpenFilterPanel: () => {
+                  this.openGearFilterPanel();
+                },
+                onOpenSort: () => {
+                  this.sheetMode = SHEET_GEAR_SORT;
+                  this.openSheetAnimated();
+                },
+                onStartMultiSelect: () => {
+                  this.multiSelectMode = true;
+                  this.selectedMultiGearIds = [];
+                },
+                onOpenAddGear: () => {
+                  this.openAddGear();
+                },
+                onOpenEditGear: (item: GearItem) => {
+                  this.openEditGear(item);
+                },
+                onConfirmDeleteGear: (item: GearItem) => {
+                  this.confirmDeleteGear(item);
+                },
+                onToggleGearExpanded: (id: string) => {
+                  this.toggleGearExpanded(id);
+                },
+                onEnterGearMultiSelect: (id: string) => {
+                  this.enterGearMultiSelect(id);
+                },
+                onToggleMultiGearSelection: (id: string) => {
+                  this.toggleMultiGearSelection(id);
+                },
+                onCancelGearMultiSelect: () => {
+                  this.cancelGearMultiSelect();
+                },
+                onOpenGenerateTripSheet: () => {
+                  this.openGenerateTripSheet();
+                },
+                onBatchDeleteGears: (ids: string[]) => {
+                  this.batchDeleteGears(ids);
+                },
+                onBatchMoveGroup: (ids: string[], targetGroup: string) => {
+                  this.batchMoveGroup(ids, targetGroup);
+                },
+                onAddGearsToTrip: (gearIds: string[], tripId: string) => {
+                  this.addGearsToExistingTrip(gearIds, tripId);
+                },
+                onAddGearsToNewTrip: (gearIds: string[]) => {
+                  this.openGenerateTripSheet();
+                }
+              });
+            }
+            .tabBar(this.customTabBar(1, $r('sys.symbol.bag'), '装备库'))
+          }
+          .animationDuration(200)
+          .barOverlap(true)
+          .vertical(false)
+          .barPosition(BarPosition.End)
+          .barFloatingStyle({
+            barBottomMargin: 28,
+            gradientMask: {
+              maskColor: '#66F8F9FA',
+              maskHeight: 72
+            },
+            systemMaterialEffect: {
+              materialType: hdsMaterial.MaterialType.IMMERSIVE,
+              materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
+            }
+          })
+          .width('100%')
+          .height('100%')
+          .backgroundColor(Color.Transparent)
+          .blur(this.contentBlur)
+          .scale({ x: this.contentScale, y: this.contentScale })
+          .onAnimationStart((_from: number, _to: number) => {
+            // 仅滑动触发时执行按压脉冲，点击切换已由 triggerBlurPulse 处理
+            if (this.isClickSwitching) {
+              return;
+            }
+            // 滑动松手 — 轻按压 + blur 脉冲
+            this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseOut }, () => {
+              this.contentScale = 0.97;
+              this.contentBlur = 4;
             });
+            setTimeout(() => {
+              this.getUIContext().animateTo({ duration: 140, curve: Curve.EaseOut }, () => {
+                this.contentBlur = 0;
+              });
+              this.getUIContext().animateTo({
+                curve: curves.springMotion(0.35, 0.8)
+              }, () => {
+                this.contentScale = 1.0;
+              });
+            }, 80);
+          })
+          .onChange((index: number) => {
+            this.currentTabIndex = index;
+          })
+
+          if (this.gearFilterPanelExpanded) {
+            GearFilterPanel({
+              categories: this.categories,
+              gears: this.gears,
+              selectedCategories: this.selectedGearCategories,
+              onApply: (categories: string[]) => {
+                this.closeGearFilterPanel(categories);
+              },
+              onDismiss: () => {
+                this.gearFilterPanelExpanded = false;
+              }
+            })
           }
-          .tabBar(this.customTabBar(1, $r('sys.symbol.bag'), '装备库'))
         }
-        .animationDuration(200)
-        .barOverlap(true)
-        .vertical(false)
-        .barPosition(BarPosition.End)
-        .barFloatingStyle({
-          barBottomMargin: 28,
-          gradientMask: {
-            maskColor: '#66F8F9FA',
-            maskHeight: 72
-          },
-          systemMaterialEffect: {
-            materialType: hdsMaterial.MaterialType.IMMERSIVE,
-            materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
-          }
-        })
         .width('100%')
         .height('100%')
-        .backgroundColor(Color.Transparent)
-        .blur(this.contentBlur)
-        .scale({ x: this.contentScale, y: this.contentScale })
-        .onAnimationStart((_from: number, _to: number) => {
-          // 仅滑动触发时执行按压脉冲，点击切换已由 triggerBlurPulse 处理
-          if (this.isClickSwitching) {
-            return;
-          }
-          // 滑动松手 — 轻按压 + blur 脉冲
-          this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseOut }, () => {
-            this.contentScale = 0.97;
-            this.contentBlur = 4;
-          });
-          setTimeout(() => {
-            this.getUIContext().animateTo({ duration: 140, curve: Curve.EaseOut }, () => {
-              this.contentBlur = 0;
-            });
-            this.getUIContext().animateTo({
-              curve: curves.springMotion(0.35, 0.8)
-            }, () => {
-              this.contentScale = 1.0;
-            });
-          }, 80);
-        })
-        .onChange((index: number) => {
-          this.currentTabIndex = index;
-        })
-
-        if (this.gearFilterPanelExpanded) {
-          GearFilterPanel({
-            categories: this.categories,
-            gears: this.gears,
-            selectedCategories: this.selectedGearCategories,
-            onApply: (categories: string[]) => {
-              this.closeGearFilterPanel(categories);
-            },
-            onDismiss: () => {
-              this.gearFilterPanelExpanded = false;
-            }
-          })
-        }
-        if (this.sheetMode !== SHEET_NONE) {
-          SheetOverlay({
-            sheetMode: this.sheetMode,
-            sheetTranslateY: this.sheetTranslateY,
-            sheetOverlayOpacity: this.sheetOverlayOpacity,
-            errorText: this.errorText,
-            gearSortMode: this.gearSortMode,
-            gearName: this.gearName,
-            gearCategory: this.gearCategory,
-            gearWeight: this.gearWeight,
-            gearPrice: this.gearPrice,
-            gearNote: this.gearNote,
-            editingGearId: this.editingGearId,
-            categories: this.presetCategories(),
-            tripTitle: this.tripTitle,
-            tripDate: this.tripDate,
-            tempItemName: this.tempItemName,
-            tempItemGroup: this.tempItemGroup,
-            showTempAddNotice: this.showTempAddNotice,
-            gears: this.gears,
-            importGearIds: this.importGearIds,
-            importGearCategory: this.importGearCategory,
-            generateTripTitle: this.generateTripTitle,
-            selectedMultiGearCount: this.selectedMultiGearIds.length,
-            onClose: () => { this.closeSheet(); },
-            onSelectSort: (mode: string) => {
-              this.gearSortMode = mode;
-              this.closeSheet();
-            },
-            onGearNameChange: (value: string) => { this.gearName = value; },
-            onGearCategoryChange: (value: string) => { this.gearCategory = value; },
-            onGearWeightChange: (value: string) => { this.gearWeight = value; },
-            onGearPriceChange: (value: string) => { this.gearPrice = value; },
-            onGearNoteChange: (value: string) => { this.gearNote = value; },
-            onSaveGear: () => { this.saveGear(); },
-            onTripTitleChange: (value: string) => { this.tripTitle = value; },
-            onTripDateChange: (value: string) => { this.tripDate = value; },
-            onCreateTrip: () => { this.createChecklist(); },
-            onSaveTrip: () => { this.saveTripInfo(); },
-            onTempItemNameChange: (value: string) => { this.tempItemName = value; },
-            onTempItemGroupChange: (value: string) => { this.tempItemGroup = value; },
-            onAddTempItem: () => { this.addTempItem(); },
-            onImportCategoryChange: (value: string) => { this.importGearCategory = value; },
-            onToggleImportSelection: (id: string, checked: boolean) => { this.toggleImportSelection(id, checked); },
-            onImportSelectedGear: () => { this.importSelectedGear(); },
-            onAddGearFromImport: () => { this.openAddGearFromImport(); },
-            onGenerateTripTitleChange: (value: string) => { this.generateTripTitle = value; },
-            onGenerateTrip: () => { this.generateChecklistFromSelectedGears(); }
-          })
-        }
-        if (this.showEditItemPanel) {
-          EditItemPanel({
-            editingItemName: this.editingItemName,
-            editingItemGroup: this.editingItemGroup,
-            editingItemWeight: this.editingItemWeight,
-            editingItemPrice: this.editingItemPrice,
-            errorText: this.errorText,
-            categories: this.categories,
-            onNameChange: (value: string) => { this.editingItemName = value; },
-            onGroupChange: (value: string) => { this.editingItemGroup = value; },
-            onWeightChange: (value: string) => { this.editingItemWeight = value; },
-            onPriceChange: (value: string) => { this.editingItemPrice = value; },
-            onSave: () => { this.saveEditedItem(); },
-            onClose: () => {
-              this.showEditItemPanel = false;
-              this.editingItemId = '';
-              this.editingItemName = '';
-              this.editingItemGroup = '其他';
-              this.editingItemWeight = '';
-              this.editingItemPrice = '';
-              this.errorText = '';
-            }
-          })
-        }
-        if (this.showEditGearPanel) {
-          EditGearPanel({
-            gearName: this.gearName,
-            gearCategory: this.gearCategory,
-            gearWeight: this.gearWeight,
-            gearPrice: this.gearPrice,
-            gearNote: this.gearNote,
-            errorText: this.errorText,
-            categories: this.categories,
-            onNameChange: (value: string) => {
-              this.gearName = value;
-            },
-            onCategoryChange: (value: string) => {
-              this.gearCategory = value;
-            },
-            onWeightChange: (value: string) => {
-              this.gearWeight = value;
-            },
-            onPriceChange: (value: string) => {
-              this.gearPrice = value;
-            },
-            onNoteChange: (value: string) => {
-              this.gearNote = value;
-            },
-            onSave: () => {
-              this.saveGear();
-            },
-            onClose: () => {
-              this.closeEditGearPanel();
-            }
-          })
-        }
-        if (this.showTripCeremony) {
-          TripCeremonyCard({
-            tripTitle: this.ceremonyTripTitle,
-            tripDate: this.ceremonyTripDate,
-            onTitleChange: (value: string) => {
-              this.ceremonyTripTitle = value;
-            },
-            onDateChange: (value: string) => {
-              this.ceremonyTripDate = value;
-            },
-            onFinish: () => {
-              this.finishTripCeremony();
-            },
-            onDismiss: () => {
-              this.dismissTripCeremony();
-            },
-            onExitStart: () => {
-              this.recoverTripBackground(400);
-            }
-          })
-        }
-        if (this.showCompletionToast) {
-          this.CompletionToast();
-        }
       }
-      .width('100%')
-      .height('100%')
+      .navDestination(this.NavDestinationMap)
+      .mode(NavigationMode.Stack)
+      .hideTitleBar(true)
+      .backgroundColor('#F8F9FA')
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+
+      // 覆盖层：独立于 Navigation 层级，始终在 NavDestination 之上
+      if (this.sheetMode !== SHEET_NONE) {
+        SheetOverlay({
+          sheetMode: this.sheetMode,
+          sheetTranslateY: this.sheetTranslateY,
+          sheetOverlayOpacity: this.sheetOverlayOpacity,
+          errorText: this.errorText,
+          gearSortMode: this.gearSortMode,
+          gearName: this.gearName,
+          gearCategory: this.gearCategory,
+          gearWeight: this.gearWeight,
+          gearPrice: this.gearPrice,
+          gearNote: this.gearNote,
+          editingGearId: this.editingGearId,
+          categories: this.presetCategories(),
+          tripTitle: this.tripTitle,
+          tripDate: this.tripDate,
+          tempItemName: this.tempItemName,
+          tempItemGroup: this.tempItemGroup,
+          showTempAddNotice: this.showTempAddNotice,
+          gears: this.gears,
+          importGearIds: this.importGearIds,
+          importGearCategory: this.importGearCategory,
+          generateTripTitle: this.generateTripTitle,
+          selectedMultiGearCount: this.selectedMultiGearIds.length,
+          onClose: () => { this.closeSheet(); },
+          onSelectSort: (mode: string) => {
+            this.gearSortMode = mode;
+            this.closeSheet();
+          },
+          onGearNameChange: (value: string) => { this.gearName = value; },
+          onGearCategoryChange: (value: string) => { this.gearCategory = value; },
+          onGearWeightChange: (value: string) => { this.gearWeight = value; },
+          onGearPriceChange: (value: string) => { this.gearPrice = value; },
+          onGearNoteChange: (value: string) => { this.gearNote = value; },
+          onSaveGear: () => { this.saveGear(); },
+          onTripTitleChange: (value: string) => { this.tripTitle = value; },
+          onTripDateChange: (value: string) => { this.tripDate = value; },
+          onCreateTrip: () => { this.createChecklist(); },
+          onSaveTrip: () => { this.saveTripInfo(); },
+          onTempItemNameChange: (value: string) => { this.tempItemName = value; },
+          onTempItemGroupChange: (value: string) => { this.tempItemGroup = value; },
+          onAddTempItem: () => { this.addTempItem(); },
+          onImportCategoryChange: (value: string) => { this.importGearCategory = value; },
+          onToggleImportSelection: (id: string, checked: boolean) => { this.toggleImportSelection(id, checked); },
+          onImportSelectedGear: () => { this.importSelectedGear(); },
+          onAddGearFromImport: () => { this.openAddGearFromImport(); },
+          onGenerateTripTitleChange: (value: string) => { this.generateTripTitle = value; },
+          onGenerateTrip: () => { this.generateChecklistFromSelectedGears(); }
+        })
+      }
+      if (this.showEditItemPanel) {
+        EditItemPanel({
+          editingItemName: this.editingItemName,
+          editingItemGroup: this.editingItemGroup,
+          editingItemWeight: this.editingItemWeight,
+          editingItemPrice: this.editingItemPrice,
+          errorText: this.errorText,
+          categories: this.categories,
+          onNameChange: (value: string) => { this.editingItemName = value; },
+          onGroupChange: (value: string) => { this.editingItemGroup = value; },
+          onWeightChange: (value: string) => { this.editingItemWeight = value; },
+          onPriceChange: (value: string) => { this.editingItemPrice = value; },
+          onSave: () => { this.saveEditedItem(); },
+          onClose: () => {
+            this.showEditItemPanel = false;
+            this.editingItemId = '';
+            this.editingItemName = '';
+            this.editingItemGroup = '其他';
+            this.editingItemWeight = '';
+            this.editingItemPrice = '';
+            this.errorText = '';
+          }
+        })
+      }
+      if (this.showEditGearPanel) {
+        EditGearPanel({
+          gearName: this.gearName,
+          gearCategory: this.gearCategory,
+          gearWeight: this.gearWeight,
+          gearPrice: this.gearPrice,
+          gearNote: this.gearNote,
+          errorText: this.errorText,
+          categories: this.categories,
+          onNameChange: (value: string) => {
+            this.gearName = value;
+          },
+          onCategoryChange: (value: string) => {
+            this.gearCategory = value;
+          },
+          onWeightChange: (value: string) => {
+            this.gearWeight = value;
+          },
+          onPriceChange: (value: string) => {
+            this.gearPrice = value;
+          },
+          onNoteChange: (value: string) => {
+            this.gearNote = value;
+          },
+          onSave: () => {
+            this.saveGear();
+          },
+          onClose: () => {
+            this.closeEditGearPanel();
+          }
+        })
+      }
+      if (this.showTripCeremony) {
+        TripCeremonyCard({
+          tripTitle: this.ceremonyTripTitle,
+          tripDate: this.ceremonyTripDate,
+          onTitleChange: (value: string) => {
+            this.ceremonyTripTitle = value;
+          },
+          onDateChange: (value: string) => {
+            this.ceremonyTripDate = value;
+          },
+          onFinish: () => {
+            this.finishTripCeremony();
+          },
+          onDismiss: () => {
+            this.dismissTripCeremony();
+          },
+          onExitStart: () => {
+            this.recoverTripBackground(400);
+          }
+        })
+      }
+      if (this.showCompletionToast) {
+        this.CompletionToast();
+      }
     }
-    .navDestination(this.NavDestinationMap)
-    .mode(NavigationMode.Stack)
-    .hideTitleBar(true)
-    .backgroundColor('#F8F9FA')
+    .width('100%')
+    .height('100%')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     .overlay(this.NoiseTextureLayer())
   }

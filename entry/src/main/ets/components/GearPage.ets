@@ -50,8 +50,11 @@ export struct GearPage {
   @Prop selectedMultiGearIds: string[] = [];
   @Prop gearBudget: number = 0;
 
-  @State private pressedGearId: string = '';
-  @State private searchExpanded: boolean = false;
+@State private pressedGearId: string = '';
+@State private swipedGearId: string = '';
+@State private swipeOffsetX: number = 0;
+@State private showMoveGroupSheet: boolean = false;
+@State private searchExpanded: boolean = false;
   @State private showWeightEditor: boolean = false;
   @State private targetWeightInput: string = '';
   @State private targetWeightError: string = '';
@@ -74,6 +77,8 @@ export struct GearPage {
 
   private store: PackStore = new PackStore();
   private gearListScroller: Scroller = new Scroller();
+  private tripTrayScroller: Scroller = new Scroller();
+  private trayAutoScrollTimer: number = -1;
   private screenWidth: number = 360; // fallback
   private screenHeight: number = 780;
 
@@ -175,9 +180,40 @@ export struct GearPage {
         } catch (e) { /* 静默 */ }
       }
     }
+    // 边缘自动滚动：手指在屏幕左/右 50vp 内时自动滚动托盘
+    const edgeThreshold = 50;
+    if (this.showTripTray && y > this.screenHeight - 200) {
+      if (x < edgeThreshold) {
+        this.startTrayAutoScroll(-4);
+      } else if (x > this.screenWidth - edgeThreshold) {
+        this.startTrayAutoScroll(4);
+      } else {
+        this.stopTrayAutoScroll();
+      }
+    } else {
+      this.stopTrayAutoScroll();
+    }
+  }
+
+  private startTrayAutoScroll(delta: number): void {
+    if (this.trayAutoScrollTimer >= 0) {
+      return; // 已在滚动
+    }
+    this.trayAutoScrollTimer = setInterval(() => {
+      const current = this.tripTrayScroller.currentOffset().xOffset;
+      this.tripTrayScroller.scrollTo({ xOffset: current + delta, yOffset: 0 });
+    }, 16) as number;
+  }
+
+  private stopTrayAutoScroll(): void {
+    if (this.trayAutoScrollTimer >= 0) {
+      clearInterval(this.trayAutoScrollTimer);
+      this.trayAutoScrollTimer = -1;
+    }
   }
 
   private completeDrag(): void {
+    this.stopTrayAutoScroll();
     const hitTarget = this.dragOverTripId;
     if (hitTarget !== '' && this.selectedMultiGearIds.length > 0) {
       // 成功释放：强振动确认
@@ -202,6 +238,7 @@ export struct GearPage {
   }
 
   private cancelDrag(): void {
+    this.stopTrayAutoScroll();
     this.getUIContext().animateTo({
       duration: 300,
       curve: curves.springMotion(0.35, 0.8)
@@ -224,6 +261,8 @@ export struct GearPage {
   onToggleMultiGearSelection: (id: string) => void = (id: string): void => {};
   onCancelGearMultiSelect: () => void = (): void => {};
   onOpenGenerateTripSheet: () => void = (): void => {};
+  onBatchDeleteGears: (ids: string[]) => void = (ids: string[]): void => {};
+  onBatchMoveGroup: (ids: string[], targetGroup: string) => void = (ids: string[], targetGroup: string): void => {};
   onAddGearsToTrip: (gearIds: string[], tripId: string) => void = (gearIds: string[], tripId: string): void => {};
   onAddGearsToNewTrip: (gearIds: string[]) => void = (gearIds: string[]): void => {};
 
@@ -339,6 +378,17 @@ export struct GearPage {
       return '按出行次数';
     }
     return '按分组';
+  }
+
+  private allGearGroups(): string[] {
+    const groups: string[] = [];
+    for (let i = 0; i < this.gears.length; i++) {
+      const cat = this.gears[i].category;
+      if (cat.length > 0 && groups.indexOf(cat) < 0) {
+        groups.push(cat);
+      }
+    }
+    return groups;
   }
 
   private filteredGearGroups(): string[] {
@@ -853,15 +903,38 @@ export struct GearPage {
 
   @Builder
   private MultiSelectBar() {
-    Row() {
+    Row({ space: 8 }) {
       Text('选中 ' + this.selectedMultiGearIds.length.toString() + ' 件')
         .fontSize(13)
         .fontColor(TEXT_MAIN)
         .fontFeature(FONT_FEATURE_TNUM)
-        .layoutWeight(1)
+      Blank()
+      Button('移动分组')
+        .height(32)
+        .fontSize(12)
+        .fontColor(this.selectedMultiGearIds.length === 0 ? '#CCCCCC' : TEXT_MAIN)
+        .backgroundColor(this.selectedMultiGearIds.length === 0 ? '#F5F5F5' : '#F0F0F0')
+        .enabled(this.selectedMultiGearIds.length > 0)
+        .onClick(() => {
+          this.showMoveGroupSheet = true;
+        })
+        .bindSheet($$this.showMoveGroupSheet, this.MoveGroupSheetContent(), {
+          height: SheetSize.FIT_CONTENT,
+          dragBar: true,
+          backgroundColor: CARD_BG
+        })
+      Button('删除')
+        .height(32)
+        .fontSize(12)
+        .fontColor(this.selectedMultiGearIds.length === 0 ? '#CCCCCC' : DANGER_COLOR)
+        .backgroundColor(this.selectedMultiGearIds.length === 0 ? '#F5F5F5' : '#FFF0F0')
+        .enabled(this.selectedMultiGearIds.length > 0)
+        .onClick(() => {
+          this.onBatchDeleteGears(this.selectedMultiGearIds);
+        })
       Button('生成清单')
-        .height(34)
-        .fontSize(13)
+        .height(32)
+        .fontSize(12)
         .fontColor('#FFFFFF')
         .backgroundColor(this.selectedMultiGearIds.length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
         .enabled(this.selectedMultiGearIds.length > 0)
@@ -869,8 +942,8 @@ export struct GearPage {
           this.onOpenGenerateTripSheet();
         })
       Button('取消')
-        .height(34)
-        .fontSize(13)
+        .height(32)
+        .fontSize(12)
         .fontColor(TEXT_TERTIARY)
         .backgroundColor('#00000000')
         .onClick(() => {
@@ -879,6 +952,43 @@ export struct GearPage {
     }
     .width('100%')
     .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
+  }
+
+  @Builder
+  private MoveGroupSheetContent() {
+    Column({ space: 12 }) {
+      Text('移动到分组')
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(TEXT_MAIN)
+        .padding({ top: 8 })
+      ForEach(this.allGearGroups(), (group: string) => {
+        Row() {
+          Row()
+            .width(3)
+            .height(14)
+            .backgroundColor(getGroupColor(group))
+            .borderRadius(1.5)
+            .margin({ right: 10 })
+          Text(group)
+            .fontSize(15)
+            .fontColor(TEXT_MAIN)
+            .layoutWeight(1)
+        }
+        .width('100%')
+        .height(48)
+        .alignItems(VerticalAlign.Center)
+        .padding({ left: 16, right: 16 })
+        .borderRadius(12)
+        .backgroundColor('#F8F9FA')
+        .onClick(() => {
+          this.onBatchMoveGroup(this.selectedMultiGearIds, group);
+          this.showMoveGroupSheet = false;
+        })
+      }, (group: string) => group)
+    }
+    .width('100%')
+    .padding({ left: 20, right: 20, top: 12, bottom: 34 })
   }
 
   @Builder
@@ -1051,15 +1161,15 @@ export struct GearPage {
         .width('100%')
         .height(44)
         .alignItems(VerticalAlign.Center)
-        .onClick(() => {
-          this.onToggleMultiGearSelection(item.id);
-        })
       }
       .width('100%')
       .padding({ left: 14, right: 14, top: 4, bottom: 4 })
       .backgroundColor(this.hasMultiGearSelection(item.id) ? LIGHT_PRIMARY_COLOR : CARD_BG)
       .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : 1)
       .animation({ duration: 200, curve: Curve.EaseOut })
+      .onClick(() => {
+        this.onToggleMultiGearSelection(item.id);
+      })
       .onTouch((event: TouchEvent) => {
         if (event.type === TouchType.Down) {
           this.pressedGearId = item.id;
@@ -1069,7 +1179,7 @@ export struct GearPage {
       })
       .gesture(
         GestureGroup(GestureMode.Sequence,
-          LongPressGesture({ fingers: 1, repeat: false, duration: 200 })
+          LongPressGesture({ fingers: 1, repeat: false, duration: 400 })
             .onAction((event: GestureEvent) => {
               if (this.hasMultiGearSelection(item.id)) {
                 this.enterDragMode(event.fingerList[0].globalX, event.fingerList[0].globalY);
@@ -1094,61 +1204,144 @@ export struct GearPage {
         )
       )
     } else {
-      // 普通模式：紧凑行，无独立卡片样式
-      Column() {
-        Row({ space: 10 }) {
-          this.GearNameText(item.name)
-          if (item.weight !== undefined && item.weight > 0) {
-            Text(item.weight.toString() + 'g')
-              .fontSize(12)
-              .fontColor(TEXT_TERTIARY)
-              .fontFeature(FONT_FEATURE_TNUM)
-          }
-          SymbolGlyph($r('sys.symbol.chevron_down'))
-            .fontSize(12)
-            .fontColor([ARROW_COLOR])
-            .rotate({ angle: this.expandedGearId === item.id ? 180 : 0 })
-            .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
+      // 普通模式：紧凑行 + 左滑删除
+      Stack() {
+        // 底层：删除按钮（右侧露出）
+        Row() {
+          Blank()
+          Text('删除')
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#FFFFFF')
+            .width(70)
+            .height('100%')
+            .textAlign(TextAlign.Center)
+            .backgroundColor(DANGER_COLOR)
+            .onClick(() => {
+              this.swipedGearId = '';
+              this.swipeOffsetX = 0;
+              this.onConfirmDeleteGear(item);
+            })
         }
         .width('100%')
-        .height(44)
-        .alignItems(VerticalAlign.Center)
-        .onClick(() => {
-          const isExpanding = this.expandedGearId !== item.id;
-          this.onToggleGearExpanded(item.id);
-          if (isExpanding) {
-            this.scrollToExpandedGear(item.id);
+        .height('100%')
+
+        // 上层：内容行
+        Column() {
+          Row({ space: 10 }) {
+            this.GearNameText(item.name)
+            if (item.weight !== undefined && item.weight > 0) {
+              Text(item.weight.toString() + 'g')
+                .fontSize(12)
+                .fontColor(TEXT_TERTIARY)
+                .fontFeature(FONT_FEATURE_TNUM)
+            }
+            SymbolGlyph($r('sys.symbol.chevron_down'))
+              .fontSize(12)
+              .fontColor([ARROW_COLOR])
+              .rotate({ angle: this.expandedGearId === item.id ? 180 : 0 })
+              .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
+          }
+          .width('100%')
+          .height(44)
+          .alignItems(VerticalAlign.Center)
+          .onClick(() => {
+            if (this.swipedGearId === item.id) {
+              // 已滑开状态下点击 = 收回
+              this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+                this.swipedGearId = '';
+                this.swipeOffsetX = 0;
+              });
+              return;
+            }
+            const isExpanding = this.expandedGearId !== item.id;
+            this.onToggleGearExpanded(item.id);
+            if (isExpanding) {
+              this.scrollToExpandedGear(item.id);
+            }
+          })
+          if (this.expandedGearId === item.id) {
+            this.Detail(item);
+          }
+        }
+        .width('100%')
+        .padding({ left: 14, right: 14, top: 4, bottom: 4 })
+        .backgroundColor(this.pressedGearId === item.id ? '#F5F5F5' : CARD_BG)
+        .animation({ duration: 150, curve: Curve.EaseOut })
+        .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
+        .animation({ duration: 0 })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.pressedGearId = item.id;
+            // 点击其他行时收回已滑开的行
+            if (this.swipedGearId !== '' && this.swipedGearId !== item.id) {
+              this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+                this.swipedGearId = '';
+                this.swipeOffsetX = 0;
+              });
+            }
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.pressedGearId = '';
           }
         })
-        if (this.expandedGearId === item.id) {
-          this.Detail(item);
-        }
+        .gesture(
+          PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 10 })
+            .onActionUpdate((event: GestureEvent) => {
+              const offsetX = event.offsetX;
+              if (this.swipedGearId === item.id) {
+                // 已滑开状态：在 -70 基础上继续滑动
+                const newOffset = Math.min(0, Math.max(-140, -70 + offsetX));
+                this.swipeOffsetX = newOffset;
+              } else {
+                // 未滑开：只允许左滑
+                const newOffset = Math.min(0, Math.max(-100, offsetX));
+                this.swipeOffsetX = newOffset;
+                if (newOffset < -5) {
+                  this.swipedGearId = item.id;
+                }
+              }
+            })
+            .onActionEnd((event: GestureEvent) => {
+              // 判断是否吸附到打开状态
+              if (this.swipeOffsetX < -35) {
+                this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+                  this.swipeOffsetX = -70;
+                });
+              } else {
+                this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+                  this.swipedGearId = '';
+                  this.swipeOffsetX = 0;
+                });
+              }
+            })
+            .onActionCancel(() => {
+              this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+                if (this.swipeOffsetX < -35) {
+                  this.swipeOffsetX = -70;
+                } else {
+                  this.swipedGearId = '';
+                  this.swipeOffsetX = 0;
+                }
+              });
+            })
+        )
+        .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
+          preview: this.GearPreviewCard(item),
+          previewAnimationOptions: { scale: [0.92, 1.05] },
+          transition: TransitionEffect.asymmetric(
+            TransitionEffect.scale({ x: 0.9, y: 0.9 })
+              .combine(TransitionEffect.OPACITY)
+              .animation({ curve: curves.springMotion(0.35, 0.78) }),
+            TransitionEffect.scale({ x: 0.95, y: 0.95 })
+              .combine(TransitionEffect.OPACITY)
+              .animation({ curve: curves.springMotion(0.28, 0.85) })
+          ),
+          placement: Placement.Bottom,
+          borderRadius: 20
+        })
       }
       .width('100%')
-      .padding({ left: 14, right: 14, top: 4, bottom: 4 })
-      .backgroundColor(this.pressedGearId === item.id ? '#F5F5F5' : CARD_BG)
-      .animation({ duration: 150, curve: Curve.EaseOut })
-      .onTouch((event: TouchEvent) => {
-        if (event.type === TouchType.Down) {
-          this.pressedGearId = item.id;
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          this.pressedGearId = '';
-        }
-      })
-      .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
-        preview: this.GearPreviewCard(item),
-        previewAnimationOptions: { scale: [0.92, 1.05] },
-        transition: TransitionEffect.asymmetric(
-          TransitionEffect.scale({ x: 0.9, y: 0.9 })
-            .combine(TransitionEffect.OPACITY)
-            .animation({ curve: curves.springMotion(0.35, 0.78) }),
-          TransitionEffect.scale({ x: 0.95, y: 0.95 })
-            .combine(TransitionEffect.OPACITY)
-            .animation({ curve: curves.springMotion(0.28, 0.85) })
-        ),
-        placement: Placement.Bottom,
-        borderRadius: 20
-      })
+      .clip(true)
     }
   }
 
@@ -1485,9 +1678,9 @@ export struct GearPage {
       .padding({ left: 20, right: 20, top: 4, bottom: 12 })
 
       // 横向行程卡片列表
-      Scroll() {
+      Scroll(this.tripTrayScroller) {
         Row({ space: 12 }) {
-          ForEach(this.checklists.slice(0, 10), (trip: TripChecklist) => {
+          ForEach(this.checklists, (trip: TripChecklist) => {
             this.TripCard(trip)
           }, (trip: TripChecklist) => trip.id)
 

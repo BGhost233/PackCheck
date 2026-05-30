@@ -39,6 +39,7 @@ import { EmptyIllustration } from './EmptyIllustration';
 export struct HomePage {
   @Prop checklists: TripChecklist[] = [];
   @Prop gears: GearItem[] = [];
+  @Prop checklistRenderNonce: number = 0;
 
   onOpenTrip: () => void = (): void => {};
   onOpenGear: () => void = (): void => {};
@@ -824,7 +825,7 @@ export struct HomePage {
                 }
               }
             })
-          }, (item: TripChecklist) => item.id)
+          }, (item: TripChecklist) => item.id + '_' + item.items.length.toString() + '_' + this.checklistRenderNonce.toString())
           if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
             ListItem() {
               Text('走过的路')
@@ -858,7 +859,7 @@ export struct HomePage {
                 }
               }
             })
-          }, (item: TripChecklist) => item.id)
+          }, (item: TripChecklist) => item.id + '_' + item.items.length.toString() + '_' + this.checklistRenderNonce.toString())
         }
         .width('100%')
         .height(this.historyListHeight())
