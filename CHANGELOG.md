@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.5.4 (2025-06-22)
+
+装备库 5 项体验优化：交互细节打磨。
+
+- **搜索自动展开分组**：搜索有关键词时 `isGearGroupCollapsed()` 强制返回 false，匹配结果所在折叠分组自动展开
+- **拖拽浮动卡片定位修正**：浮动分组卡片 Y 坐标从 `groupDragY - 20` 调整为 `groupDragY - 14`，手指下方直接出现卡片
+- **分组折叠 Spring 动画**：`animateTo(springMotion(0.35, 0.8))` + `.transition(OPACITY + translate)` 实现丝滑展开/收起
+- **多选点击区域扩大**：PanGesture distance 从 0 → 5，轻点整行即可 toggle 选中（不再只有 checkbox 响应）
+- **行程托盘动态滚速**：边缘加速（二次曲线 t²），minSpeed=2 / maxSpeed=12，托盘尺寸优化（卡片 88×68，间距 10）
+- CLAUDE.md 新增第 25~27 条避坑：搜索态绕过折叠 / PanGesture distance 阈值 / if-else 过渡动画
+
 ## v0.5.3 (2025-06-22)
 
 清单页 Bug 修复 + 快速核查快捷入口。

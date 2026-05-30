@@ -26,6 +26,11 @@
 - 磁吸动效参数：影响半径 140vp，scale 1.0~1.1 连续变化，translateY 0~-10vp 涌起，动画 duration 160 + EaseOut（不用 Spring 避免过度弹性）
 - 分组拖拽排序设计：长按 300ms 分组 header 激活 → 浮动整组（scale 1.03, rotate -1°, elevated shadow）跟手 → 碰撞检测用累积高度+中线穿越 → 松手 spring 归位 → categoryOrder 持久化
 - GearPage 搜索展开策略：搜索框不放 Column 流中（会被浮动 Header 遮挡），改用根 Stack + position(0, COLLAPSED) + zIndex(9)，展开时强制 Header 收缩 + 重置滚动位置
+- GearPage 搜索联动折叠状态：`isGearGroupCollapsed()` 在有搜索关键词时直接返回 false，搜索结果所在分组自动展开，无需额外展开逻辑
+- 多选拖拽 vs 点击共存：PanGesture distance 从 0 改为 5，让轻点正常走 onClick（toggle 选中），只有真正拖动才激活 Pan
+- 分组折叠/展开动画：`animateTo(springMotion(0.35, 0.8))` 包裹 state 赋值 + 内容 Column 加 `.transition(TransitionEffect.OPACITY.combine(translate({y:-6})))` 实现丝滑进退场
+- 行程托盘动态滚速：边缘区域 100vp，二次曲线加速 `speed = minSpeed + (maxSpeed - minSpeed) * t²`（min=2, max=12），手感自然。Timer 每次回调读 mutable field `trayScrollSpeed`，无需重启 timer 即可变速
+- 行程托盘尺寸优化：位置从 screenHeight-200 → screenHeight-240，卡片从 100×80 → 88×68，间距 12→10，容纳更多行程
 
 ## 架构
 

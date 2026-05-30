@@ -1389,9 +1389,10 @@ export struct GearPage {
               .fontWeight(FontWeight.Medium)
               .fontColor('#FFFFFF')
               .width(70)
-              .height('100%')
+              .height(44)
               .textAlign(TextAlign.Center)
               .backgroundColor(DANGER_COLOR)
+              .borderRadius({ topRight: 12, bottomRight: 12 })
               .onClick(() => {
                 this.swipedGearId = '';
                 this.swipeOffsetX = 0;
@@ -1399,7 +1400,8 @@ export struct GearPage {
               })
           }
           .width('100%')
-          .height('100%')
+          .height(52)
+          .alignItems(VerticalAlign.Center)
         }
 
         // 上层：内容行
@@ -1612,6 +1614,7 @@ export struct GearPage {
     }
     .width('100%')
     .padding({ top: 12 })
+    .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
   }
 
   @Builder

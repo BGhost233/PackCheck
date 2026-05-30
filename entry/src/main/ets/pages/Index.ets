@@ -748,7 +748,9 @@ struct Index {
   }
 
   private toggleGearExpanded(id: string): void {
-    this.expandedGearId = this.expandedGearId === id ? '' : id;
+    this.getUIContext().animateTo({ duration: 350, curve: curves.springMotion(0.35, 0.8) }, () => {
+      this.expandedGearId = this.expandedGearId === id ? '' : id;
+    });
   }
 
   private enterGearMultiSelect(id: string): void {
