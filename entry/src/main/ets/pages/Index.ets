@@ -1974,17 +1974,33 @@ struct Index {
                   progress = 0;
                 }
                 this.tabSwipeProgress = Math.max(-1, Math.min(1, progress));
+                // 呼吸感：滑动越深 scale 越小（最深 0.97），跟手同步无延迟
+                const breathDepth = Math.min(1.0, Math.abs(progress) * 2.5);
+                this.contentScale = 1.0 - 0.03 * breathDepth;
               }
             } else {
               // Up / Cancel
+              if (this.isSwiping && this.contentScale < 1.0) {
+                // 如果滑动未触发切换（onAnimationStart 不会调用），手动弹回
+                this.getUIContext().animateTo({
+                  curve: curves.springMotion(0.35, 0.8)
+                }, () => {
+                  this.contentScale = 1.0;
+                });
+              }
               this.isSwiping = false;
-              // progress 归零由 onAnimationStart/onChange 处理
             }
           })
           .onAnimationStart((_from: number, to: number) => {
             // 松手后确定最终目标，立即将指示器弹到目标位置
             this.currentTabIndex = to;
             this.tabSwipeProgress = 0;
+            // 呼吸回弹：spring 弹回原始 scale
+            this.getUIContext().animateTo({
+              curve: curves.springMotion(0.35, 0.8)
+            }, () => {
+              this.contentScale = 1.0;
+            });
           })
           .onChange((index: number) => {
             this.currentTabIndex = index;
