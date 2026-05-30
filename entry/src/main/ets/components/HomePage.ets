@@ -42,8 +42,8 @@ export struct HomePage {
   @Prop checklistRenderNonce: number = 0;
 
   onOpenTrip: () => void = (): void => {};
-  onOpenGear: () => void = (): void => {};
   onOpenChecklist: (id: string) => void = (id: string): void => {};
+  onQuickReview: (checklistId: string) => void = (checklistId: string): void => {};
   onConfirmDeleteChecklist: (item: TripChecklist) => void = (item: TripChecklist): void => {};
 
   @State private heroDaysDisplay: number = 0;
@@ -724,17 +724,54 @@ export struct HomePage {
     .shadow({ radius: 12, color: '#08000000', offsetX: 0, offsetY: 2 })
   }
 
+  // 只取未来行程中最近的一个（dateAt >= 今天）
+  private nearestFutureChecklist(): TripChecklist | undefined {
+    const today = this.startOfDay(new Date());
+    let nearest: TripChecklist | undefined = undefined;
+    for (let i = 0; i < this.checklists.length; i++) {
+      const dateAt = this.checklistDateAt(this.checklists[i]);
+      if (dateAt !== undefined && dateAt >= today) {
+        if (nearest === undefined || dateAt < this.checklistDateAt(nearest)!) {
+          nearest = this.checklists[i];
+        }
+      }
+    }
+    return nearest;
+  }
+
+  private quickReviewLabel(): string {
+    const target = this.nearestFutureChecklist();
+    if (target === undefined) {
+      return '';
+    }
+    if (target.items.length > 0 && this.checkedCount(target) === target.items.length) {
+      return '再检查一遍';
+    }
+    return '快速核查';
+  }
+
   @Builder
   private QuickEntries() {
     Row({ space: 12 }) {
       this.QuickEntry($r('sys.symbol.plus_circle'), '新建行程', PRIMARY_TINT_COLOR, PRIMARY_COLOR, () => {
         this.onOpenTrip();
       });
-      this.QuickEntry($r('sys.symbol.bag'), '装备库', CARD_BG, TEXT_SECONDARY, () => {
-        this.onOpenGear();
-      });
+      if (this.nearestFutureChecklist() !== undefined) {
+        this.QuickEntry($r('sys.symbol.checkmark_shield'), this.quickReviewLabel(), CARD_BG, TEXT_MAIN, () => {
+          this.handleQuickReview();
+        });
+      }
     }
     .width('100%')
+  }
+
+  private handleQuickReview(): void {
+    const target = this.nearestFutureChecklist();
+    if (target === undefined) {
+      return;
+    }
+    // 统一交给父组件处理（父组件根据 items 数量判断进详情还是核查模式）
+    this.onQuickReview(target.id);
   }
 
   @Builder

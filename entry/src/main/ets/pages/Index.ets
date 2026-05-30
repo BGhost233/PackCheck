@@ -1841,8 +1841,15 @@ struct Index {
                 onOpenTrip: () => {
                   this.startTripCeremony();
                 },
-                onOpenGear: () => {
-                  this.triggerBlurPulse(1);
+                onQuickReview: (checklistId: string) => {
+                  this.selectedChecklistId = checklistId;
+                  const checklist = this.currentChecklist();
+                  if (checklist !== undefined && checklist.items.length === 0) {
+                    this.openChecklist(checklistId);
+                    this.showToastMessage('先添加装备再核查');
+                  } else {
+                    this.openReviewMode();
+                  }
                 },
                 onOpenChecklist: (id: string) => {
                   this.openChecklist(id);
