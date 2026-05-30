@@ -551,6 +551,12 @@ export struct GearPage {
     return Math.round(((p - 0.3) / 0.7) * 40);
   }
 
+  // Header 动态高度：跟随滚动从 EXPANDED 收缩到 COLLAPSED
+  private gearHeaderHeight(): number {
+    const p = this.gearScrollProgress();
+    return GEAR_HEADER_EXPANDED - (GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED) * p;
+  }
+
   // 渐进式背景色：PAGE_BG → BLUR_BG，alpha 从 00 到 CC 跟随 progress
   private gearHeaderBgColor(): string {
     const p = this.gearScrollProgress();
@@ -805,6 +811,7 @@ export struct GearPage {
 
     }
     .width('100%')
+    .height(this.gearHeaderHeight())
     .clip(true)
     .backgroundColor(this.gearHeaderBgColor())
     .backdropBlur(this.gearHeaderBlurRadius())
