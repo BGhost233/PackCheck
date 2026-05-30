@@ -215,13 +215,23 @@ export struct GearPage {
         } catch (e) { /* 静默 */ }
       }
     }
-    // 边缘自动滚动：手指在屏幕左/右 50vp 内时自动滚动托盘
-    const edgeThreshold = 50;
-    if (this.showTripTray && y > this.screenHeight - 200) {
-      if (x < edgeThreshold) {
-        this.startTrayAutoScroll(-4);
-      } else if (x > this.screenWidth - edgeThreshold) {
-        this.startTrayAutoScroll(4);
+    // 动态边缘滚动：越靠近边缘速度越快，中间区域不滚动
+    const edgeZone = 100; // 边缘触发区宽度 vp
+    const minSpeed = 2;
+    const maxSpeed = 12;
+    if (this.showTripTray) {
+      const leftDist = x; // 距离左边缘
+      const rightDist = this.screenWidth - x; // 距离右边缘
+      if (leftDist < edgeZone) {
+        // 左边缘：越靠左越快
+        const t = 1 - leftDist / edgeZone; // 0~1，越靠边越大
+        const speed = minSpeed + (maxSpeed - minSpeed) * t * t; // 平方加速
+        this.startTrayAutoScroll(-speed);
+      } else if (rightDist < edgeZone) {
+        // 右边缘：越靠右越快
+        const t = 1 - rightDist / edgeZone;
+        const speed = minSpeed + (maxSpeed - minSpeed) * t * t;
+        this.startTrayAutoScroll(speed);
       } else {
         this.stopTrayAutoScroll();
       }
@@ -230,13 +240,16 @@ export struct GearPage {
     }
   }
 
-  private startTrayAutoScroll(delta: number): void {
+  private trayScrollSpeed: number = 0;
+
+  private startTrayAutoScroll(speed: number): void {
+    this.trayScrollSpeed = speed;
     if (this.trayAutoScrollTimer >= 0) {
-      return; // 已在滚动
+      return; // 已在滚动，只更新速度
     }
     this.trayAutoScrollTimer = setInterval(() => {
       const current = this.tripTrayScroller.currentOffset().xOffset;
-      this.tripTrayScroller.scrollTo({ xOffset: current + delta, yOffset: 0 });
+      this.tripTrayScroller.scrollTo({ xOffset: current + this.trayScrollSpeed, yOffset: 0 });
     }, 16) as number;
   }
 
@@ -513,6 +526,10 @@ export struct GearPage {
   }
 
   private isGearGroupCollapsed(group: string): boolean {
+    // 搜索模式下所有分组强制展开，用户取消搜索后恢复原折叠偏好
+    if (this.gearSearchKeyword.trim().length > 0) {
+      return false;
+    }
     return this.collapsedGearGroups.indexOf(group) >= 0;
   }
 
@@ -522,15 +539,20 @@ export struct GearPage {
   }
 
   private toggleGearGroupCollapse(group: string): void {
-    const idx = this.collapsedGearGroups.indexOf(group);
-    if (idx >= 0) {
-      const next = this.collapsedGearGroups;
-      next.splice(idx, 1);
-      this.collapsedGearGroups = next;
-      this.gearGroupExpandTrigger++;
-    } else {
-      this.collapsedGearGroups = this.collapsedGearGroups.concat([group]);
-    }
+    this.getUIContext().animateTo({
+      duration: 350,
+      curve: curves.springMotion(0.35, 0.8)
+    }, () => {
+      const idx = this.collapsedGearGroups.indexOf(group);
+      if (idx >= 0) {
+        const next = this.collapsedGearGroups;
+        next.splice(idx, 1);
+        this.collapsedGearGroups = next;
+        this.gearGroupExpandTrigger++;
+      } else {
+        this.collapsedGearGroups = this.collapsedGearGroups.concat([group]);
+      }
+    });
     this.persistCollapsedGroups();
   }
 
@@ -1215,6 +1237,9 @@ export struct GearPage {
         .backgroundColor(CARD_BG)
         .borderRadius(14)
         .clip(true)
+        .transition(TransitionEffect.OPACITY.combine(
+          TransitionEffect.translate({ y: -6 })
+        ).animation({ duration: 300, curve: curves.springMotion(0.35, 0.8) }))
       }
     }
     .width('100%')
@@ -1334,7 +1359,7 @@ export struct GearPage {
                 this.enterDragMode(event.fingerList[0].globalX, event.fingerList[0].globalY);
               }
             }),
-          PanGesture({ fingers: 1, distance: 0 })
+          PanGesture({ fingers: 1, distance: 5 })
             .onActionUpdate((event: GestureEvent) => {
               if (this.dragMode) {
                 this.updateDragPosition(event.fingerList[0].globalX, event.fingerList[0].globalY);
@@ -1834,22 +1859,22 @@ export struct GearPage {
 
       // 横向行程卡片列表
       Scroll(this.tripTrayScroller) {
-        Row({ space: 12 }) {
+        Row({ space: 10 }) {
           ForEach(this.checklists, (trip: TripChecklist) => {
             this.TripCard(trip)
           }, (trip: TripChecklist) => trip.id)
 
           // 新建行程卡片
-          Column({ space: 6 }) {
+          Column({ space: 4 }) {
             SymbolGlyph($r('sys.symbol.plus'))
-              .fontSize(24)
+              .fontSize(22)
               .fontColor([this.dragOverTripId === '__new_trip__' ? '#FFFFFF' : PRIMARY_COLOR])
             Text('新建')
-              .fontSize(12)
+              .fontSize(11)
               .fontColor(this.dragOverTripId === '__new_trip__' ? '#FFFFFF' : TEXT_SECONDARY)
           }
-          .width(100)
-          .height(80)
+          .width(88)
+          .height(68)
           .justifyContent(FlexAlign.Center)
           .alignItems(HorizontalAlign.Center)
           .borderRadius(12)
@@ -1877,7 +1902,7 @@ export struct GearPage {
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
       .width('100%')
-      .height(96)
+      .height(82)
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
@@ -1885,25 +1910,25 @@ export struct GearPage {
     .backdropBlur(40)
     .borderRadius({ topLeft: 24, topRight: 24 })
     .shadow({ radius: 20, color: '#1A000000', offsetX: 0, offsetY: -6 })
-    .position({ x: 0, y: this.showTripTray ? this.screenHeight - 200 : this.screenHeight })
+    .position({ x: 0, y: this.showTripTray ? this.screenHeight - 240 : this.screenHeight })
     .animation({ duration: 350, curve: curves.springMotion(0.35, 0.8) })
   }
 
   @Builder
   private TripCard(trip: TripChecklist) {
-    Column({ space: 4 }) {
+    Column({ space: 3 }) {
       Text(trip.title)
-        .fontSize(13)
+        .fontSize(12)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.dragOverTripId === trip.id ? '#FFFFFF' : TEXT_MAIN)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       Text(trip.items.length.toString() + ' 件装备')
-        .fontSize(11)
+        .fontSize(10)
         .fontColor(this.dragOverTripId === trip.id ? '#CCFFFFFF' : TEXT_TERTIARY)
     }
-    .width(100)
-    .height(80)
+    .width(88)
+    .height(68)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .padding({ left: 10, right: 10 })
@@ -2157,7 +2182,7 @@ export struct GearPage {
     .borderRadius(12)
     .scale({ x: 1.02, y: 1.02 })
     .shadow({ radius: 20, color: '#28000000', offsetX: 0, offsetY: 6 })
-    .position({ x: 0, y: this.groupDragY - 20 })
+    .position({ x: 0, y: this.groupDragY - 14 })
     .animation({ duration: 0 })
     .zIndex(100)
     .hitTestBehavior(HitTestMode.None)
