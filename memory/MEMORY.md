@@ -50,6 +50,16 @@
 - 拖拽跟手必须 `.animation({ duration: 0 })` 覆盖父级动画继承，否则 ArkUI 插值造成滞后
 - macOS Dock 风格磁吸效果：在 builder 中实时计算 proximity（基于 dragX/Y state），卡片数量有限时性能可接受（每个 TripCard 引用 dragX/Y 会触发重建）
 - SwipeGesture(Horizontal) 与垂直 List 滚动不冲突，可安全用于多选退出手势
+- Navigation 内部 Stack 的覆盖层（Sheet/弹窗/仪式卡片）会被 NavDestination 遮挡——必须移到 Navigation 外层 Stack
+- `@Prop` 深拷贝 + ForEach key 只含 id → 内部属性变化不触发重渲染。解法：key 拼入变化属性 + nonce 计数器
+- `bindSheet` 的 SheetOptions 不支持 `borderRadius` 属性（编译通过但运行报 warn），需移除
+
+## 快速核查功能（2025-06-22）
+
+- 首页 QuickEntries 第二个按钮从「装备库」替换为「快速核查」（装备库已有 3 条路径可达，按钮冗余）
+- `nearestFutureChecklist()` 只取 dateAt >= 今天的最近行程（过去行程已结束，不需要核查）
+- 按钮状态机：无未来行程→隐藏（只剩"新建行程"填满行）；未来行程 items=0→点击跳转详情页+toast"先添加装备再核查"；全勾选→"再检查一遍"；有未勾选→"快速核查"
+- 点击直接设置 `selectedChecklistId` 然后 `openReviewMode()`，跳过中间的详情页，减少操作路径
 
 ## 已知限制
 

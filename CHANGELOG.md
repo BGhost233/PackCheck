@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.5.3 (2025-06-22)
+
+清单页 Bug 修复 + 快速核查快捷入口。
+
+- **Bug 修复：Sheet 覆盖层被 NavDestination 遮挡** — 将 SheetOverlay/EditItemPanel/EditGearPanel/TripCeremonyCard/CompletionToast 从 Navigation 内部移至外层 Stack，确保渲染在 NavDestination 之上
+- **Bug 修复：清单详情页与首页数据不一致** — ForEach key 从 `item.id` 改为 `item.id + items.length + nonce`，新增 `checklistRenderNonce` 计数器强制刷新
+- **Bug 修复：GearPage bindSheet borderRadius 无效属性** — 移除 SheetOptions 中不支持的 `borderRadius`
+- **快速核查 QuickEntry** — 首页第二个快捷按钮从「装备库」替换为「快速核查」，点击直接进入最近未来行程的 ReviewMode，减少操作路径
+- 按钮状态机：无未来行程隐藏；items=0 跳详情页+toast；全勾选"再检查一遍"；有未勾选"快速核查"
+- CLAUDE.md 新增第 23~24 条避坑：Navigation 覆盖层层级 / ForEach key 变化维度
+
 ## v0.5.2 (2025-06-21)
 
 装备库增强：弹性回弹 + 分组拖拽排序 + Bug修复。

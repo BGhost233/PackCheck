@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.5.0
+## 当前版本：v0.5.3
 
 ### 已实现功能
 
@@ -111,7 +111,8 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.3.1 | ✅ 已完成 | 仪式卡片交互完善（日期选择 + 抖动提示 + 键盘收起） |
 | v0.4.0 | ✅ 已完成 | 动效与转场优化（共享元素一镜到底 + Sheet 弹性动画） |
 | v0.4.2 | ✅ 已完成 | 结构重构（Sheet 组件化 + 命名空间导出，Index.ets -18.6%） |
-| v0.5.0 | ✅ 当前 | 质感跃迁（tnum 等宽数字 + 噪点纹理 + Section Breathing + 暖琥珀色系） |
+| v0.5.0 | ✅ 已完成 | 质感跃迁（tnum 等宽数字 + 噪点纹理 + Section Breathing + 暖琥珀色系） |
+| v0.5.3 | ✅ 当前 | 清单页 Bug 修复 + 快速核查快捷入口 + 装备库弹性回弹/分组拖拽 |
 
 ## 开发约定
 
