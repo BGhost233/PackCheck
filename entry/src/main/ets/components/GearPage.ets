@@ -66,6 +66,17 @@ export struct GearPage {
   @State private gearScrollOffset: number = 0;
   @State private collapsedGearGroups: string[] = [];
   @State private gearGroupExpandTrigger: number = 0;
+  @State private categoryOrder: string[] = [];
+
+  @State private pressedGroupId: string = '';
+
+  // --- 分组拖拽排序 ---
+  @State private groupDragMode: boolean = false;
+  @State private groupDragGroup: string = '';
+  @State private groupDragY: number = 0;
+  @State private groupDragOffsetY: number = 0;
+  @State private groupReorderList: string[] = [];
+  private groupCardHeights: Map<string, number> = new Map();
 
   // --- 拖拽到行程 ---
   @State private dragMode: boolean = false;
@@ -94,8 +105,9 @@ export struct GearPage {
     // 初始位置：右下角
     this.fabX = this.screenWidth - 50 - 16;
     this.fabY = this.screenHeight - 50 - 160; // 留出 TabBar 空间
-    // 恢复折叠状态
+    // 恢复折叠状态 + 分组顺序
     this.loadCollapsedGroups();
+    this.loadCategoryOrder();
   }
 
   private async loadCollapsedGroups(): Promise<void> {
@@ -116,6 +128,29 @@ export struct GearPage {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       await this.store.init(context);
       await this.store.saveCollapsedGearGroups(this.collapsedGearGroups);
+    } catch (e) {
+      // 静默失败
+    }
+  }
+
+  private async loadCategoryOrder(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      await this.store.init(context);
+      const saved = await this.store.getCategoryOrder();
+      if (saved.length > 0) {
+        this.categoryOrder = saved;
+      }
+    } catch (e) {
+      // 降级：使用默认字母序
+    }
+  }
+
+  private async persistCategoryOrder(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      await this.store.init(context);
+      await this.store.saveCategoryOrder(this.categoryOrder);
     } catch (e) {
       // 静默失败
     }
@@ -305,6 +340,14 @@ export struct GearPage {
       if (left.category === right.category) {
         return right.createdAt - left.createdAt;
       }
+      // 按 categoryOrder 自定义顺序排
+      const leftIdx = this.categoryOrder.indexOf(left.category);
+      const rightIdx = this.categoryOrder.indexOf(right.category);
+      const li = leftIdx >= 0 ? leftIdx : 9999;
+      const ri = rightIdx >= 0 ? rightIdx : 9999;
+      if (li !== ri) {
+        return li - ri;
+      }
       return left.category.localeCompare(right.category);
     });
     return sorted;
@@ -400,7 +443,27 @@ export struct GearPage {
         groups.push(group);
       }
     }
+    // 按 categoryOrder 排序
+    if (this.gearSortMode === GEAR_SORT_GROUP && this.categoryOrder.length > 0) {
+      groups.sort((a: string, b: string): number => {
+        const ai = this.categoryOrder.indexOf(a);
+        const bi = this.categoryOrder.indexOf(b);
+        const aIdx = ai >= 0 ? ai : 9999;
+        const bIdx = bi >= 0 ? bi : 9999;
+        if (aIdx !== bIdx) {
+          return aIdx - bIdx;
+        }
+        return a.localeCompare(b);
+      });
+    }
     return groups;
+  }
+
+  private displayGearGroups(): string[] {
+    if (this.groupDragMode && this.groupReorderList.length > 0) {
+      return this.groupReorderList;
+    }
+    return this.filteredGearGroups();
   }
 
   private filteredGearsByGroup(group: string): GearItem[] {
@@ -644,7 +707,7 @@ export struct GearPage {
                 this.EmptyText('未找到相关装备');
               }
             } else {
-              ForEach(this.filteredGearGroups(), (group: string) => {
+              ForEach(this.displayGearGroups(), (group: string) => {
                 ListItem() {
                   this.GearGroupCard(group);
                 }
@@ -658,7 +721,8 @@ export struct GearPage {
           }
           .width('100%')
           .height('100%')
-          .edgeEffect(EdgeEffect.Spring)
+          .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
+          .enableScrollInteraction(!this.groupDragMode)
           .backgroundColor(Color.Transparent)
           .onDidScroll(() => {
             this.gearScrollOffset = this.gearListScroller.currentOffset().yOffset;
@@ -676,6 +740,11 @@ export struct GearPage {
       }
       if (this.showWeightEditor) {
         this.WeightTargetEditor();
+      }
+
+      // --- 分组拖拽浮动层 ---
+      if (this.groupDragMode) {
+        this.FloatingGroupCard()
       }
 
       // --- 拖拽覆盖层 ---
@@ -1052,9 +1121,45 @@ export struct GearPage {
       .height(28)
       .alignItems(VerticalAlign.Center)
       .padding({ left: 4, right: 4 })
-      .onClick(() => {
-        this.toggleGearGroupCollapse(group);
+      .scale({
+        x: this.pressedGroupId === group ? 0.97 : 1.0,
+        y: this.pressedGroupId === group ? 0.97 : 1.0
       })
+      .animation({ duration: 200, curve: curves.springMotion(0.25, 0.7) })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.pressedGroupId = group;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.pressedGroupId = '';
+        }
+      })
+      .onClick(() => {
+        if (!this.groupDragMode) {
+          this.toggleGearGroupCollapse(group);
+        }
+      })
+      .gesture(
+        GestureGroup(GestureMode.Sequence,
+          LongPressGesture({ fingers: 1, repeat: false, duration: 300 })
+            .onAction((event: GestureEvent) => {
+              if (this.gearSortMode !== GEAR_SORT_GROUP || this.multiSelectMode || this.searchExpanded) {
+                return;
+              }
+              this.enterGroupDrag(group, event.fingerList[0].globalY);
+            }),
+          PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 0 })
+            .onActionUpdate((event: GestureEvent) => {
+              if (this.groupDragMode) {
+                this.updateGroupDrag(event.fingerList[0].globalY);
+              }
+            })
+            .onActionEnd(() => {
+              if (this.groupDragMode) {
+                this.completeGroupDrag();
+              }
+            })
+        )
+      )
 
       // 分组内容卡片
       if (!this.isGearGroupCollapsed(group)) {
@@ -1077,6 +1182,14 @@ export struct GearPage {
       }
     }
     .width('100%')
+    .opacity(this.groupDragMode && this.groupDragGroup === group ? 0 : (this.groupDragMode ? 0.6 : 1.0))
+    .animation({ duration: 200, curve: Curve.EaseOut })
+    .onAreaChange((_oldArea: Area, newArea: Area) => {
+      const h = newArea.height as number;
+      if (h > 0) {
+        this.groupCardHeights.set(group, h);
+      }
+    })
   }
 
   @Builder
@@ -1855,5 +1968,142 @@ export struct GearPage {
       }
     }
     return '装备';
+  }
+
+  // ===== 分组拖拽排序 =====
+
+  private enterGroupDrag(group: string, fingerY: number): void {
+    // 初始化拖拽
+    this.groupDragGroup = group;
+    this.groupDragY = fingerY;
+    this.groupDragOffsetY = 0;
+    // 快照当前分组顺序
+    this.groupReorderList = this.filteredGearGroups().slice();
+    // 进入拖拽态
+    this.groupDragMode = true;
+    // 触觉反馈
+    try {
+      vibrator.startVibration({
+        type: 'preset',
+        count: 1
+      }, { usage: 'touch' });
+    } catch (e) {
+      // 静默
+    }
+  }
+
+  private updateGroupDrag(fingerY: number): void {
+    this.groupDragY = fingerY;
+    // 碰撞检测：计算当前拖拽分组应该在列表中的位置
+    const currentIdx = this.groupReorderList.indexOf(this.groupDragGroup);
+    if (currentIdx < 0) {
+      return;
+    }
+    // 计算各分组的累积 Y 位置
+    let accumulatedY = 0;
+    for (let i = 0; i < this.groupReorderList.length; i++) {
+      const g = this.groupReorderList[i];
+      const h = this.groupCardHeights.get(g) ?? 80;
+      const midY = accumulatedY + h / 2;
+      if (i !== currentIdx && g !== this.groupDragGroup) {
+        // 判断手指是否越过此分组的中线
+        const dragCenterY = this.groupDragY - this.groupDragOffsetY;
+        if (currentIdx < i && dragCenterY > midY) {
+          // 向下移动
+          this.groupReorderList.splice(currentIdx, 1);
+          this.groupReorderList.splice(i, 0, this.groupDragGroup);
+          return;
+        } else if (currentIdx > i && dragCenterY < midY) {
+          // 向上移动
+          this.groupReorderList.splice(currentIdx, 1);
+          this.groupReorderList.splice(i, 0, this.groupDragGroup);
+          return;
+        }
+      }
+      accumulatedY += h + 16; // 16 = list space
+    }
+  }
+
+  private completeGroupDrag(): void {
+    // 保存新顺序到 categoryOrder
+    this.categoryOrder = this.groupReorderList.slice();
+    this.persistCategoryOrder();
+    // 退出拖拽态
+    animateTo({
+      duration: 300,
+      curve: curves.springMotion(0.35, 0.8)
+    }, () => {
+      this.groupDragMode = false;
+      this.groupDragGroup = '';
+      this.groupReorderList = [];
+    });
+    // 振动确认
+    try {
+      vibrator.startVibration({
+        type: 'preset',
+        count: 1
+      }, { usage: 'touch' });
+    } catch (e) {
+      // 静默
+    }
+  }
+
+  @Builder
+  private FloatingGroupCard() {
+    Column() {
+      // 分组标题行（复制 GearGroupCard 的 header）
+      Row({ space: 6 }) {
+        Row()
+          .width(3)
+          .height(14)
+          .backgroundColor(getGroupColor(this.groupDragGroup))
+          .borderRadius(1.5)
+        Text(this.groupDragGroup)
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(TEXT_SECONDARY)
+          .layoutWeight(1)
+        Text(this.gearGroupCount(this.groupDragGroup).toString())
+          .fontSize(12)
+          .fontColor(TEXT_TERTIARY)
+          .fontFeature(FONT_FEATURE_TNUM)
+        SymbolGlyph($r('sys.symbol.chevron_down'))
+          .fontSize(12)
+          .fontColor([TEXT_TERTIARY])
+      }
+      .width('100%')
+      .height(28)
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: 4, right: 4 })
+
+      // 分组内容卡片
+      if (!this.isGearGroupCollapsed(this.groupDragGroup)) {
+        Column() {
+          ForEach(this.filteredGearsByGroup(this.groupDragGroup), (item: GearItem, index: number) => {
+            this.GearRow(item);
+            if (index < this.filteredGearsByGroup(this.groupDragGroup).length - 1 &&
+              this.expandedGearId !== item.id) {
+              Divider()
+                .strokeWidth(0.5)
+                .color(DIVIDER_COLOR)
+                .margin({ left: 14, right: 14 })
+            }
+          }, (item: GearItem) => 'float_' + item.id)
+        }
+        .width('100%')
+        .backgroundColor(CARD_BG)
+        .borderRadius(14)
+        .clip(true)
+      }
+    }
+    .width('100%')
+    .padding({ left: PAGE_PADDING, right: PAGE_PADDING })
+    .scale({ x: 1.03, y: 1.03 })
+    .rotate({ angle: -1 })
+    .shadow({ radius: 24, color: '#30000000', offsetX: 0, offsetY: 8 })
+    .position({ x: 0, y: this.groupDragY - (this.groupCardHeights.get(this.groupDragGroup) ?? 80) / 2 })
+    .animation({ duration: 0 })
+    .zIndex(100)
+    .hitTestBehavior(HitTestMode.None)
   }
 }
