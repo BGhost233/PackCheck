@@ -659,6 +659,9 @@ export struct GearPage {
 
   // 渐进式模糊强度：0~0.3 无 | 0.3~1.0 线性增到 40
   private gearHeaderBlurRadius(): number {
+    if (this.searchExpanded) {
+      return 0;
+    }
     const p = this.gearScrollProgress();
     if (p < 0.3) {
       return 0;
@@ -668,12 +671,18 @@ export struct GearPage {
 
   // Header 动态高度：跟随滚动从 EXPANDED 收缩到 COLLAPSED
   private gearHeaderHeight(): number {
+    if (this.searchExpanded) {
+      return GEAR_HEADER_COLLAPSED; // 搜索时强制收缩 header
+    }
     const p = this.gearScrollProgress();
     return GEAR_HEADER_EXPANDED - (GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED) * p;
   }
 
   // 渐进式背景色：PAGE_BG → BLUR_BG，alpha 从 00 到 CC 跟随 progress
   private gearHeaderBgColor(): string {
+    if (this.searchExpanded) {
+      return PAGE_BG;
+    }
     const p = this.gearScrollProgress();
     if (p < 0.3) {
       return PAGE_BG; // #F8F9FA 全不透明背景
@@ -685,18 +694,26 @@ export struct GearPage {
     return '#' + hex + 'F8F9FA';
   }
 
+  // 搜索展开时顶部 spacer 需要额外容纳 SearchBar 高度
+  private topSpacerHeight(): number {
+    if (this.multiSelectMode) {
+      return GEAR_HEADER_COLLAPSED;
+    }
+    if (this.searchExpanded) {
+      return GEAR_HEADER_COLLAPSED + 44; // header collapsed + searchBar
+    }
+    return GEAR_HEADER_EXPANDED - 20; // 减去 List padding-top(6) + space(16) 的多余间距，消除灰色间隙
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
-        if (this.searchExpanded) {
-          this.SearchBar();
-        }
         Stack() {
           List({ space: 16, scroller: this.gearListScroller }) {
             ListItem() {
               Column()
                 .width('100%')
-                .height(this.multiSelectMode ? GEAR_HEADER_COLLAPSED : GEAR_HEADER_EXPANDED)
+                .height(this.topSpacerHeight())
             }
             if (this.gears.length === 0) {
               ListItem() {
@@ -735,6 +752,10 @@ export struct GearPage {
       .height('100%')
 
       this.CollapsingHeader();
+      // 搜索栏：悬浮定位在 header 下方
+      if (this.searchExpanded) {
+        this.SearchBar();
+      }
       if (!this.multiSelectMode) {
         this.Fab();
       }
@@ -898,6 +919,8 @@ export struct GearPage {
             .borderRadius(18)
             .onClick(() => {
               this.searchExpanded = true;
+              this.gearListScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+              this.gearScrollOffset = 0;
             })
             Row() {
               SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
@@ -1090,6 +1113,8 @@ export struct GearPage {
     .alignItems(VerticalAlign.Center)
     .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
     .backgroundColor(PAGE_BG)
+    .position({ x: 0, y: GEAR_HEADER_COLLAPSED })
+    .zIndex(9)
   }
 
   @Builder
