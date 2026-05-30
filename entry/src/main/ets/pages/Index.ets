@@ -1769,12 +1769,26 @@ struct Index {
   }
 
   private triggerBlurPulse(targetIndex: number): void {
-    // 即时切换：零延迟，零 blur，指示器通过 spring 自然过渡
+    // 即时切换 + 呼吸脉冲（并行，不阻塞切换）
     this.isClickSwitching = true;
     this.currentTabIndex = targetIndex;
     this.tabSwipeProgress = 0;
     this.tabsController.changeIndex(targetIndex);
-    setTimeout(() => { this.isClickSwitching = false; }, 200);
+    // 呼吸下压（极短 EaseOut，不用 spring 避免拖尾）
+    this.getUIContext().animateTo({
+      duration: 80, curve: Curve.EaseOut
+    }, () => {
+      this.contentScale = 0.97;
+    });
+    // 弹回（spring 回弹，灵动感）
+    setTimeout(() => {
+      this.getUIContext().animateTo({
+        curve: curves.springMotion(0.3, 0.82)
+      }, () => {
+        this.contentScale = 1.0;
+      });
+      this.isClickSwitching = false;
+    }, 80);
   }
 
   // 计算 tab 项的视觉权重：1.0 = 完全选中，0.0 = 完全未选中
