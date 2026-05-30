@@ -694,13 +694,10 @@ export struct GearPage {
     return '#' + hex + 'F8F9FA';
   }
 
-  // 搜索展开时顶部 spacer 需要额外容纳 SearchBar 高度
+  // 顶部 spacer 高度：给 Header 腾出空间
   private topSpacerHeight(): number {
-    if (this.multiSelectMode) {
+    if (this.multiSelectMode || this.searchExpanded) {
       return GEAR_HEADER_COLLAPSED;
-    }
-    if (this.searchExpanded) {
-      return GEAR_HEADER_COLLAPSED + 44; // header collapsed + searchBar
     }
     return GEAR_HEADER_EXPANDED - 20; // 减去 List padding-top(6) + space(16) 的多余间距，消除灰色间隙
   }
@@ -728,6 +725,9 @@ export struct GearPage {
                 ListItem() {
                   this.GearGroupCard(group);
                 }
+                .transition(TransitionEffect.OPACITY.combine(
+                  TransitionEffect.translate({ y: 8 })
+                ).animation({ duration: 300, curve: curves.springMotion(0.35, 0.8) }))
               }, (group: string) => group)
             }
             ListItem() {
@@ -752,10 +752,6 @@ export struct GearPage {
       .height('100%')
 
       this.CollapsingHeader();
-      // 搜索栏：悬浮定位在 header 下方
-      if (this.searchExpanded) {
-        this.SearchBar();
-      }
       if (!this.multiSelectMode) {
         this.Fab();
       }
@@ -907,35 +903,81 @@ export struct GearPage {
               .translate({ x: this.gearCollapsedOpacity() > 0 ? 0 : -12 })
               .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
             Blank()
+            // 搜索按钮 / 搜索框：原地变形
             Row() {
               SymbolGlyph($r('sys.symbol.magnifyingglass'))
-                .fontSize(20)
+                .fontSize(this.searchExpanded ? 16 : 20)
                 .fontColor([this.gearSearchKeyword.length > 0 ? PRIMARY_COLOR : TEXT_SECONDARY])
+                .margin({ left: this.searchExpanded ? 2 : 0, right: this.searchExpanded ? 6 : 0 })
+              if (this.searchExpanded) {
+                TextInput({ placeholder: '搜索装备', text: this.gearSearchKeyword })
+                  .height(28)
+                  .fontSize(14)
+                  .fontColor(TEXT_MAIN)
+                  .placeholderColor(TEXT_TERTIARY)
+                  .backgroundColor('#00000000')
+                  .padding({ left: 0, right: 0 })
+                  .layoutWeight(1)
+                  .defaultFocus(true)
+                  .onChange((value: string) => {
+                    this.onSearchChange(value);
+                  })
+                Text('取消')
+                  .fontSize(13)
+                  .fontColor(TEXT_SECONDARY)
+                  .padding({ left: 8, right: 2 })
+                  .onClick(() => {
+                    this.getUIContext().animateTo({
+                      duration: 350,
+                      curve: curves.springMotion(0.35, 0.82)
+                    }, () => {
+                      this.searchExpanded = false;
+                      this.onSearchChange('');
+                    });
+                  })
+              }
             }
-            .width(36)
             .height(36)
-            .justifyContent(FlexAlign.Center)
-            .backgroundColor(PRIMARY_TINT_COLOR)
+            .width(this.searchExpanded ? undefined : 36)
+            .layoutWeight(this.searchExpanded ? 1 : 0)
+            .justifyContent(this.searchExpanded ? FlexAlign.Start : FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
+            .padding(this.searchExpanded ? { left: 12, right: 10 } : { left: 0, right: 0 })
             .borderRadius(18)
-            .onClick(() => {
-              this.searchExpanded = true;
-              this.gearListScroller.scrollTo({ xOffset: 0, yOffset: 0 });
-              this.gearScrollOffset = 0;
+            .backgroundBlurStyle(BlurStyle.COMPONENT_REGULAR, {
+              colorMode: ThemeColorMode.SYSTEM,
+              adaptiveColor: AdaptiveColor.DEFAULT
             })
-            Row() {
-              SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
-                .fontSize(18)
-                .fontColor([TEXT_SECONDARY])
+            .backgroundColor(this.searchExpanded ? '#B0FFFFFF' : PRIMARY_TINT_COLOR)
+            .animation({ duration: 350, curve: curves.springMotion(0.35, 0.82) })
+            .onClick(() => {
+              if (!this.searchExpanded) {
+                this.getUIContext().animateTo({
+                  duration: 350,
+                  curve: curves.springMotion(0.35, 0.82)
+                }, () => {
+                  this.searchExpanded = true;
+                  this.gearListScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+                  this.gearScrollOffset = 0;
+                });
+              }
+            })
+            if (!this.searchExpanded) {
+              Row() {
+                SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
+                  .fontSize(18)
+                  .fontColor([TEXT_SECONDARY])
+              }
+              .width(36)
+              .height(36)
+              .justifyContent(FlexAlign.Center)
+              .backgroundColor(PRIMARY_TINT_COLOR)
+              .borderRadius(18)
+              .margin({ left: 10 })
+              .onClick(() => {
+                this.onOpenSort();
+              })
             }
-            .width(36)
-            .height(36)
-            .justifyContent(FlexAlign.Center)
-            .backgroundColor(PRIMARY_TINT_COLOR)
-            .borderRadius(18)
-            .margin({ left: 10 })
-            .onClick(() => {
-              this.onOpenSort();
-            })
           }
           .width('100%')
           .height(GEAR_HEADER_COLLAPSED)
@@ -1083,39 +1125,6 @@ export struct GearPage {
     .padding({ left: 20, right: 20, top: 12, bottom: 34 })
   }
 
-  @Builder
-  private SearchBar() {
-    Row({ space: 10 }) {
-      TextInput({ placeholder: '搜索装备', text: this.gearSearchKeyword })
-        .height(36)
-        .fontSize(14)
-        .fontColor(TEXT_MAIN)
-        .placeholderColor(TEXT_TERTIARY)
-        .backgroundColor(CARD_BG)
-        .borderRadius(18)
-        .padding({ left: 14, right: 14 })
-        .layoutWeight(1)
-        .onChange((value: string) => {
-          this.onSearchChange(value);
-        })
-      Text('取消')
-        .fontSize(14)
-        .fontColor(TEXT_SECONDARY)
-        .height(36)
-        .padding({ left: 8, right: 8 })
-        .onClick(() => {
-          this.searchExpanded = false;
-          this.onSearchChange('');
-        })
-    }
-    .width('100%')
-    .height(44)
-    .alignItems(VerticalAlign.Center)
-    .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
-    .backgroundColor(PAGE_BG)
-    .position({ x: 0, y: GEAR_HEADER_COLLAPSED })
-    .zIndex(9)
-  }
 
   @Builder
   private GearGroupCard(group: string) {
@@ -1344,25 +1353,27 @@ export struct GearPage {
     } else {
       // 普通模式：紧凑行 + 左滑删除
       Stack() {
-        // 底层：删除按钮（右侧露出）
-        Row() {
-          Blank()
-          Text('删除')
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#FFFFFF')
-            .width(70)
-            .height('100%')
-            .textAlign(TextAlign.Center)
-            .backgroundColor(DANGER_COLOR)
-            .onClick(() => {
-              this.swipedGearId = '';
-              this.swipeOffsetX = 0;
-              this.onConfirmDeleteGear(item);
-            })
+        // 底层：删除按钮（仅在侧滑时渲染，避免 rest 态红色暴露）
+        if (this.swipedGearId === item.id) {
+          Row() {
+            Blank()
+            Text('删除')
+              .fontSize(14)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#FFFFFF')
+              .width(70)
+              .height('100%')
+              .textAlign(TextAlign.Center)
+              .backgroundColor(DANGER_COLOR)
+              .onClick(() => {
+                this.swipedGearId = '';
+                this.swipeOffsetX = 0;
+                this.onConfirmDeleteGear(item);
+              })
+          }
+          .width('100%')
+          .height('100%')
         }
-        .width('100%')
-        .height('100%')
 
         // 上层：内容行
         Column() {
@@ -1617,10 +1628,14 @@ export struct GearPage {
     .width(50)
     .height(50)
     .borderRadius(25)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor('#B0FFFFFF')
+    .backgroundBlurStyle(BlurStyle.COMPONENT_REGULAR, {
+      colorMode: ThemeColorMode.SYSTEM,
+      adaptiveColor: AdaptiveColor.DEFAULT
+    })
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .shadow({ radius: 12, color: '#1A2D7D46', offsetX: 0, offsetY: 4 })
+    .shadow({ radius: 16, color: '#1A2D7D46', offsetX: 0, offsetY: 6 })
     .position({ x: this.fabX, y: this.fabY })
     .scale({ x: this.fabDragging ? 1.08 : 1, y: this.fabDragging ? 1.08 : 1 })
     .gesture(
@@ -2031,14 +2046,32 @@ export struct GearPage {
         // 判断手指是否越过此分组的中线
         const dragCenterY = this.groupDragY - this.groupDragOffsetY;
         if (currentIdx < i && dragCenterY > midY) {
-          // 向下移动
-          this.groupReorderList.splice(currentIdx, 1);
-          this.groupReorderList.splice(i, 0, this.groupDragGroup);
+          // 向下移动：animateTo 驱动让位动画
+          this.getUIContext().animateTo({
+            duration: 300,
+            curve: curves.springMotion(0.35, 0.8)
+          }, () => {
+            this.groupReorderList.splice(currentIdx, 1);
+            this.groupReorderList.splice(i, 0, this.groupDragGroup);
+          });
+          // 棘轮振动反馈
+          try {
+            vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });
+          } catch (e) { /* 静默 */ }
           return;
         } else if (currentIdx > i && dragCenterY < midY) {
-          // 向上移动
-          this.groupReorderList.splice(currentIdx, 1);
-          this.groupReorderList.splice(i, 0, this.groupDragGroup);
+          // 向上移动：animateTo 驱动让位动画
+          this.getUIContext().animateTo({
+            duration: 300,
+            curve: curves.springMotion(0.35, 0.8)
+          }, () => {
+            this.groupReorderList.splice(currentIdx, 1);
+            this.groupReorderList.splice(i, 0, this.groupDragGroup);
+          });
+          // 棘轮振动反馈
+          try {
+            vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });
+          } catch (e) { /* 静默 */ }
           return;
         }
       }
