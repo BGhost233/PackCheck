@@ -21,7 +21,7 @@
 
 ---
 
-## Phase 1: 分类面板 Chip 化 — `pending`
+## Phase 1: 分类面板 Chip 化 — `complete`
 
 ### 1.1 CategoryCard 改为自适应宽度胶囊
 - 去掉 `.width('30.5%')` 固定宽度
@@ -48,7 +48,7 @@
 
 ---
 
-## Phase 2: 分类点击 Spring + 触觉反馈 — `pending`
+## Phase 2: 分类点击 Spring + 触觉反馈 — `complete`
 
 ### 2.1 按压缩放动效
 - 新增 @State `pressedCategory: string = ''`
@@ -76,7 +76,7 @@
 
 ---
 
-## Phase 3: 装备卡片精简 — `pending`
+## Phase 3: 装备卡片精简 — `complete`
 
 ### 3.1 去掉冗余分类文字
 - GearRow 中移除 `Text(item.category)` 那一行
@@ -110,7 +110,7 @@
 
 ---
 
-## Phase 4: 分组折叠状态持久化 — `pending`
+## Phase 4: 分组折叠状态持久化 — `complete`
 
 ### 4.1 PackStore 新增折叠状态存储
 - `saveCollapsedGearGroups(groups: string[]): Promise<void>`
@@ -136,7 +136,7 @@
 
 ---
 
-## Phase 5: 搜索关键词高亮 — `pending`
+## Phase 5: 搜索关键词高亮 — `complete`
 
 ### 5.1 新增高亮文本 Builder
 - `@Builder HighlightText(text: string, keyword: string)`
@@ -159,7 +159,7 @@
 
 ---
 
-## Phase 6: 筛选面板匹配数量预览 — `pending`
+## Phase 6: 筛选面板匹配数量预览 — `complete`
 
 ### 6.1 计算筛选后装备数
 - 在 GearFilterPanel 中新增 prop 或 callback 获取当前筛选结果数量
@@ -180,7 +180,7 @@
 
 ---
 
-## Phase 7: 构建验证 + 收尾 — `pending`
+## Phase 7: 构建验证 + 收尾 — `complete`
 
 ### 7.1 全量构建验证
 - `hvigorw assembleApp` 通过
@@ -201,6 +201,67 @@
 ### 7.3 Git commit
 - 每个 Phase 完成后独立 commit
 - commit message 格式：`feat(gear-page): <具体改动描述>`
+
+---
+
+## Phase 8: 长按预览 + Context Menu — `pending`
+
+### 目标
+用 `bindContextMenu` + `preview: CustomBuilder` 替代现有 `LongPressGesture`，实现 iOS/鸿蒙原生级的长按预览卡片 + 菜单操作。
+
+### 8.1 新增 GearPreviewCard Builder
+- 预览卡片尺寸：宽度 280vp，自适应高度
+- 内容：色条 + 装备名称（标题）、分组、重量、价格、出行次数、备注（截断2行）、添加时间
+- 圆角 20vp，白色卡片 + 阴影，padding 20
+- 风格比列表内的 Detail 更「卡片化」，独立浮动感
+
+### 8.2 新增 GearContextMenu Builder
+- 使用 `Menu { MenuItem(...) }` 语法
+- 菜单项：编辑、多选、删除
+- 每项配 SymbolGlyph 图标 + 文字
+- 删除项用 DANGER_COLOR 着色
+
+### 8.3 GearRow 移除 LongPressGesture + 绑定 bindContextMenu
+- 移除 `.gesture(LongPressGesture({ duration: 500 })...)`
+- 添加 `.bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, { ... })`
+- preview: `this.GearPreviewCard(item)`
+- previewAnimationOptions: `{ scale: [0.95, 1.08] }`
+- placement: Placement.Bottom
+
+### 8.4 菜单项回调连接
+- 编辑 → `this.onOpenEditGear(item)`
+- 多选 → `this.onEnterGearMultiSelect(item.id)`
+- 删除 → `this.onConfirmDeleteGear(item)`
+
+### 8.5 按压动效兼容性验证
+- bindContextMenu 可能接管 touch 事件
+- 如果 onTouch 的按压缩放和 bindContextMenu 冲突，需调整
+
+### 预期效果
+- 长按 500ms → 卡片浮起 → 预览信息卡 + 菜单弹出
+- 系统级动画 + 蒙层模糊
+- 菜单操作后恢复原状
+
+### 风险评估
+- ✅ API 23 完全支持 bindContextMenu + preview CustomBuilder
+- ✅ 不影响 onClick（展开详情）、swipeAction（左滑删除）
+- ⚠️ onTouch 按压动效可能需要移除或简化（系统会处理浮起效果）
+- ⚠️ 多选模式下不应弹菜单（multiSelectMode 时应保持 Checkbox 点击逻辑）
+
+---
+
+## Phase 9: 构建验证 + 回归 — `pending`
+
+### 9.1 hvigorw assembleApp 通过
+### 9.2 回归清单
+- [ ] 长按弹出预览卡片 + 菜单
+- [ ] 菜单「编辑」正常打开编辑 Sheet
+- [ ] 菜单「多选」正常进入多选模式
+- [ ] 菜单「删除」正常弹确认
+- [ ] 普通点击展开详情不受影响
+- [ ] 左滑删除不受影响
+- [ ] 多选模式下长按不弹菜单（直接勾选）
+- [ ] 搜索/排序/筛选不受影响
 
 ---
 

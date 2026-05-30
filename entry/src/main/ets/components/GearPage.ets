@@ -919,12 +919,87 @@ export struct GearPage {
         this.pressedGearId = '';
       }
     })
-    .gesture(
-      LongPressGesture({ duration: 500 })
-        .onAction(() => {
+    .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
+      preview: this.GearPreviewCard(item),
+      previewAnimationOptions: { scale: [0.95, 1.08] },
+      placement: Placement.Bottom,
+      borderRadius: 16
+    })
+  }
+
+  @Builder
+  private GearPreviewCard(item: GearItem) {
+    Column({ space: 12 }) {
+      Row({ space: 10 }) {
+        Row()
+          .width(4)
+          .height(28)
+          .borderRadius(2)
+          .backgroundColor(getGroupColor(item.category))
+        Text(item.name)
+          .fontSize(17)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Column({ space: 8 }) {
+        this.PreviewLine('分组', item.category)
+        this.PreviewLine('重量', item.weight === undefined ? '未填写' : item.weight.toString() + 'g')
+        this.PreviewLine('价格', item.price === undefined ? '未填写' : '¥' + item.price.toString())
+        this.PreviewLine('出行', this.gearTripCount(item) > 0 ? '×' + this.gearTripCount(item).toString() : '未出行')
+        if (item.note !== undefined && item.note.length > 0) {
+          this.PreviewLine('备注', item.note)
+        }
+        this.PreviewLine('添加', this.formatDateText(item.createdAt))
+      }
+      .width('100%')
+    }
+    .width(280)
+    .padding(20)
+    .backgroundColor(CARD_BG)
+    .borderRadius(20)
+    .shadow({ radius: 24, color: '#1A000000', offsetX: 0, offsetY: 8 })
+  }
+
+  @Builder
+  private PreviewLine(label: string, value: string) {
+    Row() {
+      Text(label)
+        .fontSize(13)
+        .fontColor(TEXT_TERTIARY)
+        .width(40)
+      Text(value)
+        .fontSize(13)
+        .fontColor(TEXT_MAIN)
+        .layoutWeight(1)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Top)
+  }
+
+  @Builder
+  private GearContextMenu(item: GearItem) {
+    Menu() {
+      MenuItem({ content: '编辑', labelInfo: '' })
+        .onClick(() => {
+          this.onOpenEditGear(item);
+        })
+      MenuItem({ content: '多选', labelInfo: '' })
+        .onClick(() => {
           this.onEnterGearMultiSelect(item.id);
         })
-    )
+      MenuItem({ content: '删除', labelInfo: '' })
+        .contentFontColor(DANGER_COLOR)
+        .onClick(() => {
+          this.onConfirmDeleteGear(item);
+        })
+    }
   }
 
   @Builder
