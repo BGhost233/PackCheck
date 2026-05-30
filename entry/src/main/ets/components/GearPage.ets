@@ -2008,10 +2008,7 @@ export struct GearPage {
     this.groupDragMode = true;
     // 触觉反馈
     try {
-      vibrator.startVibration({
-        type: 'preset',
-        count: 1
-      }, { usage: 'touch' });
+      vibrator.startVibration({ type: 'time', duration: 30 }, { usage: 'touch' });
     } catch (e) {
       // 静默
     }
@@ -2064,10 +2061,7 @@ export struct GearPage {
     });
     // 振动确认
     try {
-      vibrator.startVibration({
-        type: 'preset',
-        count: 1
-      }, { usage: 'touch' });
+      vibrator.startVibration({ type: 'time', duration: 30 }, { usage: 'touch' });
     } catch (e) {
       // 静默
     }
