@@ -578,7 +578,7 @@ export struct GearPage {
             ListItem() {
               Column()
                 .width('100%')
-                .height(GEAR_HEADER_EXPANDED)
+                .height(this.multiSelectMode ? 8 : GEAR_HEADER_EXPANDED)
             }
             if (this.gears.length === 0) {
               ListItem() {
@@ -631,9 +631,8 @@ export struct GearPage {
       .width('100%')
       .height('100%')
 
-      this.CollapsingHeader();
-
       if (!this.multiSelectMode) {
+        this.CollapsingHeader();
         this.Fab();
       }
       if (this.showWeightEditor) {
@@ -964,114 +963,148 @@ export struct GearPage {
 
   @Builder
   private GearRow(item: GearItem) {
-    Column() {
-      Row({ space: 10 }) {
-        Row()
-          .width(3)
-          .height(24)
-          .borderRadius(1.5)
-          .backgroundColor(getGroupColor(item.category))
-        if (this.multiSelectMode) {
+    if (this.multiSelectMode) {
+      // 多选模式：绑定拖拽手势，不绑定 Context Menu
+      Column() {
+        Row({ space: 10 }) {
+          Row()
+            .width(3)
+            .height(24)
+            .borderRadius(1.5)
+            .backgroundColor(getGroupColor(item.category))
           Checkbox()
             .select(this.hasMultiGearSelection(item.id))
             .onChange((checked: boolean) => {
               this.onToggleMultiGearSelection(item.id);
             })
+          this.GearNameText(item.name)
+          if (item.weight !== undefined && item.weight > 0) {
+            Text(item.weight.toString() + 'g')
+              .fontSize(13)
+              .fontColor(TEXT_SECONDARY)
+              .fontFeature(FONT_FEATURE_TNUM)
+          }
         }
-        this.GearNameText(item.name)
-        if (item.weight !== undefined && item.weight > 0) {
-          Text(item.weight.toString() + 'g')
-            .fontSize(13)
-            .fontColor(TEXT_SECONDARY)
-            .fontFeature(FONT_FEATURE_TNUM)
+        .width('100%')
+        .height(48)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => {
+          this.onToggleMultiGearSelection(item.id);
+        })
+      }
+      .width('100%')
+      .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+      .backgroundColor(CARD_BG)
+      .borderRadius(12)
+      .border({ width: { bottom: CARD_BORDER_BOTTOM_WIDTH }, color: { bottom: CARD_BORDER_BOTTOM_COLOR } })
+      .shadow({ radius: 8, color: '#08000000', offsetX: 0, offsetY: 1 })
+      .scale({ x: this.pressedGearId === item.id ? 0.97 : 1, y: this.pressedGearId === item.id ? 0.97 : 1 })
+      .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : (this.pressedGearId === item.id ? 0.85 : 1))
+      .animation({ duration: 260, curve: curves.springMotion(0.22, 0.82) })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.pressedGearId = item.id;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.pressedGearId = '';
         }
-        if (!this.multiSelectMode) {
+      })
+      .gesture(
+        GestureGroup(GestureMode.Sequence,
+          LongPressGesture({ fingers: 1, repeat: false, duration: 400 })
+            .onAction((event: GestureEvent) => {
+              if (this.hasMultiGearSelection(item.id)) {
+                const fingerX = event.fingerList[0].globalX;
+                const fingerY = event.fingerList[0].globalY;
+                this.enterDragMode(px2vp(fingerX), px2vp(fingerY));
+              }
+            }),
+          PanGesture({ fingers: 1, distance: 0 })
+            .onActionUpdate((event: GestureEvent) => {
+              if (this.dragMode) {
+                const fingerX = event.fingerList[0].globalX;
+                const fingerY = event.fingerList[0].globalY;
+                this.updateDragPosition(px2vp(fingerX), px2vp(fingerY));
+              }
+            })
+            .onActionEnd(() => {
+              if (this.dragMode) {
+                this.completeDrag();
+              }
+            })
+            .onActionCancel(() => {
+              if (this.dragMode) {
+                this.cancelDrag();
+              }
+            })
+        )
+      )
+    } else {
+      // 普通模式：绑定 Context Menu，不绑定拖拽手势
+      Column() {
+        Row({ space: 10 }) {
+          Row()
+            .width(3)
+            .height(24)
+            .borderRadius(1.5)
+            .backgroundColor(getGroupColor(item.category))
+          this.GearNameText(item.name)
+          if (item.weight !== undefined && item.weight > 0) {
+            Text(item.weight.toString() + 'g')
+              .fontSize(13)
+              .fontColor(TEXT_SECONDARY)
+              .fontFeature(FONT_FEATURE_TNUM)
+          }
           SymbolGlyph($r('sys.symbol.chevron_down'))
             .fontSize(14)
             .fontColor([TEXT_TERTIARY])
             .rotate({ angle: this.expandedGearId === item.id ? 180 : 0 })
             .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
         }
-      }
-      .width('100%')
-      .height(48)
-      .alignItems(VerticalAlign.Center)
-      .onClick(() => {
-        if (this.multiSelectMode) {
-          this.onToggleMultiGearSelection(item.id);
-        } else {
+        .width('100%')
+        .height(48)
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => {
           const isExpanding = this.expandedGearId !== item.id;
           this.onToggleGearExpanded(item.id);
           if (isExpanding) {
             this.scrollToExpandedGear(item.id);
           }
+        })
+        if (this.expandedGearId === item.id) {
+          this.Detail(item);
+        }
+      }
+      .width('100%')
+      .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+      .backgroundColor(CARD_BG)
+      .borderRadius(12)
+      .border({ width: { bottom: CARD_BORDER_BOTTOM_WIDTH }, color: { bottom: CARD_BORDER_BOTTOM_COLOR } })
+      .shadow({ radius: 8, color: '#08000000', offsetX: 0, offsetY: 1 })
+      .scale({ x: this.pressedGearId === item.id ? 0.97 : 1, y: this.pressedGearId === item.id ? 0.97 : 1 })
+      .opacity(this.pressedGearId === item.id ? 0.85 : 1)
+      .animation({ duration: 260, curve: curves.springMotion(0.22, 0.82) })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.pressedGearId = item.id;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.pressedGearId = '';
         }
       })
-      if (!this.multiSelectMode && this.expandedGearId === item.id) {
-        this.Detail(item);
-      }
+      .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
+        preview: this.GearPreviewCard(item),
+        previewAnimationOptions: { scale: [0.92, 1.05] },
+        transition: TransitionEffect.asymmetric(
+          TransitionEffect.scale({ x: 0.9, y: 0.9 })
+            .combine(TransitionEffect.OPACITY)
+            .animation({ curve: curves.springMotion(0.35, 0.78) }),
+          TransitionEffect.scale({ x: 0.95, y: 0.95 })
+            .combine(TransitionEffect.OPACITY)
+            .animation({ curve: curves.springMotion(0.28, 0.85) })
+        ),
+        placement: Placement.Bottom,
+        borderRadius: 20
+      })
     }
-    .width('100%')
-    .padding({ left: 14, right: 14, top: 10, bottom: 10 })
-    .backgroundColor(CARD_BG)
-    .borderRadius(12)
-    .border({ width: { bottom: CARD_BORDER_BOTTOM_WIDTH }, color: { bottom: CARD_BORDER_BOTTOM_COLOR } })
-    .shadow({ radius: 8, color: '#08000000', offsetX: 0, offsetY: 1 })
-    .scale({ x: this.pressedGearId === item.id ? 0.97 : 1, y: this.pressedGearId === item.id ? 0.97 : 1 })
-    .opacity(this.pressedGearId === item.id ? 0.85 : 1)
-    .animation({ duration: 260, curve: curves.springMotion(0.22, 0.82) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.pressedGearId = item.id;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedGearId = '';
-      }
-    })
-    .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
-      preview: this.GearPreviewCard(item),
-      previewAnimationOptions: { scale: [0.92, 1.05] },
-      transition: TransitionEffect.asymmetric(
-        TransitionEffect.scale({ x: 0.9, y: 0.9 })
-          .combine(TransitionEffect.OPACITY)
-          .animation({ curve: curves.springMotion(0.35, 0.78) }),
-        TransitionEffect.scale({ x: 0.95, y: 0.95 })
-          .combine(TransitionEffect.OPACITY)
-          .animation({ curve: curves.springMotion(0.28, 0.85) })
-      ),
-      placement: Placement.Bottom,
-      borderRadius: 20
-    })
-    .parallelGesture(
-      GestureGroup(GestureMode.Sequence,
-        LongPressGesture({ fingers: 1, repeat: false, duration: 400 })
-          .onAction((event: GestureEvent) => {
-            // 仅在多选模式且该装备已被选中时进入拖拽
-            if (this.multiSelectMode && this.hasMultiGearSelection(item.id)) {
-              const fingerX = event.fingerList[0].globalX;
-              const fingerY = event.fingerList[0].globalY;
-              this.enterDragMode(px2vp(fingerX), px2vp(fingerY));
-            }
-          }),
-        PanGesture({ fingers: 1, distance: 0 })
-          .onActionUpdate((event: GestureEvent) => {
-            if (this.dragMode) {
-              const fingerX = event.fingerList[0].globalX;
-              const fingerY = event.fingerList[0].globalY;
-              this.updateDragPosition(px2vp(fingerX), px2vp(fingerY));
-            }
-          })
-          .onActionEnd(() => {
-            if (this.dragMode) {
-              this.completeDrag();
-            }
-          })
-          .onActionCancel(() => {
-            if (this.dragMode) {
-              this.cancelDrag();
-            }
-          })
-      )
-    )
   }
 
   @Builder

@@ -727,6 +727,10 @@ struct Index {
       nextIds.push(id);
     }
     this.selectedMultiGearIds = nextIds;
+    // 取消所有选中后自动退出多选模式
+    if (nextIds.length === 0) {
+      this.cancelGearMultiSelect();
+    }
   }
 
   private openGenerateTripSheet(): void {
