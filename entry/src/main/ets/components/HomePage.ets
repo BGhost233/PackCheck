@@ -771,7 +771,8 @@ export struct HomePage {
       return 64;
     }
     const hasBoth = this.futureTrips().length > 0 && this.pastTrips().length > 0;
-    return this.checklists.length * 60 + (hasBoth ? 56 : 0);
+    // 即将启程 28vp + 走过的路 36vp + margin top 16vp = 80vp
+    return this.checklists.length * 60 + (hasBoth ? 80 : 0);
   }
 
   @Builder
@@ -859,10 +860,10 @@ export struct HomePage {
             })
           }, (item: TripChecklist) => item.id)
         }
-        .edgeEffect(EdgeEffect.Spring)
         .width('100%')
         .height(this.historyListHeight())
         .scrollBar(BarState.Off)
+        .nestedScroll({ scrollForward: NestedScrollMode.PARENT_FIRST, scrollBackward: NestedScrollMode.PARENT_FIRST })
         .backgroundColor(CARD_BG)
         .borderRadius(16)
       }
