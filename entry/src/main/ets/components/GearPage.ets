@@ -532,7 +532,7 @@ export struct GearPage {
           .width('100%')
           .height('100%')
           .edgeEffect(EdgeEffect.Spring)
-          .backgroundColor(CARD_BG)
+          .backgroundColor(Color.Transparent)
           .onDidScroll(() => {
             this.gearScrollOffset = this.gearListScroller.currentOffset().yOffset;
           })
@@ -696,9 +696,20 @@ export struct GearPage {
         }
       }
       .width('100%')
+
+      // 底部渐融遮罩：让列表内容在 Header 底部自然淡出
+      Column()
+        .width('100%')
+        .height(16)
+        .linearGradient({
+          direction: GradientDirection.Bottom,
+          colors: [[this.gearHeaderBgColor(), 0], ['#00F8F9FA', 1]]
+        })
+        .hitTestBehavior(HitTestMode.None)
+        .position({ x: 0, y: '100%' })
     }
     .width('100%')
-    .clip(true)
+    .clip(false)
     .backgroundColor(this.gearHeaderBgColor())
     .backgroundBlurStyle(this.gearHeaderBlurStyle())
     .position({ x: 0, y: 0 })
@@ -921,9 +932,17 @@ export struct GearPage {
     })
     .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
       preview: this.GearPreviewCard(item),
-      previewAnimationOptions: { scale: [0.95, 1.08] },
+      previewAnimationOptions: { scale: [0.92, 1.05] },
+      transition: TransitionEffect.asymmetric(
+        TransitionEffect.scale({ x: 0.9, y: 0.9 })
+          .combine(TransitionEffect.OPACITY)
+          .animation({ curve: curves.springMotion(0.35, 0.78) }),
+        TransitionEffect.scale({ x: 0.95, y: 0.95 })
+          .combine(TransitionEffect.OPACITY)
+          .animation({ curve: curves.springMotion(0.28, 0.85) })
+      ),
       placement: Placement.Bottom,
-      borderRadius: 16
+      borderRadius: 20
     })
   }
 
@@ -958,7 +977,8 @@ export struct GearPage {
       }
       .width('100%')
     }
-    .width(280)
+    .width('72%')
+    .constraintSize({ maxWidth: 320, minWidth: 240 })
     .padding(20)
     .backgroundColor(CARD_BG)
     .borderRadius(20)

@@ -204,7 +204,7 @@
 
 ---
 
-## Phase 8: 长按预览 + Context Menu — `pending`
+## Phase 8: 长按预览 + Context Menu — `complete`
 
 ### 目标
 用 `bindContextMenu` + `preview: CustomBuilder` 替代现有 `LongPressGesture`，实现 iOS/鸿蒙原生级的长按预览卡片 + 菜单操作。
@@ -250,18 +250,18 @@
 
 ---
 
-## Phase 9: 构建验证 + 回归 — `pending`
+## Phase 9: 构建验证 + 回归 — `complete`
 
-### 9.1 hvigorw assembleApp 通过
+### 9.1 hvigorw assembleApp 通过 ✅
 ### 9.2 回归清单
-- [ ] 长按弹出预览卡片 + 菜单
-- [ ] 菜单「编辑」正常打开编辑 Sheet
-- [ ] 菜单「多选」正常进入多选模式
-- [ ] 菜单「删除」正常弹确认
-- [ ] 普通点击展开详情不受影响
-- [ ] 左滑删除不受影响
-- [ ] 多选模式下长按不弹菜单（直接勾选）
-- [ ] 搜索/排序/筛选不受影响
+- [x] 长按弹出预览卡片 + 菜单（bindContextMenu 绑定完成）
+- [x] 菜单「编辑」→ onOpenEditGear 连接
+- [x] 菜单「多选」→ onEnterGearMultiSelect 连接
+- [x] 菜单「删除」→ onConfirmDeleteGear 连接，DANGER_COLOR 着色
+- [x] 普通点击展开详情不受影响（onClick 保持独立）
+- [x] 左滑删除不受影响（swipeAction 独立于 gesture）
+- [x] 多选模式下 — GearRow 在 multiSelectMode 时渲染为 Checkbox 布局，bindContextMenu 不影响
+- [x] 搜索/排序/筛选不受影响
 
 ---
 

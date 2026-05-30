@@ -136,7 +136,7 @@ export struct GearFilterPanel {
           this.applyAndClose();
         })
 
-      Column({ space: 10 }) {
+      Column({ space: 8 }) {
         Row() {
           Text('分组筛选')
             .fontSize(16)
@@ -163,7 +163,7 @@ export struct GearFilterPanel {
             })
         }
         .width('100%')
-        .padding({ left: 16, right: 16, top: 14, bottom: 4 })
+        .padding({ left: 16, right: 16, top: 12, bottom: 2 })
         .alignItems(VerticalAlign.Center)
 
         Text('已选：' + this.filterText() + ' · 共' + this.filteredGearCount().toString() + '件')
@@ -181,14 +181,13 @@ export struct GearFilterPanel {
             }, (category: string) => category + '_' + this.isCategorySelected(category).toString())
           }
           .width('100%')
-          .padding({ left: 16, right: 16, bottom: 16, top: 8 })
+          .padding({ left: 16, right: 16, bottom: 12, top: 4 })
         }
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
-        .layoutWeight(1)
       }
       .width('100%')
-      .height('52%')
+      .constraintSize({ maxHeight: '60%' })
       .backgroundColor('#EBFFFFFF')
       .backdropBlur(20)
       .borderRadius({ bottomLeft: 20, bottomRight: 20 })
@@ -217,19 +216,28 @@ export struct GearFilterPanel {
     }
     .height(32)
     .padding({ left: 12, right: 12 })
-    .backgroundColor(isActive ? PRIMARY_COLOR : '#F5F7F5')
+    .backgroundColor(isActive ?
+      (this.pressedCategory === category ? '#1F5C32' : PRIMARY_COLOR) :
+      (this.pressedCategory === category ? '#E8EBE8' : '#F5F7F5'))
     .borderRadius(16)
     .scale({
-      x: this.pressedCategory === category ? 0.93 : 1,
-      y: this.pressedCategory === category ? 0.93 : 1
+      x: this.pressedCategory === category ? 0.88 : 1,
+      y: this.pressedCategory === category ? 0.88 : 1
     })
-    .animation({ duration: 260, curve: curves.springMotion(0.25, 0.7) })
     .transition({ type: TransitionType.Insert, translate: { y: STAGGER_OFFSET_Y }, opacity: 0 })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
-        this.pressedCategory = category;
+        this.getUIContext().animateTo({
+          curve: curves.springMotion(0.18, 0.65)
+        }, () => {
+          this.pressedCategory = category;
+        });
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedCategory = '';
+        this.getUIContext().animateTo({
+          curve: curves.springMotion(0.22, 0.62)
+        }, () => {
+          this.pressedCategory = '';
+        });
       }
     })
     .onClick(() => {
