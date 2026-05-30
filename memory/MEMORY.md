@@ -24,6 +24,8 @@
 
 - 多选拖拽交互设计：长按 200ms 进入拖拽，Header 原地切换内容（不销毁/重建），浮动卡片 `duration:0` 即时跟手，底部托盘 macOS Dock 磁吸放大，右滑 SwipeGesture 退出多选
 - 磁吸动效参数：影响半径 140vp，scale 1.0~1.1 连续变化，translateY 0~-10vp 涌起，动画 duration 160 + EaseOut（不用 Spring 避免过度弹性）
+- 分组拖拽排序设计：长按 300ms 分组 header 激活 → 浮动整组（scale 1.03, rotate -1°, elevated shadow）跟手 → 碰撞检测用累积高度+中线穿越 → 松手 spring 归位 → categoryOrder 持久化
+- GearPage 搜索展开策略：搜索框不放 Column 流中（会被浮动 Header 遮挡），改用根 Stack + position(0, COLLAPSED) + zIndex(9)，展开时强制 Header 收缩 + 重置滚动位置
 
 ## 架构
 

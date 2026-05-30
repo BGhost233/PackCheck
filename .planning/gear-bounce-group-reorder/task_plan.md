@@ -15,12 +15,12 @@
 
 | # | 阶段 | 状态 |
 |---|------|------|
-| 1 | 弹性回弹 1 行改动 | pending |
-| 2 | PackStore +categoryOrder 持久化 | pending |
-| 3 | 排序逻辑按 categoryOrder | pending |
-| 4 | 分组拖拽完整交互 | pending |
-| 5 | 分组 header 按压反馈 | pending |
-| 6 | 构建验证 + commit | pending |
+| 1 | 弹性回弹 1 行改动 | ✅ done |
+| 2 | PackStore +categoryOrder 持久化 | ✅ done |
+| 3 | 排序逻辑按 categoryOrder | ✅ done |
+| 4 | 分组拖拽完整交互 | ✅ done |
+| 5 | 分组 header 按压反馈 | ✅ done |
+| 6 | 构建验证 + commit | ✅ done |
 
 ---
 

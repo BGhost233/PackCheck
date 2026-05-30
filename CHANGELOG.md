@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.2 (2025-06-21)
+
+装备库增强：弹性回弹 + 分组拖拽排序 + Bug修复。
+
+- 弹性回弹：`EdgeEffect.Spring` + `alwaysEnabled: true`，内容不满屏时也有 iOS 风格橡皮筋效果
+- 分组拖拽排序：长按 300ms 分组 header → 浮动整组跟手拖拽 → 碰撞检测让位 → 松手归位 + 持久化 categoryOrder
+- 分组按压反馈：header 按下 `scale(0.97)` + `springMotion(0.25, 0.7)` 弹性回弹
+- 灰色间隙修复：topSpacer 减去 List 的 padding-top + space，消除 Header 底边与首个分组间的灰带
+- 搜索框修复：从 Column 流式布局移至根 Stack + `position(0, COLLAPSED)`，搜索展开时强制 Header 收缩
+- PackStore 新增 `categoryOrder` 持久化（getCategoryOrder / saveCategoryOrder）
+- CLAUDE.md 新增第 21~22 条避坑：浮动 Header spacer 计算 / 浮动组件定位
+
 ## v0.5.1 (2025-06-20)
 
 多选拖拽交互全面优化，达到 Apple/Linear 级流畅度。
