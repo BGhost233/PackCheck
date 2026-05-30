@@ -6,9 +6,8 @@ import { PackStore } from '../services/PackStore';
 import { WeightGauge } from './WeightGauge';
 import { EmptyIllustration } from './EmptyIllustration';
 import {
+  ARROW_COLOR,
   CARD_BG,
-  CARD_BORDER_BOTTOM_COLOR,
-  CARD_BORDER_BOTTOM_WIDTH,
   DANGER_COLOR,
   DIVIDER_COLOR,
   FONT_FEATURE_TNUM,
@@ -20,7 +19,6 @@ import {
   GEAR_SORT_TRIP_COUNT,
   GEAR_SORT_VALUE,
   GEAR_SORT_WEIGHT,
-  GROUP_HEADER_BG,
   LIGHT_PRIMARY_COLOR,
   PAGE_BG,
   PAGE_PADDING,
@@ -504,21 +502,20 @@ export struct GearPage {
     return Math.max(0, Math.min(1, this.gearScrollOffset / range));
   }
 
-  // 计算目标装备在 List 中的 index（用于 scrollToIndex）
+  // 计算目标装备所在分组在 List 中的 index（用于 scrollToIndex）
   private gearListIndex(targetId: string): number {
     let idx = 1; // index 0 是 top spacer
     const groups = this.filteredGearGroups();
     for (let g = 0; g < groups.length; g++) {
-      idx++; // group header
       if (!this.isGearGroupCollapsed(groups[g])) {
         const items = this.filteredGearsByGroup(groups[g]);
         for (let i = 0; i < items.length; i++) {
           if (items[i].id === targetId) {
-            return idx;
+            return idx; // 返回该分组卡片的 index
           }
-          idx++;
         }
       }
+      idx++; // 每个分组是一个 ListItem
     }
     return -1;
   }
@@ -536,9 +533,9 @@ export struct GearPage {
   // 动态底部 spacer：确保内容少时仍可折叠 header，内容多时仅保留 TabBar 避让
   private bottomSpacerHeight(): number {
     const collapseRange = GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED;
-    // 每个装备行约 68vp (48 content + 10*2 padding)，加 group header 约 40vp
+    // 每个装备行约 52vp (44 content + 4*2 padding)，分组标题 28vp + 卡片间距 16vp
     const groups = this.filteredGearGroups();
-    const estimatedContentHeight = this.filteredGears().length * 68 + groups.length * 40;
+    const estimatedContentHeight = this.filteredGears().length * 52 + groups.length * 44;
     // 如果内容自身足够多，不需要额外空间来触发折叠
     if (estimatedContentHeight > collapseRange) {
       return 80; // 仅 TabBar 避让
@@ -582,7 +579,7 @@ export struct GearPage {
           this.SearchBar();
         }
         Stack() {
-          List({ space: 8, scroller: this.gearListScroller }) {
+          List({ space: 16, scroller: this.gearListScroller }) {
             ListItem() {
               Column()
                 .width('100%')
@@ -599,23 +596,7 @@ export struct GearPage {
             } else {
               ForEach(this.filteredGearGroups(), (group: string) => {
                 ListItem() {
-                  this.GroupHeader(group);
-                }
-                if (!this.isGearGroupCollapsed(group)) {
-                  ForEach(this.filteredGearsByGroup(group), (item: GearItem) => {
-                    ListItem() {
-                      this.GearRow(item);
-                    }
-                    .swipeAction({
-                    end: {
-                      builder: this.DeleteAction(item),
-                      actionAreaDistance: 80,
-                      onAction: () => {
-                        this.onConfirmDeleteGear(item);
-                      }
-                    }
-                  })
-                }, (item: GearItem) => item.id)
+                  this.GearGroupCard(group);
                 }
               }, (group: string) => group)
             }
@@ -933,35 +914,59 @@ export struct GearPage {
   }
 
   @Builder
-  private GroupHeader(group: string) {
-    Row({ space: 10 }) {
-      Row()
-        .width(4)
-        .height(22)
-        .backgroundColor(this.gearSortMode === GEAR_SORT_GROUP ? getGroupColor(group) : PRIMARY_COLOR)
-        .borderRadius(2)
-      Text(group + ' (' + this.gearGroupCount(group).toString() + ')')
-        .fontSize(15)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(TEXT_MAIN)
-        .fontFeature(FONT_FEATURE_TNUM)
-        .layoutWeight(1)
-      SymbolGlyph($r('sys.symbol.chevron_down'))
-        .fontSize(14)
-        .fontColor([TEXT_TERTIARY])
-        .rotate({ angle: this.isGearGroupCollapsed(group) ? -90 : 0 })
-        .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
+  private GearGroupCard(group: string) {
+    Column() {
+      // 分组标题行（轻量标签，在卡片外部）
+      Row({ space: 6 }) {
+        Row()
+          .width(3)
+          .height(14)
+          .backgroundColor(this.gearSortMode === GEAR_SORT_GROUP ? getGroupColor(group) : PRIMARY_COLOR)
+          .borderRadius(1.5)
+        Text(group)
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(TEXT_SECONDARY)
+          .layoutWeight(1)
+        Text(this.gearGroupCount(group).toString())
+          .fontSize(12)
+          .fontColor(TEXT_TERTIARY)
+          .fontFeature(FONT_FEATURE_TNUM)
+        SymbolGlyph($r('sys.symbol.chevron_down'))
+          .fontSize(12)
+          .fontColor([TEXT_TERTIARY])
+          .rotate({ angle: this.isGearGroupCollapsed(group) ? -90 : 0 })
+          .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
+      }
+      .width('100%')
+      .height(28)
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: 4, right: 4 })
+      .onClick(() => {
+        this.toggleGearGroupCollapse(group);
+      })
+
+      // 分组内容卡片
+      if (!this.isGearGroupCollapsed(group)) {
+        Column() {
+          ForEach(this.filteredGearsByGroup(group), (item: GearItem, index: number) => {
+            this.GearRow(item);
+            // 非最后一项加分割线
+            if (index < this.filteredGearsByGroup(group).length - 1 && this.expandedGearId !== item.id) {
+              Divider()
+                .strokeWidth(0.5)
+                .color(DIVIDER_COLOR)
+                .margin({ left: 14, right: 14 })
+            }
+          }, (item: GearItem) => item.id)
+        }
+        .width('100%')
+        .backgroundColor(CARD_BG)
+        .borderRadius(14)
+        .clip(true)
+      }
     }
     .width('100%')
-    .height(40)
-    .alignItems(VerticalAlign.Center)
-    .padding({ left: 12, right: 12 })
-    .margin({ top: this.isFirstGearGroup(group) ? 4 : 20, bottom: 2 })
-    .backgroundColor(GROUP_HEADER_BG)
-    .borderRadius(10)
-    .onClick(() => {
-      this.toggleGearGroupCollapse(group);
-    })
   }
 
   @Builder
@@ -1022,49 +1027,39 @@ export struct GearPage {
   @Builder
   private GearRow(item: GearItem) {
     if (this.multiSelectMode) {
-      // 多选模式：保持相同卡片布局，左侧渐入 Checkbox + 绑定拖拽手势
+      // 多选模式：紧凑行 + Checkbox
       Column() {
         Row({ space: 10 }) {
-          // Checkbox 动画渐入
           Checkbox()
             .select(this.hasMultiGearSelection(item.id))
-            .width(20)
-            .height(20)
+            .width(18)
+            .height(18)
             .onChange((checked: boolean) => {
               this.onToggleMultiGearSelection(item.id);
             })
             .transition(TransitionEffect.OPACITY.combine(
-              TransitionEffect.translate({ x: -16 })
+              TransitionEffect.translate({ x: -12 })
             ).animation({ duration: 260, curve: curves.springMotion(0.3, 0.8) }))
-          Row()
-            .width(3)
-            .height(24)
-            .borderRadius(1.5)
-            .backgroundColor(getGroupColor(item.category))
           this.GearNameText(item.name)
           if (item.weight !== undefined && item.weight > 0) {
             Text(item.weight.toString() + 'g')
-              .fontSize(13)
-              .fontColor(TEXT_SECONDARY)
+              .fontSize(12)
+              .fontColor(TEXT_TERTIARY)
               .fontFeature(FONT_FEATURE_TNUM)
           }
         }
         .width('100%')
-        .height(48)
+        .height(44)
         .alignItems(VerticalAlign.Center)
         .onClick(() => {
           this.onToggleMultiGearSelection(item.id);
         })
       }
       .width('100%')
-      .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+      .padding({ left: 14, right: 14, top: 4, bottom: 4 })
       .backgroundColor(this.hasMultiGearSelection(item.id) ? LIGHT_PRIMARY_COLOR : CARD_BG)
-      .borderRadius(12)
-      .border({ width: { bottom: CARD_BORDER_BOTTOM_WIDTH }, color: { bottom: CARD_BORDER_BOTTOM_COLOR } })
-      .shadow({ radius: 8, color: '#08000000', offsetX: 0, offsetY: 1 })
-      .scale({ x: this.pressedGearId === item.id ? 0.97 : 1, y: this.pressedGearId === item.id ? 0.97 : 1 })
-      .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : (this.pressedGearId === item.id ? 0.85 : 1))
-      .animation({ duration: 260, curve: curves.springMotion(0.22, 0.82) })
+      .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : 1)
+      .animation({ duration: 200, curve: Curve.EaseOut })
       .onTouch((event: TouchEvent) => {
         if (event.type === TouchType.Down) {
           this.pressedGearId = item.id;
@@ -1099,29 +1094,24 @@ export struct GearPage {
         )
       )
     } else {
-      // 普通模式：绑定 Context Menu，不绑定拖拽手势
+      // 普通模式：紧凑行，无独立卡片样式
       Column() {
         Row({ space: 10 }) {
-          Row()
-            .width(3)
-            .height(24)
-            .borderRadius(1.5)
-            .backgroundColor(getGroupColor(item.category))
           this.GearNameText(item.name)
           if (item.weight !== undefined && item.weight > 0) {
             Text(item.weight.toString() + 'g')
-              .fontSize(13)
-              .fontColor(TEXT_SECONDARY)
+              .fontSize(12)
+              .fontColor(TEXT_TERTIARY)
               .fontFeature(FONT_FEATURE_TNUM)
           }
           SymbolGlyph($r('sys.symbol.chevron_down'))
-            .fontSize(14)
-            .fontColor([TEXT_TERTIARY])
+            .fontSize(12)
+            .fontColor([ARROW_COLOR])
             .rotate({ angle: this.expandedGearId === item.id ? 180 : 0 })
             .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
         }
         .width('100%')
-        .height(48)
+        .height(44)
         .alignItems(VerticalAlign.Center)
         .onClick(() => {
           const isExpanding = this.expandedGearId !== item.id;
@@ -1135,14 +1125,9 @@ export struct GearPage {
         }
       }
       .width('100%')
-      .padding({ left: 14, right: 14, top: 10, bottom: 10 })
-      .backgroundColor(CARD_BG)
-      .borderRadius(12)
-      .border({ width: { bottom: CARD_BORDER_BOTTOM_WIDTH }, color: { bottom: CARD_BORDER_BOTTOM_COLOR } })
-      .shadow({ radius: 8, color: '#08000000', offsetX: 0, offsetY: 1 })
-      .scale({ x: this.pressedGearId === item.id ? 0.97 : 1, y: this.pressedGearId === item.id ? 0.97 : 1 })
-      .opacity(this.pressedGearId === item.id ? 0.85 : 1)
-      .animation({ duration: 260, curve: curves.springMotion(0.22, 0.82) })
+      .padding({ left: 14, right: 14, top: 4, bottom: 4 })
+      .backgroundColor(this.pressedGearId === item.id ? '#F5F5F5' : CARD_BG)
+      .animation({ duration: 150, curve: Curve.EaseOut })
       .onTouch((event: TouchEvent) => {
         if (event.type === TouchType.Down) {
           this.pressedGearId = item.id;
