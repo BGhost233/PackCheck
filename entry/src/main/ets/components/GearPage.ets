@@ -75,6 +75,31 @@ export struct GearPage {
     // 初始位置：右下角
     this.fabX = this.screenWidth - 50 - 16;
     this.fabY = this.screenHeight - 50 - 160; // 留出 TabBar 空间
+    // 恢复折叠状态
+    this.loadCollapsedGroups();
+  }
+
+  private async loadCollapsedGroups(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      await this.store.init(context);
+      const saved = await this.store.getCollapsedGearGroups();
+      if (saved.length > 0) {
+        this.collapsedGearGroups = saved;
+      }
+    } catch (e) {
+      // 降级：全展开
+    }
+  }
+
+  private async persistCollapsedGroups(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      await this.store.init(context);
+      await this.store.saveCollapsedGearGroups(this.collapsedGearGroups);
+    } catch (e) {
+      // 静默失败
+    }
   }
 
   // FAB 吸附到最近的屏幕边缘
@@ -300,6 +325,7 @@ export struct GearPage {
     } else {
       this.collapsedGearGroups = this.collapsedGearGroups.concat([group]);
     }
+    this.persistCollapsedGroups();
   }
 
   private gearMetaText(item: GearItem): string {
@@ -415,9 +441,9 @@ export struct GearPage {
   // 动态底部 spacer：确保内容少时仍可折叠 header，内容多时仅保留 TabBar 避让
   private bottomSpacerHeight(): number {
     const collapseRange = GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED;
-    // 每个装备行约 92vp (64 content + 14*2 padding)，加 group header 约 40vp
+    // 每个装备行约 68vp (48 content + 10*2 padding)，加 group header 约 40vp
     const groups = this.filteredGearGroups();
-    const estimatedContentHeight = this.filteredGears().length * 92 + groups.length * 40;
+    const estimatedContentHeight = this.filteredGears().length * 68 + groups.length * 40;
     // 如果内容自身足够多，不需要额外空间来触发折叠
     if (estimatedContentHeight > collapseRange) {
       return 80; // 仅 TabBar 避让
@@ -774,13 +800,68 @@ export struct GearPage {
   }
 
   @Builder
+  private GearNameText(name: string) {
+    if (this.gearSearchKeyword.trim().length === 0) {
+      Text(name)
+        .fontSize(15)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(TEXT_MAIN)
+        .layoutWeight(1)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    } else {
+      Text() {
+        ForEach(this.splitByKeyword(name, this.gearSearchKeyword.trim()), (segment: string, index: number) => {
+          if (segment.toLowerCase() === this.gearSearchKeyword.trim().toLowerCase()) {
+            Span(segment)
+              .fontSize(15)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(PRIMARY_COLOR)
+          } else {
+            Span(segment)
+              .fontSize(15)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(TEXT_MAIN)
+          }
+        }, (segment: string, index: number) => index.toString())
+      }
+      .layoutWeight(1)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+  }
+
+  private splitByKeyword(text: string, keyword: string): string[] {
+    if (keyword.length === 0) {
+      return [text];
+    }
+    const parts: string[] = [];
+    const lowerText = text.toLowerCase();
+    const lowerKey = keyword.toLowerCase();
+    let startIndex = 0;
+    while (startIndex < text.length) {
+      const foundIndex = lowerText.indexOf(lowerKey, startIndex);
+      if (foundIndex < 0) {
+        parts.push(text.substring(startIndex));
+        break;
+      }
+      if (foundIndex > startIndex) {
+        parts.push(text.substring(startIndex, foundIndex));
+      }
+      parts.push(text.substring(foundIndex, foundIndex + keyword.length));
+      startIndex = foundIndex + keyword.length;
+    }
+    return parts;
+  }
+
+  @Builder
   private GearRow(item: GearItem) {
     Column() {
-      Row({ space: 12 }) {
+      Row({ space: 10 }) {
         Row()
-          .width(4)
-          .height(42)
-          .borderRadius(2)
+          .width(3)
+          .height(24)
+          .borderRadius(1.5)
           .backgroundColor(getGroupColor(item.category))
         if (this.multiSelectMode) {
           Checkbox()
@@ -789,48 +870,23 @@ export struct GearPage {
               this.onToggleMultiGearSelection(item.id);
             })
         }
-        Column({ space: 4 }) {
-          Text(item.name)
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(TEXT_MAIN)
-          Text(item.category)
-            .fontSize(12)
-            .fontColor(TEXT_TERTIARY)
+        this.GearNameText(item.name)
+        if (item.weight !== undefined && item.weight > 0) {
+          Text(item.weight.toString() + 'g')
+            .fontSize(13)
+            .fontColor(TEXT_SECONDARY)
+            .fontFeature(FONT_FEATURE_TNUM)
         }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-        Column({ space: 3 }) {
-          if (item.weight !== undefined && item.weight > 0) {
-            Text(item.weight.toString() + 'g')
-              .fontSize(13)
-              .fontColor(TEXT_SECONDARY)
-              .fontFeature(FONT_FEATURE_TNUM)
-          }
-          if (item.price !== undefined && item.price > 0) {
-            Text('¥' + item.price.toString())
-              .fontSize(12)
-              .fontColor(TEXT_TERTIARY)
-              .fontFeature(FONT_FEATURE_TNUM)
-          }
-          if (this.gearTripCount(item) > 0) {
-            Text('×' + this.gearTripCount(item).toString())
-              .fontSize(12)
-              .fontColor(TEXT_TERTIARY)
-              .fontFeature(FONT_FEATURE_TNUM)
-          }
-        }
-        .alignItems(HorizontalAlign.End)
         if (!this.multiSelectMode) {
           SymbolGlyph($r('sys.symbol.chevron_down'))
-            .fontSize(16)
+            .fontSize(14)
             .fontColor([TEXT_TERTIARY])
             .rotate({ angle: this.expandedGearId === item.id ? 180 : 0 })
             .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
         }
       }
       .width('100%')
-      .height(64)
+      .height(48)
       .alignItems(VerticalAlign.Center)
       .onClick(() => {
         if (this.multiSelectMode) {
@@ -848,7 +904,7 @@ export struct GearPage {
       }
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+    .padding({ left: 14, right: 14, top: 10, bottom: 10 })
     .backgroundColor(CARD_BG)
     .borderRadius(12)
     .border({ width: { bottom: CARD_BORDER_BOTTOM_WIDTH }, color: { bottom: CARD_BORDER_BOTTOM_COLOR } })

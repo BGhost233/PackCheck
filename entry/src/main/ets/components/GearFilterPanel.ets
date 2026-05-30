@@ -1,4 +1,5 @@
 import { curves, LengthMetrics } from '@kit.ArkUI';
+import { vibrator } from '@kit.SensorServiceKit';
 import {
   CARD_BG,
   LIGHT_PRIMARY_COLOR,
@@ -31,6 +32,7 @@ export struct GearFilterPanel {
   @State private tempCategories: string[] = ['全部'];
   @State private panelTranslateY: number = -600;
   @State private overlayOpacity: number = 0;
+  @State private pressedCategory: string = '';
 
   aboutToAppear(): void {
     // 初始化临时筛选为外部传入值
@@ -67,7 +69,27 @@ export struct GearFilterPanel {
     return GearCalc.tempGearFilterText(this.tempCategories);
   }
 
+  private filteredGearCount(): number {
+    const normalized = this.normalizeCategories(this.tempCategories);
+    if (normalized.indexOf('全部') >= 0) {
+      return this.gears.length;
+    }
+    let count = 0;
+    for (let i = 0; i < this.gears.length; i++) {
+      if (normalized.indexOf(this.gears[i].category) >= 0) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   private toggleCategory(category: string): void {
+    // 触觉反馈
+    try {
+      vibrator.startVibration({ type: 'time', duration: 25 }, { usage: 'touch' });
+    } catch (e) {
+      // 静默失败
+    }
     if (category === '全部') {
       this.tempCategories = ['全部'];
       return;
@@ -144,7 +166,7 @@ export struct GearFilterPanel {
         .padding({ left: 16, right: 16, top: 14, bottom: 4 })
         .alignItems(VerticalAlign.Center)
 
-        Text('已选：' + this.filterText())
+        Text('已选：' + this.filterText() + ' · 共' + this.filteredGearCount().toString() + '件')
           .fontSize(12)
           .fontColor(TEXT_TERTIARY)
           .width('100%')
@@ -153,13 +175,13 @@ export struct GearFilterPanel {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Scroll() {
-          Flex({ wrap: FlexWrap.Wrap }) {
+          Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
             ForEach(this.allFilterCategories(), (category: string) => {
-              this.CategoryCard(category, this.isCategorySelected(category))
+              this.CategoryChip(category, this.isCategorySelected(category))
             }, (category: string) => category + '_' + this.isCategorySelected(category).toString())
           }
           .width('100%')
-          .padding({ left: 16, right: 6, bottom: 18, top: 10 })
+          .padding({ left: 16, right: 16, bottom: 16, top: 8 })
         }
         .scrollBar(BarState.Off)
         .edgeEffect(EdgeEffect.Spring)
@@ -180,40 +202,36 @@ export struct GearFilterPanel {
   }
 
   @Builder
-  private CategoryCard(category: string, isActive: boolean) {
-    Stack({ alignContent: Alignment.TopEnd }) {
+  private CategoryChip(category: string, isActive: boolean) {
+    Row({ space: 4 }) {
       Text(category)
-        .fontSize(14)
+        .fontSize(13)
         .fontWeight(isActive ? FontWeight.Medium : FontWeight.Normal)
         .fontColor(isActive ? '#FFFFFF' : TEXT_MAIN)
-        .textAlign(TextAlign.Center)
         .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-        .height(42)
-        .padding({ left: 8, right: 8 })
-        .backgroundColor(isActive ? PRIMARY_COLOR : '#F5F7F5')
-        .borderRadius(12)
-        .animation({ duration: 150, curve: Curve.EaseInOut })
-
       if (this.categoryCount(category) > 0) {
         Text(this.categoryCount(category).toString())
-          .fontSize(10)
-          .fontColor('#FFFFFF')
-          .textAlign(TextAlign.Center)
-          .width(this.categoryCount(category) > 9 ? 24 : 18)
-          .height(18)
-          .padding({ left: 4, right: 4 })
-          .backgroundColor(isActive ? '#FF6B6B' : PRIMARY_COLOR)
-          .borderRadius(9)
-          .margin({ top: -6, right: -6 })
+          .fontSize(11)
+          .fontColor(isActive ? '#CCFFFFFF' : TEXT_TERTIARY)
       }
     }
-    .width('30.5%')
-    .height(42)
-    .clip(false)
-    .margin({ right: 10, bottom: 10 })
+    .height(32)
+    .padding({ left: 12, right: 12 })
+    .backgroundColor(isActive ? PRIMARY_COLOR : '#F5F7F5')
+    .borderRadius(16)
+    .scale({
+      x: this.pressedCategory === category ? 0.93 : 1,
+      y: this.pressedCategory === category ? 0.93 : 1
+    })
+    .animation({ duration: 260, curve: curves.springMotion(0.25, 0.7) })
     .transition({ type: TransitionType.Insert, translate: { y: STAGGER_OFFSET_Y }, opacity: 0 })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedCategory = category;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedCategory = '';
+      }
+    })
     .onClick(() => {
       this.toggleCategory(category);
     })

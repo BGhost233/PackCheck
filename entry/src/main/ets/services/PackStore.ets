@@ -7,6 +7,7 @@ const KEY_GEARS = 'packcheck_gears';
 const KEY_CHECKLISTS = 'packcheck_checklists';
 const KEY_CATEGORIES = 'packcheck_categories';
 const KEY_GEAR_TARGET_WEIGHT = 'gear_target_weight';
+const KEY_COLLAPSED_GEAR_GROUPS = 'packcheck_collapsed_gear_groups';
 const DEFAULT_GEAR_TARGET_WEIGHT = 10000;
 
 export class PackStore {
@@ -65,6 +66,15 @@ export class PackStore {
 
   async saveGearTargetWeight(weightGram: number): Promise<void> {
     await this.writeString(KEY_GEAR_TARGET_WEIGHT, weightGram.toString());
+  }
+
+  async getCollapsedGearGroups(): Promise<string[]> {
+    const value = await this.readString(KEY_COLLAPSED_GEAR_GROUPS, '[]');
+    return JSON.parse(value) as string[];
+  }
+
+  async saveCollapsedGearGroups(groups: string[]): Promise<void> {
+    await this.writeString(KEY_COLLAPSED_GEAR_GROUPS, JSON.stringify(groups));
   }
 
   private async readString(key: string, fallback: string): Promise<string> {
