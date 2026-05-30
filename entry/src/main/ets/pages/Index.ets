@@ -60,6 +60,10 @@ struct Index {
   @State private selectedGearCategories: string[] = ['全部'];
   @State private gearFilterPanelExpanded: boolean = false;
   @State private currentTabIndex: number = 0;
+  @State private tabSwipeProgress: number = 0; // [-1, 1] 滑动进度，跟手指示器用
+  private tabsWidth: number = 360; // Tabs 内容区宽度，onAreaChange 更新
+  private touchStartX: number = 0; // 触摸起始 X 坐标
+  private isSwiping: boolean = false; // 是否正在滑动中
   @State private contentBlur: number = 0;
   @State private contentScale: number = 1.0;
   private isClickSwitching: boolean = false;
@@ -1765,31 +1769,29 @@ struct Index {
   }
 
   private triggerBlurPulse(targetIndex: number): void {
+    // 即时切换：零延迟，零 blur，指示器通过 spring 自然过渡
     this.isClickSwitching = true;
-    // 立即更新 tabIndex 让 TabBar 指示器同步响应
     this.currentTabIndex = targetIndex;
-    // 散焦 + 按压 + 切换一气呵成（50ms 下沉）
-    this.getUIContext().animateTo({
-      duration: 50, curve: Curve.EaseOut
-    }, () => {
-      this.contentBlur = 6;
-      this.contentScale = 0.96;
-    });
-    // 极短延迟后切换内容 + 弹回
-    setTimeout(() => {
-      this.tabsController.changeIndex(targetIndex);
-      this.getUIContext().animateTo({
-        duration: 120, curve: Curve.EaseOut
-      }, () => {
-        this.contentBlur = 0;
-      });
-      this.getUIContext().animateTo({
-        curve: curves.springMotion(0.3, 0.82)
-      }, () => {
-        this.contentScale = 1.0;
-      });
-      setTimeout(() => { this.isClickSwitching = false; }, 200);
-    }, 50);
+    this.tabSwipeProgress = 0;
+    this.tabsController.changeIndex(targetIndex);
+    setTimeout(() => { this.isClickSwitching = false; }, 200);
+  }
+
+  // 计算 tab 项的视觉权重：1.0 = 完全选中，0.0 = 完全未选中
+  private tabVisualWeight(index: number): number {
+    const isCurrent = this.currentTabIndex === index;
+    const progress = this.tabSwipeProgress; // 负值=向左滑（趋向 index+1），正值=向右滑（趋向 index-1）
+    if (isCurrent) {
+      // 当前选中项：随滑动逐渐"失去"选中态
+      return 1.0 - Math.min(1.0, Math.abs(progress));
+    }
+    // 非当前项：判断是否是滑动目标
+    const isSwipeTarget = (progress < 0 && index === this.currentTabIndex + 1) ||
+      (progress > 0 && index === this.currentTabIndex - 1);
+    if (isSwipeTarget) {
+      return Math.min(1.0, Math.abs(progress));
+    }
+    return 0.0;
   }
 
   @Builder
@@ -1797,30 +1799,30 @@ struct Index {
     Column() {
       SymbolGlyph(icon)
         .fontSize(22)
-        .fontColor([this.currentTabIndex === index ? PRIMARY_COLOR : TEXT_TERTIARY])
+        .fontColor([this.tabVisualWeight(index) > 0.5 ? PRIMARY_COLOR : TEXT_TERTIARY])
       Text(label)
         .fontSize(11)
-        .fontWeight(this.currentTabIndex === index ? FontWeight.Medium : FontWeight.Regular)
-        .fontColor(this.currentTabIndex === index ? PRIMARY_COLOR : TEXT_TERTIARY)
+        .fontWeight(this.tabVisualWeight(index) > 0.5 ? FontWeight.Medium : FontWeight.Regular)
+        .fontColor(this.tabVisualWeight(index) > 0.5 ? PRIMARY_COLOR : TEXT_TERTIARY)
         .margin({ top: 2 })
       // 液态指示器小横条
       Row()
-        .width(this.currentTabIndex === index ? 18 : 0)
+        .width(18 * this.tabVisualWeight(index))
         .height(3)
         .borderRadius(1.5)
         .backgroundColor(PRIMARY_COLOR)
         .margin({ top: 3 })
-        .opacity(this.currentTabIndex === index ? 1.0 : 0)
+        .opacity(this.tabVisualWeight(index))
     }
     .justifyContent(FlexAlign.Center)
     .width(64)
     .height(48)
     .scale({
-      x: this.currentTabIndex === index ? 1.0 : 0.92,
-      y: this.currentTabIndex === index ? 1.0 : 0.92
+      x: 0.92 + 0.08 * this.tabVisualWeight(index),
+      y: 0.92 + 0.08 * this.tabVisualWeight(index)
     })
-    .opacity(this.currentTabIndex === index ? 1.0 : 0.6)
-    .animation({ duration: 0, curve: SPRING_TAB() })
+    .opacity(0.6 + 0.4 * this.tabVisualWeight(index))
+    .animation({ curve: curves.springMotion(0.28, 0.82) })
     .onClick(() => {
       if (this.currentTabIndex !== index) {
         this.triggerBlurPulse(index);
@@ -1946,29 +1948,47 @@ struct Index {
           .backgroundColor(Color.Transparent)
           .blur(this.contentBlur)
           .scale({ x: this.contentScale, y: this.contentScale })
-          .onAnimationStart((_from: number, _to: number) => {
-            // 仅滑动触发时执行按压脉冲，点击切换已由 triggerBlurPulse 处理
+          .onAreaChange((_oldValue: Area, newValue: Area) => {
+            this.tabsWidth = newValue.width as number;
+          })
+          .onTouch((event: TouchEvent) => {
             if (this.isClickSwitching) {
               return;
             }
-            // 滑动松手 — 轻按压 + blur 脉冲
-            this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseOut }, () => {
-              this.contentScale = 0.97;
-              this.contentBlur = 4;
-            });
-            setTimeout(() => {
-              this.getUIContext().animateTo({ duration: 140, curve: Curve.EaseOut }, () => {
-                this.contentBlur = 0;
-              });
-              this.getUIContext().animateTo({
-                curve: curves.springMotion(0.35, 0.8)
-              }, () => {
-                this.contentScale = 1.0;
-              });
-            }, 80);
+            if (event.type === TouchType.Down) {
+              this.touchStartX = event.touches[0].x;
+              this.isSwiping = false;
+            } else if (event.type === TouchType.Move) {
+              const deltaX = event.touches[0].x - this.touchStartX;
+              // 超过 10vp 才认为是水平滑动
+              if (Math.abs(deltaX) > 10) {
+                this.isSwiping = true;
+              }
+              if (this.isSwiping && this.tabsWidth > 0) {
+                // deltaX > 0 = 手指向右 = 内容向右 = 趋向 index-1（progress > 0）
+                let progress = deltaX / this.tabsWidth;
+                // 边界限制：不能超出有效范围
+                if (this.currentTabIndex === 0 && progress > 0) {
+                  progress = 0;
+                } else if (this.currentTabIndex === 1 && progress < 0) {
+                  progress = 0;
+                }
+                this.tabSwipeProgress = Math.max(-1, Math.min(1, progress));
+              }
+            } else {
+              // Up / Cancel
+              this.isSwiping = false;
+              // progress 归零由 onAnimationStart/onChange 处理
+            }
+          })
+          .onAnimationStart((_from: number, to: number) => {
+            // 松手后确定最终目标，立即将指示器弹到目标位置
+            this.currentTabIndex = to;
+            this.tabSwipeProgress = 0;
           })
           .onChange((index: number) => {
             this.currentTabIndex = index;
+            this.tabSwipeProgress = 0;
           })
 
           if (this.gearFilterPanelExpanded) {

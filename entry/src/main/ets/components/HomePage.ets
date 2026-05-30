@@ -617,21 +617,6 @@ export struct HomePage {
         .width('100%')
         .alignItems(VerticalAlign.Center)
 
-        // 山脊线装饰
-        Shape() {
-          Path()
-            .commands('M 0 35 C 15 28 25 32 40 24 C 55 16 65 22 80 18 C 95 14 105 20 120 16 ' +
-              'M 0 40 C 20 34 35 38 55 30 C 70 24 85 28 100 24 C 110 21 115 23 120 22')
-            .stroke('#262D7D46')
-            .strokeWidth(1)
-            .fill('#00000000')
-            .strokeLineCap(LineCapStyle.Round)
-            .antiAlias(true)
-        }
-        .viewPort({ x: 0, y: 0, width: 120, height: 44 })
-        .width('100%')
-        .height(32)
-        .margin({ top: 4 })
       }
       .width('100%')
       .padding(20)
