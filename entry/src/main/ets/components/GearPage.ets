@@ -887,22 +887,24 @@ export struct GearPage {
         // 主内容层
         Column() {
           Row() {
-            Text('我的装备库')
-              .fontSize(this.gearTitleFontSize())
-              .fontWeight(FontWeight.Bold)
-              .fontColor(TEXT_MAIN)
-              .animation({ duration: 80 })
-            Text(this.gearSummaryText())
-              .fontSize(13)
-              .fontColor(TEXT_TERTIARY)
-              .fontFeature(FONT_FEATURE_TNUM)
-              .maxLines(1)
-              .constraintSize({ maxWidth: 160 })
-              .margin({ left: 8 })
-              .opacity(this.gearCollapsedOpacity())
-              .translate({ x: this.gearCollapsedOpacity() > 0 ? 0 : -12 })
-              .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
-            Blank()
+            if (!this.searchExpanded) {
+              Text('我的装备库')
+                .fontSize(this.gearTitleFontSize())
+                .fontWeight(FontWeight.Bold)
+                .fontColor(TEXT_MAIN)
+                .animation({ duration: 80 })
+              Text(this.gearSummaryText())
+                .fontSize(13)
+                .fontColor(TEXT_TERTIARY)
+                .fontFeature(FONT_FEATURE_TNUM)
+                .maxLines(1)
+                .constraintSize({ maxWidth: 160 })
+                .margin({ left: 8 })
+                .opacity(this.gearCollapsedOpacity())
+                .translate({ x: this.gearCollapsedOpacity() > 0 ? 0 : -12 })
+                .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
+              Blank()
+            }
             // 搜索按钮 / 搜索框：原地变形
             Row() {
               SymbolGlyph($r('sys.symbol.magnifyingglass'))
@@ -911,8 +913,8 @@ export struct GearPage {
                 .margin({ left: this.searchExpanded ? 2 : 0, right: this.searchExpanded ? 6 : 0 })
               if (this.searchExpanded) {
                 TextInput({ placeholder: '搜索装备', text: this.gearSearchKeyword })
-                  .height(28)
-                  .fontSize(14)
+                  .height(32)
+                  .fontSize(15)
                   .fontColor(TEXT_MAIN)
                   .placeholderColor(TEXT_TERTIARY)
                   .backgroundColor('#00000000')
@@ -923,9 +925,9 @@ export struct GearPage {
                     this.onSearchChange(value);
                   })
                 Text('取消')
-                  .fontSize(13)
+                  .fontSize(14)
                   .fontColor(TEXT_SECONDARY)
-                  .padding({ left: 8, right: 2 })
+                  .padding({ left: 10, right: 4 })
                   .onClick(() => {
                     this.getUIContext().animateTo({
                       duration: 350,
@@ -937,13 +939,13 @@ export struct GearPage {
                   })
               }
             }
-            .height(36)
-            .width(this.searchExpanded ? undefined : 36)
+            .height(38)
             .layoutWeight(this.searchExpanded ? 1 : 0)
+            .width(this.searchExpanded ? undefined : 36)
             .justifyContent(this.searchExpanded ? FlexAlign.Start : FlexAlign.Center)
             .alignItems(VerticalAlign.Center)
-            .padding(this.searchExpanded ? { left: 12, right: 10 } : { left: 0, right: 0 })
-            .borderRadius(18)
+            .padding(this.searchExpanded ? { left: 14, right: 10 } : { left: 0, right: 0 })
+            .borderRadius(19)
             .backgroundBlurStyle(BlurStyle.COMPONENT_REGULAR, {
               colorMode: ThemeColorMode.SYSTEM,
               adaptiveColor: AdaptiveColor.DEFAULT
@@ -2012,13 +2014,32 @@ export struct GearPage {
 
   // ===== 分组拖拽排序 =====
 
+  // 记录初始拖拽手指位置和被拖分组在列表中的原始 index
+  private groupDragStartFingerY: number = 0;
+  private groupDragOriginalIdx: number = 0;
+
   private enterGroupDrag(group: string, fingerY: number): void {
-    // 初始化拖拽
-    this.groupDragGroup = group;
-    this.groupDragY = fingerY;
-    this.groupDragOffsetY = 0;
     // 快照当前分组顺序
-    this.groupReorderList = this.filteredGearGroups().slice();
+    const groups = this.filteredGearGroups().slice();
+    this.groupReorderList = groups;
+    this.groupDragGroup = group;
+    this.groupDragOriginalIdx = groups.indexOf(group);
+
+    // 记录手指初始位置（用于计算浮动卡片 position）
+    this.groupDragStartFingerY = fingerY;
+    this.groupDragY = fingerY;
+
+    // 计算手指到被拖分组顶部的偏移（用于碰撞检测）
+    // 被拖分组的顶部在列表中的累积 Y
+    let dragGroupTopY = 0;
+    for (let i = 0; i < this.groupDragOriginalIdx; i++) {
+      const h = this.groupCardHeights.get(groups[i]) ?? 60;
+      dragGroupTopY += h + 16; // 16 = list space
+    }
+    const dragGroupH = this.groupCardHeights.get(group) ?? 60;
+    // offsetY = 手指到分组中心的距离（用于碰撞检测中的虚拟位置）
+    this.groupDragOffsetY = dragGroupTopY + dragGroupH / 2;
+
     // 进入拖拽态
     this.groupDragMode = true;
     // 触觉反馈
@@ -2031,49 +2052,55 @@ export struct GearPage {
 
   private updateGroupDrag(fingerY: number): void {
     this.groupDragY = fingerY;
-    // 碰撞检测：计算当前拖拽分组应该在列表中的位置
+
+    // 计算手指移动的 delta
+    const deltaY = fingerY - this.groupDragStartFingerY;
+    // 被拖分组的虚拟中心 Y = 原始中心Y + deltaY
+    const virtualCenterY = this.groupDragOffsetY + deltaY;
+
+    // 碰撞检测
     const currentIdx = this.groupReorderList.indexOf(this.groupDragGroup);
     if (currentIdx < 0) {
       return;
     }
-    // 计算各分组的累积 Y 位置
+
+    // 计算各分组中线位置（不包含被拖分组）
     let accumulatedY = 0;
     for (let i = 0; i < this.groupReorderList.length; i++) {
       const g = this.groupReorderList[i];
-      const h = this.groupCardHeights.get(g) ?? 80;
+      const h = this.groupCardHeights.get(g) ?? 60;
+      if (g === this.groupDragGroup) {
+        // 被拖分组不占空间（它被浮起了）
+        continue;
+      }
       const midY = accumulatedY + h / 2;
-      if (i !== currentIdx && g !== this.groupDragGroup) {
-        // 判断手指是否越过此分组的中线
-        const dragCenterY = this.groupDragY - this.groupDragOffsetY;
-        if (currentIdx < i && dragCenterY > midY) {
-          // 向下移动：animateTo 驱动让位动画
-          this.getUIContext().animateTo({
-            duration: 300,
-            curve: curves.springMotion(0.35, 0.8)
-          }, () => {
-            this.groupReorderList.splice(currentIdx, 1);
-            this.groupReorderList.splice(i, 0, this.groupDragGroup);
-          });
-          // 棘轮振动反馈
-          try {
-            vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });
-          } catch (e) { /* 静默 */ }
-          return;
-        } else if (currentIdx > i && dragCenterY < midY) {
-          // 向上移动：animateTo 驱动让位动画
-          this.getUIContext().animateTo({
-            duration: 300,
-            curve: curves.springMotion(0.35, 0.8)
-          }, () => {
-            this.groupReorderList.splice(currentIdx, 1);
-            this.groupReorderList.splice(i, 0, this.groupDragGroup);
-          });
-          // 棘轮振动反馈
-          try {
-            vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });
-          } catch (e) { /* 静默 */ }
-          return;
-        }
+
+      if (currentIdx < i && virtualCenterY > midY) {
+        // 向下移动
+        this.getUIContext().animateTo({
+          duration: 300,
+          curve: curves.springMotion(0.35, 0.8)
+        }, () => {
+          this.groupReorderList.splice(currentIdx, 1);
+          this.groupReorderList.splice(i, 0, this.groupDragGroup);
+        });
+        try {
+          vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });
+        } catch (e) { /* 静默 */ }
+        return;
+      } else if (currentIdx > i && virtualCenterY < midY) {
+        // 向上移动
+        this.getUIContext().animateTo({
+          duration: 300,
+          curve: curves.springMotion(0.35, 0.8)
+        }, () => {
+          this.groupReorderList.splice(currentIdx, 1);
+          this.groupReorderList.splice(i, 0, this.groupDragGroup);
+        });
+        try {
+          vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });
+        } catch (e) { /* 静默 */ }
+        return;
       }
       accumulatedY += h + 16; // 16 = list space
     }
@@ -2084,7 +2111,7 @@ export struct GearPage {
     this.categoryOrder = this.groupReorderList.slice();
     this.persistCategoryOrder();
     // 退出拖拽态
-    animateTo({
+    this.getUIContext().animateTo({
       duration: 300,
       curve: curves.springMotion(0.35, 0.8)
     }, () => {
@@ -2102,58 +2129,35 @@ export struct GearPage {
 
   @Builder
   private FloatingGroupCard() {
-    Column() {
-      // 分组标题行（复制 GearGroupCard 的 header）
-      Row({ space: 6 }) {
-        Row()
-          .width(3)
-          .height(14)
-          .backgroundColor(getGroupColor(this.groupDragGroup))
-          .borderRadius(1.5)
-        Text(this.groupDragGroup)
-          .fontSize(13)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(TEXT_SECONDARY)
-          .layoutWeight(1)
-        Text(this.gearGroupCount(this.groupDragGroup).toString())
-          .fontSize(12)
-          .fontColor(TEXT_TERTIARY)
-          .fontFeature(FONT_FEATURE_TNUM)
-        SymbolGlyph($r('sys.symbol.chevron_down'))
-          .fontSize(12)
-          .fontColor([TEXT_TERTIARY])
-      }
-      .width('100%')
-      .height(28)
-      .alignItems(VerticalAlign.Center)
-      .padding({ left: 4, right: 4 })
-
-      // 分组内容卡片
-      if (!this.isGearGroupCollapsed(this.groupDragGroup)) {
-        Column() {
-          ForEach(this.filteredGearsByGroup(this.groupDragGroup), (item: GearItem, index: number) => {
-            this.GearRow(item);
-            if (index < this.filteredGearsByGroup(this.groupDragGroup).length - 1 &&
-              this.expandedGearId !== item.id) {
-              Divider()
-                .strokeWidth(0.5)
-                .color(DIVIDER_COLOR)
-                .margin({ left: 14, right: 14 })
-            }
-          }, (item: GearItem) => 'float_' + item.id)
-        }
-        .width('100%')
-        .backgroundColor(CARD_BG)
-        .borderRadius(14)
-        .clip(true)
-      }
+    // 只展示分组标题行作为浮动副本（轻量、辨识度高）
+    Row({ space: 6 }) {
+      Row()
+        .width(3)
+        .height(14)
+        .backgroundColor(getGroupColor(this.groupDragGroup))
+        .borderRadius(1.5)
+      Text(this.groupDragGroup)
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(TEXT_SECONDARY)
+        .layoutWeight(1)
+      Text(this.gearGroupCount(this.groupDragGroup).toString())
+        .fontSize(12)
+        .fontColor(TEXT_TERTIARY)
+        .fontFeature(FONT_FEATURE_TNUM)
+      SymbolGlyph($r('sys.symbol.chevron_down'))
+        .fontSize(12)
+        .fontColor([TEXT_TERTIARY])
     }
     .width('100%')
-    .padding({ left: PAGE_PADDING, right: PAGE_PADDING })
-    .scale({ x: 1.03, y: 1.03 })
-    .rotate({ angle: -1 })
-    .shadow({ radius: 24, color: '#30000000', offsetX: 0, offsetY: 8 })
-    .position({ x: 0, y: this.groupDragY - (this.groupCardHeights.get(this.groupDragGroup) ?? 80) / 2 })
+    .height(40)
+    .alignItems(VerticalAlign.Center)
+    .padding({ left: PAGE_PADDING + 4, right: PAGE_PADDING + 4 })
+    .backgroundColor(CARD_BG)
+    .borderRadius(12)
+    .scale({ x: 1.02, y: 1.02 })
+    .shadow({ radius: 20, color: '#28000000', offsetX: 0, offsetY: 6 })
+    .position({ x: 0, y: this.groupDragY - 20 })
     .animation({ duration: 0 })
     .zIndex(100)
     .hitTestBehavior(HitTestMode.None)
