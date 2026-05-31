@@ -14,8 +14,11 @@ import {
 } from '../constants/Colors';
 import {
   SPRING_PRESS,
+  SPRING_GENERAL,
   PRESS_SCALE_DOWN,
-  PRESS_SCALE_REST
+  PRESS_SCALE_REST,
+  STAGGER_OFFSET_Y,
+  DURATION_NORMAL
 } from '../constants/AnimationTokens';
 
 @Component
@@ -34,6 +37,13 @@ export struct ReviewPage {
   @State private checkedBtnPressed: boolean = false;
   @State private exitBtnPressed: boolean = false;
   @State private backBtnPressed: boolean = false;
+  @State private pageEntered: boolean = false;
+
+  aboutToAppear(): void {
+    setTimeout(() => {
+      this.pageEntered = true;
+    }, 20);
+  }
 
   private currentChecklist(): TripChecklist | undefined {
     for (let index = 0; index < this.checklists.length; index++) {
@@ -113,6 +123,9 @@ export struct ReviewPage {
     .height('100%')
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(PAGE_BG)
+    .opacity(this.pageEntered ? 1 : 0)
+    .translate({ y: this.pageEntered ? 0 : STAGGER_OFFSET_Y })
+    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
   }
 
   @Builder

@@ -49,6 +49,7 @@ export struct ChecklistDetail {
   @State private headerCollapsed: boolean = false;
   @State private headerAnimating: boolean = false;
   @State private pressedItemId: string = '';
+  @State private listEntered: boolean = false;
 
   private listScroller: Scroller = new Scroller();
   private readonly collapseThreshold: number = 80;
@@ -65,6 +66,12 @@ export struct ChecklistDetail {
   onToggleChecklistItem: (itemId: string) => void = (itemId: string): void => {};
   onSaveChecklistItemToGear: (item: ChecklistItem) => void = (item: ChecklistItem): void => {};
   onDeleteChecklistItem: (itemId: string) => void = (itemId: string): void => {};
+
+  aboutToAppear(): void {
+    setTimeout(() => {
+      this.listEntered = true;
+    }, 20);
+  }
 
   private currentChecklist(): TripChecklist | undefined {
     for (let index = 0; index < this.checklists.length; index++) {
@@ -354,15 +361,21 @@ export struct ChecklistDetail {
               this.EmptyText('行程物品还是空的，先添加或导入装备。');
             }
           } else {
-            ForEach(this.checklistGroups(), (group: string) => {
+            ForEach(this.checklistGroups(), (group: string, groupIndex?: number) => {
               ListItem() {
                 this.GroupHeader(group);
               }
+              .opacity(this.listEntered ? 1 : 0)
+              .translate({ y: this.listEntered ? 0 : STAGGER_OFFSET_Y })
+              .animation({ duration: DURATION_NORMAL + staggerDelay(groupIndex ?? 0), curve: SPRING_GENERAL() })
               if (!this.isGroupCollapsed(group)) {
                 ForEach(this.checklistItemsByGroup(group), (item: ChecklistItem) => {
                   ListItem() {
                     this.ItemRow(item);
                   }
+                  .opacity(this.listEntered ? 1 : 0)
+                  .translate({ y: this.listEntered ? 0 : STAGGER_OFFSET_Y })
+                  .animation({ duration: DURATION_NORMAL + staggerDelay((groupIndex ?? 0) + 1), curve: SPRING_GENERAL() })
                   .swipeAction({
                     start: {
                       builder: this.ItemSaveAction(item),

@@ -7,7 +7,8 @@ import {
   DURATION_NORMAL, DURATION_COUNTER, DURATION_COLOR_FADE, DURATION_TICK,
   DURATION_SLOW, DURATION_CEREMONY_SHAKE, DURATION_HEADER, DURATION_PRESS,
   DURATION_TAB, DURATION_NONE,
-  CURVE_DECELERATE, CURVE_LINEAR
+  CURVE_DECELERATE, CURVE_LINEAR,
+STAGGER_OFFSET_Y, staggerDelay
 } from '../constants/AnimationTokens';
 import { vibrator } from '@kit.SensorServiceKit';
 import { AssetEvent, GearItem, TripChecklist } from '../models/PackModels';
@@ -95,7 +96,8 @@ export struct GearPage {
   @State private gearGroupExpandTrigger: number = 0;
   @State private categoryOrder: string[] = [];
 
-  @State private pressedGroupId: string = '';
+    @State private pressedGroupId: string = '';
+  @State private listEntered: boolean = false;
 
   // --- 分组拖拽排序 ---
   @State private groupDragMode: boolean = false;
@@ -145,6 +147,10 @@ export struct GearPage {
     // 恢复折叠状态 + 分组顺序
     this.loadCollapsedGroups();
     this.loadCategoryOrder();
+    // 触发列表错落入场
+    setTimeout(() => {
+      this.listEntered = true;
+    }, 20);
   }
 
   private async loadCollapsedGroups(): Promise<void> {
@@ -784,10 +790,13 @@ export struct GearPage {
                 this.EmptyText('未找到相关装备');
               }
             } else {
-              ForEach(this.displayGearGroups(), (group: string) => {
+              ForEach(this.displayGearGroups(), (group: string, index?: number) => {
                 ListItem() {
                   this.GearGroupCard(group);
                 }
+                .opacity(this.listEntered ? 1 : 0)
+                .translate({ y: this.listEntered ? 0 : STAGGER_OFFSET_Y })
+                .animation({ duration: DURATION_NORMAL + staggerDelay(index ?? 0), curve: SPRING_GENERAL() })
                 .transition(TransitionEffect.OPACITY.combine(
                   TransitionEffect.translate({ y: 8 })
                 ).animation({ duration: DURATION_SLOW, curve: SPRING_GENERAL() }))
