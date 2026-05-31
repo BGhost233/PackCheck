@@ -103,7 +103,11 @@ import {
   matchingGearForChecklistItem,
   formatTripDate,
   formatDateText,
-  addItemsToChecklist
+  addItemsToChecklist,
+  toggleItemInChecklists,
+  removeItemFromChecklists,
+  updateChecklistMeta,
+  updateItemFields
 } from '../services/ChecklistService';
 
 @Entry
@@ -1236,23 +1240,7 @@ struct Index {
   }
 
   private async updateChecklistInfo(checklistId: string, title: string, date: string, dateAt: number | undefined): Promise<void> {
-    const nextChecklists: TripChecklist[] = [];
-    for (let index = 0; index < this.checklists.length; index++) {
-      const source = this.checklists[index];
-      if (source.id === checklistId) {
-        const updated: TripChecklist = {
-          id: source.id,
-          title: title,
-          date: date,
-          dateAt: dateAt,
-          items: source.items,
-          createdAt: source.createdAt
-        };
-        nextChecklists.push(updated);
-      } else {
-        nextChecklists.push(source);
-      }
-    }
+    const nextChecklists = updateChecklistMeta(this.checklists, checklistId, title, date, dateAt);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
   }
@@ -1287,7 +1275,7 @@ struct Index {
       group: group,
       checked: false
     };
-    const nextChecklists = this.addItemsToChecklist(checklist.id, [item]);
+    const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, [item]);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
     await this.ensureCategory(group);
@@ -1343,41 +1331,7 @@ struct Index {
     if (checklist === undefined) {
       return;
     }
-    const nextChecklists: TripChecklist[] = [];
-    for (let index = 0; index < this.checklists.length; index++) {
-      const source = this.checklists[index];
-      if (source.id === checklist.id) {
-        const nextItems: ChecklistItem[] = [];
-        for (let itemIndex = 0; itemIndex < source.items.length; itemIndex++) {
-          const item = source.items[itemIndex];
-          if (item.id === itemId) {
-            const updatedItem: ChecklistItem = {
-              id: item.id,
-              name: name,
-              group: group,
-              checked: item.checked,
-              weight: updateMetrics ? weight : item.weight,
-              price: updateMetrics ? price : item.price,
-              fromGearId: updateGearId ? fromGearId : item.fromGearId
-            };
-            nextItems.push(updatedItem);
-          } else {
-            nextItems.push(item);
-          }
-        }
-        const updatedChecklist: TripChecklist = {
-          id: source.id,
-          title: source.title,
-          date: source.date,
-          dateAt: source.dateAt,
-          items: nextItems,
-          createdAt: source.createdAt
-        };
-        nextChecklists.push(updatedChecklist);
-      } else {
-        nextChecklists.push(source);
-      }
-    }
+    const nextChecklists = updateItemFields(this.checklists, checklist.id, itemId, name, group, fromGearId, updateGearId, weight, price, updateMetrics);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
   }
@@ -1389,13 +1343,6 @@ struct Index {
     this.openSheetAnimated();
   }
 
-  private filteredImportGears(): GearItem[] {
-    return filteredImportGears(this.gears, this.importGearCategory);
-  }
-
-  private importGearMetaText(item: GearItem): string {
-    return importGearMetaText(item);
-  }
 
   private hasImportSelection(id: string): boolean {
     return this.importGearIds.indexOf(id) >= 0;
@@ -1439,7 +1386,7 @@ struct Index {
       }
     }
     const countGearIds = this.countableGearIds(checklist, selectedGearIds);
-    const nextChecklists = this.addItemsToChecklist(checklist.id, items);
+    const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, items);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
     await this.incrementGearTripCounts(countGearIds);
@@ -1489,9 +1436,6 @@ struct Index {
     this.pushChecklistDetail();
   }
 
-  private addItemsToChecklist(checklistId: string, items: ChecklistItem[]): TripChecklist[] {
-    return addItemsToChecklist(this.checklists, checklistId, items);
-  }
 
   private async addGearsToExistingTrip(gearIds: string[], tripId: string): Promise<void> {
     const uniqueIds = this.uniqueGearIds(gearIds);
@@ -1511,7 +1455,7 @@ struct Index {
         items.push(item);
       }
     }
-    const updatedChecklists = this.addItemsToChecklist(tripId, items);
+    const updatedChecklists = addItemsToChecklist(this.checklists, tripId, items);
     this.applyChecklistState(updatedChecklists);
     await this.store.saveChecklists(updatedChecklists);
     await this.incrementGearTripCounts(uniqueIds);
@@ -1625,43 +1569,7 @@ struct Index {
     }
     const beforeCheckedCount = checkedCount(checklist);
     const beforeTotal = checklist.items.length;
-    const nextChecklists: TripChecklist[] = [];
-    let updatedCurrent: TripChecklist | undefined = undefined;
-    for (let index = 0; index < this.checklists.length; index++) {
-      const source = this.checklists[index];
-      if (source.id === checklist.id) {
-        const nextItems: ChecklistItem[] = [];
-        for (let itemIndex = 0; itemIndex < source.items.length; itemIndex++) {
-          const item = source.items[itemIndex];
-          if (item.id === itemId) {
-            const updatedItem: ChecklistItem = {
-              id: item.id,
-              name: item.name,
-              group: item.group,
-              checked: !item.checked,
-              weight: item.weight,
-              price: item.price,
-              fromGearId: item.fromGearId
-            };
-            nextItems.push(updatedItem);
-          } else {
-            nextItems.push(item);
-          }
-        }
-        const updatedChecklist: TripChecklist = {
-          id: source.id,
-          title: source.title,
-          date: source.date,
-          dateAt: source.dateAt,
-          items: nextItems,
-          createdAt: source.createdAt
-        };
-        updatedCurrent = updatedChecklist;
-        nextChecklists.push(updatedChecklist);
-      } else {
-        nextChecklists.push(source);
-      }
-    }
+    const nextChecklists = toggleItemInChecklists(this.checklists, checklist.id, itemId);
     this.highlightedItemId = itemId;
     this.applyChecklistState(nextChecklists, true);
     await this.store.saveChecklists(nextChecklists);
@@ -1670,6 +1578,7 @@ struct Index {
         this.highlightedItemId = '';
       }
     }, 600);
+    const updatedCurrent = nextChecklists.find((c: TripChecklist) => c.id === checklist.id);
     if (updatedCurrent !== undefined && beforeTotal > 0 &&
       beforeCheckedCount === beforeTotal - 1 && checkedCount(updatedCurrent) === beforeTotal) {
       this.showAchievement();
@@ -1708,24 +1617,7 @@ struct Index {
     if (checklist === undefined) {
       return;
     }
-    const nextChecklists: TripChecklist[] = [];
-    for (let index = 0; index < this.checklists.length; index++) {
-      const source = this.checklists[index];
-      if (source.id === checklist.id) {
-        const nextItems = source.items.filter((item: ChecklistItem) => item.id !== itemId);
-        const updatedChecklist: TripChecklist = {
-          id: source.id,
-          title: source.title,
-          date: source.date,
-          dateAt: source.dateAt,
-          items: nextItems,
-          createdAt: source.createdAt
-        };
-        nextChecklists.push(updatedChecklist);
-      } else {
-        nextChecklists.push(source);
-      }
-    }
+    const nextChecklists = removeItemFromChecklists(this.checklists, checklist.id, itemId);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
   }

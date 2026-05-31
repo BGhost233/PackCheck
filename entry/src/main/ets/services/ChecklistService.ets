@@ -337,3 +337,141 @@ export function matchingGearForChecklistItem(item: ChecklistItem, gears: GearIte
   return undefined;
 }
 
+// ─── Checklist Mutation 纯函数 ─────────────────────────────────────────
+
+/**
+ * 翻转指定 checklist 中指定 item 的 checked 状态，返回新数组。
+ */
+export function toggleItemInChecklists(checklists: TripChecklist[], checklistId: string, itemId: string): TripChecklist[] {
+  const result: TripChecklist[] = [];
+  for (let index = 0; index < checklists.length; index++) {
+    const source = checklists[index];
+    if (source.id === checklistId) {
+      const nextItems: ChecklistItem[] = [];
+      for (let itemIndex = 0; itemIndex < source.items.length; itemIndex++) {
+        const item = source.items[itemIndex];
+        if (item.id === itemId) {
+          const updated: ChecklistItem = {
+            id: item.id,
+            name: item.name,
+            group: item.group,
+            checked: !item.checked,
+            weight: item.weight,
+            price: item.price,
+            fromGearId: item.fromGearId
+          };
+          nextItems.push(updated);
+        } else {
+          nextItems.push(item);
+        }
+      }
+      const updatedChecklist: TripChecklist = {
+        id: source.id,
+        title: source.title,
+        date: source.date,
+        dateAt: source.dateAt,
+        items: nextItems,
+        createdAt: source.createdAt
+      };
+      result.push(updatedChecklist);
+    } else {
+      result.push(source);
+    }
+  }
+  return result;
+}
+
+/**
+ * 从指定 checklist 中删除指定 item，返回新数组。
+ */
+export function removeItemFromChecklists(checklists: TripChecklist[], checklistId: string, itemId: string): TripChecklist[] {
+  const result: TripChecklist[] = [];
+  for (let index = 0; index < checklists.length; index++) {
+    const source = checklists[index];
+    if (source.id === checklistId) {
+      const nextItems = source.items.filter((item: ChecklistItem) => item.id !== itemId);
+      const updatedChecklist: TripChecklist = {
+        id: source.id,
+        title: source.title,
+        date: source.date,
+        dateAt: source.dateAt,
+        items: nextItems,
+        createdAt: source.createdAt
+      };
+      result.push(updatedChecklist);
+    } else {
+      result.push(source);
+    }
+  }
+  return result;
+}
+
+/**
+ * 更新指定 checklist 的元信息（title/date/dateAt），返回新数组。
+ */
+export function updateChecklistMeta(checklists: TripChecklist[], checklistId: string,
+  title: string, date: string | undefined, dateAt: number | undefined): TripChecklist[] {
+  const result: TripChecklist[] = [];
+  for (let index = 0; index < checklists.length; index++) {
+    const source = checklists[index];
+    if (source.id === checklistId) {
+      const updated: TripChecklist = {
+        id: source.id,
+        title: title,
+        date: date,
+        dateAt: dateAt,
+        items: source.items,
+        createdAt: source.createdAt
+      };
+      result.push(updated);
+    } else {
+      result.push(source);
+    }
+  }
+  return result;
+}
+
+/**
+ * 更新指定 checklist 中指定 item 的字段，返回新数组。
+ */
+export function updateItemFields(checklists: TripChecklist[], checklistId: string, itemId: string,
+  name: string, group: string, fromGearId: string | undefined, updateGearId: boolean,
+  weight: number | undefined, price: number | undefined, updateMetrics: boolean): TripChecklist[] {
+  const result: TripChecklist[] = [];
+  for (let index = 0; index < checklists.length; index++) {
+    const source = checklists[index];
+    if (source.id === checklistId) {
+      const nextItems: ChecklistItem[] = [];
+      for (let itemIndex = 0; itemIndex < source.items.length; itemIndex++) {
+        const item = source.items[itemIndex];
+        if (item.id === itemId) {
+          const updatedItem: ChecklistItem = {
+            id: item.id,
+            name: name,
+            group: group,
+            checked: item.checked,
+            weight: updateMetrics ? weight : item.weight,
+            price: updateMetrics ? price : item.price,
+            fromGearId: updateGearId ? fromGearId : item.fromGearId
+          };
+          nextItems.push(updatedItem);
+        } else {
+          nextItems.push(item);
+        }
+      }
+      const updatedChecklist: TripChecklist = {
+        id: source.id,
+        title: source.title,
+        date: source.date,
+        dateAt: source.dateAt,
+        items: nextItems,
+        createdAt: source.createdAt
+      };
+      result.push(updatedChecklist);
+    } else {
+      result.push(source);
+    }
+  }
+  return result;
+}
+
