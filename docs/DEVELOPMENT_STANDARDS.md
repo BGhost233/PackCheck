@@ -33,6 +33,8 @@ entry/src/main/ets/
     └── PackModels.ets       — 所有 interface/class/enum
 ```
 
+**Token 导入路径**：直接从具体 token 文件（如 `Colors.ets`、`AnimationTokens.ets`）或通过 `DesignTokens` barrel 导入均可，推荐前者以获得更精确的语义。
+
 ### 1.2 代码放置决策树
 
 ```
@@ -196,7 +198,7 @@ Q4: 是否是常量/配置/token？
 
 **禁止：**
 
-- `Curve.Linear` — 机械感强，视觉不自然
+- `Curve.Linear` — 机械感强，视觉不自然（例外：帧级匀速滚动/拖拽跟手场景允许使用 `CURVE_LINEAR` token）
 - `Curve.EaseInOut` — 对称曲线，不符合物理直觉
 - 未定义在 AnimationTokens.ets 中的自定义曲线
 
