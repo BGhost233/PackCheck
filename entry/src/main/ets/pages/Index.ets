@@ -78,7 +78,6 @@ struct Index {
   @State private targetWeightGram: number = 10000;
   @State private multiSelectMode: boolean = false;
   @State private selectedMultiGearIds: string[] = [];
-  @State private gearDragMode: boolean = false;
   @State private generateTripTitle: string = '';
   @State private selectedChecklistId: string = '';
   @State private sheetMode: string = SHEET_NONE;
@@ -2059,9 +2058,6 @@ struct Index {
                 },
                 onAddGearsToNewTrip: (gearIds: string[]) => {
                   this.openGenerateTripSheet();
-                },
-                onDragModeChange: (isDragging: boolean) => {
-                  this.gearDragMode = isDragging;
                 }
               });
             }
@@ -2070,9 +2066,9 @@ struct Index {
           .animationDuration(200)
           .barOverlap(true)
           .vertical(false)
-          .scrollable(!this.multiSelectMode && !this.gearDragMode)
+          .scrollable(!this.multiSelectMode)
           .barPosition(BarPosition.End)
-          .barHeight((this.multiSelectMode || this.gearDragMode) ? 0 : 56)
+          .barHeight(this.multiSelectMode ? 0 : 56)
           .barFloatingStyle({
             barBottomMargin: 28,
             gradientMask: {
