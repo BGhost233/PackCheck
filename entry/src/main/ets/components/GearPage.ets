@@ -1427,37 +1427,35 @@ export struct GearPage {
       )
     } else {
       // 普通模式：紧凑行 + 左滑删除
-      // 使用 Column 作为布局容器（高度由内容决定），删除按钮通过 position 绝对定位
-      Column() {
-        // 删除按钮：绝对定位，不参与布局测量
-        Row() {
-          Text('删除')
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(WHITE)
+      // Stack 层叠：底层删除按钮 + 上层内容行（translate 左移露出底层）
+      Stack() {
+        // 底层：删除按钮（条件渲染，仅在滑开时显示，避免 rest 态红色暴露）
+        if (this.swipedGearId === item.id) {
+          Row() {
+            Blank()
+            Text('删除')
+              .fontSize(14)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(WHITE)
+              .width(70)
+              .height(44)
+              .textAlign(TextAlign.Center)
+              .backgroundColor(DANGER_COLOR)
+              .borderRadius({ topRight: 12, bottomRight: 12 })
+              .onClick(() => {
+                this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+                  this.swipedGearId = '';
+                  this.swipeOffsetX = 0;
+                });
+                this.onConfirmDeleteGear(item);
+              })
+          }
+          .width('100%')
+          .height(52)
+          .alignItems(VerticalAlign.Center)
         }
-        .height(44)
-        .padding({ left: 18, right: 18 })
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor(DANGER_COLOR)
-        .borderRadius(12)
-        .position({ right: 14, top: '50%' })
-        .translate({ y: '-50%' })
-        .onClick(() => {
-          this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
-            this.swipedGearId = '';
-            this.swipeOffsetX = 0;
-          });
-          this.onConfirmDeleteGear(item);
-        })
-        .scale({
-          x: this.swipedGearId === item.id ? 1 : 0.6,
-          y: this.swipedGearId === item.id ? 1 : 0.6
-        })
-        .opacity(this.swipedGearId === item.id ? 1 : 0)
-        .animation({ curve: SPRING_PRESS() })
 
-        // 内容行
+        // 上层：内容行
         Column() {
           Row({ space: 10 }) {
             this.GearNameText(item.name)
@@ -1513,47 +1511,47 @@ export struct GearPage {
             this.pressedGearId = '';
           }
         })
+        .priorityGesture(
+          PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
+            .onActionUpdate((event: GestureEvent) => {
+              const offsetX = event.offsetX;
+              if (this.swipedGearId === item.id) {
+                const newOffset = Math.min(0, Math.max(-160, -80 + offsetX));
+                this.swipeOffsetX = newOffset;
+              } else {
+                const newOffset = Math.min(0, Math.max(-100, offsetX));
+                this.swipeOffsetX = newOffset;
+                if (newOffset < -5) {
+                  this.swipedGearId = item.id;
+                }
+              }
+            })
+            .onActionEnd((event: GestureEvent) => {
+              if (this.swipeOffsetX < -40) {
+                this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+                  this.swipeOffsetX = -80;
+                });
+              } else {
+                this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+                  this.swipedGearId = '';
+                  this.swipeOffsetX = 0;
+                });
+              }
+            })
+            .onActionCancel(() => {
+              this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+                if (this.swipeOffsetX < -40) {
+                  this.swipeOffsetX = -80;
+                } else {
+                  this.swipedGearId = '';
+                  this.swipeOffsetX = 0;
+                }
+              });
+            })
+        )
       }
       .width('100%')
       .clip(true)
-      .priorityGesture(
-        PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
-          .onActionUpdate((event: GestureEvent) => {
-            const offsetX = event.offsetX;
-            if (this.swipedGearId === item.id) {
-              const newOffset = Math.min(0, Math.max(-160, -80 + offsetX));
-              this.swipeOffsetX = newOffset;
-            } else {
-              const newOffset = Math.min(0, Math.max(-100, offsetX));
-              this.swipeOffsetX = newOffset;
-              if (newOffset < -5) {
-                this.swipedGearId = item.id;
-              }
-            }
-          })
-          .onActionEnd((event: GestureEvent) => {
-            if (this.swipeOffsetX < -40) {
-              this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
-                this.swipeOffsetX = -80;
-              });
-            } else {
-              this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
-                this.swipedGearId = '';
-                this.swipeOffsetX = 0;
-              });
-            }
-          })
-          .onActionCancel(() => {
-            this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
-              if (this.swipeOffsetX < -40) {
-                this.swipeOffsetX = -80;
-              } else {
-                this.swipedGearId = '';
-                this.swipeOffsetX = 0;
-              }
-            });
-          })
-      )
       .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
         preview: this.GearPreviewCard(item),
         previewAnimationOptions: { scale: [0.92, 1.05] },
