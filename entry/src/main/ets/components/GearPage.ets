@@ -49,6 +49,7 @@ export struct GearPage {
   @Prop multiSelectMode: boolean = false;
   @Prop selectedMultiGearIds: string[] = [];
   @Prop gearBudget: number = 0;
+  @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
 
 @State private pressedGearId: string = '';
 @State private swipedGearId: string = '';
@@ -92,6 +93,15 @@ export struct GearPage {
   private trayAutoScrollTimer: number = -1;
   private screenWidth: number = 360; // fallback
   private screenHeight: number = 780;
+
+  private onSwipeResetNonceChange(): void {
+    if (this.swipedGearId !== '') {
+      this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+        this.swipedGearId = '';
+        this.swipeOffsetX = 0;
+      });
+    }
+  }
 
   aboutToAppear(): void {
     // 获取屏幕尺寸（vp）
@@ -766,6 +776,14 @@ export struct GearPage {
           .onDidScroll(() => {
             this.gearScrollOffset = this.gearListScroller.currentOffset().yOffset;
           })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down && this.swipedGearId !== '') {
+              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+                this.swipedGearId = '';
+                this.swipeOffsetX = 0;
+              });
+            }
+          })
           .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
         }
         .layoutWeight(1)
@@ -1426,7 +1444,7 @@ export struct GearPage {
           .onClick(() => {
             if (this.swipedGearId === item.id) {
               // 已滑开状态下点击 = 收回
-              this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
                 this.swipedGearId = '';
                 this.swipeOffsetX = 0;
               });
@@ -1453,7 +1471,7 @@ export struct GearPage {
             this.pressedGearId = item.id;
             // 点击其他行时收回已滑开的行
             if (this.swipedGearId !== '' && this.swipedGearId !== item.id) {
-              this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
                 this.swipedGearId = '';
                 this.swipeOffsetX = 0;
               });
@@ -1462,8 +1480,8 @@ export struct GearPage {
             this.pressedGearId = '';
           }
         })
-        .gesture(
-          PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 10 })
+        .priorityGesture(
+          PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
             .onActionUpdate((event: GestureEvent) => {
               const offsetX = event.offsetX;
               if (this.swipedGearId === item.id) {
@@ -1482,18 +1500,18 @@ export struct GearPage {
             .onActionEnd((event: GestureEvent) => {
               // 判断是否吸附到打开状态
               if (this.swipeOffsetX < -35) {
-                this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+                this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
                   this.swipeOffsetX = -70;
                 });
               } else {
-                this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+                this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
                   this.swipedGearId = '';
                   this.swipeOffsetX = 0;
                 });
               }
             })
             .onActionCancel(() => {
-              this.getUIContext().animateTo({ duration: 250, curve: curves.springMotion(0.3, 0.85) }, () => {
+              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
                 if (this.swipeOffsetX < -35) {
                   this.swipeOffsetX = -70;
                 } else {

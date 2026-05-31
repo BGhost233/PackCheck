@@ -60,6 +60,8 @@ struct Index {
   @State private selectedGearCategories: string[] = ['全部'];
   @State private gearFilterPanelExpanded: boolean = false;
   @State private currentTabIndex: number = 0;
+  @State private homeSwipeResetNonce: number = 0;
+  @State private gearSwipeResetNonce: number = 0;
   @State private tabSwipeProgress: number = 0; // [-1, 1] 滑动进度，跟手指示器用
   private tabsWidth: number = 360; // Tabs 内容区宽度，onAreaChange 更新
   private touchStartX: number = 0; // 触摸起始 X 坐标
@@ -926,6 +928,8 @@ struct Index {
     this.selectedChecklistId = checklistId;
     this.collapsedGroups = [];
     this.startShakeListening();
+    // 导航离开时收回清单页 swipeAction
+    this.homeSwipeResetNonce++;
     this.pushChecklistDetail();
   }
 
@@ -1856,6 +1860,7 @@ struct Index {
                 checklists: this.checklists,
                 gears: this.gears,
                 checklistRenderNonce: this.checklistRenderNonce,
+                swipeResetNonce: this.homeSwipeResetNonce,
                 onOpenTrip: () => {
                   this.startTripCeremony();
                 },
@@ -1886,6 +1891,7 @@ struct Index {
                 gearSearchKeyword: this.gearSearchKeyword,
                 gearSortMode: this.gearSortMode,
                 expandedGearId: this.expandedGearId,
+                swipeResetNonce: this.gearSwipeResetNonce,
                 targetWeightGram: $targetWeightGram,
                 multiSelectMode: this.multiSelectMode,
                 selectedMultiGearIds: this.selectedMultiGearIds,
@@ -2021,6 +2027,9 @@ struct Index {
           .onChange((index: number) => {
             this.currentTabIndex = index;
             this.tabSwipeProgress = 0;
+            // 切换 Tab 时收回两个页面已展开的 swipeAction
+            this.homeSwipeResetNonce++;
+            this.gearSwipeResetNonce++;
           })
 
           if (this.gearFilterPanelExpanded) {

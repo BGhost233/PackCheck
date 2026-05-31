@@ -40,6 +40,7 @@ export struct HomePage {
   @Prop checklists: TripChecklist[] = [];
   @Prop gears: GearItem[] = [];
   @Prop checklistRenderNonce: number = 0;
+  @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
 
   onOpenTrip: () => void = (): void => {};
   onOpenChecklist: (id: string) => void = (id: string): void => {};
@@ -61,6 +62,11 @@ export struct HomePage {
   @State private ringCelebrateColor: string = PRIMARY_COLOR;
   private wasLatestChecklistDone: boolean = false;
   private scroller: Scroller = new Scroller();
+  private historyListScroller: ListScroller = new ListScroller();
+
+  private onSwipeResetNonceChange(): void {
+    this.historyListScroller.closeAllSwipeActions({ onFinish: () => {} });
+  }
 
   aboutToAppear(): void {
     this.heroDaysDisplay = 0;
@@ -504,6 +510,11 @@ export struct HomePage {
           this.scrollOffset = raw;
           this.smoothScrollOffset = raw;
         })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.historyListScroller.closeAllSwipeActions({ onFinish: () => {} });
+          }
+        })
 
         this.HomeCollapsingHeader()
       }
@@ -814,7 +825,7 @@ export struct HomePage {
           .height(64)
           .textAlign(TextAlign.Center)
       } else {
-        List() {
+        List({ scroller: this.historyListScroller }) {
           if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
             ListItem() {
               Text('即将启程')
