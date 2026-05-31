@@ -1426,10 +1426,9 @@ export struct GearPage {
         )
       )
     } else {
-      // 普通模式：左滑删除
-      // 物理模型：上层内容被手指实时推开，露出底层删除区域
-      Stack() {
-        // 底层：删除操作区（绝对定位右侧，高度由 Stack 实际高度决定）
+      // 普通模式：左滑删除（仅折叠态可滑动，展开态互斥）
+      Stack({ alignContent: Alignment.End }) {
+        // 底层：删除按钮（固定高度 52vp = 折叠态内容行高度）
         if (this.swipedGearId === item.id) {
           Column({ space: 2 }) {
             SymbolGlyph($r('sys.symbol.trash'))
@@ -1440,12 +1439,11 @@ export struct GearPage {
               .fontColor(WHITE)
           }
           .width(80)
-          .height('100%')
+          .height(52)
           .justifyContent(FlexAlign.Center)
           .alignItems(HorizontalAlign.Center)
           .backgroundColor(DANGER_COLOR)
           .borderRadius({ topRight: 12, bottomRight: 12 })
-          .position({ top: 0, right: 0 })
           .onClick(() => {
             this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
               this.swipedGearId = '';
@@ -1485,6 +1483,7 @@ export struct GearPage {
           .alignItems(VerticalAlign.Center)
           .onClick(() => {
             if (this.swipedGearId === item.id) {
+              // 滑开态点击：收回滑动
               this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
                 this.swipedGearId = '';
                 this.swipeOffsetX = 0;
@@ -1522,6 +1521,10 @@ export struct GearPage {
         .priorityGesture(
           PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
             .onActionUpdate((event: GestureEvent) => {
+              // 展开态禁止左滑
+              if (this.expandedGearId === item.id) {
+                return;
+              }
               const offsetX = event.offsetX;
               if (this.swipedGearId === item.id) {
                 const newOffset = Math.min(0, Math.max(-160, -80 + offsetX));
@@ -1535,6 +1538,9 @@ export struct GearPage {
               }
             })
             .onActionEnd((event: GestureEvent) => {
+              if (this.expandedGearId === item.id) {
+                return;
+              }
               if (this.swipeOffsetX < -40) {
                 this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
                   this.swipeOffsetX = -80;
