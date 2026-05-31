@@ -223,7 +223,6 @@ export struct WeightGauge {
         x: this.ringBounceScale * this.ringEntranceScale,
         y: this.ringBounceScale * this.ringEntranceScale
       })
-      .animation({ curve: SPRING_PRESS() })
       .onClick(() => {
         this.toggleGaugeMode();
       })

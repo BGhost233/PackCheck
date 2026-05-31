@@ -14,17 +14,11 @@ import { SheetOverlay } from '../components/sheets/SheetOverlay';
 import {
   DANGER_COLOR,
   GEAR_SORT_GROUP,
-  GEAR_SORT_PRICE,
-  GEAR_SORT_TIME,
-  GEAR_SORT_TRIP_COUNT,
-  GEAR_SORT_VALUE,
-  GEAR_SORT_WEIGHT,
   LIGHT_PRIMARY_COLOR,
   PAGE_BG,
   PAGE_BG_TRANSLUCENT,
   PRIMARY_COLOR,
   PRIMARY_SHADOW_LIGHT,
-  SHEET_EDIT_ITEM,
   SHEET_EDIT_TRIP,
   SHEET_GEAR,
   SHEET_GEAR_SORT,
@@ -33,11 +27,11 @@ import {
   SHEET_NONE,
   SHEET_TEMP_ITEM,
   SHEET_TRIP,
-  TEXT_TERTIARY
+  TEXT_TERTIARY,
+  TRANSPARENT
 } from '../constants/DesignTokens';
 import {
   SPRING_GENERAL,
-  SPRING_TAB,
   SPRING_CHEVRON,
   SPRING_TAB_BREATHE,
   SPRING_TAB_ICON,
@@ -48,18 +42,14 @@ import {
   DURATION_RECOVER,
   DURATION_CEREMONY_SHAKE,
   CURVE_DECELERATE,
-  PRESS_SCALE_BOUNCE,
-  PRESS_SCALE_REST,
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
-import { AssetEvent, AssetTotals, ChecklistItem, DEFAULT_CATEGORIES, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
+import { AssetEvent, AssetTotals, ChecklistItem, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import {
   filterGears,
   normalizeGearCategories,
   sortedGears,
-  numberOrZero,
-  gearValueRatio,
   filteredGearGroups,
   filteredGearsByGroup,
   gearSortLabel,
@@ -71,13 +61,10 @@ import {
   heaviestGearText,
   mostExpensiveGearText,
   mostFrequentGearText,
-  formatKg,
   categoryTabs,
   presetCategories,
   gearById,
-  uniqueGearIds,
-  filteredImportGears,
-  importGearMetaText
+  uniqueGearIds
 } from '../services/GearService';
 import {
   startOfDay,
@@ -97,19 +84,15 @@ import {
   countdownText,
   checklistTotalWeight,
   checklistCheckedWeight,
-  progressStartColor,
-  progressEndColor,
   checklistItemWeight,
   checklistItemPrice,
   numberInputText,
   latestChecklistHomeSubtitle,
-  checklistHasGear,
   countableGearIds,
   isChecklistItemInGear,
   hasGearMarker,
   matchingGearForChecklistItem,
   formatTripDate,
-  formatDateText,
   addItemsToChecklist,
   toggleItemInChecklists,
   removeItemFromChecklists,
@@ -1862,7 +1845,7 @@ struct Index {
           })
           .width('100%')
           .height('100%')
-          .backgroundColor(Color.Transparent)
+          .backgroundColor(TRANSPARENT)
           .blur(this.contentBlur)
           .scale({ x: this.contentScale, y: this.contentScale })
           .onAreaChange((_oldValue: Area, newValue: Area) => {

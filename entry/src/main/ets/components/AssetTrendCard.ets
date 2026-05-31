@@ -12,6 +12,7 @@ import {
   PAGE_PADDING,
   PRIMARY_COLOR,
   PRIMARY_SHADOW,
+  PRIMARY_TRANSPARENT,
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY
@@ -187,7 +188,7 @@ export struct AssetTrendCard {
 
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
     gradient.addColorStop(0, PRIMARY_SHADOW);
-    gradient.addColorStop(1, '#002D7D46'); // Canvas gradient: primary color fully transparent
+    gradient.addColorStop(1, PRIMARY_TRANSPARENT);
     ctx.fillStyle = gradient;
     ctx.fill();
 
@@ -504,7 +505,7 @@ export struct AssetTrendCard {
         Text(label)
           .fontSize(10)
           .fontColor(TEXT_TERTIARY)
-      })
+      }, (label: string) => label)
     }
     .width('100%')
     .justifyContent(FlexAlign.SpaceBetween)

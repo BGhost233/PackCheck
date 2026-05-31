@@ -416,7 +416,7 @@ export struct HomePage {
       }
     }
     // 按 dateAt 升序排列（最近的在前）
-    result.sort((a, b) => this.checklistDateAt(a)! - this.checklistDateAt(b)!);
+    result.sort((a: TripChecklist, b: TripChecklist) => this.checklistDateAt(a)! - this.checklistDateAt(b)!);
     return result;
   }
 
@@ -433,8 +433,8 @@ export struct HomePage {
       }
     }
     // 有日期的按 dateAt 降序（最近的在前），无日期的按 createdAt 降序排后面
-    withDate.sort((a, b) => this.checklistDateAt(b)! - this.checklistDateAt(a)!);
-    noDate.sort((a, b) => b.createdAt - a.createdAt);
+    withDate.sort((a: TripChecklist, b: TripChecklist) => this.checklistDateAt(b)! - this.checklistDateAt(a)!);
+    noDate.sort((a: TripChecklist, b: TripChecklist) => b.createdAt - a.createdAt);
     return [...withDate, ...noDate];
   }
 
@@ -544,7 +544,7 @@ export struct HomePage {
     const t = Math.min(1, (p - 0.2) / 0.8);
     const alpha = Math.round(t * 0xCC);
     const hex = alpha < 16 ? '0' + alpha.toString(16).toUpperCase() : alpha.toString(16).toUpperCase();
-    return '#' + hex + 'F8F9FA';
+    return '#' + hex + 'F8F9FA'; // PAGE_BG with dynamic alpha
   }
 
   @Builder

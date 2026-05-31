@@ -56,18 +56,14 @@ export const CURVE_LINEAR: Curve = Curve.Linear;
 // 通用时长
 export const DURATION_NONE = 0;
 export const DURATION_TICK = 32;
-export const DURATION_PULSE = 50;
 export const DURATION_FAST = 100;
 export const DURATION_PRESS = 150;
 export const DURATION_NORMAL = 200;
 export const DURATION_HEADER = 250;
-export const DURATION_TAB = 260;
 export const DURATION_RECOVER = 280;
 export const DURATION_SLOW = 300;
 export const DURATION_COLOR_FADE = 350;
 export const DURATION_COUNTER = 400;
-export const DURATION_ENTRANCE = 500;
-export const DURATION_GAUGE = 600;
 export const DURATION_GAUGE_COUNTER = 800;
 export const DURATION_SCROLL_SMOOTH = 120;
 
@@ -82,10 +78,6 @@ export const DURATION_CEREMONY_SHIMMER = 1200;
 // ============================================================
 // 错落入场
 // ============================================================
-
-export const STAGGER_DELAY_MENU = 30;
-export const STAGGER_DELAY_LIST = 40;
-export const STAGGER_DELAY_SWIPE = 50;
 
 // 加速度曲线错落延迟（涟漪感：首项快、末项慢，400ms 封顶）
 export function staggerDelay(index: number, base: number = 30, accel: number = 4, cap: number = 400): number {
@@ -103,7 +95,6 @@ export const PRESS_SCALE_REST = 1.0;
 
 // 面板动画
 export const PANEL_SCALE_START = 0.9;
-export const PANEL_SCALE_DISMISS = 0.95;
 
 // 错落入场偏移 (vp)
 export const STAGGER_OFFSET_Y = 12;

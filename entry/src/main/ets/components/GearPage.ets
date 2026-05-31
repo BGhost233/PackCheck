@@ -807,7 +807,7 @@ export struct GearPage {
           .height('100%')
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
           .enableScrollInteraction(!this.groupDragMode)
-          .backgroundColor(Color.Transparent)
+          .backgroundColor(TRANSPARENT)
           .onDidScroll(() => {
             this.gearScrollOffset = this.gearListScroller.currentOffset().yOffset;
           })
@@ -2004,7 +2004,7 @@ export struct GearPage {
 
   private updateTripCardArea(id: string, x: number, y: number, w: number, h: number): void {
     const area: TripCardArea = { id: id, x: x, y: y, w: w, h: h };
-    const idx = this.tripCardAreas.findIndex(a => a.id === id);
+    const idx = this.tripCardAreas.findIndex((a: TripCardArea) => a.id === id);
     if (idx >= 0) {
       this.tripCardAreas[idx] = area;
     } else {
@@ -2017,7 +2017,7 @@ export struct GearPage {
     if (!this.dragMode) {
       return 0;
     }
-    const area = this.tripCardAreas.find(a => a.id === id);
+    const area = this.tripCardAreas.find((a: TripCardArea) => a.id === id);
     if (area === undefined) {
       return 0;
     }
@@ -2084,7 +2084,7 @@ export struct GearPage {
   private dragGearFirstName(): string {
     if (this.selectedMultiGearIds.length > 0) {
       const firstId = this.selectedMultiGearIds[0];
-      const gear = this.gears.find(g => g.id === firstId);
+      const gear = this.gears.find((g: GearItem) => g.id === firstId);
       if (gear !== undefined) {
         return gear.name;
       }

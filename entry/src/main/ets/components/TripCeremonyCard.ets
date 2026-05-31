@@ -23,7 +23,9 @@ import {
   PRIMARY_PRESSED_DEEP,
   SHADOW_DEFAULT,
   TEXT_MAIN,
-  WHITE
+  TRANSPARENT,
+  WHITE,
+  WHITE_SEMI_TRANSPARENT
 } from '../constants/Colors';
 
 @Component
@@ -524,7 +526,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 水平抖动序列
     const sequence: number[] = [-8, 8, -5, 5, 0];
     let delay = 0;
-    sequence.forEach((x) => {
+    sequence.forEach((x: number) => {
       setTimeout(() => {
         this.getUIContext().animateTo({ duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE }, () => {
           this.titleShakeX = x;
@@ -775,7 +777,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .borderRadius(20)
           .linearGradient({
             angle: 90,
-            colors: [['#00FFFFFF', 0], ['#40FFFFFF', 0.5], ['#00FFFFFF', 1.0]] // gradient: white fully transparent / semi-transparent white
+            colors: [[TRANSPARENT, 0], [WHITE_SEMI_TRANSPARENT, 0.5], [TRANSPARENT, 1.0]]
           })
           .translate({ x: this.titleShimmerX })
       }
@@ -793,7 +795,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       .translate({ x: this.titleShakeX })
       .border({
         width: this.titleBorderHighlight ? 1.5 : 0,
-        color: this.titleBorderHighlight ? ERROR_BORDER : '#00FFFFFF', // gradient: white fully transparent
+        color: this.titleBorderHighlight ? ERROR_BORDER : TRANSPARENT,
         radius: 12
       })
       .animation({ duration: DURATION_NORMAL, curve: CURVE_DECELERATE })
@@ -903,7 +905,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
           SymbolGlyph($r('sys.symbol.airplane'))
             .fontSize(20)
-            .fontColor([Color.White])
+            .fontColor([WHITE])
             .rotate({ angle: this.airplaneRotate })
             .animation({ curve: SPRING_COUNTER() })
         }
@@ -919,7 +921,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         Column()
           .width(56)
           .height(56)
-          .backgroundColor('#00FFFFFF') // gradient: white fully transparent (touch hotzone)
+          .backgroundColor(TRANSPARENT)
           .position({
             x: this.slideX - (56 - this.SLIDER_WIDTH) / 2,
             y: (this.SLIDER_HEIGHT - 56) / 2

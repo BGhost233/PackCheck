@@ -16,6 +16,7 @@ export const PRIMARY_PRESSED_DEEP: string = '#256B3A';
 export const PRIMARY_STROKE_FAINT: string = '#332D7D46';
 export const PRIMARY_STROKE_GHOST: string = '#0A2D7D46';
 export const PRIMARY_SHADOW: string = '#1A2D7D46';
+export const PRIMARY_TRANSPARENT: string = '#002D7D46';
 export const PRIMARY_SHADOW_LIGHT: string = '#262D7D46';
 export const PRIMARY_HALF: string = '#802D7D46';
 export const PRIMARY_FILL_SUBTLE: string = '#2D7D4660';
@@ -43,6 +44,7 @@ export const TEXT_MAIN: string = '#1A1A1A';
 export const TEXT_SECONDARY: string = '#666666';
 export const TEXT_TERTIARY: string = '#999999';
 export const WHITE_SECONDARY: string = '#CCFFFFFF';
+export const WHITE_SEMI_TRANSPARENT: string = '#40FFFFFF';
 
 // ============ 边框/分割线 ============
 export const BORDER_COLOR: string = '#ECEFF1';
