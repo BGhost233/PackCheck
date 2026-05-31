@@ -270,11 +270,12 @@ ForEach(items, (item, index) => {
 
 ### 3.6 动效禁止事项
 
-1. 禁止 `duration` + Spring 曲线同时使用（Spring 忽略 duration）
-2. 禁止同一属性同时有 `.animation()` 和 `animateTo()`
-3. 禁止滚动驱动场景使用 `animateTo`（用 `.animation()` 修饰器）
-4. 禁止 `setTimeout` 延迟切换状态实现「动画」
-5. 禁止动画静止态残留可见痕迹（rest state 必须 opacity=0 或 scale=1.0）
+1. **禁止 `duration` + Spring 曲线同时使用** — Spring 系列（`springMotion`/`responsiveSpringMotion`/`springCurve`）完全忽略 `duration` 字段，时间由 `response` 参数唯一决定。错落延迟必须用 `delay` 字段：`animateTo({ delay: index * 40, curve: SPRING_GENERAL() }, ...)`
+2. **禁止同一属性同时有 `.animation()` 和 `animateTo()`** — 两者竞争会产生卡顿/抖动。选一种：要么 `.animation()` 修饰器驱动（适合滚动联动），要么 `animateTo` 命令式驱动（适合离散事件）
+3. **禁止滚动驱动场景使用 `animateTo`**（用 `.animation()` 修饰器）
+4. **禁止 `setTimeout` 延迟切换状态实现「动画」**
+5. **禁止动画静止态残留非中性值** — rest state 必须是中性值：scale=1.0、opacity=0 或 1。绝不能停在弹性中间值（如 `PRESS_SCALE_BOUNCE`=1.02）
+6. **禁止 `Curve.EaseInOut` 冒充 Standard 曲线** — `Curve.EaseInOut` 实际是 `cubic-bezier(0.42, 0, 0.58, 1.0)`（对称曲线），HarmonyOS Standard 是 `cubic-bezier(0.4, 0, 0.2, 1.0)`（非对称减速）。使用 `curves.cubicBezierCurve(0.4, 0.0, 0.2, 1.0)` 生成正确的 `ICurve`
 
 ---
 
@@ -445,8 +446,11 @@ type = feat | fix | refactor | style | docs | chore
 - [ ] 用的是 AnimationTokens 里的预设曲线吗？
 - [ ] 时长符合 3.2 分级吗？
 - [ ] 有按压反馈吗？（可点击元素）
-- [ ] 没有 Spring + duration 混用吗？
-- [ ] 静止态干净吗？（无残留）
+- [ ] 没有 Spring + duration 混用吗？（Spring 忽略 duration，错落用 delay）
+- [ ] 静止态是中性值吗？（scale=1.0，opacity=0 或 1）
+- [ ] 同一属性没有同时 `.animation()` + `animateTo()` 吧？
+- [ ] Bezier 曲线用的 `curves.cubicBezierCurve()` 而非 `Curve.EaseInOut` 吧？
+- [ ] 颜色都从 Colors.ets token 引用了吗？（包括 `TRANSPARENT`）
 
 ### C. 组件提交检查清单
 

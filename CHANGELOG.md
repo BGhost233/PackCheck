@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.5.6 (2025-06-24)
+
+动效 Token 体系全面审查修复。
+
+- **P0 修复：WeightGauge ring 动画冲突** — `.scale()` 同时有 `.animation()` 和 `animateTo()` 竞争导致卡顿，移除 `.animation()` 修饰
+- **P0 修复：GearSortSheet rest-state 违规** — 按压松手后 scale 停留在 1.02（`PRESS_SCALE_BOUNCE`），改为 1.0（`PRESS_SCALE_REST`）
+- **P0 修复：CURVE_STANDARD 曲线值错误** — 原值 `Curve.EaseInOut`(0.42,0,0.58,1) 是对称曲线，改为 `curves.cubicBezierCurve(0.4, 0, 0.2, 1.0)` 符合 HarmonyOS Standard 非对称减速曲线
+- **全量清除 Spring+duration 混用** — ~50 处跨 12 个文件（GearPage/HomePage/ChecklistDetail/TripCeremonyCard/EmptyIllustration/GearSortSheet/Index/EditGearPanel/EditItemPanel/AnimationUtils 等），Spring 忽略 duration，错落延迟改用 `delay` 字段
+- **AnimationTokens 死代码清理** — 删除 8 个无消费者导出（DURATION_PULSE/TAB/ENTRANCE/GAUGE、STAGGER_DELAY_MENU/LIST/SWIPE、PANEL_SCALE_DISMISS）
+- **Typography 去重** — 删除重复常量 `FONT_FEATURE_TABULAR_NUMS`
+- **Index.ets 清理 19 个未使用 import**
+- **硬编码色值 → Colors token** — TripCeremonyCard/AssetTrendCard/GearPage/HomePage/Index 中 `Color.Transparent` 和自定义色值统一替换为 `TRANSPARENT`/`PRIMARY_TRANSPARENT`/`WHITE_SEMI_TRANSPARENT`
+- **箭头函数类型标注补全** — GearPage/HomePage 排序回调等
+- **DEVELOPMENT_STANDARDS.md 更新** — 3.6 节从 5 条扩展到 6 条 + 新增 CURVE_LINEAR 例外说明 + Token 导入路径政策 + 动效检查清单扩充
+- MEMORY.md 避坑清单从 28 条扩展到 34 条
+
 ## v0.5.5 (2026-05-31)
 
 装备库布局 Bug 修复。

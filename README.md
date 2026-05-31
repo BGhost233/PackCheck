@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.5.5
+## 当前版本：v0.5.6
 
 ### 已实现功能
 
@@ -23,7 +23,7 @@
 
 **仪式感交互**：宝可梦卡牌翻转入场动画、滑动出发确认（正圆滑块骑在轨道上 + 白色遮罩吞噬已滑区域 + 磁吸吸附 + 卡片飘走）、未填名称时输入框抖动+边框闪红、点击空白收起键盘。
 
-**动效体系**：Spring 弹性曲线统一全局、底部胶囊 Tab 果冻 pill 切换、列表 staggered 错落入场（加速度曲线）、折叠头部滚动驱动、geometryTransition 共享元素一镜到底转场、按压三段式反馈、Sheet 面板 Spring 弹性升起/收回。
+**动效体系**：Spring 弹性曲线统一全局（9 个场景化预设 + 完整 Token 体系）、底部胶囊 Tab 果冻 pill 切换、列表 staggered 错落入场（加速度曲线 + delay 驱动）、折叠头部滚动驱动、geometryTransition 共享元素一镜到底转场、按压三段式反馈、Sheet 面板 Spring 弹性升起/收回。
 
 **视觉质感**：等宽数字 `fontFeature('tnum')`、噪点纹理纸感背景（64×64 noise tile）、Section Breathing 分组呼吸间距、暖琥珀警示色系（接近目标 80-100% 态）、卡片底部微边框。
 
@@ -66,9 +66,14 @@ entry/src/main/ets/
 │   ├── GearService.ets      — 装备业务逻辑（export class GearCalc 聚合导出）
 │   └── ChecklistService.ets — 清单业务逻辑（export class CheckCalc 聚合导出）
 ├── constants/               — 设计 Token
-│   ├── DesignTokens.ets     — 颜色/间距/圆角
-│   └── AnimationTokens.ets  — Spring 曲线/时长/缩放
-└── utils/ColorUtils.ets     — 分组颜色辅助函数
+│   ├── Colors.ets           — 色彩语义 token（含透明色系列）
+│   ├── Typography.ets       — 字阶 token
+│   ├── Layout.ets           — 间距/尺寸 token
+│   ├── AnimationTokens.ets  — Spring 预设 + Bezier 曲线 + 时长/缩放常量
+│   └── DesignTokens.ets     — Barrel re-export（兼容旧路径）
+└── utils/
+    ├── ColorUtils.ets       — 分组颜色辅助函数
+    └── AnimationUtils.ets   — 通用动画封装（按压/错落/面板/转场）
 ```
 
 ## 目录结构
@@ -114,7 +119,8 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.5.0 | ✅ 已完成 | 质感跃迁（tnum 等宽数字 + 噪点纹理 + Section Breathing + 暖琥珀色系） |
 | v0.5.3 | ✅ 已完成 | 清单页 Bug 修复 + 快速核查快捷入口 + 装备库弹性回弹/分组拖拽 |
 | v0.5.4 | ✅ 已完成 | 装备库 5 项体验优化（搜索展开/拖拽定位/折叠动画/多选点击/托盘滚速） |
-| v0.5.5 | ✅ 当前 | 装备库布局 Bug 修复（Stack 高度循环依赖 → position 绝对定位） |
+| v0.5.5 | ✅ 已完成 | 装备库布局 Bug 修复（Stack 高度循环依赖 → position 绝对定位） |
+| v0.5.6 | ✅ 当前 | 动效 Token 体系审查修复（3 个 P0 运行时 bug + 全量代码质量清理） |
 
 ## 开发约定
 
