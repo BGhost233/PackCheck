@@ -9,6 +9,11 @@ import {
   WHITE,
   DISABLED_COLOR
 } from '../../constants/Colors';
+import {
+  SPRING_PRESS,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST
+} from '../../constants/AnimationTokens';
 
 @Component
 export struct GenerateTripSheet {
@@ -16,6 +21,8 @@ export struct GenerateTripSheet {
   @Prop generateTripTitle: string = '';
   onTitleChange: (value: string) => void = (value: string): void => {};
   onConfirm: () => void = (): void => {};
+
+  @State private buttonPressed: boolean = false;
 
   build() {
     Column({ space: 12 }) {
@@ -43,6 +50,16 @@ export struct GenerateTripSheet {
         .backgroundColor(this.generateTripTitle.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')
         .enabled(this.generateTripTitle.trim().length > 0)
+        .scale({ x: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.buttonPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.buttonPressed = false;
+          }
+        })
         .onClick(() => {
           this.onConfirm();
         })

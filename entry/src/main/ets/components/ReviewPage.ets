@@ -12,6 +12,11 @@ import {
   SHADOW_DEFAULT,
   TRANSPARENT
 } from '../constants/Colors';
+import {
+  SPRING_PRESS,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST
+} from '../constants/AnimationTokens';
 
 @Component
 export struct ReviewPage {
@@ -24,6 +29,11 @@ export struct ReviewPage {
   onUpdateDragX: (value: number) => void = (value: number): void => {};
   onMarkReviewItem: (checked: boolean) => void = (checked: boolean): void => {};
   onExitReviewMode: () => void = (): void => {};
+
+  @State private uncheckedBtnPressed: boolean = false;
+  @State private checkedBtnPressed: boolean = false;
+  @State private exitBtnPressed: boolean = false;
+  @State private backBtnPressed: boolean = false;
 
   private currentChecklist(): TripChecklist | undefined {
     for (let index = 0; index < this.checklists.length; index++) {
@@ -147,31 +157,64 @@ export struct ReviewPage {
         .fontFeature(FONT_FEATURE_TNUM)
         .padding({ top: 28, bottom: 18 })
       Row({ space: 12 }) {
-        this.ReviewButton('未带', false);
-        this.ReviewButton('已带', true);
+        Button('未带')
+          .height(44)
+          .fontSize(14)
+          .fontColor(TEXT_MAIN)
+          .backgroundColor(CARD_BG)
+          .borderRadius(22)
+          .scale({ x: this.uncheckedBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+            y: this.uncheckedBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+          .animation({ curve: SPRING_PRESS() })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.uncheckedBtnPressed = true;
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.uncheckedBtnPressed = false;
+            }
+          })
+          .onClick(() => {
+            this.onMarkReviewItem(false);
+          })
+        Button('已带')
+          .height(44)
+          .fontSize(14)
+          .fontColor(WHITE)
+          .backgroundColor(PRIMARY_COLOR)
+          .borderRadius(22)
+          .scale({ x: this.checkedBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+            y: this.checkedBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+          .animation({ curve: SPRING_PRESS() })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.checkedBtnPressed = true;
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.checkedBtnPressed = false;
+            }
+          })
+          .onClick(() => {
+            this.onMarkReviewItem(true);
+          })
       }
       Button('退出核查模式')
         .height(44)
         .fontSize(14)
         .fontColor(TEXT_TERTIARY)
         .backgroundColor(TRANSPARENT)
+        .scale({ x: this.exitBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.exitBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.exitBtnPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.exitBtnPressed = false;
+          }
+        })
         .onClick(() => {
           this.onExitReviewMode();
         })
     }
-  }
-
-  @Builder
-  private ReviewButton(title: string, checked: boolean) {
-    Button(title)
-      .height(44)
-      .fontSize(14)
-      .fontColor(checked ? WHITE : TEXT_MAIN)
-      .backgroundColor(checked ? PRIMARY_COLOR : CARD_BG)
-      .borderRadius(22)
-      .onClick(() => {
-        this.onMarkReviewItem(checked);
-      })
   }
 
   @Builder
@@ -193,6 +236,16 @@ export struct ReviewPage {
         .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .borderRadius(23)
+        .scale({ x: this.backBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.backBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.backBtnPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.backBtnPressed = false;
+          }
+        })
         .onClick(() => {
           this.onExitReviewMode();
         })

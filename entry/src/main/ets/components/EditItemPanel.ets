@@ -18,7 +18,10 @@ import {
 import {
   DURATION_SLOW,
   SPRING_PANEL_ENTER,
-  SPRING_PANEL_EXIT
+  SPRING_PANEL_EXIT,
+  SPRING_PRESS,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST
 } from '../constants/AnimationTokens';
 
 @Component
@@ -40,6 +43,9 @@ export struct EditItemPanel {
   // 内部动画状态
   @State private panelScale: number = 0.85;
   @State private panelOpacity: number = 0;
+  @State private buttonPressed: boolean = false;
+  @State private closePressed: boolean = false;
+  @State private pressedChip: string = '';
 
   aboutToAppear(): void {
     setTimeout(() => {
@@ -105,6 +111,16 @@ export struct EditItemPanel {
           .width(36)
           .height(36)
           .justifyContent(FlexAlign.Center)
+          .scale({ x: this.closePressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+            y: this.closePressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+          .animation({ curve: SPRING_PRESS() })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.closePressed = true;
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.closePressed = false;
+            }
+          })
           .onClick(() => {
             this.handleClose();
           })
@@ -141,6 +157,16 @@ export struct EditItemPanel {
               .backgroundColor(this.editingItemGroup === category ? PRIMARY_COLOR : CARD_BG)
               .border({ width: 1, color: this.editingItemGroup === category ? PRIMARY_COLOR : CHIP_BORDER })
               .borderRadius(12)
+              .scale({ x: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+                y: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+              .animation({ curve: SPRING_PRESS() })
+              .onTouch((event: TouchEvent) => {
+                if (event.type === TouchType.Down) {
+                  this.pressedChip = category;
+                } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                  this.pressedChip = '';
+                }
+              })
               .onClick(() => {
                 this.onGroupChange(category);
               })
@@ -174,6 +200,16 @@ export struct EditItemPanel {
           .width('100%')
           .enabled(this.editingItemName.trim().length > 0)
           .borderRadius(12)
+          .scale({ x: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+            y: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+          .animation({ curve: SPRING_PRESS() })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.buttonPressed = true;
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.buttonPressed = false;
+            }
+          })
           .onClick(() => {
             this.onSave();
           })

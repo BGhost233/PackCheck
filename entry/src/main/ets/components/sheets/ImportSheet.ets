@@ -13,6 +13,11 @@ import {
   CHIP_BORDER
 } from '../../constants/Colors';
 import {
+  SPRING_PRESS,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST
+} from '../../constants/AnimationTokens';
+import {
   filteredImportGears,
   importGearMetaText,
   categoryTabs
@@ -28,6 +33,10 @@ export struct ImportSheet {
   onToggleSelection: (id: string, checked: boolean) => void = (id: string, checked: boolean): void => {};
   onImport: () => void = (): void => {};
   onAddGearFromImport: () => void = (): void => {};
+
+  @State private buttonPressed: boolean = false;
+  @State private addButtonPressed: boolean = false;
+  @State private pressedChip: string = '';
 
   build() {
     Column({ space: 12 }) {
@@ -46,6 +55,16 @@ export struct ImportSheet {
             .fontColor(WHITE)
             .backgroundColor(PRIMARY_COLOR)
             .borderRadius(12)
+            .scale({ x: this.addButtonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+              y: this.addButtonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+            .animation({ curve: SPRING_PRESS() })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.addButtonPressed = true;
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.addButtonPressed = false;
+              }
+            })
             .onClick(() => {
               this.onAddGearFromImport();
             })
@@ -65,6 +84,16 @@ export struct ImportSheet {
               .border({ width: 1, color: this.importGearCategory === category ? PRIMARY_COLOR : CHIP_BORDER })
               .borderRadius(12)
               .margin({ right: 8, bottom: 8 })
+              .scale({ x: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+                y: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+              .animation({ curve: SPRING_PRESS() })
+              .onTouch((event: TouchEvent) => {
+                if (event.type === TouchType.Down) {
+                  this.pressedChip = category;
+                } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                  this.pressedChip = '';
+                }
+              })
               .onClick(() => {
                 this.onCategoryChange(category);
               })
@@ -112,6 +141,16 @@ export struct ImportSheet {
         .backgroundColor(this.importGearIds.length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')
         .enabled(this.importGearIds.length > 0)
+        .scale({ x: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.buttonPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.buttonPressed = false;
+          }
+        })
         .onClick(() => {
           this.onImport();
         })

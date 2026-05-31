@@ -11,6 +11,11 @@ import {
   DISABLED_COLOR,
   CHIP_BORDER
 } from '../../constants/Colors';
+import {
+  SPRING_PRESS,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST
+} from '../../constants/AnimationTokens';
 
 @Component
 export struct TempItemSheet {
@@ -21,6 +26,9 @@ export struct TempItemSheet {
   onNameChange: (value: string) => void = (value: string): void => {};
   onGroupChange: (value: string) => void = (value: string): void => {};
   onConfirm: () => void = (): void => {};
+
+  @State private buttonPressed: boolean = false;
+  @State private pressedChip: string = '';
 
   build() {
     Column({ space: 12 }) {
@@ -59,6 +67,16 @@ export struct TempItemSheet {
         .backgroundColor(this.tempItemName.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')
         .enabled(this.tempItemName.trim().length > 0)
+        .scale({ x: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.buttonPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.buttonPressed = false;
+          }
+        })
         .onClick(() => {
           this.onConfirm();
         })
@@ -76,6 +94,16 @@ export struct TempItemSheet {
           .backgroundColor(this.tempItemGroup === category ? PRIMARY_COLOR : CARD_BG)
           .border({ width: 1, color: this.tempItemGroup === category ? PRIMARY_COLOR : CHIP_BORDER })
           .borderRadius(12)
+          .scale({ x: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+            y: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+          .animation({ curve: SPRING_PRESS() })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.pressedChip = category;
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.pressedChip = '';
+            }
+          })
           .onClick(() => {
             this.onGroupChange(category);
           })

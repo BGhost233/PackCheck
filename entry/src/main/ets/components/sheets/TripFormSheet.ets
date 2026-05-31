@@ -6,6 +6,11 @@ import {
   TEXT_TERTIARY
 } from '../../constants/DesignTokens';
 import { WHITE } from '../../constants/Colors';
+import {
+  SPRING_PRESS,
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST
+} from '../../constants/AnimationTokens';
 
 @Component
 export struct TripFormSheet {
@@ -15,6 +20,9 @@ export struct TripFormSheet {
   onTitleChange: (value: string) => void = (value: string): void => {};
   onDateChange: (value: string) => void = (value: string): void => {};
   onConfirm: () => void = (): void => {};
+
+  @State private buttonPressed: boolean = false;
+  @State private dateRowPressed: boolean = false;
 
   build() {
     Column({ space: 12 }) {
@@ -37,6 +45,16 @@ export struct TripFormSheet {
         .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .width('100%')
+        .scale({ x: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.buttonPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.buttonPressed = false;
+          }
+        })
         .onClick(() => {
           this.onConfirm();
         })
@@ -59,6 +77,16 @@ export struct TripFormSheet {
     .padding({ left: 12, right: 12 })
     .backgroundColor(PAGE_BG)
     .borderRadius(12)
+    .scale({ x: this.dateRowPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+      y: this.dateRowPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .animation({ curve: SPRING_PRESS() })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.dateRowPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.dateRowPressed = false;
+      }
+    })
     .onClick(() => {
       DatePickerDialog.show({
         start: new Date('2020-1-1'),
