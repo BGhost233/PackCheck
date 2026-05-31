@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.7 (2026-05-31)
+
+装备库左滑删除修复 & 动效架构优化。
+
+- **修复左滑删除按钮消失**：commit c51f597 将 GearRow 容器从 Stack 改为 Column 导致内容行平移后仍覆盖底层删除按钮（Column 子元素不重叠），恢复 Stack 布局
+- **修复删除按钮铺满全屏**：Stack 内 `height('100%')` 无论常规流还是 position 定位都不可靠，改为固定 52vp + `alignContent: Alignment.End` 靠右对齐
+- **修复左滑动效硬切无动画**：`.animation({ duration: 0 })` 与 `animateTo` 冲突（避坑 #7），移除后利用 `.animation()` 作用域规则自然隔离 translate 不被前置 animation 捕获
+- **删除按钮出场动效**：条件渲染 + `TransitionEffect.asymmetric`（进场 opacity+translate Spring，退场快速淡出）
+- **展开态禁止左滑**：展开详情时 `onActionUpdate`/`onActionEnd` 直接 return，避免展开态触发危险删除操作
+- **删除按钮视觉升级**：从纯文字改为 trash 图标 + 文字垂直排列，全高红色区域匹配折叠态行高
+- MEMORY.md 避坑 #28 补充 position 场景 + 新增 #35（animation 作用域隔离正确姿势）
+
 ## v0.5.6 (2025-06-24)
 
 动效 Token 体系全面审查修复。

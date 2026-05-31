@@ -27,6 +27,7 @@
 - 分组拖拽排序设计：长按 300ms 分组 header 激活 → 浮动整组（scale 1.03, rotate -1°, elevated shadow）跟手 → 碰撞检测用累积高度+中线穿越 → 松手 spring 归位 → categoryOrder 持久化
 - GearPage 搜索展开策略：搜索框不放 Column 流中（会被浮动 Header 遮挡），改用根 Stack + position(0, COLLAPSED) + zIndex(9)，展开时强制 Header 收缩 + 重置滚动位置
 - GearPage 搜索联动折叠状态：`isGearGroupCollapsed()` 在有搜索关键词时直接返回 false，搜索结果所在分组自动展开，无需额外展开逻辑
+- GearPage 左滑删除与展开详情互斥：展开态禁止左滑手势（`onActionUpdate`/`onActionEnd` 中 `if (expandedGearId === item.id) return`），删除按钮固定 52vp 高度匹配折叠态行高
 - 多选拖拽 vs 点击共存：PanGesture distance 从 0 改为 5，让轻点正常走 onClick（toggle 选中），只有真正拖动才激活 Pan
 - 分组折叠/展开动画：`animateTo(springMotion(0.35, 0.8))` 包裹 state 赋值 + 内容 Column 加 `.transition(TransitionEffect.OPACITY.combine(translate({y:-6})))` 实现丝滑进退场
 - 行程托盘动态滚速：边缘区域 100vp，二次曲线加速 `speed = minSpeed + (maxSpeed - minSpeed) * t²`（min=2, max=12），手感自然。Timer 每次回调读 mutable field `trayScrollSpeed`，无需重启 timer 即可变速
@@ -71,7 +72,7 @@
 25. **搜索态绕过折叠/隐藏状态** — 状态查询方法在搜索关键词非空时返回 false，从数据源头解决
 26. **PanGesture distance≥5 防吃 onClick** — distance:0 会让微小移动触发 Pan。Pan+Click 共存时 distance 至少 5
 27. **if/else 条件渲染动画** — 两步：① animateTo 包裹 state 赋值 ② 组件加 `.transition(OPACITY+translate)`。缺一不可
-28. **Stack 子组件禁止 height('100%')** — Stack 高度由子组件最大高度决定，子组件 `height('100%')` 形成循环依赖，运行时布局引擎给出异常大高度值。解法：需要覆盖层/绝对定位元素时，用 Column/Row 容器 + `position()` + `translate()` 代替 Stack
+28. **Stack 子组件禁止 height('100%')** — Stack 高度由子组件最大高度决定，常规流子组件 `height('100%')` 形成循环依赖，运行时给出异常大高度值。**补充：position() 脱离布局流后 `height('100%')` 同样不可靠**——它引用的是上层容器约束高度（可能是 List/Column 可用高度）而非 Stack 被其他子元素撑开的自然高度。解法：需要底层覆盖元素时用固定高度 + Stack `alignContent` 对齐，不用任何形式的 `height('100%')`
 
 29. **CURVE_STANDARD 必须用 `curves.cubicBezierCurve()`** — `Curve.EaseInOut` 是 `cubic-bezier(0.42, 0, 0.58, 1.0)`（对称曲线），与 Material/HarmonyOS Standard `cubic-bezier(0.4, 0, 0.2, 1.0)` 完全不同。正确实现：`curves.cubicBezierCurve(0.4, 0.0, 0.2, 1.0)` 返回 `ICurve` 类型（非 `Curve` 枚举）。`animateTo` 的 curve 字段接受 `Curve | ICurve | string` 三种类型
 30. **ForEach callback index 是 `number` 不是 optional** — ArkUI 的 ForEach 第二个参数签名是 `(item: T, index: number) => void`，index 不需要 `?` 可选标记
@@ -79,6 +80,7 @@
 32. **CURVE_LINEAR 合法场景** — 帧级匀速运动（如 setInterval 16ms 驱动的托盘自动滚动）不适合 Spring/EaseOut，匀速是正确选择。但必须通过 `CURVE_LINEAR` token 引用，不硬写 `Curve.Linear`
 33. **大规模机械性修改用并行 subagent** — 跨 12+ 文件的模式化修改（如去除 Spring+duration）适合拆分为并行 subagent 批量处理，但需要事后人工复查是否有遗漏（本次 subagent 漏了 2 处 Index.ets + 误保留 1 处 DURATION_GAUGE）
 34. **Colors token 补充透明色** — `Color.Transparent` 不走 token 体系，新增 `TRANSPARENT`/`PRIMARY_TRANSPARENT`/`WHITE_SEMI_TRANSPARENT` 确保所有颜色统一管理
+35. **`.animation()` 作用域隔离 translate 的正确姿势** — `.animation()` 只捕获它与前一个 `.animation()` 之间的属性变化。利用此规则：`.backgroundColor(...).animation({ press }).translate(...)` — animation 只作用于 backgroundColor，translate 在其后不被捕获，可由 `animateTo` 自由驱动。**禁止**用 `.animation({ duration: 0 })` 来"隔离"——它会与 `animateTo` 冲突（避坑 #7），导致 translate 变化无动画（硬切）
 
 ### 补充验证结论
 
