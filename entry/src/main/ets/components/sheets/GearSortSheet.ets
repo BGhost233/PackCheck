@@ -12,7 +12,6 @@ import {
 } from '../../constants/DesignTokens';
 import {
   SPRING_GENERAL,
-  DURATION_NORMAL,
   PRESS_SCALE_BOUNCE,
   PRESS_SCALE_REST
 } from '../../constants/AnimationTokens';
@@ -53,7 +52,7 @@ export struct GearSortSheet {
     .backgroundColor(this.gearSortMode === mode ? LIGHT_PRIMARY_COLOR : PAGE_BG)
     .borderRadius(12)
     .scale({ x: this.gearSortMode === mode ? PRESS_SCALE_BOUNCE : PRESS_SCALE_REST, y: this.gearSortMode === mode ? PRESS_SCALE_BOUNCE : PRESS_SCALE_REST })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
+    .animation({ curve: SPRING_GENERAL() })
     .onClick(() => {
       this.onSelectSort(mode);
     })

@@ -11,7 +11,6 @@ import {
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
   DURATION_NONE,
-  DURATION_NORMAL,
   DURATION_COUNTER,
   DURATION_COLOR_FADE,
   CURVE_DECELERATE,
@@ -53,7 +52,7 @@ export function pressHandler(setter: (pressed: boolean) => void): (event: TouchE
  * 用法：.animation(pressAnimationOptions())
  */
 export function pressAnimationOptions(): AnimateParam {
-  return { duration: DURATION_NORMAL, curve: SPRING_PRESS() };
+  return { curve: SPRING_PRESS() };
 }
 
 // ============================================================
@@ -66,7 +65,7 @@ export function pressAnimationOptions(): AnimateParam {
  */
 export function staggeredAnimationOptions(index: number, base: number = 30, accel: number = 4, cap: number = 400): AnimateParam {
   const delay = Math.min(cap, index * base + index * index * accel);
-  return { duration: DURATION_NORMAL + delay, curve: SPRING_GENERAL() };
+  return { delay: delay, curve: SPRING_GENERAL() };
 }
 
 /**

@@ -26,7 +26,6 @@ import {
   SPRING_GENERAL,
   SPRING_CHEVRON,
   DURATION_NORMAL,
-  DURATION_SLOW,
   DURATION_HEADER,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
@@ -703,7 +702,7 @@ export struct ChecklistDetail {
         .fontSize(14)
         .fontColor([TEXT_TERTIARY])
         .rotate({ angle: this.isGroupCollapsed(group) ? -90 : 0 })
-        .animation({ duration: DURATION_SLOW, curve: SPRING_CHEVRON() })
+        .animation({ curve: SPRING_CHEVRON() })
     }
     .width('100%')
     .height(44)
@@ -751,7 +750,7 @@ export struct ChecklistDetail {
     .borderRadius(12)
     .scale({ x: this.pressedItemId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.pressedItemId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
     .opacity(this.pressedItemId === item.id ? 0.9 : 1)
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+    .animation({ curve: SPRING_PRESS() })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedItemId = item.id;
@@ -793,7 +792,7 @@ export struct ChecklistDetail {
     .onClick(() => {
       this.onToggleChecklistItem(itemId);
     })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+    .animation({ curve: SPRING_PRESS() })
   }
 
   @Builder

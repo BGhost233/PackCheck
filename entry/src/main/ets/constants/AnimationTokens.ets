@@ -46,7 +46,7 @@ export const SPRING_TAB_ICON = (): ICurve => curves.springMotion(0.28, 0.82);
 // ============================================================
 
 export const CURVE_DECELERATE: Curve = Curve.EaseOut;
-export const CURVE_STANDARD: Curve = Curve.EaseInOut;
+export const CURVE_STANDARD: ICurve = curves.cubicBezierCurve(0.4, 0.0, 0.2, 1.0);
 export const CURVE_LINEAR: Curve = Curve.Linear;
 
 // ============================================================

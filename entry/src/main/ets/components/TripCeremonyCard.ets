@@ -1,11 +1,10 @@
 import {
   SPRING_CEREMONY_FLIP, SPRING_CEREMONY_DISMISS, SPRING_PRESS,
   SPRING_COUNTER, SPRING_GENERAL,
-  DURATION_CEREMONY_OVERLAY, DURATION_GAUGE, DURATION_CEREMONY_SHINE,
+  DURATION_CEREMONY_OVERLAY, DURATION_CEREMONY_SHINE,
   DURATION_CEREMONY_STAGGER, DURATION_CEREMONY_SHIMMER, DURATION_SCROLL_SMOOTH,
-  DURATION_COUNTER, DURATION_FAST, DURATION_PRESS, DURATION_NORMAL,
-  DURATION_SLOW, DURATION_COLOR_FADE, DURATION_CEREMONY_SHAKE,
-  DURATION_HEADER,
+  DURATION_COUNTER, DURATION_FAST, DURATION_NORMAL,
+  DURATION_COLOR_FADE, DURATION_CEREMONY_SHAKE,
   CURVE_DECELERATE, CURVE_STANDARD
 } from '../constants/AnimationTokens';
 import { vibrator } from '@kit.SensorServiceKit';
@@ -147,7 +146,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: DURATION_GAUGE,
         curve: SPRING_CEREMONY_FLIP()
       }, () => {
         this.cardScale = 1.0;
@@ -265,7 +263,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 按压态：缩小 + 颜色加深 + 轨道下沉
     this.getUIContext().animateTo({
-      duration: DURATION_SCROLL_SMOOTH,
       curve: SPRING_PRESS()
     }, () => {
       this.sliderPressed = true;
@@ -318,7 +315,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 松开按压态 + 恢复颜色/下沉
     this.getUIContext().animateTo({
-      duration: DURATION_SCROLL_SMOOTH,
       curve: SPRING_PRESS()
     }, () => {
       this.sliderPressed = false;
@@ -330,7 +326,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 未到磁吸点，弹回
     if (this.getProgress() < this.MAGNET_THRESHOLD) {
       this.getUIContext().animateTo({
-        duration: DURATION_COUNTER,
         curve: SPRING_CEREMONY_FLIP()
       }, () => {
         this.slideX = 0;
@@ -378,7 +373,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 滑块放大 1.15
     this.getUIContext().animateTo({
-      duration: DURATION_PRESS,
       curve: SPRING_PRESS()
     }, () => {
       this.sliderBounceScale = 1.15;
@@ -422,7 +416,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 卡片收缩蓄力
     this.getUIContext().animateTo({
-      duration: DURATION_SLOW,
       curve: SPRING_GENERAL()
     }, () => {
       this.ceremonyCardScale = 0.97;
@@ -447,7 +440,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 滑块从 1.15 恢复到 1.0
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: DURATION_NORMAL,
         curve: SPRING_COUNTER()
       }, () => {
         this.sliderBounceScale = 1.0;
@@ -468,7 +460,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 弹射预备：微放大
     this.getUIContext().animateTo({
-      duration: DURATION_FAST,
       curve: SPRING_PRESS()
     }, () => {
       this.ceremonyCardScale = 1.03;
@@ -504,7 +495,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 卡片飘走
     this.getUIContext().animateTo({
-      duration: DURATION_COUNTER,
       curve: SPRING_CEREMONY_FLIP()
     }, () => {
       this.launchTranslateY = -800;
@@ -585,7 +575,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
     this.onExitStart();
     this.stopShimmer();
     this.getUIContext().animateTo({
-      duration: DURATION_HEADER,
       curve: SPRING_CEREMONY_DISMISS()
     }, () => {
       this.cardScale = 0.8;
@@ -916,7 +905,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
             .fontSize(20)
             .fontColor([Color.White])
             .rotate({ angle: this.airplaneRotate })
-            .animation({ duration: DURATION_SLOW, curve: SPRING_COUNTER() })
+            .animation({ curve: SPRING_COUNTER() })
         }
         .width(this.SLIDER_WIDTH)
         .height(this.SLIDER_HEIGHT)

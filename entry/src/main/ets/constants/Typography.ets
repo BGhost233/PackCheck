@@ -38,5 +38,4 @@ export const TYPE_CAPTION: TypographyToken = { fontSize: FONT_SIZE_CAPTION, font
 export const LINE_HEIGHT_RATIO: number = 1.4;
 
 // ============ 等宽数字特性 ============
-
-export const FONT_FEATURE_TABULAR_NUMS: string = "'tnum'";
+// 注：等宽数字 token 统一使用 Layout.ets 导出的 FONT_FEATURE_TNUM

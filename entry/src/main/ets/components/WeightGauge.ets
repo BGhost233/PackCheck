@@ -18,11 +18,6 @@ import {
 import {
   SPRING_PRESS,
   SPRING_GENERAL,
-  DURATION_FAST,
-  DURATION_NORMAL,
-  DURATION_COUNTER,
-  DURATION_PULSE,
-  DURATION_GAUGE,
   DURATION_GAUGE_COUNTER,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
@@ -146,14 +141,12 @@ export struct WeightGauge {
   private toggleGaugeMode(): void {
     this.ringBounceScale = 0.92;
     this.getUIContext().animateTo({
-      duration: DURATION_PULSE,
       curve: SPRING_PRESS()
     }, () => {
       this.ringBounceScale = 1.08;
     });
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: DURATION_COUNTER,
         curve: SPRING_GENERAL()
       }, () => {
         this.ringBounceScale = 1.0;
@@ -177,7 +170,6 @@ export struct WeightGauge {
     } else if (label === '件数') {
       this.gearCountPopScale = 1.25;
       this.getUIContext().animateTo({
-        duration: DURATION_COUNTER,
         curve: SPRING_GENERAL()
       }, () => {
         this.gearCountPopScale = 1.0;
@@ -201,7 +193,7 @@ export struct WeightGauge {
           .height(132)
           .color(this.gaugeStatusColor())
           .style({ strokeWidth: 10, enableSmoothEffect: true })
-          .animation({ duration: DURATION_GAUGE, curve: SPRING_GENERAL() })
+          .animation({ curve: SPRING_GENERAL() })
         Column({ space: 2 }) {
           if (this.gaugeMode === GaugeMode.WEIGHT) {
             Text(this.formatKg(this.getDisplayWeight()))
@@ -231,7 +223,7 @@ export struct WeightGauge {
         x: this.ringBounceScale * this.ringEntranceScale,
         y: this.ringBounceScale * this.ringEntranceScale
       })
-      .animation({ duration: DURATION_FAST, curve: SPRING_PRESS() })
+      .animation({ curve: SPRING_PRESS() })
       .onClick(() => {
         this.toggleGaugeMode();
       })
@@ -252,7 +244,6 @@ export struct WeightGauge {
     .onAppear((): void => {
       this.startCounterAnimation();
       this.getUIContext().animateTo({
-        duration: DURATION_GAUGE,
         curve: SPRING_GENERAL()
       }, () => {
         this.ringEntranceScale = 1.0;
@@ -287,7 +278,7 @@ export struct WeightGauge {
         .fontColor(TEXT_MAIN)
         .fontFeature(FONT_FEATURE_TNUM)
         .scale({ x: label === '件数' ? popScale : 1.0, y: label === '件数' ? popScale : 1.0 })
-        .animation({ duration: DURATION_COUNTER, curve: SPRING_GENERAL() })
+        .animation({ curve: SPRING_GENERAL() })
     }
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Center)
@@ -297,7 +288,7 @@ export struct WeightGauge {
     .margin({ left: 4, right: 4 })
     .opacity(this.pillEntranceIndices[staggerIndex] ? 1 : 0)
     .translate({ y: this.pillEntranceIndices[staggerIndex] ? 0 : STAGGER_OFFSET_Y })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
+    .animation({ curve: SPRING_GENERAL() })
     .scale({ x: PRESS_SCALE_REST, y: PRESS_SCALE_REST })
     .onClick(() => {
       this.onStatPillClick(label);

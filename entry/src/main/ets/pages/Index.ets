@@ -45,9 +45,6 @@ import {
   SPRING_HERO_COLLAPSE,
   SPRING_PANEL_ENTER,
   SPRING_PANEL_EXIT,
-  DURATION_NORMAL,
-  DURATION_TAB,
-  DURATION_COLOR_FADE,
   DURATION_RECOVER,
   DURATION_CEREMONY_SHAKE,
   CURVE_DECELERATE,
@@ -276,7 +273,7 @@ struct Index {
       this.checklistRenderNonce = this.checklistRenderNonce + 1;
     };
     if (animated) {
-      this.getUIContext().animateTo({ duration: DURATION_TAB, curve: SPRING_CHEVRON() }, updateState);
+      this.getUIContext().animateTo({ curve: SPRING_CHEVRON() }, updateState);
       return;
     }
     updateState();
@@ -829,7 +826,7 @@ struct Index {
   }
 
   private toggleGearExpanded(id: string): void {
-    this.getUIContext().animateTo({ duration: DURATION_COLOR_FADE, curve: SPRING_GENERAL() }, () => {
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
       this.expandedGearId = this.expandedGearId === id ? '' : id;
     });
   }

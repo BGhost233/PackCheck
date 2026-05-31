@@ -28,11 +28,6 @@ import {
   SPRING_PRESS,
   SPRING_GENERAL,
   SPRING_SCROLL,
-  DURATION_NORMAL,
-  DURATION_SLOW,
-  DURATION_COUNTER,
-  DURATION_ENTRANCE,
-  DURATION_TAB,
   DURATION_CEREMONY_SHAKE,
   CURVE_DECELERATE,
   PRESS_SCALE_DOWN,
@@ -146,7 +141,6 @@ export struct HomePage {
     }
     const target = Math.abs(days);
     this.getUIContext().animateTo({
-      duration: DURATION_COUNTER,
       curve: SPRING_GENERAL(),
       onFinish: (): void => {
         this.heroNumberAnimated = true;
@@ -164,7 +158,6 @@ export struct HomePage {
     }
     const target = this.checkedCount(checklist);
     this.getUIContext().animateTo({
-      duration: DURATION_COUNTER,
       curve: SPRING_GENERAL(),
       onFinish: (): void => {
         this.progressAnimated = true;
@@ -455,14 +448,12 @@ export struct HomePage {
       this.heroRingCelebrateScale = 1.35;
       this.ringCelebrateColor = CELEBRATE_GOLD;
       this.getUIContext().animateTo({
-        duration: DURATION_ENTRANCE,
         curve: SPRING_PRESS()
       }, () => {
         this.heroRingCelebrateScale = 1.35;
       });
       setTimeout(() => {
         this.getUIContext().animateTo({
-          duration: DURATION_COUNTER,
           curve: SPRING_GENERAL()
         }, () => {
           this.heroRingCelebrateScale = 1.0;
@@ -572,7 +563,7 @@ export struct HomePage {
           .margin({ left: 8 })
           .opacity(this.scrollProgress() < 0.5 ? 0 : Math.min(1, (this.scrollProgress() - 0.5) * 2))
           .translate({ x: this.scrollProgress() < 0.5 ? -8 : 0 })
-          .animation({ duration: DURATION_TAB, curve: SPRING_SCROLL() })
+          .animation({ curve: SPRING_SCROLL() })
       }
       Blank()
       if (this.scrollProgress() < 0.6) {
@@ -653,7 +644,7 @@ export struct HomePage {
         x: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale(),
         y: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale()
       })
-      .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+      .animation({ curve: SPRING_PRESS() })
       .onTouch((event: TouchEvent) => {
         if (event.type === TouchType.Down) {
           this.heroPressed = true;
@@ -685,13 +676,13 @@ export struct HomePage {
         .height(52)
         .color(this.ringCelebrateColor)
         .style({ strokeWidth: 5, enableSmoothEffect: true })
-        .animation({ duration: DURATION_ENTRANCE, curve: SPRING_GENERAL() })
+        .animation({ curve: SPRING_GENERAL() })
       Text(this.getAnimatedProgressText(checklist))
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.ringCelebrateColor)
         .fontFeature(FONT_FEATURE_TNUM)
-        .animation({ duration: DURATION_ENTRANCE, curve: SPRING_GENERAL() })
+        .animation({ curve: SPRING_GENERAL() })
     }
     .width(52)
     .height(52)
@@ -798,7 +789,7 @@ export struct HomePage {
     .borderRadius(16)
     .shadow({ radius: bg === CARD_BG ? 8 : 0, color: SHADOW_MICRO, offsetX: 0, offsetY: 1 })
     .scale({ x: this.quickEntryPressed === title ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.quickEntryPressed === title ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+    .animation({ curve: SPRING_PRESS() })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.quickEntryPressed = title;
@@ -854,7 +845,7 @@ export struct HomePage {
             }
             .opacity(this.historyStaggerReady ? 1 : 0)
             .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
-            .animation({ duration: DURATION_NORMAL + staggerDelay(index), curve: SPRING_GENERAL() })
+            .animation({ delay: staggerDelay(index), curve: SPRING_GENERAL() })
             .onClick(() => {
               this.onOpenChecklist(item.id);
             })
@@ -888,7 +879,7 @@ export struct HomePage {
             }
             .opacity(this.historyStaggerReady ? 1 : 0)
             .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
-            .animation({ duration: DURATION_NORMAL + staggerDelay(this.futureTrips().length + index), curve: SPRING_GENERAL() })
+            .animation({ delay: staggerDelay(this.futureTrips().length + index), curve: SPRING_GENERAL() })
             .onClick(() => {
               this.onOpenChecklist(item.id);
             })
@@ -962,7 +953,7 @@ export struct HomePage {
     .geometryTransition('trip-' + item.id)
     .transition(TransitionEffect.opacity(0.99))
     .scale({ x: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.historyPressedId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
+    .animation({ curve: SPRING_PRESS() })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.historyPressedId = item.id;

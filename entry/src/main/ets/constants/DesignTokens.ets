@@ -116,8 +116,7 @@ export {
   TYPE_BODY_LARGE,
   TYPE_BODY_MEDIUM,
   TYPE_CAPTION,
-  LINE_HEIGHT_RATIO,
-  FONT_FEATURE_TABULAR_NUMS
+  LINE_HEIGHT_RATIO
 } from './Typography';
 
 export const VIEW_HOME = 'home';
