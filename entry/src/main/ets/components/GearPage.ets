@@ -4,7 +4,7 @@ import {
   SPRING_SWIPE_RESET, SPRING_FAB_SNAP, SPRING_GENERAL, SPRING_SEARCH,
   SPRING_CHEVRON, SPRING_PRESS, SPRING_CEREMONY_FLIP, SPRING_CONTEXT_EXIT,
   SPRING_TRAY_CARD, SPRING_SCROLL,
-  DURATION_NORMAL, DURATION_TICK,
+  DURATION_NORMAL, DURATION_TICK, DURATION_FAST,
   DURATION_CEREMONY_SHAKE, DURATION_PRESS,
   DURATION_NONE,
   CURVE_DECELERATE, CURVE_LINEAR,
@@ -1426,36 +1426,49 @@ export struct GearPage {
         )
       )
     } else {
-      // 普通模式：紧凑行 + 左滑删除
-      // Stack 层叠：底层删除按钮 + 上层内容行（translate 左移露出底层）
+      // 普通模式：左滑删除
+      // 物理模型：上层内容被手指实时推开，露出底层删除区域
       Stack() {
-        // 底层：删除按钮（条件渲染，仅在滑开时显示，避免 rest 态红色暴露）
+        // 底层：删除操作区（条件渲染 + transition 出场动效）
         if (this.swipedGearId === item.id) {
           Row() {
             Blank()
-            Text('删除')
-              .fontSize(14)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(WHITE)
-              .width(70)
-              .height(44)
-              .textAlign(TextAlign.Center)
-              .backgroundColor(DANGER_COLOR)
-              .borderRadius({ topRight: 12, bottomRight: 12 })
-              .onClick(() => {
-                this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
-                  this.swipedGearId = '';
-                  this.swipeOffsetX = 0;
-                });
-                this.onConfirmDeleteGear(item);
-              })
+            Column({ space: 2 }) {
+              SymbolGlyph($r('sys.symbol.trash'))
+                .fontSize(16)
+                .fontColor([WHITE])
+              Text('删除')
+                .fontSize(11)
+                .fontColor(WHITE)
+            }
+            .width(80)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+            .onClick(() => {
+              this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+                this.swipedGearId = '';
+                this.swipeOffsetX = 0;
+              });
+              this.onConfirmDeleteGear(item);
+            })
           }
           .width('100%')
-          .height(52)
+          .height('100%')
+          .backgroundColor(DANGER_COLOR)
+          .borderRadius({ topRight: 12, bottomRight: 12 })
           .alignItems(VerticalAlign.Center)
+          .transition(
+            TransitionEffect.asymmetric(
+              TransitionEffect.OPACITY
+                .combine(TransitionEffect.translate({ x: 30 }))
+                .animation({ curve: SPRING_SWIPE_RESET() }),
+              TransitionEffect.OPACITY
+                .animation({ duration: DURATION_FAST })
+            )
+          )
         }
 
-        // 上层：内容行
+        // 上层：内容行（translate 由 animateTo 驱动弹性动画）
         Column() {
           Row({ space: 10 }) {
             this.GearNameText(item.name)
@@ -1497,7 +1510,6 @@ export struct GearPage {
         .backgroundColor(this.pressedGearId === item.id ? GROUP_HEADER_BG : CARD_BG)
         .animation({ duration: DURATION_PRESS, curve: CURVE_DECELERATE })
         .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
-        .animation({ duration: DURATION_NONE })
         .onTouch((event: TouchEvent) => {
           if (event.type === TouchType.Down) {
             this.pressedGearId = item.id;
