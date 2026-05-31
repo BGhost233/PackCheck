@@ -6,6 +6,7 @@ import {
   CARD_BORDER_BOTTOM_COLOR,
   CARD_BORDER_BOTTOM_WIDTH,
   CARD_RADIUS,
+  CELEBRATE_GOLD,
   DANGER_COLOR,
   DIVIDER_COLOR,
   FONT_FEATURE_TNUM,
@@ -16,9 +17,13 @@ import {
   PAGE_PADDING,
   PRIMARY_COLOR,
   PRIMARY_TINT_COLOR,
+  SHADOW_MICRO,
+  SHADOW_SUBTLE,
   TEXT_MAIN,
   TEXT_SECONDARY,
-  TEXT_TERTIARY
+  TEXT_TERTIARY,
+  TRANSPARENT,
+  WHITE
 } from '../constants/DesignTokens';
 import {
   SPRING_PRESS,
@@ -444,7 +449,7 @@ export struct HomePage {
     if (checklist !== undefined && this.isChecklistDone(checklist) && checklist.items.length > 0) {
       this.wasLatestChecklistDone = true;
       this.heroRingCelebrateScale = 1.35;
-      this.ringCelebrateColor = '#FFD700';
+      this.ringCelebrateColor = CELEBRATE_GOLD;
       this.getUIContext().animateTo({
         duration: 500,
         curve: SPRING_PRESS()
@@ -636,7 +641,7 @@ export struct HomePage {
         angle: 135,
         colors: [[heroGradientStart(this.daysLeft(this.latestChecklist()!)), 0], [CARD_BG, 1]]
       })
-      .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
+      .shadow({ radius: 12, color: SHADOW_SUBTLE, offsetX: 0, offsetY: 2 })
       .geometryTransition('trip-' + this.latestChecklist()!.id)
       .transition(TransitionEffect.opacity(0.99))
       .opacity(this.heroOpacity())
@@ -664,7 +669,7 @@ export struct HomePage {
   private RingProgress(checklist: TripChecklist) {
     Stack({ alignContent: Alignment.Center }) {
       Circle({ width: 52, height: 52 })
-        .fill('#00000000')
+        .fill(TRANSPARENT)
         .stroke(DIVIDER_COLOR)
         .strokeWidth(5)
       Progress({
@@ -703,7 +708,7 @@ export struct HomePage {
       Button('创建第一个行程')
         .height(44)
         .fontSize(14)
-        .fontColor('#FFFFFF')
+        .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .borderRadius(22)
         .margin({ top: 10 })
@@ -717,7 +722,7 @@ export struct HomePage {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(CARD_BG)
     .borderRadius(CARD_RADIUS)
-    .shadow({ radius: 12, color: '#08000000', offsetX: 0, offsetY: 2 })
+    .shadow({ radius: 12, color: SHADOW_MICRO, offsetX: 0, offsetY: 2 })
   }
 
   // 只取未来行程中最近的一个（dateAt >= 今天）
@@ -787,7 +792,7 @@ export struct HomePage {
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(bg)
     .borderRadius(16)
-    .shadow({ radius: bg === CARD_BG ? 8 : 0, color: '#08000000', offsetX: 0, offsetY: 1 })
+    .shadow({ radius: bg === CARD_BG ? 8 : 0, color: SHADOW_MICRO, offsetX: 0, offsetY: 1 })
     .scale({ x: this.quickEntryPressed === title ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.quickEntryPressed === title ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
     .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
     .onTouch((event: TouchEvent) => {
@@ -914,7 +919,7 @@ export struct HomePage {
           .height(16)
           .backgroundColor(DIVIDER_COLOR)
         Circle({ width: 8, height: 8 })
-          .fill(this.isChecklistDone(item) ? PRIMARY_COLOR : '#00000000')
+          .fill(this.isChecklistDone(item) ? PRIMARY_COLOR : TRANSPARENT)
           .stroke(PRIMARY_COLOR)
           .strokeWidth(1.5)
         Row()
@@ -968,7 +973,7 @@ export struct HomePage {
     Row() {
       Text('删除')
         .fontSize(14)
-        .fontColor('#FFFFFF')
+        .fontColor(WHITE)
     }
     .height(52)
     .padding({ left: 18, right: 18 })

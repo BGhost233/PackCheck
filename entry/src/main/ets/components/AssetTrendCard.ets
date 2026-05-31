@@ -4,8 +4,11 @@ import { AssetEvent } from '../models/PackModels';
 import {
   CARD_BG,
   FONT_FEATURE_TNUM,
+  OVERLAY_DIM,
+  PAGE_BG,
   PAGE_PADDING,
   PRIMARY_COLOR,
+  PRIMARY_SHADOW,
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY
@@ -180,8 +183,8 @@ export struct AssetTrendCard {
     ctx.closePath();
 
     const gradient = ctx.createLinearGradient(0, 0, 0, h);
-    gradient.addColorStop(0, '#1A2D7D46');
-    gradient.addColorStop(1, '#002D7D46');
+    gradient.addColorStop(0, PRIMARY_SHADOW);
+    gradient.addColorStop(1, '#002D7D46'); // Canvas gradient: primary color fully transparent
     ctx.fillStyle = gradient;
     ctx.fill();
 
@@ -396,7 +399,7 @@ export struct AssetTrendCard {
               .width(1)
               .height(CANVAS_HEIGHT)
               .position({ x: this.touchX, y: 0 })
-              .backgroundColor('#33000000')
+              .backgroundColor(OVERLAY_DIM)
 
             // 高亮圆点
             Circle({ width: 8, height: 8 })
@@ -514,7 +517,7 @@ export struct AssetTrendCard {
           .fontColor(TEXT_MAIN)
       }
       .padding({ left: 10, right: 10, top: 6, bottom: 6 })
-      .backgroundColor('#F8F9FA')
+      .backgroundColor(PAGE_BG)
       .borderRadius(8)
     }
   }
@@ -561,7 +564,7 @@ export struct AssetTrendCard {
     }
     .layoutWeight(1)
     .padding({ top: 8, bottom: 8 })
-    .backgroundColor('#F8F9FA')
+    .backgroundColor(PAGE_BG)
     .borderRadius(8)
     .alignItems(HorizontalAlign.Center)
   }
@@ -586,7 +589,7 @@ export struct AssetTrendCard {
     }
     .layoutWeight(1)
     .padding({ top: 8, bottom: 8 })
-    .backgroundColor('#F8F9FA')
+    .backgroundColor(PAGE_BG)
     .borderRadius(8)
     .alignItems(HorizontalAlign.Center)
   }

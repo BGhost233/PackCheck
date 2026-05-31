@@ -8,6 +8,14 @@ import {
   TEXT_SECONDARY
 } from '../constants/DesignTokens';
 import {
+  WHITE,
+  DISABLED_COLOR,
+  OVERLAY_MASK,
+  CHIP_BORDER,
+  TRANSPARENT,
+  SHADOW_LIGHT
+} from '../constants/Colors';
+import {
   DURATION_SLOW,
   SPRING_PANEL_ENTER,
   SPRING_PANEL_EXIT
@@ -75,7 +83,7 @@ export struct EditItemPanel {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('#66000000')
+        .backgroundColor(OVERLAY_MASK)
         .backdropBlur(20)
         .opacity(this.panelOpacity)
         .onClick(() => {
@@ -128,10 +136,10 @@ export struct EditItemPanel {
           ForEach(this.presetCategories(), (category: string) => {
             Text(category)
               .fontSize(13)
-              .fontColor(this.editingItemGroup === category ? '#FFFFFF' : '#666666')
+              .fontColor(this.editingItemGroup === category ? WHITE : TEXT_SECONDARY)
               .padding({ left: 12, right: 12, top: 7, bottom: 7 })
               .backgroundColor(this.editingItemGroup === category ? PRIMARY_COLOR : CARD_BG)
-              .border({ width: 1, color: this.editingItemGroup === category ? PRIMARY_COLOR : '#E0E0E0' })
+              .border({ width: 1, color: this.editingItemGroup === category ? PRIMARY_COLOR : CHIP_BORDER })
               .borderRadius(12)
               .onClick(() => {
                 this.onGroupChange(category);
@@ -161,8 +169,8 @@ export struct EditItemPanel {
         Button('保存修改')
           .height(48)
           .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor(this.editingItemName.trim().length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
+          .fontColor(WHITE)
+          .backgroundColor(this.editingItemName.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
           .width('100%')
           .enabled(this.editingItemName.trim().length > 0)
           .borderRadius(12)
@@ -174,7 +182,7 @@ export struct EditItemPanel {
       .padding({ left: 24, right: 24, top: 24, bottom: 24 })
       .backgroundColor(CARD_BG)
       .borderRadius(24)
-      .shadow({ radius: 24, color: '#14000000', offsetX: 0, offsetY: 8 })
+      .shadow({ radius: 24, color: SHADOW_LIGHT, offsetX: 0, offsetY: 8 })
       .scale({ x: this.panelScale, y: this.panelScale })
       .opacity(this.panelOpacity)
     }
@@ -195,7 +203,7 @@ export struct EditItemPanel {
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
-          .backgroundColor('#00000000')
+          .backgroundColor(TRANSPARENT)
           .layoutWeight(1)
           .onChange((value: string) => {
             onValueChange(value);

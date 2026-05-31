@@ -7,6 +7,11 @@ import {
   TEXT_MAIN,
   TEXT_TERTIARY
 } from '../constants/DesignTokens';
+import {
+  WHITE,
+  SHADOW_DEFAULT,
+  TRANSPARENT
+} from '../constants/Colors';
 
 @Component
 export struct ReviewPage {
@@ -119,7 +124,7 @@ export struct ReviewPage {
       .alignItems(HorizontalAlign.Center)
       .backgroundColor(CARD_BG)
       .borderRadius(20)
-      .shadow({ radius: 18, color: '#1A000000', offsetX: 0, offsetY: 8 })
+      .shadow({ radius: 18, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 8 })
       .translate({ x: this.reviewDragX, y: 0, z: 0 })
       .gesture(
         PanGesture({ direction: PanDirection.Horizontal })
@@ -149,7 +154,7 @@ export struct ReviewPage {
         .height(44)
         .fontSize(14)
         .fontColor(TEXT_TERTIARY)
-        .backgroundColor('#00000000')
+        .backgroundColor(TRANSPARENT)
         .onClick(() => {
           this.onExitReviewMode();
         })
@@ -161,7 +166,7 @@ export struct ReviewPage {
     Button(title)
       .height(44)
       .fontSize(14)
-      .fontColor(checked ? '#FFFFFF' : TEXT_MAIN)
+      .fontColor(checked ? WHITE : TEXT_MAIN)
       .backgroundColor(checked ? PRIMARY_COLOR : CARD_BG)
       .borderRadius(22)
       .onClick(() => {
@@ -185,7 +190,7 @@ export struct ReviewPage {
       Button('返回清单')
         .height(46)
         .fontSize(14)
-        .fontColor('#FFFFFF')
+        .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .borderRadius(23)
         .onClick(() => {

@@ -13,6 +13,10 @@ import {
   TEXT_TERTIARY
 } from '../constants/DesignTokens';
 import {
+  TRANSPARENT,
+  SHADOW_SUBTLE
+} from '../constants/Colors';
+import {
   SPRING_PRESS,
   SPRING_GENERAL,
   DURATION_FAST,
@@ -181,7 +185,7 @@ export struct WeightGauge {
     Column({ space: 10 }) {
       Stack({ alignContent: Alignment.Center }) {
         Circle({ width: 132, height: 132 })
-          .fill('#00000000')
+          .fill(TRANSPARENT)
           .stroke(DIVIDER_COLOR)
           .strokeWidth(10)
         Progress({
@@ -240,7 +244,7 @@ export struct WeightGauge {
     .padding({ left: 16, right: 16, top: 18, bottom: 16 })
     .backgroundColor(CARD_BG)
     .borderRadius(20)
-    .shadow({ radius: 12, color: '#0A000000', offsetX: 0, offsetY: 2 })
+    .shadow({ radius: 12, color: SHADOW_SUBTLE, offsetX: 0, offsetY: 2 })
     .onAppear((): void => {
       this.startCounterAnimation();
       this.getUIContext().animateTo({

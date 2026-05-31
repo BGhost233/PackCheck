@@ -4,18 +4,23 @@ import {
   ARROW_COLOR,
   CARD_BG,
   DANGER_COLOR,
+  DISABLED_COLOR,
   DIVIDER_COLOR,
   FONT_FEATURE_TNUM,
   GROUP_HEADER_BG,
   LIGHT_PRIMARY_COLOR,
   PAGE_BG,
   PAGE_PADDING,
+  PLACEHOLDER_COLOR,
   PRIMARY_COLOR,
   PRIMARY_TINT_COLOR,
   PROGRESS_END_COLOR,
+  SHADOW_SUBTLE,
   TEXT_MAIN,
   TEXT_SECONDARY,
-  TEXT_TERTIARY
+  TEXT_TERTIARY,
+  TRANSPARENT,
+  WHITE
 } from '../constants/DesignTokens';
 import {
   SPRING_PRESS,
@@ -454,7 +459,7 @@ export struct ChecklistDetail {
       .padding({ left: PAGE_PADDING, right: PAGE_PADDING })
       .alignItems(VerticalAlign.Center)
       .backgroundColor(PAGE_BG)
-      .shadow({ radius: 4, color: '#0A000000', offsetX: 0, offsetY: 2 })
+      .shadow({ radius: 4, color: SHADOW_SUBTLE, offsetX: 0, offsetY: 2 })
       .animation({ duration: 250, curve: Curve.EaseInOut })
     }
   }
@@ -564,14 +569,14 @@ export struct ChecklistDetail {
             .fill(PRIMARY_COLOR)
           SymbolGlyph($r('sys.symbol.checkmark'))
             .fontSize(20)
-            .fontColor(['#FFFFFF'])
+            .fontColor([WHITE])
         }
         .width(44)
         .height(44)
       } else {
         Stack({ alignContent: Alignment.Center }) {
           Circle({ width: 44, height: 44 })
-            .fill('#00000000')
+            .fill(TRANSPARENT)
             .stroke(LIGHT_PRIMARY_COLOR)
             .strokeWidth(5)
           Progress({
@@ -704,8 +709,8 @@ export struct ChecklistDetail {
       this.CheckMark(item.id);
       Text(item.name)
         .fontSize(16)
-        .fontColor(item.checked ? '#BBBBBB' : TEXT_MAIN)
-        .decoration(item.checked ? { type: TextDecorationType.LineThrough, color: '#CCCCCC' } : undefined)
+        .fontColor(item.checked ? PLACEHOLDER_COLOR : TEXT_MAIN)
+        .decoration(item.checked ? { type: TextDecorationType.LineThrough, color: DISABLED_COLOR } : undefined)
         .layoutWeight(1)
         .onClick(() => {
           this.onOpenEditItem(item);
@@ -714,7 +719,7 @@ export struct ChecklistDetail {
         if (this.checklistItemWeight(item) !== undefined && this.checklistItemWeight(item)! > 0) {
           Text(this.checklistItemWeight(item)!.toString() + 'g')
             .fontSize(12)
-            .fontColor('#CCCCCC')
+            .fontColor(DISABLED_COLOR)
             .fontFeature(FONT_FEATURE_TNUM)
         }
         if (this.hasGearMarker(item)) {
@@ -755,13 +760,13 @@ export struct ChecklistDetail {
     Row() {
       Stack({ alignContent: Alignment.Center }) {
         Circle({ width: 28, height: 28 })
-          .fill(this.isChecklistItemChecked(itemId) ? PRIMARY_COLOR : '#00000000')
+          .fill(this.isChecklistItemChecked(itemId) ? PRIMARY_COLOR : TRANSPARENT)
           .stroke(this.isChecklistItemChecked(itemId) ? PRIMARY_COLOR : ARROW_COLOR)
           .strokeWidth(2)
         if (this.isChecklistItemChecked(itemId)) {
           SymbolGlyph($r('sys.symbol.checkmark'))
             .fontSize(15)
-            .fontColor(['#FFFFFF'])
+            .fontColor([WHITE])
             .fontWeight(FontWeight.Bold)
         }
       }
@@ -786,7 +791,7 @@ export struct ChecklistDetail {
     .height(52)
     .padding({ left: 18, right: 18 })
     .margin({ right: 10 })
-    .backgroundColor(this.hasGearMarker(item) ? '#F0F0F0' : LIGHT_PRIMARY_COLOR)
+    .backgroundColor(this.hasGearMarker(item) ? DIVIDER_COLOR : LIGHT_PRIMARY_COLOR)
     .borderRadius(12)
     .onClick(() => {
       this.onSaveChecklistItemToGear(item);
@@ -798,7 +803,7 @@ export struct ChecklistDetail {
     Row() {
       Text('删除')
         .fontSize(14)
-        .fontColor('#FFFFFF')
+        .fontColor(WHITE)
     }
     .height(52)
     .padding({ left: 18, right: 18 })

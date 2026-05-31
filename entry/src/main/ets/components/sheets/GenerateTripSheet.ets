@@ -5,6 +5,10 @@ import {
   TEXT_MAIN,
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
+import {
+  WHITE,
+  DISABLED_COLOR
+} from '../../constants/Colors';
 
 @Component
 export struct GenerateTripSheet {
@@ -35,8 +39,8 @@ export struct GenerateTripSheet {
       Button('确认生成')
         .height(48)
         .fontSize(14)
-        .fontColor('#FFFFFF')
-        .backgroundColor(this.generateTripTitle.trim().length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
+        .fontColor(WHITE)
+        .backgroundColor(this.generateTripTitle.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')
         .enabled(this.generateTripTitle.trim().length > 0)
         .onClick(() => {

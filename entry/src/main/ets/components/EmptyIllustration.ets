@@ -4,6 +4,10 @@
  * 统一风格：stroke-only、1.5vp 线宽、主题绿 20% alpha、≤25 控制点/套
  */
 import { curves } from '@kit.ArkUI';
+import {
+  PRIMARY_STROKE_FAINT,
+  TRANSPARENT
+} from '../constants/Colors';
 
 @Component
 export struct EmptyIllustration {
@@ -52,9 +56,9 @@ export struct EmptyIllustration {
     Shape() {
       Path()
         .commands(this.pathCommands())
-        .stroke('#332D7D46')
+        .stroke(PRIMARY_STROKE_FAINT)
         .strokeWidth(1.5)
-        .fill('#00000000')
+        .fill(TRANSPARENT)
         .strokeLineCap(LineCapStyle.Round)
         .strokeLineJoin(LineJoinStyle.Round)
         .antiAlias(true)

@@ -14,6 +14,10 @@ import {
   TEXT_MAIN,
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
+import {
+  TRANSPARENT,
+  OVERLAY_SUBTLE
+} from '../../constants/Colors';
 import { GearSortSheet } from './GearSortSheet';
 import { GenerateTripSheet } from './GenerateTripSheet';
 import { GearFormSheet } from './GearFormSheet';
@@ -97,7 +101,7 @@ export struct SheetOverlay {
             Button('+ 添加装备')
               .fontSize(14)
               .fontColor(PRIMARY_COLOR)
-              .backgroundColor('#00000000')
+              .backgroundColor(TRANSPARENT)
               .onClick(() => {
                 this.onAddGearFromImport();
               })
@@ -105,7 +109,7 @@ export struct SheetOverlay {
           Button(this.sheetMode === SHEET_TEMP_ITEM ? '完成' : '关闭')
             .fontSize(13)
             .fontColor(TEXT_SECONDARY)
-            .backgroundColor('#00000000')
+            .backgroundColor(TRANSPARENT)
             .onClick(() => {
               this.onClose();
             })
@@ -195,7 +199,7 @@ export struct SheetOverlay {
     .width('100%')
     .height('100%')
     .opacity(this.sheetOverlayOpacity)
-    .backgroundColor('#26000000')
+    .backgroundColor(OVERLAY_SUBTLE)
     .backdropBlur(16)
   }
 

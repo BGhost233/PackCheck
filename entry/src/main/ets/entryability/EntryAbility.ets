@@ -1,6 +1,7 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { BLACK, PAGE_BG } from '../constants/Colors';
 
 const DOMAIN = 0x0000;
 
@@ -27,12 +28,12 @@ export default class EntryAbility extends UIAbility {
     // Navigation 的 expandSafeArea 负责背景延伸，内容保持在安全区内
     try {
       const mainWindow = windowStage.getMainWindowSync();
-      mainWindow.setWindowBackgroundColor('#F8F9FA');
+      mainWindow.setWindowBackgroundColor(PAGE_BG);
       mainWindow.setWindowSystemBarProperties({
-        statusBarContentColor: '#000000',
-        navigationBarContentColor: '#000000',
-        statusBarColor: '#F8F9FA',
-        navigationBarColor: '#F8F9FA'
+        statusBarContentColor: BLACK,
+        navigationBarContentColor: BLACK,
+        statusBarColor: PAGE_BG,
+        navigationBarColor: PAGE_BG
       });
     } catch (error) {
       hilog.warn(DOMAIN, 'PackCheck', 'Failed to set window properties. Cause: %{public}s', JSON.stringify(error));

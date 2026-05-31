@@ -6,6 +6,11 @@ import {
   TEXT_MAIN,
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
+import {
+  WHITE,
+  DISABLED_COLOR,
+  CHIP_BORDER
+} from '../../constants/Colors';
 
 @Component
 export struct GearFormSheet {
@@ -84,8 +89,8 @@ export struct GearFormSheet {
         Button(this.editingGearId.length === 0 ? '确认添加' : '确认保存')
           .height(48)
           .fontSize(14)
-          .fontColor('#FFFFFF')
-          .backgroundColor(this.gearName.trim().length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
+          .fontColor(WHITE)
+          .backgroundColor(this.gearName.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
           .width('100%')
           .enabled(this.gearName.trim().length > 0)
           .onClick(() => {
@@ -103,10 +108,10 @@ export struct GearFormSheet {
       ForEach(this.categories, (category: string) => {
         Text(category)
           .fontSize(13)
-          .fontColor(this.gearCategory === category ? '#FFFFFF' : '#666666')
+          .fontColor(this.gearCategory === category ? WHITE : TEXT_SECONDARY)
           .padding({ left: 12, right: 12, top: 7, bottom: 7 })
           .backgroundColor(this.gearCategory === category ? PRIMARY_COLOR : CARD_BG)
-          .border({ width: 1, color: this.gearCategory === category ? PRIMARY_COLOR : '#E0E0E0' })
+          .border({ width: 1, color: this.gearCategory === category ? PRIMARY_COLOR : CHIP_BORDER })
           .borderRadius(12)
           .onClick(() => {
             this.onCategoryChange(category);

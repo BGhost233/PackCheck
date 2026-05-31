@@ -2,12 +2,19 @@ import { curves, LengthMetrics } from '@kit.ArkUI';
 import { vibrator } from '@kit.SensorServiceKit';
 import {
   CARD_BG,
+  CHIP_BG_DEFAULT,
+  GLASS_BG_HEAVY,
   LIGHT_PRIMARY_COLOR,
+  OVERLAY_MASK_LIGHT,
   PAGE_BG,
   PRIMARY_COLOR,
+  PRIMARY_PRESSED,
+  SHADOW_DEFAULT,
   TEXT_MAIN,
   TEXT_SECONDARY,
-  TEXT_TERTIARY
+  TEXT_TERTIARY,
+  WHITE,
+  WHITE_SECONDARY
 } from '../constants/DesignTokens';
 import {
   DURATION_NORMAL,
@@ -129,7 +136,7 @@ export struct GearFilterPanel {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('#4D000000')
+        .backgroundColor(OVERLAY_MASK_LIGHT)
         .backdropBlur(20)
         .opacity(this.overlayOpacity)
         .onClick(() => {
@@ -154,7 +161,7 @@ export struct GearFilterPanel {
           Button('确认')
             .height(32)
             .fontSize(14)
-            .fontColor('#FFFFFF')
+            .fontColor(WHITE)
             .backgroundColor(PRIMARY_COLOR)
             .borderRadius(16)
             .margin({ left: 8 })
@@ -188,10 +195,10 @@ export struct GearFilterPanel {
       }
       .width('100%')
       .constraintSize({ maxHeight: '60%' })
-      .backgroundColor('#EBFFFFFF')
+      .backgroundColor(GLASS_BG_HEAVY)
       .backdropBlur(20)
       .borderRadius({ bottomLeft: 20, bottomRight: 20 })
-      .shadow({ radius: 20, color: '#1A000000', offsetX: 0, offsetY: 4 })
+      .shadow({ radius: 20, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 4 })
       .translate({ y: this.panelTranslateY })
       .onClick(() => {
       })
@@ -206,19 +213,19 @@ export struct GearFilterPanel {
       Text(category)
         .fontSize(13)
         .fontWeight(this.isCategorySelected(category) ? FontWeight.Medium : FontWeight.Normal)
-        .fontColor(this.isCategorySelected(category) ? '#FFFFFF' : TEXT_MAIN)
+        .fontColor(this.isCategorySelected(category) ? WHITE : TEXT_MAIN)
         .maxLines(1)
       if (this.categoryCount(category) > 0) {
         Text(this.categoryCount(category).toString())
           .fontSize(11)
-          .fontColor(this.isCategorySelected(category) ? '#CCFFFFFF' : TEXT_TERTIARY)
+          .fontColor(this.isCategorySelected(category) ? WHITE_SECONDARY : TEXT_TERTIARY)
       }
     }
     .height(32)
     .padding({ left: 12, right: 12 })
     .backgroundColor(this.isCategorySelected(category) ?
-      (this.pressedCategory === category ? '#1F5C32' : PRIMARY_COLOR) :
-      (this.pressedCategory === category ? '#E8EBE8' : '#F5F7F5'))
+      (this.pressedCategory === category ? PRIMARY_PRESSED : PRIMARY_COLOR) :
+      (this.pressedCategory === category ? CHIP_BORDER : CHIP_BG_DEFAULT))
     .borderRadius(16)
     .scale({
       x: this.pressedCategory === category ? 0.88 : 1,

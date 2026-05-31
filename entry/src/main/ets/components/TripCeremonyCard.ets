@@ -3,10 +3,20 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { inputMethod } from '@kit.IMEKit';
 import {
   CARD_BG,
+  CARD_FOOTER_BG,
+  ERROR_BORDER,
+  INPUT_BG,
+  PLACEHOLDER_COLOR,
   PRIMARY_COLOR,
+  PRIMARY_FILL_SUBTLE,
+  PRIMARY_GRADIENT_END,
+  PRIMARY_GRADIENT_START,
+  PRIMARY_HALF,
+  PRIMARY_PRESSED_DEEP,
+  SHADOW_DEFAULT,
   TEXT_MAIN,
-  TEXT_SECONDARY
-} from '../constants/DesignTokens';
+  WHITE
+} from '../constants/Colors';
 
 @Component
 export struct TripCeremonyCard {
@@ -60,7 +70,7 @@ export struct TripCeremonyCard {
   @State private sliderBounceScale: number = 1.0;
 
   // === 按压增强 ===
-  @State private sliderBgColor: string = '#2D7D46';
+  @State private sliderBgColor: string = PRIMARY_COLOR;
   @State private trackSinkY: number = 0;
   @State private airplaneRotate: number = 0;
   private lastRatchetProgress: number = 0;
@@ -250,7 +260,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       curve: curves.springMotion(0.25, 0.7)
     }, () => {
       this.sliderPressed = true;
-      this.sliderBgColor = '#256B3A';
+      this.sliderBgColor = PRIMARY_PRESSED_DEEP;
       this.trackSinkY = 1.5;
     });
 
@@ -303,7 +313,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       curve: curves.springMotion(0.25, 0.7)
     }, () => {
       this.sliderPressed = false;
-      this.sliderBgColor = '#2D7D46';
+      this.sliderBgColor = PRIMARY_COLOR;
       this.trackSinkY = 0;
     });
     this.lastRatchetProgress = 0;
@@ -343,7 +353,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     }, () => {
       this.slideX = maxSlide;
       this.sliderPressed = false;
-      this.sliderBgColor = '#2D7D46';
+      this.sliderBgColor = PRIMARY_COLOR;
       this.trackSinkY = 0;
     });
 
@@ -607,7 +617,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         .height(308)
         .constraintSize({ maxWidth: 348 })
         .borderRadius(28)
-        .backgroundColor('#2D7D46')
+        .backgroundColor(PRIMARY_COLOR)
         .opacity(this.glowLayerOpacity)
         .blur(16)
         .animation({ duration: 200, curve: Curve.EaseOut })
@@ -646,7 +656,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       .clip(true)
       .shadow({
         radius: this.cardElevation,
-        color: '#1A000000',
+        color: SHADOW_DEFAULT,
         offsetY: this.cardElevation / 3
       })
       .scale({
@@ -678,8 +688,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
         .height(48)
         .fontSize(14)
         .fontColor(TEXT_MAIN)
-        .placeholderColor('#BBBBBB')
-        .backgroundColor('#F7F8F7')
+        .placeholderColor(PLACEHOLDER_COLOR)
+        .backgroundColor(INPUT_BG)
         .borderRadius(12)
         .padding({ left: 16, right: 16 })
         .opacity(this.contentStep >= stepIndex ? 1 : 0)
@@ -691,13 +701,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
       Row() {
         Text(text.length > 0 ? text : placeholder)
           .fontSize(14)
-          .fontColor(text.length > 0 ? TEXT_MAIN : '#BBBBBB')
+          .fontColor(text.length > 0 ? TEXT_MAIN : PLACEHOLDER_COLOR)
           .layoutWeight(1)
       }
       .width('100%')
       .height(48)
       .padding({ left: 16, right: 16 })
-      .backgroundColor('#F7F8F7')
+      .backgroundColor(INPUT_BG)
       .borderRadius(12)
       .opacity(this.contentStep >= stepIndex ? 1 : 0)
       .translate({ y: this.contentStep >= stepIndex ? 0 : 8 })
@@ -713,11 +723,11 @@ return this.trackWidth - this.SLIDER_WIDTH;
       Text('PackCheck')
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#FFFFFF')
+        .fontColor(WHITE)
         .opacity(0.9)
       Text('装备清单 · 轻装出发')
         .fontSize(12)
-        .fontColor('#FFFFFF')
+        .fontColor(WHITE)
         .opacity(0.6)
     }
     .width('100%')
@@ -738,19 +748,19 @@ return this.trackWidth - this.SLIDER_WIDTH;
           Circle({ width: 6, height: 6 })
             .fill(PRIMARY_COLOR)
           Circle({ width: 4, height: 4 })
-            .fill('#2D7D4660')
+            .fill(PRIMARY_FILL_SUBTLE)
             .margin({ left: 4 })
 
           // 标题文字
           Text('新的冒险即将开始')
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#1A1A1A')
+            .fontColor(TEXT_MAIN)
             .margin({ left: 10, right: 10 })
 
           // 右侧圆点组
           Circle({ width: 4, height: 4 })
-            .fill('#2D7D4660')
+            .fill(PRIMARY_FILL_SUBTLE)
           Circle({ width: 6, height: 6 })
             .fill(PRIMARY_COLOR)
             .margin({ left: 4 })
@@ -767,7 +777,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .borderRadius(20)
           .linearGradient({
             angle: 90,
-            colors: [['#00FFFFFF', 0], ['#40FFFFFF', 0.5], ['#00FFFFFF', 1.0]]
+            colors: [['#00FFFFFF', 0], ['#40FFFFFF', 0.5], ['#00FFFFFF', 1.0]] // gradient: white fully transparent / semi-transparent white
           })
           .translate({ x: this.titleShimmerX })
       }
@@ -785,7 +795,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       .translate({ x: this.titleShakeX })
       .border({
         width: this.titleBorderHighlight ? 1.5 : 0,
-        color: this.titleBorderHighlight ? '#FF4444' : '#00FFFFFF',
+        color: this.titleBorderHighlight ? ERROR_BORDER : '#00FFFFFF', // gradient: white fully transparent
         radius: 12
       })
       .animation({ duration: 200, curve: Curve.EaseOut })
@@ -797,13 +807,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
       Row() {
         Text(this.tripDate.length > 0 ? this.tripDate : '什么时候出发？')
           .fontSize(14)
-          .fontColor(this.tripDate.length > 0 ? TEXT_MAIN : '#BBBBBB')
+          .fontColor(this.tripDate.length > 0 ? TEXT_MAIN : PLACEHOLDER_COLOR)
           .layoutWeight(1)
       }
       .width('100%')
       .height(48)
       .padding({ left: 16, right: 16 })
-      .backgroundColor('#F7F8F7')
+      .backgroundColor(INPUT_BG)
       .borderRadius(12)
       .opacity(this.contentStep >= 3 ? 1 : 0)
       .translate({ y: this.contentStep >= 3 ? 0 : 8 })
@@ -833,7 +843,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .width('100%')
           .height(this.TRACK_HEIGHT)
           .borderRadius(this.TRACK_HEIGHT / 2)
-          .backgroundColor('#F0F4F0')
+          .backgroundColor(CARD_FOOTER_BG)
 
         // ①.5 绿色进度填充条
         Row()
@@ -842,7 +852,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .borderRadius({ topLeft: this.TRACK_HEIGHT / 2, bottomLeft: this.TRACK_HEIGHT / 2 })
           .linearGradient({
             angle: 0,
-            colors: [['#1F2D7D46', 0.0], ['#4D2D7D46', 1.0]]
+            colors: [[PRIMARY_GRADIENT_START, 0.0], [PRIMARY_GRADIENT_END, 1.0]]
           })
           .position({ x: 0, y: (this.SLIDER_HEIGHT - this.TRACK_HEIGHT) / 2 })
 
@@ -851,7 +861,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           Text('滑动出发')
             .fontSize(14)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#802D7D46')
+            .fontColor(PRIMARY_HALF)
             .opacity(this.trackTextOpacity)
             .animation({ duration: 150, curve: Curve.EaseOut })
           Text('准备出发！')
@@ -866,19 +876,19 @@ return this.trackWidth - this.SLIDER_WIDTH;
         Row()
           .width(this.slideX + this.SLIDER_WIDTH / 2)
           .height(this.TRACK_HEIGHT)
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(WHITE)
           .borderRadius({ topLeft: this.TRACK_HEIGHT / 2, bottomLeft: this.TRACK_HEIGHT / 2 })
           .position({ x: 0, y: (this.SLIDER_HEIGHT - this.TRACK_HEIGHT) / 2 })
 
         // ④ 波纹层（仪式感 Phase1 用）
         Circle({ width: 48, height: 48 })
-          .fill('#2D7D46')
+          .fill(PRIMARY_COLOR)
           .position({ x: this.getMaxSlide(), y: 0 })
           .scale({ x: this.ripple1Scale, y: this.ripple1Scale })
           .opacity(this.ripple1Opacity)
           .animation({ duration: 400, curve: Curve.EaseOut })
         Circle({ width: 48, height: 48 })
-          .fill('#2D7D46')
+          .fill(PRIMARY_COLOR)
           .position({ x: this.getMaxSlide(), y: 0 })
           .scale({ x: this.ripple2Scale, y: this.ripple2Scale })
           .opacity(this.ripple2Opacity)
@@ -911,7 +921,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         Column()
           .width(56)
           .height(56)
-          .backgroundColor('#00FFFFFF')
+          .backgroundColor('#00FFFFFF') // gradient: white fully transparent (touch hotzone)
           .position({
             x: this.slideX - (56 - this.SLIDER_WIDTH) / 2,
             y: (this.SLIDER_HEIGHT - 56) / 2
@@ -944,7 +954,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     .width('100%')
     .height('100%')
     .padding({ left: 24, right: 24, bottom: 20 })
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(CARD_BG)
     .justifyContent(FlexAlign.Start)
     .alignItems(HorizontalAlign.Center)
     .borderRadius(24)

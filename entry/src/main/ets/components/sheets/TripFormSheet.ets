@@ -5,6 +5,7 @@ import {
   TEXT_SECONDARY,
   TEXT_TERTIARY
 } from '../../constants/DesignTokens';
+import { WHITE } from '../../constants/Colors';
 
 @Component
 export struct TripFormSheet {
@@ -33,7 +34,7 @@ export struct TripFormSheet {
       Button(this.isEditMode ? '确认保存' : '创建')
         .height(48)
         .fontSize(14)
-        .fontColor('#FFFFFF')
+        .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .width('100%')
         .onClick(() => {

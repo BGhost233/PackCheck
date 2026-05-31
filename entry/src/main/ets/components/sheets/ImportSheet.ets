@@ -8,6 +8,11 @@ import {
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
 import {
+  WHITE,
+  DISABLED_COLOR,
+  CHIP_BORDER
+} from '../../constants/Colors';
+import {
   filteredImportGears,
   importGearMetaText,
   categoryTabs
@@ -38,7 +43,7 @@ export struct ImportSheet {
             .width(160)
             .height(44)
             .fontSize(14)
-            .fontColor('#FFFFFF')
+            .fontColor(WHITE)
             .backgroundColor(PRIMARY_COLOR)
             .borderRadius(12)
             .onClick(() => {
@@ -54,10 +59,10 @@ export struct ImportSheet {
           ForEach(categoryTabs(this.categories), (category: string) => {
             Text(category)
               .fontSize(13)
-              .fontColor(this.importGearCategory === category ? '#FFFFFF' : '#666666')
+              .fontColor(this.importGearCategory === category ? WHITE : TEXT_SECONDARY)
               .padding({ left: 12, right: 12, top: 7, bottom: 7 })
               .backgroundColor(this.importGearCategory === category ? PRIMARY_COLOR : CARD_BG)
-              .border({ width: 1, color: this.importGearCategory === category ? PRIMARY_COLOR : '#E0E0E0' })
+              .border({ width: 1, color: this.importGearCategory === category ? PRIMARY_COLOR : CHIP_BORDER })
               .borderRadius(12)
               .margin({ right: 8, bottom: 8 })
               .onClick(() => {
@@ -103,8 +108,8 @@ export struct ImportSheet {
       Button('导入选中 (' + this.importGearIds.length.toString() + ')')
         .height(48)
         .fontSize(14)
-        .fontColor('#FFFFFF')
-        .backgroundColor(this.importGearIds.length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
+        .fontColor(WHITE)
+        .backgroundColor(this.importGearIds.length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')
         .enabled(this.importGearIds.length > 0)
         .onClick(() => {

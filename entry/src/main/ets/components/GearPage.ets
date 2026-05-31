@@ -9,6 +9,8 @@ import {
   ARROW_COLOR,
   CARD_BG,
   DANGER_COLOR,
+  DANGER_TINT,
+  DISABLED_COLOR,
   DIVIDER_COLOR,
   FONT_FEATURE_TNUM,
   GEAR_HEADER_COLLAPSED,
@@ -19,14 +21,29 @@ import {
   GEAR_SORT_TRIP_COUNT,
   GEAR_SORT_VALUE,
   GEAR_SORT_WEIGHT,
+  GLASS_BG,
+  GLASS_BG_LIGHT,
+  GLASS_BG_MEDIUM,
+  GROUP_HEADER_BG,
   LIGHT_PRIMARY_COLOR,
+  OVERLAY_DIM,
+  OVERLAY_MASK,
   PAGE_BG,
   PAGE_PADDING,
   PRIMARY_COLOR,
+  PRIMARY_SHADOW,
+  PRIMARY_STROKE_GHOST,
   PRIMARY_TINT_COLOR,
+  SHADOW_DEFAULT,
+  SHADOW_LIGHT,
+  SHADOW_MEDIUM,
+  SHADOW_SUBTLE,
   TEXT_MAIN,
   TEXT_SECONDARY,
-  TEXT_TERTIARY
+  TEXT_TERTIARY,
+  TRANSPARENT,
+  WHITE,
+  WHITE_SECONDARY
 } from '../constants/DesignTokens';
 import { getGroupColor } from '../utils/ColorUtils';
 
@@ -815,7 +832,7 @@ export struct GearPage {
         Column()
           .width('100%')
           .height('100%')
-          .backgroundColor('#66000000')
+          .backgroundColor(OVERLAY_MASK)
           .backdropBlur(20)
           .onClick(() => {
             this.cancelDrag();
@@ -880,8 +897,8 @@ export struct GearPage {
         Button('生成清单')
           .height(32)
           .fontSize(13)
-          .fontColor('#FFFFFF')
-          .backgroundColor(this.selectedMultiGearIds.length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
+          .fontColor(WHITE)
+          .backgroundColor(this.selectedMultiGearIds.length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
           .borderRadius(16)
           .padding({ left: 14, right: 14 })
           .enabled(this.selectedMultiGearIds.length > 0)
@@ -892,7 +909,7 @@ export struct GearPage {
           .height(32)
           .fontSize(13)
           .fontColor(TEXT_SECONDARY)
-          .backgroundColor('#00000000')
+          .backgroundColor(TRANSPARENT)
           .padding({ left: 10, right: 10 })
           .onClick(() => {
             this.onCancelGearMultiSelect();
@@ -917,9 +934,9 @@ export struct GearPage {
               'M 0 180 C 35 172 70 182 105 175 C 140 168 175 178 210 170 C 245 162 280 174 315 166 C 340 160 355 168 360 165 ' +
               'M 0 240 C 45 232 90 244 135 235 C 180 226 225 238 270 230 C 315 222 345 234 360 228'
             )
-            .stroke('#0A2D7D46')
+            .stroke(PRIMARY_STROKE_GHOST)
             .strokeWidth(1)
-            .fill('#00000000')
+            .fill(TRANSPARENT)
             .strokeLineCap(LineCapStyle.Round)
             .antiAlias(true)
         }
@@ -963,7 +980,7 @@ export struct GearPage {
                   .fontSize(15)
                   .fontColor(TEXT_MAIN)
                   .placeholderColor(TEXT_TERTIARY)
-                  .backgroundColor('#00000000')
+                  .backgroundColor(TRANSPARENT)
                   .padding({ left: 0, right: 0 })
                   .layoutWeight(1)
                   .defaultFocus(true)
@@ -996,7 +1013,7 @@ export struct GearPage {
               colorMode: ThemeColorMode.SYSTEM,
               adaptiveColor: AdaptiveColor.DEFAULT
             })
-            .backgroundColor(this.searchExpanded ? '#B0FFFFFF' : PRIMARY_TINT_COLOR)
+            .backgroundColor(this.searchExpanded ? GLASS_BG : PRIMARY_TINT_COLOR)
             .animation({ duration: 350, curve: curves.springMotion(0.35, 0.82) })
             .onClick(() => {
               if (!this.searchExpanded) {
@@ -1093,8 +1110,8 @@ export struct GearPage {
       Button('移动分组')
         .height(32)
         .fontSize(12)
-        .fontColor(this.selectedMultiGearIds.length === 0 ? '#CCCCCC' : TEXT_MAIN)
-        .backgroundColor(this.selectedMultiGearIds.length === 0 ? '#F5F5F5' : '#F0F0F0')
+        .fontColor(this.selectedMultiGearIds.length === 0 ? DISABLED_COLOR : TEXT_MAIN)
+        .backgroundColor(this.selectedMultiGearIds.length === 0 ? GROUP_HEADER_BG : DIVIDER_COLOR)
         .enabled(this.selectedMultiGearIds.length > 0)
         .onClick(() => {
           this.showMoveGroupSheet = true;
@@ -1107,8 +1124,8 @@ export struct GearPage {
       Button('删除')
         .height(32)
         .fontSize(12)
-        .fontColor(this.selectedMultiGearIds.length === 0 ? '#CCCCCC' : DANGER_COLOR)
-        .backgroundColor(this.selectedMultiGearIds.length === 0 ? '#F5F5F5' : '#FFF0F0')
+        .fontColor(this.selectedMultiGearIds.length === 0 ? DISABLED_COLOR : DANGER_COLOR)
+        .backgroundColor(this.selectedMultiGearIds.length === 0 ? GROUP_HEADER_BG : DANGER_TINT)
         .enabled(this.selectedMultiGearIds.length > 0)
         .onClick(() => {
           this.onBatchDeleteGears(this.selectedMultiGearIds);
@@ -1116,8 +1133,8 @@ export struct GearPage {
       Button('生成清单')
         .height(32)
         .fontSize(12)
-        .fontColor('#FFFFFF')
-        .backgroundColor(this.selectedMultiGearIds.length === 0 ? '#CCCCCC' : PRIMARY_COLOR)
+        .fontColor(WHITE)
+        .backgroundColor(this.selectedMultiGearIds.length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .enabled(this.selectedMultiGearIds.length > 0)
         .onClick(() => {
           this.onOpenGenerateTripSheet();
@@ -1126,7 +1143,7 @@ export struct GearPage {
         .height(32)
         .fontSize(12)
         .fontColor(TEXT_TERTIARY)
-        .backgroundColor('#00000000')
+        .backgroundColor(TRANSPARENT)
         .onClick(() => {
           this.onCancelGearMultiSelect();
         })
@@ -1161,7 +1178,7 @@ export struct GearPage {
         .alignItems(VerticalAlign.Center)
         .padding({ left: 16, right: 16 })
         .borderRadius(12)
-        .backgroundColor('#F8F9FA')
+        .backgroundColor(PAGE_BG)
         .onClick(() => {
           this.onBatchMoveGroup(this.selectedMultiGearIds, group);
           this.showMoveGroupSheet = false;
@@ -1407,7 +1424,7 @@ export struct GearPage {
           Text('删除')
             .fontSize(14)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#FFFFFF')
+            .fontColor(WHITE)
         }
         .height(44)
         .padding({ left: 18, right: 18 })
@@ -1469,7 +1486,7 @@ export struct GearPage {
         }
         .width('100%')
         .padding({ left: 14, right: 14, top: 4, bottom: 4 })
-        .backgroundColor(this.pressedGearId === item.id ? '#F5F5F5' : CARD_BG)
+        .backgroundColor(this.pressedGearId === item.id ? GROUP_HEADER_BG : CARD_BG)
         .animation({ duration: 150, curve: Curve.EaseOut })
         .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
         .onTouch((event: TouchEvent) => {
@@ -1579,7 +1596,7 @@ export struct GearPage {
     .padding(20)
     .backgroundColor(CARD_BG)
     .borderRadius(20)
-    .shadow({ radius: 24, color: '#1A000000', offsetX: 0, offsetY: 8 })
+    .shadow({ radius: 24, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 8 })
   }
 
   @Builder
@@ -1656,7 +1673,7 @@ export struct GearPage {
     Row() {
       Text('删除')
         .fontSize(14)
-        .fontColor('#FFFFFF')
+        .fontColor(WHITE)
     }
     .height(56)
     .padding({ left: 18, right: 18 })
@@ -1678,14 +1695,14 @@ export struct GearPage {
     .width(50)
     .height(50)
     .borderRadius(25)
-    .backgroundColor('#B0FFFFFF')
+    .backgroundColor(GLASS_BG)
     .backgroundBlurStyle(BlurStyle.COMPONENT_REGULAR, {
       colorMode: ThemeColorMode.SYSTEM,
       adaptiveColor: AdaptiveColor.DEFAULT
     })
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .shadow({ radius: 16, color: '#1A2D7D46', offsetX: 0, offsetY: 6 })
+    .shadow({ radius: 16, color: PRIMARY_SHADOW, offsetX: 0, offsetY: 6 })
     .position({ x: this.fabX, y: this.fabY })
     .scale({ x: this.fabDragging ? 1.08 : 1, y: this.fabDragging ? 1.08 : 1 })
     .gesture(
@@ -1726,7 +1743,7 @@ export struct GearPage {
       }
         .width('100%')
         .height('100%')
-        .backgroundColor('#66000000')
+        .backgroundColor(OVERLAY_MASK)
         .backdropBlur(20)
         .onClick(() => {
           this.closeWeightEditor();
@@ -1797,7 +1814,7 @@ export struct GearPage {
           Button('确认')
             .height(44)
             .fontSize(14)
-            .fontColor('#FFFFFF')
+            .fontColor(WHITE)
             .backgroundColor(PRIMARY_COLOR)
             .borderRadius(12)
             .layoutWeight(1)
@@ -1811,7 +1828,7 @@ export struct GearPage {
       .padding({ left: 24, right: 24, top: 24, bottom: 24 })
       .backgroundColor(CARD_BG)
       .borderRadius(24)
-      .shadow({ radius: 24, color: '#14000000', offsetX: 0, offsetY: 8 })
+      .shadow({ radius: 24, color: SHADOW_LIGHT, offsetX: 0, offsetY: 8 })
     }
     .width('100%')
     .height('100%')
@@ -1827,7 +1844,7 @@ export struct GearPage {
       Button('添加装备')
         .height(44)
         .fontSize(14)
-        .fontColor('#FFFFFF')
+        .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .padding({ left: 24, right: 24 })
         .borderRadius(22)
@@ -1864,7 +1881,7 @@ export struct GearPage {
         .width(40)
         .height(4)
         .borderRadius(2)
-        .backgroundColor('#33000000')
+        .backgroundColor(OVERLAY_DIM)
         .margin({ top: 10, bottom: 6 })
 
       // 标题行
@@ -1891,17 +1908,17 @@ export struct GearPage {
           Column({ space: 4 }) {
             SymbolGlyph($r('sys.symbol.plus'))
               .fontSize(22)
-              .fontColor([this.dragOverTripId === '__new_trip__' ? '#FFFFFF' : PRIMARY_COLOR])
+              .fontColor([this.dragOverTripId === '__new_trip__' ? WHITE : PRIMARY_COLOR])
             Text('新建')
               .fontSize(11)
-              .fontColor(this.dragOverTripId === '__new_trip__' ? '#FFFFFF' : TEXT_SECONDARY)
+              .fontColor(this.dragOverTripId === '__new_trip__' ? WHITE : TEXT_SECONDARY)
           }
           .width(88)
           .height(68)
           .justifyContent(FlexAlign.Center)
           .alignItems(HorizontalAlign.Center)
           .borderRadius(12)
-          .backgroundColor(this.dragOverTripId === '__new_trip__' ? PRIMARY_COLOR : '#00000000')
+          .backgroundColor(this.dragOverTripId === '__new_trip__' ? PRIMARY_COLOR : TRANSPARENT)
           .border({
             width: 1.5,
             color: this.dragOverTripId === '__new_trip__' ? PRIMARY_COLOR : TEXT_TERTIARY,
@@ -1931,10 +1948,10 @@ export struct GearPage {
     .height(274)
     .alignItems(HorizontalAlign.Center)
     .padding({ bottom: 34 })
-    .backgroundColor('#E8FFFFFF')
+    .backgroundColor(GLASS_BG_MEDIUM)
     .backdropBlur(40)
     .borderRadius({ topLeft: 24, topRight: 24 })
-    .shadow({ radius: 20, color: '#1A000000', offsetX: 0, offsetY: -6 })
+    .shadow({ radius: 20, color: SHADOW_DEFAULT, offsetX: 0, offsetY: -6 })
     .position({ x: 0, y: this.showTripTray ? this.screenHeight - 274 : this.screenHeight })
     .animation({ duration: 350, curve: curves.springMotion(0.35, 0.8) })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
@@ -1946,12 +1963,12 @@ export struct GearPage {
       Text(trip.title)
         .fontSize(12)
         .fontWeight(FontWeight.Medium)
-        .fontColor(this.dragOverTripId === trip.id ? '#FFFFFF' : TEXT_MAIN)
+        .fontColor(this.dragOverTripId === trip.id ? WHITE : TEXT_MAIN)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       Text(trip.items.length.toString() + ' 件装备')
         .fontSize(10)
-        .fontColor(this.dragOverTripId === trip.id ? '#CCFFFFFF' : TEXT_TERTIARY)
+        .fontColor(this.dragOverTripId === trip.id ? WHITE_SECONDARY : TEXT_TERTIARY)
     }
     .width(88)
     .height(68)
@@ -1960,7 +1977,7 @@ export struct GearPage {
     .padding({ left: 10, right: 10 })
     .borderRadius(12)
     .backgroundColor(this.dragOverTripId === trip.id ? PRIMARY_COLOR : CARD_BG)
-    .shadow({ radius: this.dragOverTripId === trip.id ? 16 : 4, color: '#0A000000', offsetX: 0, offsetY: 2 })
+    .shadow({ radius: this.dragOverTripId === trip.id ? 16 : 4, color: SHADOW_SUBTLE, offsetX: 0, offsetY: 2 })
     .scale({
       x: this.tripCardScale(trip.id),
       y: this.tripCardScale(trip.id)
@@ -2036,7 +2053,7 @@ export struct GearPage {
         Text('×' + this.selectedMultiGearIds.length.toString())
           .fontSize(12)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#FFFFFF')
+          .fontColor(WHITE)
           .backgroundColor(PRIMARY_COLOR)
           .borderRadius(10)
           .padding({ left: 6, right: 6, top: 2, bottom: 2 })
@@ -2045,10 +2062,10 @@ export struct GearPage {
     .width(140)
     .height(44)
     .padding({ left: 12, right: 12 })
-    .backgroundColor('#EEFFFFFF')
+    .backgroundColor(GLASS_BG_LIGHT)
     .backdropBlur(20)
     .borderRadius(12)
-    .shadow({ radius: 20, color: '#28000000', offsetX: 0, offsetY: 6 })
+    .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetX: 0, offsetY: 6 })
     .rotate({ angle: -2 })
     .position({ x: this.dragX - 70, y: this.dragY - 56 })
     .animation({ duration: 0 })
@@ -2209,7 +2226,7 @@ export struct GearPage {
     .backgroundColor(CARD_BG)
     .borderRadius(12)
     .scale({ x: 1.02, y: 1.02 })
-    .shadow({ radius: 20, color: '#28000000', offsetX: 0, offsetY: 6 })
+    .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetX: 0, offsetY: 6 })
     .position({ x: 0, y: this.groupDragY - 14 })
     .animation({ duration: 0 })
     .zIndex(100)

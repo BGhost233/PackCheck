@@ -20,7 +20,10 @@ import {
   GEAR_SORT_VALUE,
   GEAR_SORT_WEIGHT,
   LIGHT_PRIMARY_COLOR,
+  PAGE_BG,
+  PAGE_BG_TRANSLUCENT,
   PRIMARY_COLOR,
+  PRIMARY_SHADOW_LIGHT,
   SHEET_EDIT_ITEM,
   SHEET_EDIT_TRIP,
   SHEET_GEAR,
@@ -1844,7 +1847,7 @@ struct Index {
           .barFloatingStyle({
             barBottomMargin: 28,
             gradientMask: {
-              maskColor: '#66F8F9FA',
+              maskColor: PAGE_BG_TRANSLUCENT,
               maskHeight: 72
             },
             systemMaterialEffect: {
@@ -1939,7 +1942,7 @@ struct Index {
       .navDestination(this.NavDestinationMap)
       .mode(NavigationMode.Stack)
       .hideTitleBar(true)
-      .backgroundColor('#F8F9FA')
+      .backgroundColor(PAGE_BG)
       .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
       // 覆盖层：独立于 Navigation 层级，始终在 NavDestination 之上
@@ -2107,7 +2110,7 @@ struct Index {
       .justifyContent(FlexAlign.Center)
       .backgroundColor(LIGHT_PRIMARY_COLOR)
       .borderRadius(24)
-      .shadow({ radius: 8, color: '#262D7D46', offsetX: 0, offsetY: 2 })
+      .shadow({ radius: 8, color: PRIMARY_SHADOW_LIGHT, offsetX: 0, offsetY: 2 })
       .transition({ type: TransitionType.Insert, translate: { y: -20 }, scale: { x: PANEL_SCALE_START, y: PANEL_SCALE_START }, opacity: 0 })
     }
     .width('100%')

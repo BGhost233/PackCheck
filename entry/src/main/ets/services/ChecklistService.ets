@@ -1,4 +1,5 @@
 import { ChecklistItem, GearItem, makeId, TripChecklist } from '../models/PackModels';
+import { PRIMARY_COLOR, PROGRESS_END_COLOR, PROGRESS_INACTIVE } from '../constants/Colors';
 import { gearById, numberOrZero } from './GearService';
 
 /**
@@ -177,19 +178,19 @@ export function checklistCheckedWeight(checklist: TripChecklist, gears: GearItem
 
 export function progressStartColor(percent: number): string {
   if (percent < 30) {
-    return '#90A4AE';
+    return PROGRESS_INACTIVE;
   }
-  return '#2D7D46';
+  return PRIMARY_COLOR;
 }
 
 export function progressEndColor(percent: number): string {
   if (percent < 30) {
-    return '#90A4AE';
+    return PROGRESS_INACTIVE;
   }
   if (percent < 60) {
-    return '#4CAF50';
+    return PROGRESS_END_COLOR;
   }
-  return '#4CAF50';
+  return PROGRESS_END_COLOR;
 }
 
 export function checklistGroups(checklist: TripChecklist | undefined): string[] {
