@@ -1513,47 +1513,47 @@ export struct GearPage {
             this.pressedGearId = '';
           }
         })
-        .priorityGesture(
-          PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
-            .onActionUpdate((event: GestureEvent) => {
-              const offsetX = event.offsetX;
-              if (this.swipedGearId === item.id) {
-                const newOffset = Math.min(0, Math.max(-160, -80 + offsetX));
-                this.swipeOffsetX = newOffset;
-              } else {
-                const newOffset = Math.min(0, Math.max(-100, offsetX));
-                this.swipeOffsetX = newOffset;
-                if (newOffset < -5) {
-                  this.swipedGearId = item.id;
-                }
-              }
-            })
-            .onActionEnd((event: GestureEvent) => {
-              if (this.swipeOffsetX < -40) {
-                this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
-                  this.swipeOffsetX = -80;
-                });
-              } else {
-                this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
-                  this.swipedGearId = '';
-                  this.swipeOffsetX = 0;
-                });
-              }
-            })
-            .onActionCancel(() => {
-              this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
-                if (this.swipeOffsetX < -40) {
-                  this.swipeOffsetX = -80;
-                } else {
-                  this.swipedGearId = '';
-                  this.swipeOffsetX = 0;
-                }
-              });
-            })
-        )
       }
       .width('100%')
       .clip(true)
+      .priorityGesture(
+        PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
+          .onActionUpdate((event: GestureEvent) => {
+            const offsetX = event.offsetX;
+            if (this.swipedGearId === item.id) {
+              const newOffset = Math.min(0, Math.max(-160, -80 + offsetX));
+              this.swipeOffsetX = newOffset;
+            } else {
+              const newOffset = Math.min(0, Math.max(-100, offsetX));
+              this.swipeOffsetX = newOffset;
+              if (newOffset < -5) {
+                this.swipedGearId = item.id;
+              }
+            }
+          })
+          .onActionEnd((event: GestureEvent) => {
+            if (this.swipeOffsetX < -40) {
+              this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+                this.swipeOffsetX = -80;
+              });
+            } else {
+              this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+                this.swipedGearId = '';
+                this.swipeOffsetX = 0;
+              });
+            }
+          })
+          .onActionCancel(() => {
+            this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+              if (this.swipeOffsetX < -40) {
+                this.swipeOffsetX = -80;
+              } else {
+                this.swipedGearId = '';
+                this.swipeOffsetX = 0;
+              }
+            });
+          })
+      )
       .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
         preview: this.GearPreviewCard(item),
         previewAnimationOptions: { scale: [0.92, 1.05] },
