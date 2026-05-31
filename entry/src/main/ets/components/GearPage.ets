@@ -193,14 +193,15 @@ export struct GearPage {
     this.dragMode = true;
     this.dragX = startX;
     this.dragY = startY;
+    this.onDragModeChange(true);
     // 触觉确认
     try {
       vibrator.startVibration({ type: 'time', duration: 30 }, { usage: 'touch' });
     } catch (e) { /* 静默 */ }
     // 弹出托盘 + 背景模糊
     this.getUIContext().animateTo({
-      duration: 350,
-      curve: curves.springMotion(0.35, 0.8)
+      duration: 400,
+      curve: curves.springMotion(0.38, 0.82)
     }, () => {
       this.showTripTray = true;
     });
@@ -290,6 +291,7 @@ export struct GearPage {
       }
     }
     // 退出拖拽态
+    this.onDragModeChange(false);
     this.getUIContext().animateTo({
       duration: 300,
       curve: curves.springMotion(0.35, 0.8)
@@ -302,6 +304,7 @@ export struct GearPage {
 
   private cancelDrag(): void {
     this.stopTrayAutoScroll();
+    this.onDragModeChange(false);
     this.getUIContext().animateTo({
       duration: 300,
       curve: curves.springMotion(0.35, 0.8)
@@ -328,6 +331,7 @@ export struct GearPage {
   onBatchMoveGroup: (ids: string[], targetGroup: string) => void = (ids: string[], targetGroup: string): void => {};
   onAddGearsToTrip: (gearIds: string[], tripId: string) => void = (gearIds: string[], tripId: string): void => {};
   onAddGearsToNewTrip: (gearIds: string[]) => void = (gearIds: string[]): void => {};
+  onDragModeChange: (isDragging: boolean) => void = (isDragging: boolean): void => {};
 
   private numberOrZero(value: number | undefined): number {
     return value === undefined ? 0 : value;
@@ -821,8 +825,14 @@ export struct GearPage {
             this.cancelDrag();
           })
 
-        // 底部行程托盘
-        this.TripDropTray()
+        // 底部行程托盘（贴底定位）
+        Column() {
+          this.TripDropTray()
+        }
+        .width('100%')
+        .height('100%')
+        .justifyContent(FlexAlign.End)
+        .hitTestBehavior(HitTestMode.Transparent)
 
         // 浮动装备堆
         this.DragGearStack()
@@ -1400,8 +1410,6 @@ export struct GearPage {
       )
     } else {
       // 普通模式：紧凑行 + 左滑删除
-      // 注意：bindContextMenu 的 preview 会参与 Stack 布局测量导致高度异常，
-      // 因此将 bindContextMenu 移到外层 Column 上，Stack 仅负责滑动删除层叠。
       Column() {
         Stack() {
           // 底层：删除按钮（始终渲染，通过 opacity + scale 做弹性出场）
@@ -1542,7 +1550,7 @@ export struct GearPage {
       }
       .width('100%')
       .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
-        preview: this.GearPreviewCard(item),
+        preview: MenuPreviewMode.IMAGE,
         previewAnimationOptions: { scale: [0.92, 1.05] },
         transition: TransitionEffect.asymmetric(
           TransitionEffect.scale({ x: 0.9, y: 0.9 })
@@ -1558,62 +1566,6 @@ export struct GearPage {
     }
   }
 
-  @Builder
-  private GearPreviewCard(item: GearItem) {
-    Column({ space: 12 }) {
-      Row({ space: 10 }) {
-        Row()
-          .width(4)
-          .height(28)
-          .borderRadius(2)
-          .backgroundColor(getGroupColor(item.category))
-        Text(item.name)
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      Column({ space: 8 }) {
-        this.PreviewLine('分组', item.category)
-        this.PreviewLine('重量', item.weight === undefined ? '未填写' : item.weight.toString() + 'g')
-        this.PreviewLine('价格', item.price === undefined ? '未填写' : '¥' + item.price.toString())
-        this.PreviewLine('出行', this.gearTripCount(item) > 0 ? '×' + this.gearTripCount(item).toString() : '未出行')
-        if (item.note !== undefined && item.note.length > 0) {
-          this.PreviewLine('备注', item.note)
-        }
-        this.PreviewLine('添加', this.formatDateText(item.createdAt))
-      }
-      .width('100%')
-    }
-    .width('72%')
-    .constraintSize({ maxWidth: 320, minWidth: 240 })
-    .padding(20)
-    .backgroundColor(CARD_BG)
-    .borderRadius(20)
-    .shadow({ radius: 24, color: '#1A000000', offsetX: 0, offsetY: 8 })
-  }
-
-  @Builder
-  private PreviewLine(label: string, value: string) {
-    Row() {
-      Text(label)
-        .fontSize(13)
-        .fontColor(TEXT_TERTIARY)
-        .width(40)
-      Text(value)
-        .fontSize(13)
-        .fontColor(TEXT_MAIN)
-        .layoutWeight(1)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('100%')
-    .alignItems(VerticalAlign.Top)
-  }
 
   @Builder
   private GearContextMenu(item: GearItem) {
@@ -1880,7 +1832,7 @@ export struct GearPage {
         .height(4)
         .borderRadius(2)
         .backgroundColor('#33000000')
-        .margin({ top: 10, bottom: 6 })
+        .margin({ top: 12, bottom: 8 })
 
       // 标题行
       Row() {
@@ -1893,7 +1845,7 @@ export struct GearPage {
           .fontColor(TEXT_TERTIARY)
       }
       .width('100%')
-      .padding({ left: 20, right: 20, top: 4, bottom: 12 })
+      .padding({ left: 20, right: 20, top: 2, bottom: 14 })
 
       // 横向行程卡片列表
       Scroll(this.tripTrayScroller) {
@@ -1943,15 +1895,15 @@ export struct GearPage {
       .height(82)
     }
     .width('100%')
-    .height(274)
     .alignItems(HorizontalAlign.Center)
-    .padding({ bottom: 34 })
+    .padding({ bottom: 20 })
     .backgroundColor('#E8FFFFFF')
     .backdropBlur(40)
     .borderRadius({ topLeft: 24, topRight: 24 })
     .shadow({ radius: 20, color: '#1A000000', offsetX: 0, offsetY: -6 })
-    .position({ x: 0, y: this.showTripTray ? this.screenHeight - 274 : this.screenHeight })
-    .animation({ duration: 350, curve: curves.springMotion(0.35, 0.8) })
+    .translate({ y: this.showTripTray ? 0 : 300 })
+    .opacity(this.showTripTray ? 1 : 0)
+    .animation({ duration: 400, curve: curves.springMotion(0.38, 0.82) })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
 
