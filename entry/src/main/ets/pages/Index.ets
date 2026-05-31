@@ -153,9 +153,42 @@ struct Index {
         this.gearCategory = this.categories[0];
       }
       this.tempItemGroup = '其他';
+      // 资产事件历史回填
+      await this.backfillAssetEvents();
     } catch (error) {
       this.errorText = '数据加载失败';
     }
+  }
+
+  private async backfillAssetEvents(): Promise<void> {
+    const existingEvents = await this.store.getAssetEvents();
+    if (existingEvents.length > 0 || this.gears.length === 0) {
+      return; // 已有事件或无装备，无需回填
+    }
+    // 按 createdAt 升序排列，逐条合成历史事件
+    const sorted: GearItem[] = [];
+    for (let i = 0; i < this.gears.length; i++) {
+      sorted.push(this.gears[i]);
+    }
+    sorted.sort((a: GearItem, b: GearItem) => a.createdAt - b.createdAt);
+
+    const events: AssetEvent[] = [];
+    let runningValue = 0;
+    for (let i = 0; i < sorted.length; i++) {
+      const gear = sorted[i];
+      const price = gear.price !== undefined ? gear.price : 0;
+      runningValue += price;
+      const evt: AssetEvent = {
+        timestamp: gear.createdAt,
+        totalValue: runningValue,
+        totalCount: i + 1,
+        event: 'add',
+        gearName: gear.name,
+        gearPrice: gear.price
+      };
+      events.push(evt);
+    }
+    await this.store.saveAssetEvents(events);
   }
 
   private applyChecklistState(nextChecklists: TripChecklist[], animated: boolean = false): void {
