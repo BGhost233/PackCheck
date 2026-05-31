@@ -17,8 +17,7 @@ import {
   SPRING_GENERAL,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
-  STAGGER_OFFSET_Y,
-  DURATION_NORMAL
+  STAGGER_OFFSET_Y
 } from '../constants/AnimationTokens';
 
 @Component
@@ -125,7 +124,7 @@ export struct ReviewPage {
     .backgroundColor(PAGE_BG)
     .opacity(this.pageEntered ? 1 : 0)
     .translate({ y: this.pageEntered ? 0 : STAGGER_OFFSET_Y })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
+    .animation({ curve: SPRING_GENERAL() })
   }
 
   @Builder

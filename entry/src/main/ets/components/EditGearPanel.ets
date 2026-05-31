@@ -16,7 +16,6 @@ import {
   SHADOW_LIGHT
 } from '../constants/Colors';
 import {
-  DURATION_SLOW,
   SPRING_PANEL_ENTER,
   SPRING_PANEL_EXIT,
   SPRING_PRESS,

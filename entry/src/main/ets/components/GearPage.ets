@@ -790,13 +790,13 @@ export struct GearPage {
                 this.EmptyText('未找到相关装备');
               }
             } else {
-              ForEach(this.displayGearGroups(), (group: string, index?: number) => {
+              ForEach(this.displayGearGroups(), (group: string, index: number) => {
                 ListItem() {
                   this.GearGroupCard(group);
                 }
                 .opacity(this.listEntered ? 1 : 0)
                 .translate({ y: this.listEntered ? 0 : STAGGER_OFFSET_Y })
-                .animation({ duration: DURATION_NORMAL + staggerDelay(index ?? 0), curve: SPRING_GENERAL() })
+                .animation({ delay: staggerDelay(index), curve: SPRING_GENERAL() })
                 .transition(TransitionEffect.OPACITY.combine(
                   TransitionEffect.translate({ y: 8 })
                 ).animation({ duration: DURATION_SLOW, curve: SPRING_GENERAL() }))
