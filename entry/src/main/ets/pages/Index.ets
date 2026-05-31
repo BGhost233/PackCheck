@@ -327,7 +327,7 @@ struct Index {
     if (latest === undefined) {
       return '';
     }
-    return this.checklistMetaText(latest);
+    return calcChecklistMetaText(latest);
   }
 
   private latestChecklistProgress(): number {
@@ -335,7 +335,7 @@ struct Index {
     if (latest === undefined) {
       return 0;
     }
-    return this.progressPercent(latest);
+    return progressPercent(latest);
   }
 
   private openLatestChecklist(): void {
@@ -382,7 +382,7 @@ struct Index {
     if (checklist === undefined) {
       return 0;
     }
-    return this.progressPercent(checklist);
+    return progressPercent(checklist);
   }
 
   private currentChecklistProgressValue(): number {
@@ -390,7 +390,7 @@ struct Index {
     if (checklist === undefined) {
       return 0;
     }
-    return this.progressValue(checklist);
+    return progressValue(checklist);
   }
 
   private currentChecklistProgressTotal(): number {
@@ -398,7 +398,7 @@ struct Index {
     if (checklist === undefined) {
       return 1;
     }
-    return this.progressTotal(checklist);
+    return progressTotal(checklist);
   }
 
   private currentChecklistProgressText(): string {
@@ -406,7 +406,7 @@ struct Index {
     if (checklist === undefined) {
       return '0/0';
     }
-    return this.progressText(checklist);
+    return progressText(checklist);
   }
 
   private currentChecklistCountdownText(): string {
@@ -414,7 +414,7 @@ struct Index {
     if (checklist === undefined) {
       return '';
     }
-    return this.countdownText(checklist);
+    return countdownText(checklist);
   }
 
   private currentChecklistCheckedWeight(): number {
@@ -437,29 +437,17 @@ struct Index {
     return filterGears(this.gears, this.gearSearchKeyword, normalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
   }
 
-  private normalizeGearCategories(categories: string[]): string[] {
-    return normalizeGearCategories(categories);
-  }
-
   private openGearFilterPanel(): void {
     this.gearFilterPanelExpanded = true;
   }
 
   private closeGearFilterPanel(categories: string[]): void {
-    this.selectedGearCategories = this.normalizeGearCategories(categories);
+    this.selectedGearCategories = normalizeGearCategories(categories);
     this.gearFilterPanelExpanded = false;
   }
 
   private sortedGears(items: GearItem[]): GearItem[] {
     return sortedGears(items, this.gearSortMode);
-  }
-
-  private numberOrZero(value: number | undefined): number {
-    return numberOrZero(value);
-  }
-
-  private gearValueRatio(item: GearItem): number {
-    return gearValueRatio(item);
   }
 
   private filteredGearGroups(): string[] {
@@ -472,10 +460,6 @@ struct Index {
 
   private gearSortLabel(): string {
     return gearSortLabel(this.gearSortMode);
-  }
-
-  private gearTripCount(item: GearItem): number {
-    return gearTripCount(item);
   }
 
   private gearGroupCount(group: string): number {
@@ -508,10 +492,6 @@ struct Index {
 
   private mostFrequentGearText(): string {
     return mostFrequentGearText(this.gears);
-  }
-
-  private formatKg(weightGram: number): string {
-    return formatKg(weightGram);
   }
 
   private categoryTabs(): string[] {
@@ -558,36 +538,8 @@ struct Index {
     this.collapsedGroups = nextGroups;
   }
 
-  private checkedCount(checklist: TripChecklist): number {
-    return checkedCount(checklist);
-  }
-
-  private progressPercent(checklist: TripChecklist): number {
-    return progressPercent(checklist);
-  }
-
-  private progressValue(checklist: TripChecklist): number {
-    return progressValue(checklist);
-  }
-
-  private progressTotal(checklist: TripChecklist): number {
-    return progressTotal(checklist);
-  }
-
-  private progressText(checklist: TripChecklist): string {
-    return progressText(checklist);
-  }
-
-  private checklistMetaText(checklist: TripChecklist): string {
-    return calcChecklistMetaText(checklist);
-  }
-
   private homeStatusText(): string {
     return homeStatusText(this.checklists);
-  }
-
-  private isChecklistDone(checklist: TripChecklist): boolean {
-    return isChecklistDone(checklist);
   }
 
   private isCurrentChecklistDone(): boolean {
@@ -602,36 +554,12 @@ struct Index {
     return activeChecklistCount(this.checklists);
   }
 
-  private parseTripDateAt(text: string): number | undefined {
-    return parseTripDateAt(text);
-  }
-
-  private startOfDay(date: Date): number {
-    return startOfDay(date);
-  }
-
-  private checklistDateAt(checklist: TripChecklist): number | undefined {
-    return checklistDateAt(checklist);
-  }
-
-  private countdownText(checklist: TripChecklist): string {
-    return countdownText(checklist);
-  }
-
   private checklistTotalWeight(checklist: TripChecklist): number {
     return checklistTotalWeight(checklist, this.gears);
   }
 
   private checklistCheckedWeight(checklist: TripChecklist): number {
     return checklistCheckedWeight(checklist, this.gears);
-  }
-
-  private progressStartColor(percent: number): string {
-    return progressStartColor(percent);
-  }
-
-  private progressEndColor(percent: number): string {
-    return progressEndColor(percent);
   }
 
   private gearById(id: string): GearItem | undefined {
@@ -644,10 +572,6 @@ struct Index {
 
   private checklistItemPrice(item: ChecklistItem): number | undefined {
     return checklistItemPrice(item, this.gears);
-  }
-
-  private numberInputText(value: number | undefined): string {
-    return numberInputText(value);
   }
 
   private latestChecklistHomeSubtitle(): string {
@@ -1000,7 +924,7 @@ struct Index {
           weight: gear.weight,
           price: gear.price,
           note: gear.note,
-          tripCount: this.gearTripCount(gear) + 1,
+          tripCount: gearTripCount(gear) + 1,
           createdAt: gear.createdAt
         };
         nextGears.push(updated);
@@ -1077,7 +1001,7 @@ struct Index {
       id: makeId('trip'),
       title: title,
       date: this.tripDate.trim(),
-      dateAt: this.parseTripDateAt(this.tripDate),
+      dateAt: parseTripDateAt(this.tripDate),
       items: [],
       createdAt: Date.now()
     };
@@ -1232,8 +1156,8 @@ struct Index {
     this.editingItemId = item.id;
     this.editingItemName = item.name;
     this.editingItemGroup = item.group;
-    this.editingItemWeight = this.numberInputText(this.checklistItemWeight(item));
-    this.editingItemPrice = this.numberInputText(this.checklistItemPrice(item));
+    this.editingItemWeight = numberInputText(this.checklistItemWeight(item));
+    this.editingItemPrice = numberInputText(this.checklistItemPrice(item));
     this.errorText = '';
     this.showEditItemPanel = true;
   }
@@ -1307,7 +1231,7 @@ struct Index {
       this.errorText = '行程名称不能为空';
       return;
     }
-    await this.updateChecklistInfo(checklist.id, title, this.tripDate.trim(), this.parseTripDateAt(this.tripDate));
+    await this.updateChecklistInfo(checklist.id, title, this.tripDate.trim(), parseTripDateAt(this.tripDate));
     this.closeSheet();
   }
 
@@ -1343,18 +1267,11 @@ struct Index {
       lunar: false,
       showTime: false,
       onDateAccept: (date: Date) => {
-        this.updateChecklistInfo(checklist.id, checklist.title, this.formatTripDate(date), this.startOfDay(date));
+        this.updateChecklistInfo(checklist.id, checklist.title, formatTripDate(date), startOfDay(date));
       }
     });
   }
 
-  private formatTripDate(date: Date): string {
-    return formatTripDate(date);
-  }
-
-  private formatDateText(timestamp: number): string {
-    return formatDateText(timestamp);
-  }
 
   private async addTempItem(): Promise<void> {
     const checklist = this.currentChecklist();
@@ -1628,8 +1545,8 @@ struct Index {
     if (checklist === undefined) {
       return '';
     }
-    return '已带 ' + this.checkedCount(checklist).toString() + ' 件，未带 ' +
-      (checklist.items.length - this.checkedCount(checklist)).toString() + ' 件';
+    return '已带 ' + checkedCount(checklist).toString() + ' 件，未带 ' +
+      (checklist.items.length - checkedCount(checklist)).toString() + ' 件';
   }
 
   private async markReviewItem(checked: boolean): Promise<void> {
@@ -1654,7 +1571,7 @@ struct Index {
     if (checklist === undefined) {
       return;
     }
-    const beforeCheckedCount = this.checkedCount(checklist);
+    const beforeCheckedCount = checkedCount(checklist);
     const beforeTotal = checklist.items.length;
     const nextChecklists: TripChecklist[] = [];
     let updatedCurrent: TripChecklist | undefined = undefined;
@@ -1696,7 +1613,7 @@ struct Index {
     this.applyChecklistState(nextChecklists, true);
     await this.store.saveChecklists(nextChecklists);
     if (updatedCurrent !== undefined && beforeTotal > 0 &&
-      beforeCheckedCount === beforeTotal - 1 && this.checkedCount(updatedCurrent) === beforeTotal) {
+      beforeCheckedCount === beforeTotal - 1 && checkedCount(updatedCurrent) === beforeTotal) {
       this.showAchievement();
     }
   }
@@ -1706,7 +1623,7 @@ struct Index {
     if (checklist === undefined) {
       return;
     }
-    const beforeCheckedCount = this.checkedCount(checklist);
+    const beforeCheckedCount = checkedCount(checklist);
     const beforeTotal = checklist.items.length;
     const nextChecklists: TripChecklist[] = [];
     let updatedCurrent: TripChecklist | undefined = undefined;
@@ -1754,7 +1671,7 @@ struct Index {
       }
     }, 600);
     if (updatedCurrent !== undefined && beforeTotal > 0 &&
-      beforeCheckedCount === beforeTotal - 1 && this.checkedCount(updatedCurrent) === beforeTotal) {
+      beforeCheckedCount === beforeTotal - 1 && checkedCount(updatedCurrent) === beforeTotal) {
       this.showAchievement();
     }
   }
