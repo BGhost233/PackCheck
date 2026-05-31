@@ -1499,6 +1499,7 @@ export struct GearPage {
         .backgroundColor(this.pressedGearId === item.id ? GROUP_HEADER_BG : CARD_BG)
         .animation({ duration: DURATION_PRESS, curve: CURVE_DECELERATE })
         .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
+        .animation({ duration: DURATION_NONE })
         .onTouch((event: TouchEvent) => {
           if (event.type === TouchType.Down) {
             this.pressedGearId = item.id;
