@@ -1429,34 +1429,30 @@ export struct GearPage {
       // 普通模式：左滑删除
       // 物理模型：上层内容被手指实时推开，露出底层删除区域
       Stack() {
-        // 底层：删除操作区（条件渲染 + transition 出场动效）
+        // 底层：删除操作区（绝对定位右侧，高度由 Stack 实际高度决定）
         if (this.swipedGearId === item.id) {
-          Row() {
-            Blank()
-            Column({ space: 2 }) {
-              SymbolGlyph($r('sys.symbol.trash'))
-                .fontSize(16)
-                .fontColor([WHITE])
-              Text('删除')
-                .fontSize(11)
-                .fontColor(WHITE)
-            }
-            .width(80)
-            .justifyContent(FlexAlign.Center)
-            .alignItems(HorizontalAlign.Center)
-            .onClick(() => {
-              this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
-                this.swipedGearId = '';
-                this.swipeOffsetX = 0;
-              });
-              this.onConfirmDeleteGear(item);
-            })
+          Column({ space: 2 }) {
+            SymbolGlyph($r('sys.symbol.trash'))
+              .fontSize(16)
+              .fontColor([WHITE])
+            Text('删除')
+              .fontSize(11)
+              .fontColor(WHITE)
           }
-          .width('100%')
+          .width(80)
           .height('100%')
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
           .backgroundColor(DANGER_COLOR)
           .borderRadius({ topRight: 12, bottomRight: 12 })
-          .alignItems(VerticalAlign.Center)
+          .position({ top: 0, right: 0 })
+          .onClick(() => {
+            this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+              this.swipedGearId = '';
+              this.swipeOffsetX = 0;
+            });
+            this.onConfirmDeleteGear(item);
+          })
           .transition(
             TransitionEffect.asymmetric(
               TransitionEffect.OPACITY
