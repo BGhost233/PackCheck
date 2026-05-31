@@ -46,8 +46,65 @@ import {
 } from '../constants/AnimationTokens';
 import { AssetEvent, AssetTotals, ChecklistItem, DEFAULT_CATEGORIES, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
-import { GearCalc } from '../services/GearService';
-import { CheckCalc } from '../services/ChecklistService';
+import {
+  filterGears,
+  normalizeGearCategories,
+  sortedGears,
+  numberOrZero,
+  gearValueRatio,
+  filteredGearGroups,
+  filteredGearsByGroup,
+  gearSortLabel,
+  gearTripCount,
+  gearStatsText,
+  totalGearWeight,
+  totalGearPrice,
+  averageGearValueRatio,
+  heaviestGearText,
+  mostExpensiveGearText,
+  mostFrequentGearText,
+  formatKg,
+  categoryTabs,
+  presetCategories,
+  gearById,
+  uniqueGearIds,
+  filteredImportGears,
+  importGearMetaText
+} from '../services/GearService';
+import {
+  startOfDay,
+  checklistDateAt,
+  checklistGroups,
+  checklistItemsByGroup,
+  isGroupDone,
+  checkedCount,
+  progressPercent,
+  progressValue,
+  progressTotal,
+  progressText,
+  checklistMetaText as calcChecklistMetaText,
+  homeStatusText,
+  isChecklistDone,
+  activeChecklistCount,
+  parseTripDateAt,
+  countdownText,
+  checklistTotalWeight,
+  checklistCheckedWeight,
+  progressStartColor,
+  progressEndColor,
+  checklistItemWeight,
+  checklistItemPrice,
+  numberInputText,
+  latestChecklistHomeSubtitle,
+  checklistHasGear,
+  countableGearIds,
+  isChecklistItemInGear,
+  hasGearMarker,
+  matchingGearForChecklistItem,
+  formatTripDate,
+  formatDateText,
+  addItemsToChecklist
+} from '../services/ChecklistService';
 
 @Entry
 @Component
@@ -222,13 +279,13 @@ struct Index {
     if (this.checklists.length === 0) {
       return undefined;
     }
-    const today = CheckCalc.startOfDay(new Date());
+    const today = startOfDay(new Date());
     // 找最近的未来行程（dateAt >= 今天0点），按 dateAt 升序取第一个
     let nearestFuture: TripChecklist | undefined = undefined;
     for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = CheckCalc.checklistDateAt(this.checklists[i]);
+      const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt >= today) {
-        if (nearestFuture === undefined || dateAt < CheckCalc.checklistDateAt(nearestFuture)!) {
+        if (nearestFuture === undefined || dateAt < checklistDateAt(nearestFuture)!) {
           nearestFuture = this.checklists[i];
         }
       }
@@ -239,9 +296,9 @@ struct Index {
     // 无未来行程，找最近的历史行程（dateAt < 今天0点），按 dateAt 降序取第一个
     let latestPast: TripChecklist | undefined = undefined;
     for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = CheckCalc.checklistDateAt(this.checklists[i]);
+      const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt < today) {
-        if (latestPast === undefined || dateAt > CheckCalc.checklistDateAt(latestPast)!) {
+        if (latestPast === undefined || dateAt > checklistDateAt(latestPast)!) {
           latestPast = this.checklists[i];
         }
       }
@@ -377,11 +434,11 @@ struct Index {
   }
 
   private filteredGears(): GearItem[] {
-    return GearCalc.filterGears(this.gears, this.gearSearchKeyword, GearCalc.normalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
+    return filterGears(this.gears, this.gearSearchKeyword, normalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
   }
 
   private normalizeGearCategories(categories: string[]): string[] {
-    return GearCalc.normalizeGearCategories(categories);
+    return normalizeGearCategories(categories);
   }
 
   private openGearFilterPanel(): void {
@@ -394,31 +451,31 @@ struct Index {
   }
 
   private sortedGears(items: GearItem[]): GearItem[] {
-    return GearCalc.sortedGears(items, this.gearSortMode);
+    return sortedGears(items, this.gearSortMode);
   }
 
   private numberOrZero(value: number | undefined): number {
-    return GearCalc.numberOrZero(value);
+    return numberOrZero(value);
   }
 
   private gearValueRatio(item: GearItem): number {
-    return GearCalc.gearValueRatio(item);
+    return gearValueRatio(item);
   }
 
   private filteredGearGroups(): string[] {
-    return GearCalc.filteredGearGroups(this.gears, this.gearSearchKeyword, GearCalc.normalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
+    return filteredGearGroups(this.gears, this.gearSearchKeyword, normalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
   }
 
   private filteredGearsByGroup(group: string): GearItem[] {
-    return GearCalc.filteredGearsByGroup(this.gears, this.gearSearchKeyword, GearCalc.normalizeGearCategories(this.selectedGearCategories), this.gearSortMode, group);
+    return filteredGearsByGroup(this.gears, this.gearSearchKeyword, normalizeGearCategories(this.selectedGearCategories), this.gearSortMode, group);
   }
 
   private gearSortLabel(): string {
-    return GearCalc.gearSortLabel(this.gearSortMode);
+    return gearSortLabel(this.gearSortMode);
   }
 
   private gearTripCount(item: GearItem): number {
-    return GearCalc.gearTripCount(item);
+    return gearTripCount(item);
   }
 
   private gearGroupCount(group: string): number {
@@ -426,51 +483,51 @@ struct Index {
   }
 
   private gearStatsText(): string {
-    return GearCalc.gearStatsText(this.gears);
+    return gearStatsText(this.gears);
   }
 
   private totalGearWeight(): number {
-    return GearCalc.totalGearWeight(this.gears);
+    return totalGearWeight(this.gears);
   }
 
   private totalGearPrice(): number {
-    return GearCalc.totalGearPrice(this.gears);
+    return totalGearPrice(this.gears);
   }
 
   private averageGearValueRatio(): number {
-    return GearCalc.averageGearValueRatio(this.gears);
+    return averageGearValueRatio(this.gears);
   }
 
   private heaviestGearText(): string {
-    return GearCalc.heaviestGearText(this.gears);
+    return heaviestGearText(this.gears);
   }
 
   private mostExpensiveGearText(): string {
-    return GearCalc.mostExpensiveGearText(this.gears);
+    return mostExpensiveGearText(this.gears);
   }
 
   private mostFrequentGearText(): string {
-    return GearCalc.mostFrequentGearText(this.gears);
+    return mostFrequentGearText(this.gears);
   }
 
   private formatKg(weightGram: number): string {
-    return GearCalc.formatKg(weightGram);
+    return formatKg(weightGram);
   }
 
   private categoryTabs(): string[] {
-    return GearCalc.categoryTabs(this.categories);
+    return categoryTabs(this.categories);
   }
 
   private presetCategories(): string[] {
-    return GearCalc.presetCategories(this.categories);
+    return presetCategories(this.categories);
   }
 
   private checklistGroups(): string[] {
-    return CheckCalc.checklistGroups(this.currentChecklist());
+    return checklistGroups(this.currentChecklist());
   }
 
   private checklistItemsByGroup(group: string): ChecklistItem[] {
-    return CheckCalc.checklistItemsByGroup(this.currentChecklist(), group);
+    return checklistItemsByGroup(this.currentChecklist(), group);
   }
 
   private groupItemCount(group: string): number {
@@ -478,7 +535,7 @@ struct Index {
   }
 
   private isGroupDone(group: string): boolean {
-    return CheckCalc.isGroupDone(this.currentChecklist(), group);
+    return isGroupDone(this.currentChecklist(), group);
   }
 
   private isGroupCollapsed(group: string): boolean {
@@ -502,35 +559,35 @@ struct Index {
   }
 
   private checkedCount(checklist: TripChecklist): number {
-    return CheckCalc.checkedCount(checklist);
+    return checkedCount(checklist);
   }
 
   private progressPercent(checklist: TripChecklist): number {
-    return CheckCalc.progressPercent(checklist);
+    return progressPercent(checklist);
   }
 
   private progressValue(checklist: TripChecklist): number {
-    return CheckCalc.progressValue(checklist);
+    return progressValue(checklist);
   }
 
   private progressTotal(checklist: TripChecklist): number {
-    return CheckCalc.progressTotal(checklist);
+    return progressTotal(checklist);
   }
 
   private progressText(checklist: TripChecklist): string {
-    return CheckCalc.progressText(checklist);
+    return progressText(checklist);
   }
 
   private checklistMetaText(checklist: TripChecklist): string {
-    return CheckCalc.checklistMetaText(checklist);
+    return calcChecklistMetaText(checklist);
   }
 
   private homeStatusText(): string {
-    return CheckCalc.homeStatusText(this.checklists);
+    return homeStatusText(this.checklists);
   }
 
   private isChecklistDone(checklist: TripChecklist): boolean {
-    return CheckCalc.isChecklistDone(checklist);
+    return isChecklistDone(checklist);
   }
 
   private isCurrentChecklistDone(): boolean {
@@ -538,63 +595,63 @@ struct Index {
     if (checklist === undefined) {
       return false;
     }
-    return CheckCalc.isChecklistDone(checklist);
+    return isChecklistDone(checklist);
   }
 
   private activeChecklistCount(): number {
-    return CheckCalc.activeChecklistCount(this.checklists);
+    return activeChecklistCount(this.checklists);
   }
 
   private parseTripDateAt(text: string): number | undefined {
-    return CheckCalc.parseTripDateAt(text);
+    return parseTripDateAt(text);
   }
 
   private startOfDay(date: Date): number {
-    return CheckCalc.startOfDay(date);
+    return startOfDay(date);
   }
 
   private checklistDateAt(checklist: TripChecklist): number | undefined {
-    return CheckCalc.checklistDateAt(checklist);
+    return checklistDateAt(checklist);
   }
 
   private countdownText(checklist: TripChecklist): string {
-    return CheckCalc.countdownText(checklist);
+    return countdownText(checklist);
   }
 
   private checklistTotalWeight(checklist: TripChecklist): number {
-    return CheckCalc.checklistTotalWeight(checklist, this.gears);
+    return checklistTotalWeight(checklist, this.gears);
   }
 
   private checklistCheckedWeight(checklist: TripChecklist): number {
-    return CheckCalc.checklistCheckedWeight(checklist, this.gears);
+    return checklistCheckedWeight(checklist, this.gears);
   }
 
   private progressStartColor(percent: number): string {
-    return CheckCalc.progressStartColor(percent);
+    return progressStartColor(percent);
   }
 
   private progressEndColor(percent: number): string {
-    return CheckCalc.progressEndColor(percent);
+    return progressEndColor(percent);
   }
 
   private gearById(id: string): GearItem | undefined {
-    return GearCalc.gearById(this.gears, id);
+    return gearById(this.gears, id);
   }
 
   private checklistItemWeight(item: ChecklistItem): number | undefined {
-    return CheckCalc.checklistItemWeight(item, this.gears);
+    return checklistItemWeight(item, this.gears);
   }
 
   private checklistItemPrice(item: ChecklistItem): number | undefined {
-    return CheckCalc.checklistItemPrice(item, this.gears);
+    return checklistItemPrice(item, this.gears);
   }
 
   private numberInputText(value: number | undefined): string {
-    return CheckCalc.numberInputText(value);
+    return numberInputText(value);
   }
 
   private latestChecklistHomeSubtitle(): string {
-    return CheckCalc.latestChecklistHomeSubtitle(this.latestChecklist(), this.gears);
+    return latestChecklistHomeSubtitle(this.latestChecklist(), this.gears);
   }
 
   private resetGearForm(): void {
@@ -916,15 +973,15 @@ struct Index {
   }
 
   private uniqueGearIds(ids: string[]): string[] {
-    return GearCalc.uniqueGearIds(ids);
+    return uniqueGearIds(ids);
   }
 
   private checklistHasGear(checklist: TripChecklist, gearId: string): boolean {
-    return CheckCalc.checklistHasGear(checklist, gearId);
+    return checklistHasGear(checklist, gearId);
   }
 
   private countableGearIds(checklist: TripChecklist, gearIds: string[]): string[] {
-    return CheckCalc.countableGearIds(checklist, gearIds);
+    return countableGearIds(checklist, gearIds);
   }
 
   private async incrementGearTripCounts(gearIds: string[]): Promise<void> {
@@ -956,15 +1013,15 @@ struct Index {
   }
 
   private isChecklistItemInGear(item: ChecklistItem): boolean {
-    return CheckCalc.isChecklistItemInGear(item);
+    return isChecklistItemInGear(item);
   }
 
   private hasGearMarker(item: ChecklistItem): boolean {
-    return CheckCalc.hasGearMarker(item);
+    return hasGearMarker(item);
   }
 
   private matchingGearForChecklistItem(item: ChecklistItem): GearItem | undefined {
-    return CheckCalc.matchingGearForChecklistItem(item, this.gears);
+    return matchingGearForChecklistItem(item, this.gears);
   }
 
   private openTripSheet(): void {
@@ -1292,11 +1349,11 @@ struct Index {
   }
 
   private formatTripDate(date: Date): string {
-    return CheckCalc.formatTripDate(date);
+    return formatTripDate(date);
   }
 
   private formatDateText(timestamp: number): string {
-    return CheckCalc.formatDateText(timestamp);
+    return formatDateText(timestamp);
   }
 
   private async addTempItem(): Promise<void> {
@@ -1416,11 +1473,11 @@ struct Index {
   }
 
   private filteredImportGears(): GearItem[] {
-    return GearCalc.filteredImportGears(this.gears, this.importGearCategory);
+    return filteredImportGears(this.gears, this.importGearCategory);
   }
 
   private importGearMetaText(item: GearItem): string {
-    return GearCalc.importGearMetaText(item);
+    return importGearMetaText(item);
   }
 
   private hasImportSelection(id: string): boolean {
@@ -1516,7 +1573,7 @@ struct Index {
   }
 
   private addItemsToChecklist(checklistId: string, items: ChecklistItem[]): TripChecklist[] {
-    return CheckCalc.addItemsToChecklist(this.checklists, checklistId, items);
+    return addItemsToChecklist(this.checklists, checklistId, items);
   }
 
   private async addGearsToExistingTrip(gearIds: string[], tripId: string): Promise<void> {

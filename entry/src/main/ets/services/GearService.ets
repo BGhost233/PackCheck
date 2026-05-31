@@ -315,32 +315,3 @@ export function tempGearFilterText(categories: string[]): string {
   return normalized.length.toString() + '个分组';
 }
 
-/** Namespace 聚合导出 — 调用方用 GearCalc.xxx() 避免命名空间污染 */
-export class GearCalc {
-  static numberOrZero = numberOrZero;
-  static gearTripCount = gearTripCount;
-  static gearValueRatio = gearValueRatio;
-  static sortedGears = sortedGears;
-  static filterGears = filterGears;
-  static normalizeGearCategories = normalizeGearCategories;
-  static allGearFilterCategories = allGearFilterCategories;
-  static gearCategoryCount = gearCategoryCount;
-  static gearSortLabel = gearSortLabel;
-  static filteredGearGroups = filteredGearGroups;
-  static filteredGearsByGroup = filteredGearsByGroup;
-  static totalGearWeight = totalGearWeight;
-  static totalGearPrice = totalGearPrice;
-  static averageGearValueRatio = averageGearValueRatio;
-  static heaviestGearText = heaviestGearText;
-  static mostExpensiveGearText = mostExpensiveGearText;
-  static mostFrequentGearText = mostFrequentGearText;
-  static formatKg = formatKg;
-  static gearStatsText = gearStatsText;
-  static gearById = gearById;
-  static presetCategories = presetCategories;
-  static categoryTabs = categoryTabs;
-  static uniqueGearIds = uniqueGearIds;
-  static importGearMetaText = importGearMetaText;
-  static filteredImportGears = filteredImportGears;
-  static tempGearFilterText = tempGearFilterText;
-}
