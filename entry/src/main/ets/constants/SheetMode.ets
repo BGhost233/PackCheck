@@ -1,0 +1,9 @@
+export const SHEET_NONE = '';
+export const SHEET_GEAR = 'gear';
+export const SHEET_TRIP = 'trip';
+export const SHEET_EDIT_TRIP = 'edit_trip';
+export const SHEET_TEMP_ITEM = 'temp_item';
+export const SHEET_EDIT_ITEM = 'edit_item';
+export const SHEET_IMPORT = 'import';
+export const SHEET_GEAR_SORT = 'gear_sort';
+export const SHEET_GENERATE_TRIP = 'generate_trip';
