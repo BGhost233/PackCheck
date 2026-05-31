@@ -18,10 +18,10 @@ interface CurvePoint {
 }
 
 const MILESTONES: number[] = [1000, 5000, 10000, 30000, 50000, 100000];
-const CANVAS_HEIGHT = 120;
-const CANVAS_PADDING_X = 12;
-const CANVAS_PADDING_TOP = 16;
-const CANVAS_PADDING_BOTTOM = 8;
+const CANVAS_HEIGHT = 88;
+const CANVAS_PADDING_X = 4;
+const CANVAS_PADDING_TOP = 12;
+const CANVAS_PADDING_BOTTOM = 4;
 
 @Component
 export struct AssetTrendCard {
@@ -30,7 +30,7 @@ export struct AssetTrendCard {
   @Prop gearCount: number = 0;
   @Prop totalWeight: number = 0;
 
-  @State private drawProgress: number = 0;
+  @State @Watch('onDrawProgressChange') private drawProgress: number = 0;
   @State private isTouching: boolean = false;
   @State private touchX: number = 0;
   @State private touchValue: number = 0;
@@ -44,9 +44,14 @@ export struct AssetTrendCard {
   private canvasHeight: number = CANVAS_HEIGHT;
   private cachedPoints: CurvePoint[] = [];
   private hasEnteredView: boolean = false;
+  private lastVibrateIdx: number = -1; // 震动去重：上一次震动的节点 index
 
   aboutToAppear(): void {
     this.rebuildCachedPoints();
+  }
+
+  private onDrawProgressChange(): void {
+    this.drawCurve();
   }
 
   // ======= 数据处理 =======
@@ -74,7 +79,6 @@ export struct AssetTrendCard {
     const drawW = this.canvasWidth - CANVAS_PADDING_X * 2;
     const drawH = this.canvasHeight - CANVAS_PADDING_TOP - CANVAS_PADDING_BOTTOM;
 
-    // 找到 Y 轴范围
     let maxVal = 0;
     for (let i = 0; i < events.length; i++) {
       if (events[i].totalValue > maxVal) {
@@ -82,10 +86,9 @@ export struct AssetTrendCard {
       }
     }
     if (maxVal === 0) {
-      maxVal = 1; // 避免除零
+      maxVal = 1;
     }
 
-    // 时间范围
     const minT = events[0].timestamp;
     const maxT = events.length > 1 ? events[events.length - 1].timestamp : minT + 1;
     const timeSpan = maxT - minT;
@@ -110,33 +113,41 @@ export struct AssetTrendCard {
     const ctx = this.canvasContext;
     const w = this.canvasWidth;
     const h = this.canvasHeight;
+    if (w === 0) {
+      return;
+    }
     ctx.clearRect(0, 0, w, h);
 
     if (this.cachedPoints.length < 2) {
+      // 只有 1 个点时画一个小圆点
+      if (this.cachedPoints.length === 1) {
+        const p = this.cachedPoints[0];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = PRIMARY_COLOR;
+        ctx.fill();
+      }
       return;
     }
 
-    const endIndex = Math.floor(this.cachedPoints.length * this.drawProgress);
+    const endIndex = Math.floor((this.cachedPoints.length - 1) * this.drawProgress);
     if (endIndex < 1) {
       return;
     }
 
     const points = this.cachedPoints;
 
-    // 绘制渐变填充
+    // 渐变填充
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
-
-    for (let i = 1; i <= endIndex && i < points.length; i++) {
+    for (let i = 1; i <= endIndex; i++) {
       const prev = points[i - 1];
       const curr = points[i];
       const cpx1 = prev.x + (curr.x - prev.x) * 0.4;
       const cpx2 = prev.x + (curr.x - prev.x) * 0.6;
       ctx.bezierCurveTo(cpx1, prev.y, cpx2, curr.y, curr.x, curr.y);
     }
-
-    // 封闭渐变区域
-    const lastPoint = points[Math.min(endIndex, points.length - 1)];
+    const lastPoint = points[endIndex];
     ctx.lineTo(lastPoint.x, h);
     ctx.lineTo(points[0].x, h);
     ctx.closePath();
@@ -147,25 +158,23 @@ export struct AssetTrendCard {
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // 绘制曲线
+    // 曲线
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
-
-    for (let i = 1; i <= endIndex && i < points.length; i++) {
+    for (let i = 1; i <= endIndex; i++) {
       const prev = points[i - 1];
       const curr = points[i];
       const cpx1 = prev.x + (curr.x - prev.x) * 0.4;
       const cpx2 = prev.x + (curr.x - prev.x) * 0.6;
       ctx.bezierCurveTo(cpx1, prev.y, cpx2, curr.y, curr.x, curr.y);
     }
-
     ctx.strokeStyle = PRIMARY_COLOR;
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // 绘制里程碑点
+    // 里程碑点
     this.drawMilestones(ctx, endIndex);
   }
 
@@ -174,12 +183,10 @@ export struct AssetTrendCard {
     for (let i = 0; i <= endIndex && i < points.length; i++) {
       const evt = points[i].event;
       for (let m = 0; m < MILESTONES.length; m++) {
-        // 检查是否在本事件首次达到里程碑
         const milestone = MILESTONES[m];
         if (evt.totalValue >= milestone) {
           const prevValue = i > 0 ? points[i - 1].event.totalValue : 0;
           if (prevValue < milestone) {
-            // 这是首次达到该里程碑的节点
             ctx.beginPath();
             ctx.arc(points[i].x, points[i].y, 3, 0, Math.PI * 2);
             ctx.fillStyle = PRIMARY_COLOR;
@@ -203,7 +210,6 @@ export struct AssetTrendCard {
     }
     const points = this.cachedPoints;
 
-    // 找到最近的点
     let nearestIdx = 0;
     let nearestDist = Math.abs(points[0].x - touchX);
     for (let i = 1; i < points.length; i++) {
@@ -220,11 +226,14 @@ export struct AssetTrendCard {
     this.touchDate = this.formatDate(nearest.event.timestamp);
     this.touchEventInfo = nearest.event;
 
-    // 触觉反馈（里程碑节点或切换到新事件时）
-    try {
-      vibrator.startVibration({ type: 'time', duration: 10 }, { usage: 'touch' });
-    } catch (e) {
-      // ignore
+    // 震动去重：只在切换到新节点时震动一次
+    if (nearestIdx !== this.lastVibrateIdx) {
+      this.lastVibrateIdx = nearestIdx;
+      try {
+        vibrator.startVibration({ type: 'time', duration: 10 }, { usage: 'touch' });
+      } catch (e) {
+        // ignore
+      }
     }
   }
 
@@ -334,7 +343,7 @@ export struct AssetTrendCard {
   // ======= Build =======
 
   build() {
-    Column({ space: 12 }) {
+    Column({ space: 8 }) {
       // 标题行
       this.TitleRow()
 
@@ -394,7 +403,7 @@ export struct AssetTrendCard {
       this.StatRow()
     }
     .width('100%')
-    .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 16, bottom: 16 })
+    .padding({ left: 12, right: 12, top: 12, bottom: 12 })
     .backgroundColor(CARD_BG)
     .borderRadius(16)
   }
@@ -408,6 +417,7 @@ export struct AssetTrendCard {
 
     if (event.type === TouchType.Down) {
       this.isTouching = true;
+      this.lastVibrateIdx = -1; // 重置震动去重
       this.touchX = x;
       this.interpolateAtX(x);
     } else if (event.type === TouchType.Move) {
@@ -429,12 +439,12 @@ export struct AssetTrendCard {
     Row() {
       Column({ space: 2 }) {
         Text(this.isTouching ? this.formatPrice(this.touchValue) : this.formatPrice(this.currentTotal))
-          .fontSize(24)
+          .fontSize(22)
           .fontWeight(FontWeight.Bold)
           .fontColor(TEXT_MAIN)
           .fontFeature(FONT_FEATURE_TNUM)
         Text('装备资产')
-          .fontSize(12)
+          .fontSize(11)
           .fontColor(TEXT_TERTIARY)
       }
       .alignItems(HorizontalAlign.Start)
@@ -443,7 +453,7 @@ export struct AssetTrendCard {
 
       if (this.isTouching) {
         Text(this.touchDate)
-          .fontSize(12)
+          .fontSize(11)
           .fontColor(TEXT_SECONDARY)
       }
     }
@@ -472,41 +482,35 @@ export struct AssetTrendCard {
           .fontSize(13)
           .fontColor(TEXT_MAIN)
       }
-      .padding(10)
-      .backgroundColor(CARD_BG)
-      .borderRadius(10)
-      .shadow({ radius: 8, color: '#1A000000', offsetY: 2 })
+      .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+      .backgroundColor('#F8F9FA')
+      .borderRadius(8)
     }
   }
 
   @Builder
   private EmptyState() {
-    Column({ space: 8 }) {
+    Column({ space: 6 }) {
       Text('📈')
-        .fontSize(32)
+        .fontSize(24)
       Text('继续添加装备，解锁你的资产曲线')
-        .fontSize(14)
+        .fontSize(13)
         .fontColor(TEXT_SECONDARY)
       Text('至少 3 件有价格的装备即可查看趋势')
-        .fontSize(12)
+        .fontSize(11)
         .fontColor(TEXT_TERTIARY)
     }
     .width('100%')
-    .height(CANVAS_HEIGHT)
+    .height(72)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
   }
 
   @Builder
   private StatRow() {
-    Row({ space: 8 }) {
-      // 件数
+    Row({ space: 6 }) {
       this.StatPill('件数', this.gearCount.toString())
-
-      // 本月新增
       this.MonthlyPill()
-
-      // 重量
       this.StatPill('重量', this.formatKg(this.totalWeight))
     }
     .width('100%')
@@ -516,18 +520,18 @@ export struct AssetTrendCard {
   private StatPill(label: string, value: string) {
     Column({ space: 2 }) {
       Text(value)
-        .fontSize(16)
+        .fontSize(15)
         .fontWeight(FontWeight.Medium)
         .fontColor(TEXT_MAIN)
         .fontFeature(FONT_FEATURE_TNUM)
       Text(label)
-        .fontSize(11)
+        .fontSize(10)
         .fontColor(TEXT_TERTIARY)
     }
     .layoutWeight(1)
-    .padding({ top: 10, bottom: 10 })
+    .padding({ top: 8, bottom: 8 })
     .backgroundColor('#F8F9FA')
-    .borderRadius(10)
+    .borderRadius(8)
     .alignItems(HorizontalAlign.Center)
   }
 
@@ -536,23 +540,23 @@ export struct AssetTrendCard {
     Column({ space: 2 }) {
       if (this.monthlyAddedCount() > 0) {
         Text('+' + this.monthlyAddedCount().toString() + '件 / ¥' + this.monthlyAddedValue().toString())
-          .fontSize(13)
+          .fontSize(12)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
           .fontFeature(FONT_FEATURE_TNUM)
       } else {
         Text('暂无新增')
-          .fontSize(12)
+          .fontSize(11)
           .fontColor(TEXT_TERTIARY)
       }
       Text('本月新增')
-        .fontSize(11)
+        .fontSize(10)
         .fontColor(TEXT_TERTIARY)
     }
     .layoutWeight(1)
-    .padding({ top: 10, bottom: 10 })
+    .padding({ top: 8, bottom: 8 })
     .backgroundColor('#F8F9FA')
-    .borderRadius(10)
+    .borderRadius(8)
     .alignItems(HorizontalAlign.Center)
   }
 }
