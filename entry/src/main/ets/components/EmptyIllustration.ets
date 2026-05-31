@@ -3,7 +3,7 @@
  * 三套极简线条画：gear（背包）、trip（山路）、complete（山顶旗帜）
  * 统一风格：stroke-only、1.5vp 线宽、主题绿 20% alpha、≤25 控制点/套
  */
-import { curves } from '@kit.ArkUI';
+import { SPRING_TAB, DURATION_ENTRANCE } from '../constants/AnimationTokens';
 import {
   PRIMARY_STROKE_FAINT,
   TRANSPARENT
@@ -68,6 +68,6 @@ export struct EmptyIllustration {
     .height(100)
     .opacity(this.appeared ? 1 : 0)
     .translate({ y: this.appeared ? 0 : 8 })
-    .animation({ duration: 500, curve: curves.springMotion(0.4, 0.8) })
+    .animation({ duration: DURATION_ENTRANCE, curve: SPRING_TAB() })
   }
 }

@@ -1,5 +1,14 @@
 import { common } from '@kit.AbilityKit';
-import { curves, display } from '@kit.ArkUI';
+import { display } from '@kit.ArkUI';
+import {
+  SPRING_SWIPE_RESET, SPRING_FAB_SNAP, SPRING_GENERAL, SPRING_SEARCH,
+  SPRING_CHEVRON, SPRING_PRESS, SPRING_CEREMONY_FLIP, SPRING_CONTEXT_EXIT,
+  SPRING_TRAY_CARD, SPRING_SCROLL,
+  DURATION_NORMAL, DURATION_COUNTER, DURATION_COLOR_FADE, DURATION_TICK,
+  DURATION_SLOW, DURATION_CEREMONY_SHAKE, DURATION_HEADER, DURATION_PRESS,
+  DURATION_TAB, DURATION_NONE,
+  CURVE_DECELERATE, CURVE_LINEAR
+} from '../constants/AnimationTokens';
 import { vibrator } from '@kit.SensorServiceKit';
 import { AssetEvent, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
@@ -114,7 +123,7 @@ export struct GearPage {
 
   private onSwipeResetNonceChange(): void {
     if (this.swipedGearId !== '') {
-      this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+      this.getUIContext().animateTo({ duration: DURATION_NORMAL, curve: SPRING_SWIPE_RESET() }, () => {
         this.swipedGearId = '';
         this.swipeOffsetX = 0;
       });
@@ -195,8 +204,8 @@ export struct GearPage {
     const targetY = Math.max(minY, Math.min(maxY, this.fabY));
 
     this.getUIContext().animateTo({
-      duration: 400,
-      curve: curves.springMotion(0.28, 0.76)
+      duration: DURATION_COUNTER,
+      curve: SPRING_FAB_SNAP()
     }, () => {
       this.fabX = targetX;
       this.fabY = targetY;
@@ -216,8 +225,8 @@ export struct GearPage {
     } catch (e) { /* 静默 */ }
     // 弹出托盘 + 背景模糊
     this.getUIContext().animateTo({
-      duration: 350,
-      curve: curves.springMotion(0.35, 0.8)
+      duration: DURATION_COLOR_FADE,
+      curve: SPRING_GENERAL()
     }, () => {
       this.showTripTray = true;
     });
@@ -280,7 +289,7 @@ export struct GearPage {
       this.tripTrayScroller.scrollTo({
         xOffset: current + this.trayScrollSpeed,
         yOffset: 0,
-        animation: { duration: 32, curve: Curve.Linear }
+        animation: { duration: DURATION_TICK, curve: CURVE_LINEAR }
       });
     }, 16) as number;
   }
@@ -308,8 +317,8 @@ export struct GearPage {
     }
     // 退出拖拽态
     this.getUIContext().animateTo({
-      duration: 300,
-      curve: curves.springMotion(0.35, 0.8)
+      duration: DURATION_SLOW,
+      curve: SPRING_GENERAL()
     }, () => {
       this.dragMode = false;
       this.showTripTray = false;
@@ -320,8 +329,8 @@ export struct GearPage {
   private cancelDrag(): void {
     this.stopTrayAutoScroll();
     this.getUIContext().animateTo({
-      duration: 300,
-      curve: curves.springMotion(0.35, 0.8)
+      duration: DURATION_SLOW,
+      curve: SPRING_GENERAL()
     }, () => {
       this.dragMode = false;
       this.showTripTray = false;
@@ -572,8 +581,8 @@ export struct GearPage {
 
   private toggleGearGroupCollapse(group: string): void {
     this.getUIContext().animateTo({
-      duration: 350,
-      curve: curves.springMotion(0.35, 0.8)
+      duration: DURATION_COLOR_FADE,
+      curve: SPRING_GENERAL()
     }, () => {
       const idx = this.collapsedGearGroups.indexOf(group);
       if (idx >= 0) {
@@ -781,7 +790,7 @@ export struct GearPage {
                 }
                 .transition(TransitionEffect.OPACITY.combine(
                   TransitionEffect.translate({ y: 8 })
-                ).animation({ duration: 300, curve: curves.springMotion(0.35, 0.8) }))
+                ).animation({ duration: DURATION_SLOW, curve: SPRING_GENERAL() }))
               }, (group: string) => group)
             }
             ListItem() {
@@ -800,7 +809,7 @@ export struct GearPage {
           })
           .onTouch((event: TouchEvent) => {
             if (event.type === TouchType.Down && this.swipedGearId !== '') {
-              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+              this.getUIContext().animateTo({ duration: DURATION_NORMAL, curve: SPRING_SWIPE_RESET() }, () => {
                 this.swipedGearId = '';
                 this.swipeOffsetX = 0;
               });
@@ -864,8 +873,8 @@ export struct GearPage {
         const maxY = newHeight - fabSize - 140;
         const targetY = Math.max(80, Math.min(maxY, this.fabY));
         this.getUIContext().animateTo({
-          duration: 300,
-          curve: curves.springMotion(0.3, 0.8)
+          duration: DURATION_SLOW,
+          curve: SPRING_GENERAL()
         }, () => {
           this.fabX = targetX;
           this.fabY = targetY;
@@ -944,7 +953,7 @@ export struct GearPage {
         .width('100%')
         .height(GEAR_HEADER_EXPANDED)
         .translate({ y: -(this.gearScrollOffset * 0.3) })
-        .animation({ duration: 80, curve: Curve.EaseOut })
+        .animation({ duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE })
         .hitTestBehavior(HitTestMode.None)
 
         // 主内容层
@@ -955,7 +964,7 @@ export struct GearPage {
                 .fontSize(this.gearTitleFontSize())
                 .fontWeight(FontWeight.Bold)
                 .fontColor(TEXT_MAIN)
-                .animation({ duration: 80 })
+                .animation({ duration: DURATION_CEREMONY_SHAKE })
               Text(this.gearSummaryText())
                 .fontSize(13)
                 .fontColor(TEXT_TERTIARY)
@@ -965,7 +974,7 @@ export struct GearPage {
                 .margin({ left: 8 })
                 .opacity(this.gearCollapsedOpacity())
                 .translate({ x: this.gearCollapsedOpacity() > 0 ? 0 : -12 })
-                .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
+                .animation({ duration: DURATION_TAB, curve: SPRING_SCROLL() })
               Blank()
             }
             // 搜索按钮 / 搜索框：原地变形
@@ -993,8 +1002,8 @@ export struct GearPage {
                   .padding({ left: 10, right: 4 })
                   .onClick(() => {
                     this.getUIContext().animateTo({
-                      duration: 350,
-                      curve: curves.springMotion(0.35, 0.82)
+                      duration: DURATION_COLOR_FADE,
+                      curve: SPRING_SEARCH()
                     }, () => {
                       this.searchExpanded = false;
                       this.onSearchChange('');
@@ -1014,12 +1023,12 @@ export struct GearPage {
               adaptiveColor: AdaptiveColor.DEFAULT
             })
             .backgroundColor(this.searchExpanded ? GLASS_BG : PRIMARY_TINT_COLOR)
-            .animation({ duration: 350, curve: curves.springMotion(0.35, 0.82) })
+            .animation({ duration: DURATION_COLOR_FADE, curve: SPRING_SEARCH() })
             .onClick(() => {
               if (!this.searchExpanded) {
                 this.getUIContext().animateTo({
-                  duration: 350,
-                  curve: curves.springMotion(0.35, 0.82)
+                  duration: DURATION_COLOR_FADE,
+                  curve: SPRING_SEARCH()
                 }, () => {
                   this.searchExpanded = true;
                   this.gearListScroller.scrollTo({ xOffset: 0, yOffset: 0 });
@@ -1213,7 +1222,7 @@ export struct GearPage {
           .fontSize(12)
           .fontColor([TEXT_TERTIARY])
           .rotate({ angle: this.isGearGroupCollapsed(group) ? -90 : 0 })
-          .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
+          .animation({ duration: DURATION_SLOW, curve: SPRING_CHEVRON() })
       }
       .width('100%')
       .height(28)
@@ -1223,7 +1232,7 @@ export struct GearPage {
         x: this.pressedGroupId === group ? 0.97 : 1.0,
         y: this.pressedGroupId === group ? 0.97 : 1.0
       })
-      .animation({ duration: 200, curve: curves.springMotion(0.25, 0.7) })
+      .animation({ duration: DURATION_NORMAL, curve: SPRING_PRESS() })
       .onTouch((event: TouchEvent) => {
         if (event.type === TouchType.Down) {
           this.pressedGroupId = group;
@@ -1279,12 +1288,12 @@ export struct GearPage {
         .clip(true)
         .transition(TransitionEffect.OPACITY.combine(
           TransitionEffect.translate({ y: -6 })
-        ).animation({ duration: 300, curve: curves.springMotion(0.35, 0.8) }))
+        ).animation({ duration: DURATION_SLOW, curve: SPRING_GENERAL() }))
       }
     }
     .width('100%')
     .opacity(this.groupDragMode && this.groupDragGroup === group ? 0 : (this.groupDragMode ? 0.6 : 1.0))
-    .animation({ duration: 200, curve: Curve.EaseOut })
+    .animation({ duration: DURATION_NORMAL, curve: CURVE_DECELERATE })
     .onAreaChange((_oldArea: Area, newArea: Area) => {
       const h = newArea.height as number;
       if (h > 0) {
@@ -1361,7 +1370,7 @@ export struct GearPage {
             .hitTestBehavior(HitTestMode.None)
             .transition(TransitionEffect.OPACITY.combine(
               TransitionEffect.translate({ x: -12 })
-            ).animation({ duration: 260, curve: curves.springMotion(0.3, 0.8) }))
+            ).animation({ duration: DURATION_TAB, curve: SPRING_GENERAL() }))
           this.GearNameText(item.name)
           if (item.weight !== undefined && item.weight > 0) {
             Text(item.weight.toString() + 'g')
@@ -1378,7 +1387,7 @@ export struct GearPage {
       .padding({ left: 14, right: 14, top: 4, bottom: 4 })
       .backgroundColor(this.hasMultiGearSelection(item.id) ? LIGHT_PRIMARY_COLOR : CARD_BG)
       .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : 1)
-      .animation({ duration: 200, curve: Curve.EaseOut })
+      .animation({ duration: DURATION_NORMAL, curve: CURVE_DECELERATE })
       .onClick(() => {
         this.onToggleMultiGearSelection(item.id);
       })
@@ -1434,7 +1443,7 @@ export struct GearPage {
         .position({ right: 14, top: '50%' })
         .translate({ y: '-50%' })
         .onClick(() => {
-          this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+          this.getUIContext().animateTo({ duration: DURATION_NORMAL, curve: SPRING_SWIPE_RESET() }, () => {
             this.swipedGearId = '';
             this.swipeOffsetX = 0;
           });
@@ -1445,7 +1454,7 @@ export struct GearPage {
           y: this.swipedGearId === item.id ? 1 : 0.6
         })
         .opacity(this.swipedGearId === item.id ? 1 : 0)
-        .animation({ duration: 250, curve: curves.springMotion(0.3, 0.7) })
+        .animation({ duration: DURATION_HEADER, curve: SPRING_PRESS() })
 
         // 内容行
         Column() {
@@ -1461,14 +1470,14 @@ export struct GearPage {
               .fontSize(12)
               .fontColor([ARROW_COLOR])
               .rotate({ angle: this.expandedGearId === item.id ? 180 : 0 })
-              .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
+              .animation({ duration: DURATION_SLOW, curve: SPRING_CHEVRON() })
           }
           .width('100%')
           .height(44)
           .alignItems(VerticalAlign.Center)
           .onClick(() => {
             if (this.swipedGearId === item.id) {
-              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+              this.getUIContext().animateTo({ duration: DURATION_NORMAL, curve: SPRING_SWIPE_RESET() }, () => {
                 this.swipedGearId = '';
                 this.swipeOffsetX = 0;
               });
@@ -1487,13 +1496,13 @@ export struct GearPage {
         .width('100%')
         .padding({ left: 14, right: 14, top: 4, bottom: 4 })
         .backgroundColor(this.pressedGearId === item.id ? GROUP_HEADER_BG : CARD_BG)
-        .animation({ duration: 150, curve: Curve.EaseOut })
+        .animation({ duration: DURATION_PRESS, curve: CURVE_DECELERATE })
         .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
         .onTouch((event: TouchEvent) => {
           if (event.type === TouchType.Down) {
             this.pressedGearId = item.id;
             if (this.swipedGearId !== '' && this.swipedGearId !== item.id) {
-              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+              this.getUIContext().animateTo({ duration: DURATION_NORMAL, curve: SPRING_SWIPE_RESET() }, () => {
                 this.swipedGearId = '';
                 this.swipeOffsetX = 0;
               });
@@ -1519,18 +1528,18 @@ export struct GearPage {
             })
             .onActionEnd((event: GestureEvent) => {
               if (this.swipeOffsetX < -40) {
-                this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+                this.getUIContext().animateTo({ duration: DURATION_NORMAL, curve: SPRING_SWIPE_RESET() }, () => {
                   this.swipeOffsetX = -80;
                 });
               } else {
-                this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+                this.getUIContext().animateTo({ duration: DURATION_NORMAL, curve: SPRING_SWIPE_RESET() }, () => {
                   this.swipedGearId = '';
                   this.swipeOffsetX = 0;
                 });
               }
             })
             .onActionCancel(() => {
-              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+              this.getUIContext().animateTo({ duration: DURATION_NORMAL, curve: SPRING_SWIPE_RESET() }, () => {
                 if (this.swipeOffsetX < -40) {
                   this.swipeOffsetX = -80;
                 } else {
@@ -1549,10 +1558,10 @@ export struct GearPage {
         transition: TransitionEffect.asymmetric(
           TransitionEffect.scale({ x: 0.9, y: 0.9 })
             .combine(TransitionEffect.OPACITY)
-            .animation({ curve: curves.springMotion(0.35, 0.78) }),
+            .animation({ curve: SPRING_CEREMONY_FLIP() }),
           TransitionEffect.scale({ x: 0.95, y: 0.95 })
             .combine(TransitionEffect.OPACITY)
-            .animation({ curve: curves.springMotion(0.28, 0.85) })
+            .animation({ curve: SPRING_CONTEXT_EXIT() })
         ),
         placement: Placement.Bottom,
         borderRadius: 20
@@ -1711,7 +1720,7 @@ export struct GearPage {
           this.fabStartX = this.fabX;
           this.fabStartY = this.fabY;
           this.getUIContext().animateTo({
-            duration: 150, curve: Curve.EaseOut
+            duration: DURATION_PRESS, curve: CURVE_DECELERATE
           }, () => {
             this.fabDragging = true;
           });
@@ -1722,7 +1731,7 @@ export struct GearPage {
         })
         .onActionEnd(() => {
           this.getUIContext().animateTo({
-            duration: 150, curve: Curve.EaseOut
+            duration: DURATION_PRESS, curve: CURVE_DECELERATE
           }, () => {
             this.fabDragging = false;
           });
@@ -1929,7 +1938,7 @@ export struct GearPage {
             y: this.tripCardScale('__new_trip__')
           })
           .translate({ y: this.tripCardLift('__new_trip__') })
-          .animation({ duration: 200, curve: curves.springMotion(0.28, 0.72) })
+          .animation({ duration: DURATION_NORMAL, curve: SPRING_TRAY_CARD() })
           .onAreaChange((_old: Area, area: Area) => {
             const pos = area.globalPosition as Position;
             this.updateTripCardArea('__new_trip__',
@@ -1953,7 +1962,7 @@ export struct GearPage {
     .borderRadius({ topLeft: 24, topRight: 24 })
     .shadow({ radius: 20, color: SHADOW_DEFAULT, offsetX: 0, offsetY: -6 })
     .position({ x: 0, y: this.showTripTray ? this.screenHeight - 274 : this.screenHeight })
-    .animation({ duration: 350, curve: curves.springMotion(0.35, 0.8) })
+    .animation({ duration: DURATION_COLOR_FADE, curve: SPRING_GENERAL() })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
 
@@ -1983,7 +1992,7 @@ export struct GearPage {
       y: this.tripCardScale(trip.id)
     })
     .translate({ y: this.tripCardLift(trip.id) })
-    .animation({ duration: 200, curve: curves.springMotion(0.28, 0.72) })
+    .animation({ duration: DURATION_NORMAL, curve: SPRING_TRAY_CARD() })
     .onAreaChange((_old: Area, area: Area) => {
       const pos = area.globalPosition as Position;
       this.updateTripCardArea(trip.id,
@@ -2068,7 +2077,7 @@ export struct GearPage {
     .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetX: 0, offsetY: 6 })
     .rotate({ angle: -2 })
     .position({ x: this.dragX - 70, y: this.dragY - 56 })
-    .animation({ duration: 0 })
+    .animation({ duration: DURATION_NONE })
   }
 
   private dragGearFirstName(): string {
@@ -2148,8 +2157,8 @@ export struct GearPage {
       if (currentIdx < i && virtualCenterY > midY) {
         // 向下移动
         this.getUIContext().animateTo({
-          duration: 300,
-          curve: curves.springMotion(0.35, 0.8)
+          duration: DURATION_SLOW,
+          curve: SPRING_GENERAL()
         }, () => {
           this.groupReorderList.splice(currentIdx, 1);
           this.groupReorderList.splice(i, 0, this.groupDragGroup);
@@ -2161,8 +2170,8 @@ export struct GearPage {
       } else if (currentIdx > i && virtualCenterY < midY) {
         // 向上移动
         this.getUIContext().animateTo({
-          duration: 300,
-          curve: curves.springMotion(0.35, 0.8)
+          duration: DURATION_SLOW,
+          curve: SPRING_GENERAL()
         }, () => {
           this.groupReorderList.splice(currentIdx, 1);
           this.groupReorderList.splice(i, 0, this.groupDragGroup);
@@ -2182,8 +2191,8 @@ export struct GearPage {
     this.persistCategoryOrder();
     // 退出拖拽态
     this.getUIContext().animateTo({
-      duration: 300,
-      curve: curves.springMotion(0.35, 0.8)
+      duration: DURATION_SLOW,
+      curve: SPRING_GENERAL()
     }, () => {
       this.groupDragMode = false;
       this.groupDragGroup = '';
@@ -2228,7 +2237,7 @@ export struct GearPage {
     .scale({ x: 1.02, y: 1.02 })
     .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetX: 0, offsetY: 6 })
     .position({ x: 0, y: this.groupDragY - 14 })
-    .animation({ duration: 0 })
+    .animation({ duration: DURATION_NONE })
     .zIndex(100)
     .hitTestBehavior(HitTestMode.None)
   }

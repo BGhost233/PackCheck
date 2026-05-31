@@ -1,4 +1,3 @@
-import { curves } from '@kit.ArkUI';
 import {
   AMBER_ACCENT,
   CARD_BG,
@@ -21,9 +20,14 @@ import {
   SPRING_GENERAL,
   DURATION_FAST,
   DURATION_NORMAL,
+  DURATION_COUNTER,
+  DURATION_PULSE,
+  DURATION_GAUGE,
+  DURATION_GAUGE_COUNTER,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
-  STAGGER_OFFSET_Y
+  STAGGER_OFFSET_Y,
+  CURVE_DECELERATE
 } from '../constants/AnimationTokens';
 
 enum GaugeMode {
@@ -72,8 +76,8 @@ export struct WeightGauge {
 
   private startCounterAnimation(): void {
     this.getUIContext().animateTo({
-      duration: 800,
-      curve: Curve.EaseOut,
+      duration: DURATION_GAUGE_COUNTER,
+      curve: CURVE_DECELERATE,
       onFinish: (): void => {
         this.counterAnimated = true;
       }
@@ -142,14 +146,14 @@ export struct WeightGauge {
   private toggleGaugeMode(): void {
     this.ringBounceScale = 0.92;
     this.getUIContext().animateTo({
-      duration: 50,
+      duration: DURATION_PULSE,
       curve: SPRING_PRESS()
     }, () => {
       this.ringBounceScale = 1.08;
     });
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: 400,
+        duration: DURATION_COUNTER,
         curve: SPRING_GENERAL()
       }, () => {
         this.ringBounceScale = 1.0;
@@ -173,7 +177,7 @@ export struct WeightGauge {
     } else if (label === '件数') {
       this.gearCountPopScale = 1.25;
       this.getUIContext().animateTo({
-        duration: 400,
+        duration: DURATION_COUNTER,
         curve: SPRING_GENERAL()
       }, () => {
         this.gearCountPopScale = 1.0;
@@ -197,7 +201,7 @@ export struct WeightGauge {
           .height(132)
           .color(this.gaugeStatusColor())
           .style({ strokeWidth: 10, enableSmoothEffect: true })
-          .animation({ duration: 600, curve: SPRING_GENERAL() })
+          .animation({ duration: DURATION_GAUGE, curve: SPRING_GENERAL() })
         Column({ space: 2 }) {
           if (this.gaugeMode === GaugeMode.WEIGHT) {
             Text(this.formatKg(this.getDisplayWeight()))
@@ -248,7 +252,7 @@ export struct WeightGauge {
     .onAppear((): void => {
       this.startCounterAnimation();
       this.getUIContext().animateTo({
-        duration: 600,
+        duration: DURATION_GAUGE,
         curve: SPRING_GENERAL()
       }, () => {
         this.ringEntranceScale = 1.0;
@@ -283,7 +287,7 @@ export struct WeightGauge {
         .fontColor(TEXT_MAIN)
         .fontFeature(FONT_FEATURE_TNUM)
         .scale({ x: label === '件数' ? popScale : 1.0, y: label === '件数' ? popScale : 1.0 })
-        .animation({ duration: 400, curve: SPRING_GENERAL() })
+        .animation({ duration: DURATION_COUNTER, curve: SPRING_GENERAL() })
     }
     .layoutWeight(1)
     .alignItems(HorizontalAlign.Center)

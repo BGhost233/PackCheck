@@ -1,4 +1,3 @@
-import { curves } from '@kit.ArkUI';
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import {
   AMBER_ACCENT,
@@ -28,9 +27,14 @@ import {
 import {
   SPRING_PRESS,
   SPRING_GENERAL,
+  SPRING_SCROLL,
   DURATION_NORMAL,
   DURATION_SLOW,
   DURATION_COUNTER,
+  DURATION_ENTRANCE,
+  DURATION_TAB,
+  DURATION_CEREMONY_SHAKE,
+  CURVE_DECELERATE,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
@@ -451,14 +455,14 @@ export struct HomePage {
       this.heroRingCelebrateScale = 1.35;
       this.ringCelebrateColor = CELEBRATE_GOLD;
       this.getUIContext().animateTo({
-        duration: 500,
+        duration: DURATION_ENTRANCE,
         curve: SPRING_PRESS()
       }, () => {
         this.heroRingCelebrateScale = 1.35;
       });
       setTimeout(() => {
         this.getUIContext().animateTo({
-          duration: 400,
+          duration: DURATION_COUNTER,
           curve: SPRING_GENERAL()
         }, () => {
           this.heroRingCelebrateScale = 1.0;
@@ -559,7 +563,7 @@ export struct HomePage {
         .fontSize(this.titleFontSize())
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
-        .animation({ duration: 80, curve: Curve.EaseOut })
+        .animation({ duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE })
       if (this.latestChecklist() !== undefined) {
         Text(this.compactHeaderText())
           .fontSize(13)
@@ -568,7 +572,7 @@ export struct HomePage {
           .margin({ left: 8 })
           .opacity(this.scrollProgress() < 0.5 ? 0 : Math.min(1, (this.scrollProgress() - 0.5) * 2))
           .translate({ x: this.scrollProgress() < 0.5 ? -8 : 0 })
-          .animation({ duration: 260, curve: curves.springMotion(0.35, 0.85) })
+          .animation({ duration: DURATION_TAB, curve: SPRING_SCROLL() })
       }
       Blank()
       if (this.scrollProgress() < 0.6) {
@@ -576,7 +580,7 @@ export struct HomePage {
           .fontSize(13)
           .fontColor(TEXT_TERTIARY)
           .opacity(1 - this.scrollProgress() * 2)
-          .animation({ duration: 80, curve: Curve.EaseOut })
+          .animation({ duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE })
       }
     }
     .width('100%')
@@ -681,13 +685,13 @@ export struct HomePage {
         .height(52)
         .color(this.ringCelebrateColor)
         .style({ strokeWidth: 5, enableSmoothEffect: true })
-        .animation({ duration: 500, curve: SPRING_GENERAL() })
+        .animation({ duration: DURATION_ENTRANCE, curve: SPRING_GENERAL() })
       Text(this.getAnimatedProgressText(checklist))
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.ringCelebrateColor)
         .fontFeature(FONT_FEATURE_TNUM)
-        .animation({ duration: 500, curve: SPRING_GENERAL() })
+        .animation({ duration: DURATION_ENTRANCE, curve: SPRING_GENERAL() })
     }
     .width(52)
     .height(52)

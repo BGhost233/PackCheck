@@ -1,4 +1,3 @@
-import { curves } from '@kit.ArkUI';
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import {
   ARROW_COLOR,
@@ -25,12 +24,15 @@ import {
 import {
   SPRING_PRESS,
   SPRING_GENERAL,
+  SPRING_CHEVRON,
   DURATION_NORMAL,
   DURATION_SLOW,
+  DURATION_HEADER,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
-  staggerDelay
+  staggerDelay,
+  CURVE_STANDARD
 } from '../constants/AnimationTokens';
 import { getGroupColor } from '../utils/ColorUtils';
 
@@ -301,8 +303,8 @@ export struct ChecklistDetail {
     }
     this.headerAnimating = true;
     this.getUIContext().animateTo({
-      duration: 250,
-      curve: Curve.EaseInOut,
+      duration: DURATION_HEADER,
+      curve: CURVE_STANDARD,
       onFinish: () => {
         this.headerAnimating = false;
       }
@@ -317,8 +319,8 @@ export struct ChecklistDetail {
     }
     this.headerAnimating = true;
     this.getUIContext().animateTo({
-      duration: 250,
-      curve: Curve.EaseInOut,
+      duration: DURATION_HEADER,
+      curve: CURVE_STANDARD,
       onFinish: () => {
         this.headerAnimating = false;
       }
@@ -413,7 +415,7 @@ export struct ChecklistDetail {
       }
       .width('100%')
       .backgroundColor(PAGE_BG)
-      .animation({ duration: 250, curve: Curve.EaseInOut })
+      .animation({ duration: DURATION_HEADER, curve: CURVE_STANDARD })
     }
   }
 
@@ -460,7 +462,7 @@ export struct ChecklistDetail {
       .alignItems(VerticalAlign.Center)
       .backgroundColor(PAGE_BG)
       .shadow({ radius: 4, color: SHADOW_SUBTLE, offsetX: 0, offsetY: 2 })
-      .animation({ duration: 250, curve: Curve.EaseInOut })
+      .animation({ duration: DURATION_HEADER, curve: CURVE_STANDARD })
     }
   }
 
@@ -688,7 +690,7 @@ export struct ChecklistDetail {
         .fontSize(14)
         .fontColor([TEXT_TERTIARY])
         .rotate({ angle: this.isGroupCollapsed(group) ? -90 : 0 })
-        .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
+        .animation({ duration: DURATION_SLOW, curve: SPRING_CHEVRON() })
     }
     .width('100%')
     .height(44)
@@ -700,7 +702,7 @@ export struct ChecklistDetail {
     .onClick(() => {
       this.onToggleGroup(group);
     })
-    .animation({ duration: 200, curve: Curve.EaseInOut })
+    .animation({ duration: DURATION_NORMAL, curve: CURVE_STANDARD })
   }
 
   @Builder

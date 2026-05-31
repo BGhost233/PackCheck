@@ -1,4 +1,7 @@
-import { curves } from '@kit.ArkUI';
+import {
+  SPRING_TAB, SPRING_COUNTER,
+  DURATION_CHART_DRAW, DURATION_NORMAL
+} from '../constants/AnimationTokens';
 import { vibrator } from '@kit.SensorServiceKit';
 import { AssetEvent } from '../models/PackModels';
 import {
@@ -358,8 +361,8 @@ export struct AssetTrendCard {
     this.hasEnteredView = true;
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: 1200,
-        curve: curves.springMotion(0.4, 0.8)
+        duration: DURATION_CHART_DRAW,
+        curve: SPRING_TAB()
       }, () => {
         this.drawProgress = 1;
       });
@@ -459,8 +462,8 @@ export struct AssetTrendCard {
       this.interpolateAtX(x);
     } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
       this.getUIContext().animateTo({
-        duration: 200,
-        curve: curves.springMotion(0.3, 0.75)
+        duration: DURATION_NORMAL,
+        curve: SPRING_COUNTER()
       }, () => {
         this.isTouching = false;
         this.touchEventInfo = undefined;

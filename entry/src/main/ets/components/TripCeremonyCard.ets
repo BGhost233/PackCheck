@@ -1,4 +1,13 @@
-import { curves } from '@kit.ArkUI';
+import {
+  SPRING_CEREMONY_FLIP, SPRING_CEREMONY_DISMISS, SPRING_PRESS,
+  SPRING_COUNTER, SPRING_GENERAL,
+  DURATION_CEREMONY_OVERLAY, DURATION_GAUGE, DURATION_CEREMONY_SHINE,
+  DURATION_CEREMONY_STAGGER, DURATION_CEREMONY_SHIMMER, DURATION_SCROLL_SMOOTH,
+  DURATION_COUNTER, DURATION_FAST, DURATION_PRESS, DURATION_NORMAL,
+  DURATION_SLOW, DURATION_COLOR_FADE, DURATION_CEREMONY_SHAKE,
+  DURATION_HEADER,
+  CURVE_DECELERATE, CURVE_STANDARD
+} from '../constants/AnimationTokens';
 import { vibrator } from '@kit.SensorServiceKit';
 import { inputMethod } from '@kit.IMEKit';
 import {
@@ -131,15 +140,15 @@ return this.trackWidth - this.SLIDER_WIDTH;
   // ============================================================
   private startEntrance(): void {
     this.getUIContext().animateTo({
-      duration: 300, curve: Curve.EaseOut
+      duration: DURATION_CEREMONY_OVERLAY, curve: CURVE_DECELERATE
     }, () => {
       this.overlayOpacity = 0.6;
     });
 
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: 600,
-        curve: curves.springMotion(0.35, 0.78)
+        duration: DURATION_GAUGE,
+        curve: SPRING_CEREMONY_FLIP()
       }, () => {
         this.cardScale = 1.0;
         this.cardRotateY = 0;
@@ -152,7 +161,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: 400, curve: Curve.EaseInOut
+        duration: DURATION_CEREMONY_SHINE, curve: CURVE_STANDARD
       }, () => {
         this.shineX = 350;
       });
@@ -160,7 +169,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 内容错落入场：紧跟翻转，不等完全 settle
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE }, () => {
         this.contentStep = 1;
       });
       // 标题入场完成后 300ms 启动标题 shimmer
@@ -169,17 +178,17 @@ return this.trackWidth - this.SLIDER_WIDTH;
       }, 300);
     }, 300);
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE }, () => {
         this.contentStep = 2;
       });
     }, 360);
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE }, () => {
         this.contentStep = 3;
       });
     }, 420);
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 150, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE }, () => {
         this.contentStep = 4;
       });
       // 入场完毕后启动 shimmer
@@ -197,8 +206,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
     const endX = Math.max(280, this.trackWidth + 50);
     this.shimmerX = -80;
     this.getUIContext().animateTo({
-      duration: 1200,
-      curve: Curve.EaseInOut
+      duration: DURATION_CEREMONY_SHIMMER,
+      curve: CURVE_STANDARD
     }, () => {
       this.shimmerX = endX;
     });
@@ -222,8 +231,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
     const endX = this.titleRowWidth + 60;
     this.titleShimmerX = -60;
     this.getUIContext().animateTo({
-      duration: 1200,
-      curve: Curve.EaseInOut
+      duration: DURATION_CEREMONY_SHIMMER,
+      curve: CURVE_STANDARD
     }, () => {
       this.titleShimmerX = endX;
     });
@@ -256,8 +265,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 按压态：缩小 + 颜色加深 + 轨道下沉
     this.getUIContext().animateTo({
-      duration: 120,
-      curve: curves.springMotion(0.25, 0.7)
+      duration: DURATION_SCROLL_SMOOTH,
+      curve: SPRING_PRESS()
     }, () => {
       this.sliderPressed = true;
       this.sliderBgColor = PRIMARY_PRESSED_DEEP;
@@ -309,8 +318,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 松开按压态 + 恢复颜色/下沉
     this.getUIContext().animateTo({
-      duration: 120,
-      curve: curves.springMotion(0.25, 0.7)
+      duration: DURATION_SCROLL_SMOOTH,
+      curve: SPRING_PRESS()
     }, () => {
       this.sliderPressed = false;
       this.sliderBgColor = PRIMARY_COLOR;
@@ -321,8 +330,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 未到磁吸点，弹回
     if (this.getProgress() < this.MAGNET_THRESHOLD) {
       this.getUIContext().animateTo({
-        duration: 400,
-        curve: curves.springMotion(0.35, 0.78)
+        duration: DURATION_COUNTER,
+        curve: SPRING_CEREMONY_FLIP()
       }, () => {
         this.slideX = 0;
         this.targetGlowScale = 1.0;
@@ -348,8 +357,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 吸附到终点 + 恢复按压态
     const maxSlide = this.getMaxSlide();
     this.getUIContext().animateTo({
-      duration: 100,
-      curve: Curve.EaseOut
+      duration: DURATION_FAST,
+      curve: CURVE_DECELERATE
     }, () => {
       this.slideX = maxSlide;
       this.sliderPressed = false;
@@ -369,8 +378,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 滑块放大 1.15
     this.getUIContext().animateTo({
-      duration: 150,
-      curve: curves.springMotion(0.25, 0.7)
+      duration: DURATION_PRESS,
+      curve: SPRING_PRESS()
     }, () => {
       this.sliderBounceScale = 1.15;
     });
@@ -413,8 +422,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 卡片收缩蓄力
     this.getUIContext().animateTo({
-      duration: 300,
-      curve: curves.springMotion(0.3, 0.8)
+      duration: DURATION_SLOW,
+      curve: SPRING_GENERAL()
     }, () => {
       this.ceremonyCardScale = 0.97;
       this.ceremonyCardSinkY = 3;
@@ -429,8 +438,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 光晕显现
     this.getUIContext().animateTo({
-      duration: 200,
-      curve: Curve.EaseOut
+      duration: DURATION_NORMAL,
+      curve: CURVE_DECELERATE
     }, () => {
       this.glowLayerOpacity = 0.10;
     });
@@ -438,8 +447,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 滑块从 1.15 恢复到 1.0
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: 200,
-        curve: curves.springMotion(0.3, 0.75)
+        duration: DURATION_NORMAL,
+        curve: SPRING_COUNTER()
       }, () => {
         this.sliderBounceScale = 1.0;
       });
@@ -459,8 +468,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 弹射预备：微放大
     this.getUIContext().animateTo({
-      duration: 100,
-      curve: curves.springMotion(0.25, 0.7)
+      duration: DURATION_FAST,
+      curve: SPRING_PRESS()
     }, () => {
       this.ceremonyCardScale = 1.03;
       this.ceremonyCardSinkY = 0;
@@ -487,16 +496,16 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 光晕消散
     this.getUIContext().animateTo({
-      duration: 200,
-      curve: Curve.EaseOut
+      duration: DURATION_NORMAL,
+      curve: CURVE_DECELERATE
     }, () => {
       this.glowLayerOpacity = 0;
     });
 
     // 卡片飘走
     this.getUIContext().animateTo({
-      duration: 400,
-      curve: curves.springMotion(0.35, 0.78)
+      duration: DURATION_COUNTER,
+      curve: SPRING_CEREMONY_FLIP()
     }, () => {
       this.launchTranslateY = -800;
       this.launchScale = 0.85;
@@ -506,8 +515,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 遮罩消散
     this.getUIContext().animateTo({
-      duration: 350,
-      curve: Curve.EaseOut
+      duration: DURATION_COLOR_FADE,
+      curve: CURVE_DECELERATE
     }, () => {
       this.overlayOpacity = 0;
     });
@@ -527,7 +536,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     let delay = 0;
     sequence.forEach((x) => {
       setTimeout(() => {
-        this.getUIContext().animateTo({ duration: 80, curve: Curve.EaseOut }, () => {
+        this.getUIContext().animateTo({ duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE }, () => {
           this.titleShakeX = x;
         });
       }, delay);
@@ -537,7 +546,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 边框闪红
     this.titleBorderHighlight = true;
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
+      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_OVERLAY, curve: CURVE_DECELERATE }, () => {
         this.titleBorderHighlight = false;
       });
     }, 600);
@@ -576,8 +585,8 @@ return this.trackWidth - this.SLIDER_WIDTH;
     this.onExitStart();
     this.stopShimmer();
     this.getUIContext().animateTo({
-      duration: 250,
-      curve: curves.springMotion(0.25, 0.8)
+      duration: DURATION_HEADER,
+      curve: SPRING_CEREMONY_DISMISS()
     }, () => {
       this.cardScale = 0.8;
       this.cardOpacity = 0;
@@ -585,7 +594,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       this.cardRotateZ = 5;
     });
     this.getUIContext().animateTo({
-      duration: 200, curve: Curve.EaseOut
+      duration: DURATION_NORMAL, curve: CURVE_DECELERATE
     }, () => {
       this.overlayOpacity = 0;
     });
@@ -620,7 +629,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         .backgroundColor(PRIMARY_COLOR)
         .opacity(this.glowLayerOpacity)
         .blur(16)
-        .animation({ duration: 200, curve: Curve.EaseOut })
+        .animation({ duration: DURATION_NORMAL, curve: CURVE_DECELERATE })
         .scale({
           x: this.cardScale * this.launchScale * this.ceremonyCardScale,
           y: this.cardScale * this.launchScale * this.ceremonyCardScale
@@ -798,7 +807,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         color: this.titleBorderHighlight ? ERROR_BORDER : '#00FFFFFF', // gradient: white fully transparent
         radius: 12
       })
-      .animation({ duration: 200, curve: Curve.EaseOut })
+      .animation({ duration: DURATION_NORMAL, curve: CURVE_DECELERATE })
 
       // 间距 16vp（同组内）
       Column().height(16)
@@ -863,13 +872,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
             .fontWeight(FontWeight.Medium)
             .fontColor(PRIMARY_HALF)
             .opacity(this.trackTextOpacity)
-            .animation({ duration: 150, curve: Curve.EaseOut })
+            .animation({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE })
           Text('准备出发！')
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
             .fontColor(PRIMARY_COLOR)
             .opacity(this.readyTextOpacity)
-            .animation({ duration: 150, curve: Curve.EaseOut })
+            .animation({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE })
         }
 
         // ③ 白色遮罩（盖住左侧轨道 + 文字）
@@ -886,13 +895,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .position({ x: this.getMaxSlide(), y: 0 })
           .scale({ x: this.ripple1Scale, y: this.ripple1Scale })
           .opacity(this.ripple1Opacity)
-          .animation({ duration: 400, curve: Curve.EaseOut })
+          .animation({ duration: DURATION_COUNTER, curve: CURVE_DECELERATE })
         Circle({ width: 48, height: 48 })
           .fill(PRIMARY_COLOR)
           .position({ x: this.getMaxSlide(), y: 0 })
           .scale({ x: this.ripple2Scale, y: this.ripple2Scale })
           .opacity(this.ripple2Opacity)
-          .animation({ duration: 350, curve: Curve.EaseOut })
+          .animation({ duration: DURATION_COLOR_FADE, curve: CURVE_DECELERATE })
 
         // ⑤ 滑块：纯色正圆 + 白色飞机
         Stack({ alignContent: Alignment.Center }) {
@@ -901,13 +910,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
             .height(this.SLIDER_HEIGHT)
             .borderRadius(this.SLIDER_HEIGHT / 2)
             .backgroundColor(this.sliderBgColor)
-            .animation({ duration: 150, curve: Curve.EaseOut })
+            .animation({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE })
 
           SymbolGlyph($r('sys.symbol.airplane'))
             .fontSize(20)
             .fontColor([Color.White])
             .rotate({ angle: this.airplaneRotate })
-            .animation({ duration: 300, curve: curves.springMotion(0.3, 0.75) })
+            .animation({ duration: DURATION_SLOW, curve: SPRING_COUNTER() })
         }
         .width(this.SLIDER_WIDTH)
         .height(this.SLIDER_HEIGHT)
@@ -931,7 +940,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       .height(this.SLIDER_HEIGHT)
       .clip(false)
       .translate({ y: (this.contentStep >= 4 ? 0 : 10) + this.trackSinkY })
-      .animation({ duration: 120, curve: Curve.EaseOut })
+      .animation({ duration: DURATION_SCROLL_SMOOTH, curve: CURVE_DECELERATE })
       .opacity(this.contentStep >= 4 ? 1 : 0)
       .scale({
         x: this.contentStep >= 4 ? 1.0 : 0.9,

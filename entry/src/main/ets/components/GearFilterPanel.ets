@@ -1,8 +1,9 @@
-import { curves, LengthMetrics } from '@kit.ArkUI';
+import { LengthMetrics } from '@kit.ArkUI';
 import { vibrator } from '@kit.SensorServiceKit';
 import {
   CARD_BG,
   CHIP_BG_DEFAULT,
+  CHIP_BORDER,
   GLASS_BG_HEAVY,
   LIGHT_PRIMARY_COLOR,
   OVERLAY_MASK_LIGHT,
@@ -21,6 +22,8 @@ import {
   DURATION_SLOW,
   SPRING_GENERAL,
   SPRING_PANEL_EXIT,
+  SPRING_FILTER_PRESS,
+  SPRING_FILTER_RELEASE,
   STAGGER_OFFSET_Y
 } from '../constants/AnimationTokens';
 import { GearItem } from '../models/PackModels';
@@ -235,13 +238,13 @@ export struct GearFilterPanel {
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.getUIContext().animateTo({
-          curve: curves.springMotion(0.18, 0.65)
+          curve: SPRING_FILTER_PRESS()
         }, () => {
           this.pressedCategory = category;
         });
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
         this.getUIContext().animateTo({
-          curve: curves.springMotion(0.22, 0.62)
+          curve: SPRING_FILTER_RELEASE()
         }, () => {
           this.pressedCategory = '';
         });

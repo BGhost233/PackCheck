@@ -1,5 +1,5 @@
 import { common } from '@kit.AbilityKit';
-import { curves } from '@kit.ArkUI';
+
 import { sensor, vibrator } from '@kit.SensorServiceKit';
 import { HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
 import { ChecklistDetail } from '../components/ChecklistDetail';
@@ -38,11 +38,19 @@ import {
 import {
   SPRING_GENERAL,
   SPRING_TAB,
+  SPRING_CHEVRON,
+  SPRING_TAB_BREATHE,
+  SPRING_TAB_ICON,
   SPRING_HERO_EXPAND,
   SPRING_HERO_COLLAPSE,
   SPRING_PANEL_ENTER,
   SPRING_PANEL_EXIT,
   DURATION_NORMAL,
+  DURATION_TAB,
+  DURATION_COLOR_FADE,
+  DURATION_RECOVER,
+  DURATION_CEREMONY_SHAKE,
+  CURVE_DECELERATE,
   PRESS_SCALE_BOUNCE,
   PRESS_SCALE_REST,
   PANEL_SCALE_START
@@ -268,7 +276,7 @@ struct Index {
       this.checklistRenderNonce = this.checklistRenderNonce + 1;
     };
     if (animated) {
-      this.getUIContext().animateTo({ duration: 260, curve: curves.springMotion(0.22, 0.82) }, updateState);
+      this.getUIContext().animateTo({ duration: DURATION_TAB, curve: SPRING_CHEVRON() }, updateState);
       return;
     }
     updateState();
@@ -821,7 +829,7 @@ struct Index {
   }
 
   private toggleGearExpanded(id: string): void {
-    this.getUIContext().animateTo({ duration: 350, curve: curves.springMotion(0.35, 0.8) }, () => {
+    this.getUIContext().animateTo({ duration: DURATION_COLOR_FADE, curve: SPRING_GENERAL() }, () => {
       this.expandedGearId = this.expandedGearId === id ? '' : id;
     });
   }
@@ -948,10 +956,10 @@ struct Index {
     this.showTripCeremony = false;
   }
 
-  private recoverTripBackground(duration: number = 280): void {
+  private recoverTripBackground(duration: number = DURATION_RECOVER): void {
     this.getUIContext().animateTo({
       duration: duration,
-      curve: Curve.EaseOut
+      curve: CURVE_DECELERATE
     }, () => {
       this.contentScale = 1.0;
       this.contentBlur = 0;
@@ -1669,14 +1677,14 @@ struct Index {
     this.tabsController.changeIndex(targetIndex);
     // 呼吸下压（极短 EaseOut，不用 spring 避免拖尾）
     this.getUIContext().animateTo({
-      duration: 80, curve: Curve.EaseOut
+      duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE
     }, () => {
       this.contentScale = 0.97;
     });
     // 弹回（spring 回弹，灵动感）
     setTimeout(() => {
       this.getUIContext().animateTo({
-        curve: curves.springMotion(0.3, 0.82)
+        curve: SPRING_TAB_BREATHE()
       }, () => {
         this.contentScale = 1.0;
       });
@@ -1729,7 +1737,7 @@ struct Index {
       y: 0.92 + 0.08 * this.tabVisualWeight(index)
     })
     .opacity(0.6 + 0.4 * this.tabVisualWeight(index))
-    .animation({ curve: curves.springMotion(0.28, 0.82) })
+    .animation({ curve: SPRING_TAB_ICON() })
     .onClick(() => {
       if (this.currentTabIndex !== index) {
         this.triggerBlurPulse(index);
@@ -1895,7 +1903,7 @@ struct Index {
               if (this.isSwiping && this.contentScale < 1.0) {
                 // 如果滑动未触发切换（onAnimationStart 不会调用），手动弹回
                 this.getUIContext().animateTo({
-                  curve: curves.springMotion(0.35, 0.8)
+                  curve: SPRING_GENERAL()
                 }, () => {
                   this.contentScale = 1.0;
                 });
@@ -1909,7 +1917,7 @@ struct Index {
             this.tabSwipeProgress = 0;
             // 呼吸回弹：spring 弹回原始 scale
             this.getUIContext().animateTo({
-              curve: curves.springMotion(0.35, 0.8)
+              curve: SPRING_GENERAL()
             }, () => {
               this.contentScale = 1.0;
             });

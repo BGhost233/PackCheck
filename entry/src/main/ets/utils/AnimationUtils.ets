@@ -1,6 +1,5 @@
 // 通用动画工具 — 封装可复用的动画模式，避免组件重复编写
 
-import { curves } from '@kit.ArkUI';
 import {
   SPRING_GENERAL,
   SPRING_PRESS,
@@ -11,9 +10,11 @@ import {
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
+  DURATION_NONE,
   DURATION_NORMAL,
   DURATION_COUNTER,
   DURATION_COLOR_FADE,
+  CURVE_DECELERATE,
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
 
@@ -215,7 +216,7 @@ export function collapseAnimate(stateUpdater: () => void): void {
  * 用法：.animation(colorFadeOptions())
  */
 export function colorFadeOptions(): AnimateParam {
-  return { duration: DURATION_COLOR_FADE, curve: Curve.EaseOut };
+  return { duration: DURATION_COLOR_FADE, curve: CURVE_DECELERATE };
 }
 
 // ============================================================
@@ -227,7 +228,7 @@ export function colorFadeOptions(): AnimateParam {
  * 用法：浮动拖拽层 .animation(dragFollowOptions())
  */
 export function dragFollowOptions(): AnimateParam {
-  return { duration: 0 };
+  return { duration: DURATION_NONE };
 }
 
 /**
