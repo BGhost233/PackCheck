@@ -42,7 +42,7 @@
 - 导航架构：单 Page（Index.ets）+ Navigation NavPathStack，两个 NavDestination（ChecklistDetail、ReviewPage）
 - TripCeremonyCard 暴露 `onExitStart` 回调，退场动画启动第一帧触发，供父组件并行驱动背景恢复
 
-## ArkUI 避坑清单（实战总结，共 27 条）
+## ArkUI 避坑清单（实战总结，共 28 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间由 response 决定。需要短动画就用 EaseOut
@@ -71,6 +71,7 @@
 25. **搜索态绕过折叠/隐藏状态** — 状态查询方法在搜索关键词非空时返回 false，从数据源头解决
 26. **PanGesture distance≥5 防吃 onClick** — distance:0 会让微小移动触发 Pan。Pan+Click 共存时 distance 至少 5
 27. **if/else 条件渲染动画** — 两步：① animateTo 包裹 state 赋值 ② 组件加 `.transition(OPACITY+translate)`。缺一不可
+28. **Stack 子组件禁止 height('100%')** — Stack 高度由子组件最大高度决定，子组件 `height('100%')` 形成循环依赖，运行时布局引擎给出异常大高度值。解法：需要覆盖层/绝对定位元素时，用 Column/Row 容器 + `position()` + `translate()` 代替 Stack
 
 ### 补充验证结论
 
