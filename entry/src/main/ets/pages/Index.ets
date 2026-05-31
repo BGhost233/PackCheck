@@ -1953,7 +1953,9 @@ struct Index {
           .animationDuration(200)
           .barOverlap(true)
           .vertical(false)
+          .scrollable(!this.multiSelectMode)
           .barPosition(BarPosition.End)
+          .barHeight(this.multiSelectMode ? 0 : 56)
           .barFloatingStyle({
             barBottomMargin: 28,
             gradientMask: {

@@ -1336,9 +1336,7 @@ export struct GearPage {
             .select(this.hasMultiGearSelection(item.id))
             .width(18)
             .height(18)
-            .onChange((checked: boolean) => {
-              this.onToggleMultiGearSelection(item.id);
-            })
+            .hitTestBehavior(HitTestMode.None)
             .transition(TransitionEffect.OPACITY.combine(
               TransitionEffect.translate({ x: -12 })
             ).animation({ duration: 260, curve: curves.springMotion(0.3, 0.8) }))
