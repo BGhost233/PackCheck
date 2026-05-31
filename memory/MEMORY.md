@@ -42,22 +42,47 @@
 - 导航架构：单 Page（Index.ets）+ Navigation NavPathStack，两个 NavDestination（ChecklistDetail、ReviewPage）
 - TripCeremonyCard 暴露 `onExitStart` 回调，退场动画启动第一帧触发，供父组件并行驱动背景恢复
 
-## 技术验证结论（避坑）
+## ArkUI 避坑清单（实战总结，共 27 条）
 
-- HarmonyOS vibrator 可用预设：`haptic.clock.timer`（轻 tick）、`haptic.effect.soft`（柔）、`haptic.effect.hard`（重）、`haptic.effect.sharp`（锐）；支持 `count` 参数做连击
-- `backgroundColor` 是 ArkUI 可动画属性，可用 `.animation()` 修饰器平滑过渡
-- 波纹效果用固定数量 Circle 组件 + `.animation()` 修饰器驱动 scale/opacity，不用 ForEach 动态创建（避免 state 数组变化时序问题）
-- 光晕层用独立 Column + blur + opacity 动画实现，`.shadow()` 的 color 插值不可靠
-- SymbolGlyph 支持 `.rotate()` 变换（GearPage.ets 已验证）
-- 文字切换用 Stack + 双 Text 的 opacity 交叉淡入实现，比条件渲染平滑
-- 棘轮振动模式：在连续手势中按进度阈值触发振动，需用 state 记录已触发阈值防重复
-- `GestureEvent.fingerList[].globalX/Y` 已经是 vp 单位，不需要 px2vp；`display.getDefaultDisplaySync()` 返回物理像素需要 px2vp
-- 拖拽跟手必须 `.animation({ duration: 0 })` 覆盖父级动画继承，否则 ArkUI 插值造成滞后
-- macOS Dock 风格磁吸效果：在 builder 中实时计算 proximity（基于 dragX/Y state），卡片数量有限时性能可接受（每个 TripCard 引用 dragX/Y 会触发重建）
-- SwipeGesture(Horizontal) 与垂直 List 滚动不冲突，可安全用于多选退出手势
-- Navigation 内部 Stack 的覆盖层（Sheet/弹窗/仪式卡片）会被 NavDestination 遮挡——必须移到 Navigation 外层 Stack
-- `@Prop` 深拷贝 + ForEach key 只含 id → 内部属性变化不触发重渲染。解法：key 拼入变化属性 + nonce 计数器
-- `bindSheet` 的 SheetOptions 不支持 `borderRadius` 属性（编译通过但运行报 warn），需移除
+1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
+2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间由 response 决定。需要短动画就用 EaseOut
+3. **滚动驱动动画禁止 animateTo** — scrollOffset→UI 必须同步赋值，平滑感放 `.animation()` 修饰器，不放数据源
+4. **折叠 Header 必须缩小实际高度** — 不能只 opacity:0，必须 `.height(计算值)` + `.clip(true)` 真正折叠
+5. **Tab 切换禁止 setTimeout** — `changeIndex()` 必须 onClick 中立即调用，弹性动画只作用于 pill，不延迟切换
+6. **Stack 中组件定位要显式** — 用 `.position()` / `.align()` + `.offset()`，不依赖 margin
+7. **动画不要叠加** — 同一属性不能同时有 `.animation()` 和 `animateTo()`，选一种
+8. **@Builder 回调参数 this 丢失** — 异步回调（弹窗/选择器）中 this 丢失。规则：参数只传数据，不传带 this 的回调
+9. **onTouch vs onClick 冲突** — 父 `.onClick()` 拦截子事件。父只需触摸态时用 `.onTouch(TouchType.Down)` 代替
+10. **geometryTransition + Navigation** — pushPath/pop 必须在 animateTo 内 + animated=false；NavDestination 加 `.transition(OPACITY)`；禁止 `{ follow: true }`；必须 `.onBackPressed()` 拦截系统返回走 animateTo
+11. **覆盖层退场背景恢复必须并行** — 子组件暴露 `onExitStart`，退场第一帧触发；恢复用 EaseOut 不用 Spring
+12. **波纹/粒子用固定组件** — 预置固定数量 Circle + `.animation()` 驱动，不用 ForEach 动态创建
+13. **连续手势振动节奏** — 棘轮式按阈值触发，state 记录已触发阈值防重复。预设：clock.timer < effect.soft < effect.hard < effect.sharp
+14. **@Builder 方法体禁止变量声明** — 只能写 UI 描述语法，计算值用 `this.xxx()` 方法或 @State
+15. **折叠屏适配：position 组件必须 onAreaChange** — display 只是瞬间物理像素，折叠/分屏后要重新计算坐标
+16. **ArkTS 禁止无类型对象字面量导出** — 用 `export class Xxx { static fn = fn }` 代替 `export const = {}`
+17. **装饰动画静止态必须完全不可见** — rest state 必须 opacity=0 或 scale=0，不能半透明蒙混
+18. **手势坐标是 vp，display 是物理像素** — GestureEvent/TouchEvent 坐标直接用；display.width/height 必须 px2vp()
+19. **拖拽浮层 animation({ duration: 0 })** — 覆盖父级动画继承，消除插值滞后
+20. **多选模式切换不改变 Header 可见性** — 不 if/else 整个 Header，内部切换内容。多选时 Header 锁定收缩态
+21. **浮动 Header + List spacer 间距** — spacer = Header高度 - paddingTop - space；模式切换时同步调整
+22. **浮动组件不放 Column 流式布局** — 放根 Stack 用 position + zIndex 定位，展开时强制 Header 收缩
+23. **覆盖层必须在 Navigation 外层** — NavDestination 会遮挡内部 Stack 子组件，覆盖层放 Navigation 同级之后
+24. **ForEach key 包含所有变化维度** — key 不止 id，拼入影响渲染的属性 + nonce 计数器
+25. **搜索态绕过折叠/隐藏状态** — 状态查询方法在搜索关键词非空时返回 false，从数据源头解决
+26. **PanGesture distance≥5 防吃 onClick** — distance:0 会让微小移动触发 Pan。Pan+Click 共存时 distance 至少 5
+27. **if/else 条件渲染动画** — 两步：① animateTo 包裹 state 赋值 ② 组件加 `.transition(OPACITY+translate)`。缺一不可
+
+### 补充验证结论
+
+- HarmonyOS vibrator 预设：`haptic.clock.timer`/`effect.soft`/`effect.hard`/`effect.sharp`；`count` 参数做连击
+- `backgroundColor` 可动画，用 `.animation()` 修饰器过渡
+- 光晕层用独立 Column + blur + opacity，`.shadow()` color 插值不可靠
+- SymbolGlyph 支持 `.rotate()` 变换
+- 文字切换用 Stack + 双 Text opacity 交叉淡入
+- macOS Dock 磁吸：builder 中实时算 proximity，卡片有限时性能可接受
+- SwipeGesture(Horizontal) 与垂直 List 不冲突
+- `@Prop` 深拷贝 + ForEach key 只含 id → 不触发重渲染。解法：key 拼入变化属性 + nonce
+- `bindSheet` SheetOptions 不支持 `borderRadius`（编译通过运行报 warn），需移除
 
 ## 快速核查功能（2025-06-22）
 
