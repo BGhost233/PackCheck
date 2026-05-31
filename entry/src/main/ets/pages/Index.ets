@@ -44,7 +44,7 @@ import {
   PRESS_SCALE_REST,
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
-import { ChecklistItem, DEFAULT_CATEGORIES, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
+import { AssetEvent, AssetTotals, ChecklistItem, DEFAULT_CATEGORIES, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import { GearCalc } from '../services/GearService';
 import { CheckCalc } from '../services/ChecklistService';
@@ -599,6 +599,18 @@ struct Index {
     this.errorText = '';
   }
 
+  private computeAssetTotals(gears: GearItem[]): AssetTotals {
+    let totalValue = 0;
+    for (let i = 0; i < gears.length; i++) {
+      const p = gears[i].price;
+      if (p !== undefined && p > 0) {
+        totalValue += p;
+      }
+    }
+    const result: AssetTotals = { totalValue: totalValue, totalCount: gears.length };
+    return result;
+  }
+
   private async saveGear(): Promise<void> {
     const name = this.gearName.trim();
     const category = this.gearCategory.trim().length === 0 ? '其他' : this.gearCategory.trim();
@@ -609,15 +621,18 @@ struct Index {
 
     const nextGears: GearItem[] = [];
     let updated = false;
+    let oldPrice: number | undefined = undefined;
+    const newPrice = normalizeNumber(this.gearPrice);
     for (let index = 0; index < this.gears.length; index++) {
       const item = this.gears[index];
       if (item.id === this.editingGearId) {
+        oldPrice = item.price;
         const edited: GearItem = {
           id: item.id,
           name: name,
           category: category,
           weight: normalizeNumber(this.gearWeight),
-          price: normalizeNumber(this.gearPrice),
+          price: newPrice,
           note: this.gearNote.trim(),
           tripCount: item.tripCount,
           createdAt: item.createdAt
@@ -635,7 +650,7 @@ struct Index {
         name: name,
         category: category,
         weight: normalizeNumber(this.gearWeight),
-        price: normalizeNumber(this.gearPrice),
+        price: newPrice,
         note: this.gearNote.trim(),
         tripCount: 0,
         createdAt: Date.now()
@@ -645,6 +660,33 @@ struct Index {
 
     await this.store.saveGears(nextGears);
     this.gears = nextGears;
+
+    // 记录资产事件
+    const totals = this.computeAssetTotals(nextGears);
+    if (!updated) {
+      // 新增装备
+      const evt: AssetEvent = {
+        timestamp: Date.now(),
+        totalValue: totals.totalValue,
+        totalCount: totals.totalCount,
+        event: 'add',
+        gearName: name,
+        gearPrice: newPrice
+      };
+      await this.store.appendAssetEvent(evt);
+    } else if (oldPrice !== newPrice) {
+      // 编辑且价格变化
+      const evt: AssetEvent = {
+        timestamp: Date.now(),
+        totalValue: totals.totalValue,
+        totalCount: totals.totalCount,
+        event: 'edit',
+        gearName: name,
+        gearPrice: newPrice
+      };
+      await this.store.appendAssetEvent(evt);
+    }
+
     await this.ensureCategory(category);
     if (this.returnToImportAfterGear) {
       this.returnToImportAfterGear = false;
@@ -671,9 +713,25 @@ struct Index {
   }
 
   private async deleteGear(id: string): Promise<void> {
+    const deleted = this.gears.find((item: GearItem) => item.id === id);
     const nextGears = this.gears.filter((item: GearItem) => item.id !== id);
     await this.store.saveGears(nextGears);
     this.gears = nextGears;
+
+    // 记录资产事件
+    if (deleted !== undefined) {
+      const totals = this.computeAssetTotals(nextGears);
+      const evt: AssetEvent = {
+        timestamp: Date.now(),
+        totalValue: totals.totalValue,
+        totalCount: totals.totalCount,
+        event: 'remove',
+        gearName: deleted.name,
+        gearPrice: deleted.price
+      };
+      await this.store.appendAssetEvent(evt);
+    }
+
     if (this.expandedGearId === id) {
       this.expandedGearId = '';
     }
@@ -715,6 +773,18 @@ struct Index {
           const nextGears = this.gears.filter((item: GearItem) => ids.indexOf(item.id) < 0);
           await this.store.saveGears(nextGears);
           this.gears = nextGears;
+
+          // 记录资产事件（批量删除合并为一条 remove 事件）
+          const totals = this.computeAssetTotals(nextGears);
+          const evt: AssetEvent = {
+            timestamp: Date.now(),
+            totalValue: totals.totalValue,
+            totalCount: totals.totalCount,
+            event: 'remove',
+            gearName: ids.length.toString() + '件装备'
+          };
+          await this.store.appendAssetEvent(evt);
+
           this.cancelGearMultiSelect();
         }
       }

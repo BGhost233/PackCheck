@@ -28,6 +28,20 @@ export interface TripChecklist {
   createdAt: number;
 }
 
+export interface AssetEvent {
+  timestamp: number;          // 毫秒时间戳
+  totalValue: number;         // 事件后的累计总价（元）
+  totalCount: number;         // 事件后的装备总件数
+  event: 'add' | 'remove' | 'edit';
+  gearName?: string;          // 触发事件的装备名称
+  gearPrice?: number;         // 该装备的价格（元）
+}
+
+export interface AssetTotals {
+  totalValue: number;
+  totalCount: number;
+}
+
 export const DEFAULT_CATEGORIES: string[] = [
   '证件',
   '穿着·上身',

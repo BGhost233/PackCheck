@@ -259,7 +259,11 @@ export struct GearPage {
     }
     this.trayAutoScrollTimer = setInterval(() => {
       const current = this.tripTrayScroller.currentOffset().xOffset;
-      this.tripTrayScroller.scrollTo({ xOffset: current + this.trayScrollSpeed, yOffset: 0 });
+      this.tripTrayScroller.scrollTo({
+        xOffset: current + this.trayScrollSpeed,
+        yOffset: 0,
+        animation: { duration: 32, curve: Curve.Linear }
+      });
     }, 16) as number;
   }
 
@@ -826,6 +830,7 @@ export struct GearPage {
     .width('100%')
     .height('100%')
     .backgroundColor(PAGE_BG)
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
     .onAreaChange((_oldArea: Area, newArea: Area) => {
       const newWidth = newArea.width as number;
       const newHeight = newArea.height as number;
@@ -1396,29 +1401,39 @@ export struct GearPage {
     } else {
       // 普通模式：紧凑行 + 左滑删除
       Stack() {
-        // 底层：删除按钮（仅在侧滑时渲染，避免 rest 态红色暴露）
-        if (this.swipedGearId === item.id) {
+        // 底层：删除按钮（始终渲染，通过 opacity + scale 做弹性出场）
+        Row() {
+          Blank()
           Row() {
-            Blank()
             Text('删除')
               .fontSize(14)
               .fontWeight(FontWeight.Medium)
               .fontColor('#FFFFFF')
-              .width(70)
-              .height(44)
-              .textAlign(TextAlign.Center)
-              .backgroundColor(DANGER_COLOR)
-              .borderRadius({ topRight: 12, bottomRight: 12 })
-              .onClick(() => {
-                this.swipedGearId = '';
-                this.swipeOffsetX = 0;
-                this.onConfirmDeleteGear(item);
-              })
           }
-          .width('100%')
           .height(52)
-          .alignItems(VerticalAlign.Center)
+          .padding({ left: 18, right: 18 })
+          .margin({ left: 10 })
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor(DANGER_COLOR)
+          .borderRadius(12)
+          .onClick(() => {
+            this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+              this.swipedGearId = '';
+              this.swipeOffsetX = 0;
+            });
+            this.onConfirmDeleteGear(item);
+          })
+          .scale({
+            x: this.swipedGearId === item.id ? 1 : 0.6,
+            y: this.swipedGearId === item.id ? 1 : 0.6
+          })
+          .opacity(this.swipedGearId === item.id ? 1 : 0)
+          .animation({ duration: 250, curve: curves.springMotion(0.3, 0.7) })
         }
+        .width('100%')
+        .height('100%')
+        .alignItems(VerticalAlign.Center)
+        .padding({ right: 14 })
 
         // 上层：内容行
         Column() {
@@ -1463,7 +1478,6 @@ export struct GearPage {
         .backgroundColor(this.pressedGearId === item.id ? '#F5F5F5' : CARD_BG)
         .animation({ duration: 150, curve: Curve.EaseOut })
         .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
-        .animation({ duration: 0 })
         .onTouch((event: TouchEvent) => {
           if (event.type === TouchType.Down) {
             this.pressedGearId = item.id;
@@ -1483,8 +1497,8 @@ export struct GearPage {
             .onActionUpdate((event: GestureEvent) => {
               const offsetX = event.offsetX;
               if (this.swipedGearId === item.id) {
-                // 已滑开状态：在 -70 基础上继续滑动
-                const newOffset = Math.min(0, Math.max(-140, -70 + offsetX));
+                // 已滑开状态：在 -80 基础上继续滑动
+                const newOffset = Math.min(0, Math.max(-160, -80 + offsetX));
                 this.swipeOffsetX = newOffset;
               } else {
                 // 未滑开：只允许左滑
@@ -1497,9 +1511,9 @@ export struct GearPage {
             })
             .onActionEnd((event: GestureEvent) => {
               // 判断是否吸附到打开状态
-              if (this.swipeOffsetX < -35) {
+              if (this.swipeOffsetX < -40) {
                 this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
-                  this.swipeOffsetX = -70;
+                  this.swipeOffsetX = -80;
                 });
               } else {
                 this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
@@ -1510,8 +1524,8 @@ export struct GearPage {
             })
             .onActionCancel(() => {
               this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
-                if (this.swipeOffsetX < -35) {
-                  this.swipeOffsetX = -70;
+                if (this.swipeOffsetX < -40) {
+                  this.swipeOffsetX = -80;
                 } else {
                   this.swipedGearId = '';
                   this.swipeOffsetX = 0;
@@ -1908,7 +1922,7 @@ export struct GearPage {
             y: this.tripCardScale('__new_trip__')
           })
           .translate({ y: this.tripCardLift('__new_trip__') })
-          .animation({ duration: 160, curve: Curve.EaseOut })
+          .animation({ duration: 200, curve: curves.springMotion(0.28, 0.72) })
           .onAreaChange((_old: Area, area: Area) => {
             const pos = area.globalPosition as Position;
             this.updateTripCardArea('__new_trip__',
@@ -1924,13 +1938,16 @@ export struct GearPage {
       .height(82)
     }
     .width('100%')
+    .height(274)
     .alignItems(HorizontalAlign.Center)
+    .padding({ bottom: 34 })
     .backgroundColor('#E8FFFFFF')
     .backdropBlur(40)
     .borderRadius({ topLeft: 24, topRight: 24 })
     .shadow({ radius: 20, color: '#1A000000', offsetX: 0, offsetY: -6 })
-    .position({ x: 0, y: this.showTripTray ? this.screenHeight - 240 : this.screenHeight })
+    .position({ x: 0, y: this.showTripTray ? this.screenHeight - 274 : this.screenHeight })
     .animation({ duration: 350, curve: curves.springMotion(0.35, 0.8) })
+    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
   }
 
   @Builder
@@ -1959,7 +1976,7 @@ export struct GearPage {
       y: this.tripCardScale(trip.id)
     })
     .translate({ y: this.tripCardLift(trip.id) })
-    .animation({ duration: 160, curve: Curve.EaseOut })
+    .animation({ duration: 200, curve: curves.springMotion(0.28, 0.72) })
     .onAreaChange((_old: Area, area: Area) => {
       const pos = area.globalPosition as Position;
       this.updateTripCardArea(trip.id,
@@ -1996,20 +2013,22 @@ export struct GearPage {
     return Math.max(0, 1 - distance / threshold);
   }
 
-  // 基于 proximity 的 scale: 1.0 ~ 1.12
+  // 基于 proximity 的 scale: 1.0 ~ 1.25 (命中时 1.25，接近时渐变)
   private tripCardScale(id: string): number {
     if (this.dragOverTripId === id) {
-      return 1.1;
+      return 1.25;
     }
-    return 1 + 0.1 * this.tripCardProximity(id);
+    const p = this.tripCardProximity(id);
+    return 1 + 0.25 * p * p; // 平方曲线：接近时加速放大
   }
 
-  // 基于 proximity 的 translateY: 0 ~ -10vp (向上涌起)
+  // 基于 proximity 的 translateY: 0 ~ -22vp (向上涌起)
   private tripCardLift(id: string): number {
     if (this.dragOverTripId === id) {
-      return -10;
+      return -22;
     }
-    return -8 * this.tripCardProximity(id);
+    const p = this.tripCardProximity(id);
+    return -20 * p * p;
   }
 
   // --- 浮动装备堆 ---
