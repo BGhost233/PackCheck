@@ -113,6 +113,9 @@ struct Index {
   @State private reviewDragX: number = 0;
   @State private highlightedItemId: string = '';
   @State private checklistRenderNonce: number = 0;
+  // ===== 资产趋势 =====
+  @State private assetEvents: AssetEvent[] = [];
+
   // ===== 新建行程仪式感 =====
   @State private showTripCeremony: boolean = false;
   @State private ceremonyTripTitle: string = '';
@@ -155,6 +158,8 @@ struct Index {
       this.tempItemGroup = '其他';
       // 资产事件历史回填
       await this.backfillAssetEvents();
+      // 加载资产事件到状态
+      this.assetEvents = await this.store.getAssetEvents();
     } catch (error) {
       this.errorText = '数据加载失败';
     }
@@ -707,6 +712,7 @@ struct Index {
         gearPrice: newPrice
       };
       await this.store.appendAssetEvent(evt);
+      this.assetEvents = await this.store.getAssetEvents();
     } else if (oldPrice !== newPrice) {
       // 编辑且价格变化
       const evt: AssetEvent = {
@@ -718,6 +724,7 @@ struct Index {
         gearPrice: newPrice
       };
       await this.store.appendAssetEvent(evt);
+      this.assetEvents = await this.store.getAssetEvents();
     }
 
     await this.ensureCategory(category);
@@ -763,6 +770,7 @@ struct Index {
         gearPrice: deleted.price
       };
       await this.store.appendAssetEvent(evt);
+      this.assetEvents = await this.store.getAssetEvents();
     }
 
     if (this.expandedGearId === id) {
@@ -817,6 +825,7 @@ struct Index {
             gearName: ids.length.toString() + '件装备'
           };
           await this.store.appendAssetEvent(evt);
+          this.assetEvents = await this.store.getAssetEvents();
 
           this.cancelGearMultiSelect();
         }
@@ -1999,6 +2008,7 @@ struct Index {
                 multiSelectMode: this.multiSelectMode,
                 selectedMultiGearIds: this.selectedMultiGearIds,
                 checklists: this.checklists,
+                assetEvents: this.assetEvents,
                 onSearchChange: (keyword: string) => {
                   this.gearSearchKeyword = keyword;
                 },

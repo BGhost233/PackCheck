@@ -1,9 +1,9 @@
 import { common } from '@kit.AbilityKit';
 import { curves, display } from '@kit.ArkUI';
 import { vibrator } from '@kit.SensorServiceKit';
-import { GearItem, TripChecklist } from '../models/PackModels';
+import { AssetEvent, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
-import { WeightGauge } from './WeightGauge';
+import { AssetTrendCard } from './AssetTrendCard';
 import { EmptyIllustration } from './EmptyIllustration';
 import {
   ARROW_COLOR,
@@ -86,6 +86,7 @@ export struct GearPage {
   @State private dragOverTripId: string = '';
   @State private showTripTray: boolean = false;
   @Prop checklists: TripChecklist[] = [];
+  @Prop assetEvents: AssetEvent[] = [];
 
   private store: PackStore = new PackStore();
   private gearListScroller: Scroller = new Scroller();
@@ -1053,12 +1054,11 @@ export struct GearPage {
                 this.onOpenFilterPanel();
               })
 
-              WeightGauge({
-                currentWeight: this.totalGearWeight(),
-                targetWeight: this.targetWeightGram,
+              AssetTrendCard({
+                assetEvents: this.assetEvents,
+                currentTotal: this.totalGearPrice(),
                 gearCount: this.gears.length,
-                totalPrice: this.totalGearPrice(),
-                budget: this.gearBudget
+                totalWeight: this.totalGearWeight()
               })
                 .opacity(this.gearRingOpacity())
                 .scale({ x: this.gearRingScale(), y: this.gearRingScale() })
