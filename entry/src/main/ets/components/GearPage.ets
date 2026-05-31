@@ -54,7 +54,6 @@ export struct GearPage {
 @State private pressedGearId: string = '';
 @State private swipedGearId: string = '';
 @State private swipeOffsetX: number = 0;
-@State private contextMenuShownId: string = '';
 @State private showMoveGroupSheet: boolean = false;
 @State private searchExpanded: boolean = false;
   @State private showWeightEditor: boolean = false;
@@ -1542,7 +1541,7 @@ export struct GearPage {
         .clip(true)
       }
       .width('100%')
-      .bindContextMenu(this.contextMenuShownId === item.id, this.GearContextMenu(item), {
+      .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
         preview: this.GearPreviewCard(item),
         previewAnimationOptions: { scale: [0.92, 1.05] },
         transition: TransitionEffect.asymmetric(
@@ -1554,17 +1553,8 @@ export struct GearPage {
             .animation({ curve: curves.springMotion(0.28, 0.85) })
         ),
         placement: Placement.Bottom,
-        borderRadius: 20,
-        onDisappear: () => {
-          this.contextMenuShownId = '';
-        }
+        borderRadius: 20
       })
-      .gesture(
-        LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
-          .onAction(() => {
-            this.contextMenuShownId = item.id;
-          })
-      )
     }
   }
 
