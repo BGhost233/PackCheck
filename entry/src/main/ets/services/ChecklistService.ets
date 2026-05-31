@@ -1,4 +1,4 @@
-import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
+import { ChecklistItem, GearItem, makeId, TripChecklist } from '../models/PackModels';
 import { gearById, numberOrZero } from './GearService';
 
 /**
@@ -323,6 +323,75 @@ function formatKgLocal(weightGram: number): string {
     return '0kg';
   }
   return (Math.round(weightGram / 100) / 10).toString() + 'kg';
+}
+
+/**
+ * 找到最相关的行程：优先最近的未来行程，其次最近的过去行程，最后按创建时间取最新。
+ */
+export function findLatestChecklist(checklists: TripChecklist[]): TripChecklist | undefined {
+  if (checklists.length === 0) {
+    return undefined;
+  }
+  const today = startOfDay(new Date());
+  let nearestFuture: TripChecklist | undefined = undefined;
+  for (let i = 0; i < checklists.length; i++) {
+    const dateAt = checklistDateAt(checklists[i]);
+    if (dateAt !== undefined && dateAt >= today) {
+      if (nearestFuture === undefined || dateAt < checklistDateAt(nearestFuture)!) {
+        nearestFuture = checklists[i];
+      }
+    }
+  }
+  if (nearestFuture !== undefined) {
+    return nearestFuture;
+  }
+  let latestPast: TripChecklist | undefined = undefined;
+  for (let i = 0; i < checklists.length; i++) {
+    const dateAt = checklistDateAt(checklists[i]);
+    if (dateAt !== undefined && dateAt < today) {
+      if (latestPast === undefined || dateAt > checklistDateAt(latestPast)!) {
+        latestPast = checklists[i];
+      }
+    }
+  }
+  if (latestPast !== undefined) {
+    return latestPast;
+  }
+  return checklists[0];
+}
+
+/**
+ * 从装备列表中按 ID 筛选，生成 ChecklistItem 数组。
+ */
+export function buildItemsFromGears(gears: GearItem[], gearIds: string[]): ChecklistItem[] {
+  const items: ChecklistItem[] = [];
+  for (let gearIndex = 0; gearIndex < gears.length; gearIndex++) {
+    const gear = gears[gearIndex];
+    if (gearIds.indexOf(gear.id) >= 0) {
+      const item: ChecklistItem = {
+        id: makeId('item'),
+        name: gear.name,
+        group: gear.category,
+        checked: false,
+        weight: gear.weight,
+        price: gear.price,
+        fromGearId: gear.id
+      };
+      items.push(item);
+    }
+  }
+  return items;
+}
+
+/**
+ * 在 checklists 头部插入新建的 checklist，返回新数组。
+ */
+export function prependChecklist(checklists: TripChecklist[], created: TripChecklist): TripChecklist[] {
+  const result: TripChecklist[] = [created];
+  for (let index = 0; index < checklists.length; index++) {
+    result.push(checklists[index]);
+  }
+  return result;
 }
 
 export function matchingGearForChecklistItem(item: ChecklistItem, gears: GearItem[]): GearItem | undefined {

@@ -73,7 +73,6 @@ import {
 } from '../services/GearService';
 import {
   startOfDay,
-  checklistDateAt,
   checklistGroups,
   checklistItemsByGroup,
   isGroupDone,
@@ -107,7 +106,10 @@ import {
   toggleItemInChecklists,
   removeItemFromChecklists,
   updateChecklistMeta,
-  updateItemFields
+  updateItemFields,
+  buildItemsFromGears,
+  prependChecklist,
+  findLatestChecklist
 } from '../services/ChecklistService';
 
 @Entry
@@ -280,38 +282,7 @@ struct Index {
   }
 
   private latestChecklist(): TripChecklist | undefined {
-    if (this.checklists.length === 0) {
-      return undefined;
-    }
-    const today = startOfDay(new Date());
-    // 找最近的未来行程（dateAt >= 今天0点），按 dateAt 升序取第一个
-    let nearestFuture: TripChecklist | undefined = undefined;
-    for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = checklistDateAt(this.checklists[i]);
-      if (dateAt !== undefined && dateAt >= today) {
-        if (nearestFuture === undefined || dateAt < checklistDateAt(nearestFuture)!) {
-          nearestFuture = this.checklists[i];
-        }
-      }
-    }
-    if (nearestFuture !== undefined) {
-      return nearestFuture;
-    }
-    // 无未来行程，找最近的历史行程（dateAt < 今天0点），按 dateAt 降序取第一个
-    let latestPast: TripChecklist | undefined = undefined;
-    for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = checklistDateAt(this.checklists[i]);
-      if (dateAt !== undefined && dateAt < today) {
-        if (latestPast === undefined || dateAt > checklistDateAt(latestPast)!) {
-          latestPast = this.checklists[i];
-        }
-      }
-    }
-    if (latestPast !== undefined) {
-      return latestPast;
-    }
-    // 全部无日期，按 createdAt 降序取第一个（checklists 已按 createdAt 降序排列）
-    return this.checklists[0];
+    return findLatestChecklist(this.checklists);
   }
 
   private hasLatestChecklist(): boolean {
@@ -900,20 +871,9 @@ struct Index {
     this.openSheetAnimated();
   }
 
-  private uniqueGearIds(ids: string[]): string[] {
-    return uniqueGearIds(ids);
-  }
-
-  private checklistHasGear(checklist: TripChecklist, gearId: string): boolean {
-    return checklistHasGear(checklist, gearId);
-  }
-
-  private countableGearIds(checklist: TripChecklist, gearIds: string[]): string[] {
-    return countableGearIds(checklist, gearIds);
-  }
 
   private async incrementGearTripCounts(gearIds: string[]): Promise<void> {
-    const dedupedIds = this.uniqueGearIds(gearIds);
+    const dedupedIds = uniqueGearIds(gearIds);
     if (dedupedIds.length === 0) {
       return;
     }
@@ -1009,10 +969,7 @@ struct Index {
       items: [],
       createdAt: Date.now()
     };
-    const nextChecklists: TripChecklist[] = [created];
-    for (let index = 0; index < this.checklists.length; index++) {
-      nextChecklists.push(this.checklists[index]);
-    }
+    const nextChecklists = prependChecklist(this.checklists, created);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
     this.selectedChecklistId = created.id;
@@ -1367,25 +1324,8 @@ struct Index {
       this.errorText = '请选择装备';
       return;
     }
-    const items: ChecklistItem[] = [];
-    const selectedGearIds: string[] = [];
-    for (let gearIndex = 0; gearIndex < this.gears.length; gearIndex++) {
-      const gear = this.gears[gearIndex];
-      if (this.importGearIds.indexOf(gear.id) >= 0) {
-        selectedGearIds.push(gear.id);
-        const item: ChecklistItem = {
-          id: makeId('item'),
-          name: gear.name,
-          group: gear.category,
-          checked: false,
-          weight: gear.weight,
-          price: gear.price,
-          fromGearId: gear.id
-        };
-        items.push(item);
-      }
-    }
-    const countGearIds = this.countableGearIds(checklist, selectedGearIds);
+    const items = buildItemsFromGears(this.gears, this.importGearIds);
+    const countGearIds = countableGearIds(checklist, this.importGearIds);
     const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, items);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
@@ -1399,33 +1339,15 @@ struct Index {
       this.errorText = '行程名称不能为空';
       return;
     }
-    const uniqueIds = this.uniqueGearIds(this.selectedMultiGearIds);
-    const items: ChecklistItem[] = [];
-    for (let gearIndex = 0; gearIndex < this.gears.length; gearIndex++) {
-      const gear = this.gears[gearIndex];
-      if (uniqueIds.indexOf(gear.id) >= 0) {
-        const item: ChecklistItem = {
-          id: makeId('item'),
-          name: gear.name,
-          group: gear.category,
-          checked: false,
-          weight: gear.weight,
-          price: gear.price,
-          fromGearId: gear.id
-        };
-        items.push(item);
-      }
-    }
+    const uniqueIds = uniqueGearIds(this.selectedMultiGearIds);
+    const items = buildItemsFromGears(this.gears, uniqueIds);
     const created: TripChecklist = {
       id: makeId('trip'),
       title: title,
       items: items,
       createdAt: Date.now()
     };
-    const nextChecklists: TripChecklist[] = [created];
-    for (let index = 0; index < this.checklists.length; index++) {
-      nextChecklists.push(this.checklists[index]);
-    }
+    const nextChecklists = prependChecklist(this.checklists, created);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
     await this.incrementGearTripCounts(uniqueIds);
@@ -1438,30 +1360,14 @@ struct Index {
 
 
   private async addGearsToExistingTrip(gearIds: string[], tripId: string): Promise<void> {
-    const uniqueIds = this.uniqueGearIds(gearIds);
-    const items: ChecklistItem[] = [];
-    for (let gearIndex = 0; gearIndex < this.gears.length; gearIndex++) {
-      const gear = this.gears[gearIndex];
-      if (uniqueIds.indexOf(gear.id) >= 0) {
-        const item: ChecklistItem = {
-          id: makeId('item'),
-          name: gear.name,
-          group: gear.category,
-          checked: false,
-          weight: gear.weight,
-          price: gear.price,
-          fromGearId: gear.id
-        };
-        items.push(item);
-      }
-    }
+    const uniqueIds = uniqueGearIds(gearIds);
+    const items = buildItemsFromGears(this.gears, uniqueIds);
     const updatedChecklists = addItemsToChecklist(this.checklists, tripId, items);
     this.applyChecklistState(updatedChecklists);
     await this.store.saveChecklists(updatedChecklists);
     await this.incrementGearTripCounts(uniqueIds);
     this.cancelGearMultiSelect();
-    // 找到目标行程名称做 toast
-    const targetTrip = updatedChecklists.find(c => c.id === tripId);
+    const targetTrip = updatedChecklists.find((c: TripChecklist) => c.id === tripId);
     const tripName = targetTrip !== undefined ? targetTrip.title : '行程';
     this.showToastMessage('已添加 ' + items.length.toString() + ' 件到「' + tripName + '」');
   }
