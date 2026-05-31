@@ -1400,156 +1400,161 @@ export struct GearPage {
       )
     } else {
       // 普通模式：紧凑行 + 左滑删除
-      Stack() {
-        // 底层：删除按钮（始终渲染，通过 opacity + scale 做弹性出场）
-        Row() {
-          Blank()
+      // 注意：bindContextMenu 的 preview 会参与 Stack 布局测量导致高度异常，
+      // 因此将 bindContextMenu 移到外层 Column 上，Stack 仅负责滑动删除层叠。
+      Column() {
+        Stack() {
+          // 底层：删除按钮（始终渲染，通过 opacity + scale 做弹性出场）
           Row() {
-            Text('删除')
-              .fontSize(14)
-              .fontWeight(FontWeight.Medium)
-              .fontColor('#FFFFFF')
-          }
-          .height(52)
-          .padding({ left: 18, right: 18 })
-          .margin({ left: 10 })
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(DANGER_COLOR)
-          .borderRadius(12)
-          .onClick(() => {
-            this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
-              this.swipedGearId = '';
-              this.swipeOffsetX = 0;
-            });
-            this.onConfirmDeleteGear(item);
-          })
-          .scale({
-            x: this.swipedGearId === item.id ? 1 : 0.6,
-            y: this.swipedGearId === item.id ? 1 : 0.6
-          })
-          .opacity(this.swipedGearId === item.id ? 1 : 0)
-          .animation({ duration: 250, curve: curves.springMotion(0.3, 0.7) })
-        }
-        .width('100%')
-        .height('100%')
-        .alignItems(VerticalAlign.Center)
-        .padding({ right: 14 })
-
-        // 上层：内容行
-        Column() {
-          Row({ space: 10 }) {
-            this.GearNameText(item.name)
-            if (item.weight !== undefined && item.weight > 0) {
-              Text(item.weight.toString() + 'g')
-                .fontSize(12)
-                .fontColor(TEXT_TERTIARY)
-                .fontFeature(FONT_FEATURE_TNUM)
+            Blank()
+            Row() {
+              Text('删除')
+                .fontSize(14)
+                .fontWeight(FontWeight.Medium)
+                .fontColor('#FFFFFF')
             }
-            SymbolGlyph($r('sys.symbol.chevron_down'))
-              .fontSize(12)
-              .fontColor([ARROW_COLOR])
-              .rotate({ angle: this.expandedGearId === item.id ? 180 : 0 })
-              .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
+            .height(44)
+            .padding({ left: 18, right: 18 })
+            .margin({ left: 10 })
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor(DANGER_COLOR)
+            .borderRadius(12)
+            .onClick(() => {
+              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+                this.swipedGearId = '';
+                this.swipeOffsetX = 0;
+              });
+              this.onConfirmDeleteGear(item);
+            })
+            .scale({
+              x: this.swipedGearId === item.id ? 1 : 0.6,
+              y: this.swipedGearId === item.id ? 1 : 0.6
+            })
+            .opacity(this.swipedGearId === item.id ? 1 : 0)
+            .animation({ duration: 250, curve: curves.springMotion(0.3, 0.7) })
           }
           .width('100%')
-          .height(44)
+          .height('100%')
           .alignItems(VerticalAlign.Center)
-          .onClick(() => {
-            if (this.swipedGearId === item.id) {
-              // 已滑开状态下点击 = 收回
-              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
-                this.swipedGearId = '';
-                this.swipeOffsetX = 0;
-              });
-              return;
+          .padding({ right: 14 })
+
+          // 上层：内容行
+          Column() {
+            Row({ space: 10 }) {
+              this.GearNameText(item.name)
+              if (item.weight !== undefined && item.weight > 0) {
+                Text(item.weight.toString() + 'g')
+                  .fontSize(12)
+                  .fontColor(TEXT_TERTIARY)
+                  .fontFeature(FONT_FEATURE_TNUM)
+              }
+              SymbolGlyph($r('sys.symbol.chevron_down'))
+                .fontSize(12)
+                .fontColor([ARROW_COLOR])
+                .rotate({ angle: this.expandedGearId === item.id ? 180 : 0 })
+                .animation({ duration: 300, curve: curves.springMotion(0.22, 0.82) })
             }
-            const isExpanding = this.expandedGearId !== item.id;
-            this.onToggleGearExpanded(item.id);
-            if (isExpanding) {
-              this.scrollToExpandedGear(item.id);
+            .width('100%')
+            .height(44)
+            .alignItems(VerticalAlign.Center)
+            .onClick(() => {
+              if (this.swipedGearId === item.id) {
+                // 已滑开状态下点击 = 收回
+                this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+                  this.swipedGearId = '';
+                  this.swipeOffsetX = 0;
+                });
+                return;
+              }
+              const isExpanding = this.expandedGearId !== item.id;
+              this.onToggleGearExpanded(item.id);
+              if (isExpanding) {
+                this.scrollToExpandedGear(item.id);
+              }
+            })
+            if (this.expandedGearId === item.id) {
+              this.Detail(item);
+            }
+          }
+          .width('100%')
+          .padding({ left: 14, right: 14, top: 4, bottom: 4 })
+          .backgroundColor(this.pressedGearId === item.id ? '#F5F5F5' : CARD_BG)
+          .animation({ duration: 150, curve: Curve.EaseOut })
+          .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
+          .onTouch((event: TouchEvent) => {
+            if (event.type === TouchType.Down) {
+              this.pressedGearId = item.id;
+              // 点击其他行时收回已滑开的行
+              if (this.swipedGearId !== '' && this.swipedGearId !== item.id) {
+                this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+                  this.swipedGearId = '';
+                  this.swipeOffsetX = 0;
+                });
+              }
+            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+              this.pressedGearId = '';
             }
           })
-          if (this.expandedGearId === item.id) {
-            this.Detail(item);
-          }
+          .priorityGesture(
+            PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
+              .onActionUpdate((event: GestureEvent) => {
+                const offsetX = event.offsetX;
+                if (this.swipedGearId === item.id) {
+                  // 已滑开状态：在 -80 基础上继续滑动
+                  const newOffset = Math.min(0, Math.max(-160, -80 + offsetX));
+                  this.swipeOffsetX = newOffset;
+                } else {
+                  // 未滑开：只允许左滑
+                  const newOffset = Math.min(0, Math.max(-100, offsetX));
+                  this.swipeOffsetX = newOffset;
+                  if (newOffset < -5) {
+                    this.swipedGearId = item.id;
+                  }
+                }
+              })
+              .onActionEnd((event: GestureEvent) => {
+                // 判断是否吸附到打开状态
+                if (this.swipeOffsetX < -40) {
+                  this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+                    this.swipeOffsetX = -80;
+                  });
+                } else {
+                  this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+                    this.swipedGearId = '';
+                    this.swipeOffsetX = 0;
+                  });
+                }
+              })
+              .onActionCancel(() => {
+                this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
+                  if (this.swipeOffsetX < -40) {
+                    this.swipeOffsetX = -80;
+                  } else {
+                    this.swipedGearId = '';
+                    this.swipeOffsetX = 0;
+                  }
+                });
+              })
+          )
         }
         .width('100%')
-        .padding({ left: 14, right: 14, top: 4, bottom: 4 })
-        .backgroundColor(this.pressedGearId === item.id ? '#F5F5F5' : CARD_BG)
-        .animation({ duration: 150, curve: Curve.EaseOut })
-        .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
-        .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
-            this.pressedGearId = item.id;
-            // 点击其他行时收回已滑开的行
-            if (this.swipedGearId !== '' && this.swipedGearId !== item.id) {
-              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
-                this.swipedGearId = '';
-                this.swipeOffsetX = 0;
-              });
-            }
-          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-            this.pressedGearId = '';
-          }
-        })
-        .priorityGesture(
-          PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
-            .onActionUpdate((event: GestureEvent) => {
-              const offsetX = event.offsetX;
-              if (this.swipedGearId === item.id) {
-                // 已滑开状态：在 -80 基础上继续滑动
-                const newOffset = Math.min(0, Math.max(-160, -80 + offsetX));
-                this.swipeOffsetX = newOffset;
-              } else {
-                // 未滑开：只允许左滑
-                const newOffset = Math.min(0, Math.max(-100, offsetX));
-                this.swipeOffsetX = newOffset;
-                if (newOffset < -5) {
-                  this.swipedGearId = item.id;
-                }
-              }
-            })
-            .onActionEnd((event: GestureEvent) => {
-              // 判断是否吸附到打开状态
-              if (this.swipeOffsetX < -40) {
-                this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
-                  this.swipeOffsetX = -80;
-                });
-              } else {
-                this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
-                  this.swipedGearId = '';
-                  this.swipeOffsetX = 0;
-                });
-              }
-            })
-            .onActionCancel(() => {
-              this.getUIContext().animateTo({ duration: 200, curve: curves.springMotion(0.35, 0.72) }, () => {
-                if (this.swipeOffsetX < -40) {
-                  this.swipeOffsetX = -80;
-                } else {
-                  this.swipedGearId = '';
-                  this.swipeOffsetX = 0;
-                }
-              });
-            })
-        )
-        .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
-          preview: this.GearPreviewCard(item),
-          previewAnimationOptions: { scale: [0.92, 1.05] },
-          transition: TransitionEffect.asymmetric(
-            TransitionEffect.scale({ x: 0.9, y: 0.9 })
-              .combine(TransitionEffect.OPACITY)
-              .animation({ curve: curves.springMotion(0.35, 0.78) }),
-            TransitionEffect.scale({ x: 0.95, y: 0.95 })
-              .combine(TransitionEffect.OPACITY)
-              .animation({ curve: curves.springMotion(0.28, 0.85) })
-          ),
-          placement: Placement.Bottom,
-          borderRadius: 20
-        })
+        .clip(true)
       }
       .width('100%')
-      .clip(true)
+      .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
+        preview: this.GearPreviewCard(item),
+        previewAnimationOptions: { scale: [0.92, 1.05] },
+        transition: TransitionEffect.asymmetric(
+          TransitionEffect.scale({ x: 0.9, y: 0.9 })
+            .combine(TransitionEffect.OPACITY)
+            .animation({ curve: curves.springMotion(0.35, 0.78) }),
+          TransitionEffect.scale({ x: 0.95, y: 0.95 })
+            .combine(TransitionEffect.OPACITY)
+            .animation({ curve: curves.springMotion(0.28, 0.85) })
+        ),
+        placement: Placement.Bottom,
+        borderRadius: 20
+      })
     }
   }
 

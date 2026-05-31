@@ -67,7 +67,36 @@ export struct AssetTrendCard {
 
   private hasEnoughData(): boolean {
     const events = this.getValidEvents();
-    return events.length >= 3;
+    if (events.length < 3) {
+      return false;
+    }
+    // 按天聚合后至少需要 2 个不同天的数据点才能画线
+    const dailyEvents = this.aggregateByDay(events);
+    return dailyEvents.length >= 2;
+  }
+
+  // 按天聚合事件：同一天内多次操作合并为一个数据点（取当天最终累计值）
+  private aggregateByDay(events: AssetEvent[]): AssetEvent[] {
+    if (events.length === 0) {
+      return [];
+    }
+    const result: AssetEvent[] = [];
+    let lastDayKey = '';
+    for (let i = 0; i < events.length; i++) {
+      const evt = events[i];
+      const d = new Date(evt.timestamp);
+      const dayKey = d.getFullYear().toString() + '-' +
+        (d.getMonth() + 1).toString().padStart(2, '0') + '-' +
+        d.getDate().toString().padStart(2, '0');
+      if (dayKey === lastDayKey && result.length > 0) {
+        // 同一天：用最新的事件覆盖（totalValue 是累计值，取最后一条即为当天最终状态）
+        result[result.length - 1] = evt;
+      } else {
+        result.push(evt);
+        lastDayKey = dayKey;
+      }
+    }
+    return result;
   }
 
   private rebuildCachedPoints(): void {
@@ -76,26 +105,28 @@ export struct AssetTrendCard {
       this.cachedPoints = [];
       return;
     }
+    // 按天聚合：同一天的多次操作合并为一个点
+    const dailyEvents = this.aggregateByDay(events);
     const drawW = this.canvasWidth - CANVAS_PADDING_X * 2;
     const drawH = this.canvasHeight - CANVAS_PADDING_TOP - CANVAS_PADDING_BOTTOM;
 
     let maxVal = 0;
-    for (let i = 0; i < events.length; i++) {
-      if (events[i].totalValue > maxVal) {
-        maxVal = events[i].totalValue;
+    for (let i = 0; i < dailyEvents.length; i++) {
+      if (dailyEvents[i].totalValue > maxVal) {
+        maxVal = dailyEvents[i].totalValue;
       }
     }
     if (maxVal === 0) {
       maxVal = 1;
     }
 
-    const minT = events[0].timestamp;
-    const maxT = events.length > 1 ? events[events.length - 1].timestamp : minT + 1;
+    const minT = dailyEvents[0].timestamp;
+    const maxT = dailyEvents.length > 1 ? dailyEvents[dailyEvents.length - 1].timestamp : minT + 1;
     const timeSpan = maxT - minT;
 
     const points: CurvePoint[] = [];
-    for (let i = 0; i < events.length; i++) {
-      const evt = events[i];
+    for (let i = 0; i < dailyEvents.length; i++) {
+      const evt = dailyEvents[i];
       const xRatio = timeSpan > 0 ? (evt.timestamp - minT) / timeSpan : 0.5;
       const yRatio = evt.totalValue / maxVal;
       points.push({
@@ -137,15 +168,11 @@ export struct AssetTrendCard {
 
     const points = this.cachedPoints;
 
-    // 渐变填充
+    // 渐变填充（折线段）
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (let i = 1; i <= endIndex; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
-      const cpx1 = prev.x + (curr.x - prev.x) * 0.4;
-      const cpx2 = prev.x + (curr.x - prev.x) * 0.6;
-      ctx.bezierCurveTo(cpx1, prev.y, cpx2, curr.y, curr.x, curr.y);
+      ctx.lineTo(points[i].x, points[i].y);
     }
     const lastPoint = points[endIndex];
     ctx.lineTo(lastPoint.x, h);
@@ -158,15 +185,11 @@ export struct AssetTrendCard {
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // 曲线
+    // 折线
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (let i = 1; i <= endIndex; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
-      const cpx1 = prev.x + (curr.x - prev.x) * 0.4;
-      const cpx2 = prev.x + (curr.x - prev.x) * 0.6;
-      ctx.bezierCurveTo(cpx1, prev.y, cpx2, curr.y, curr.x, curr.y);
+      ctx.lineTo(points[i].x, points[i].y);
     }
     ctx.strokeStyle = PRIMARY_COLOR;
     ctx.lineWidth = 2;
@@ -386,6 +409,14 @@ export struct AssetTrendCard {
         .onTouch((event: TouchEvent) => {
           this.handleTouch(event);
         })
+        .priorityGesture(
+          PanGesture({ fingers: 1, direction: PanDirection.Horizontal, distance: 5 })
+            .onActionStart(() => {
+              // 拦截水平滑动，阻止冒泡到 HdsTabs 触发 Tab 切换
+            })
+            .onActionUpdate(() => {})
+            .onActionEnd(() => {})
+        )
 
         // 时间标签行
         this.TimeLabels()
