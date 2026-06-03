@@ -36,7 +36,6 @@ import {
   staggerDelay
 } from '../constants/AnimationTokens';
 import { heroGradientStart } from '../utils/ColorUtils';
-import { EmptyIllustration } from './EmptyIllustration';
 
 
 @Component
@@ -500,6 +499,10 @@ export struct HomePage {
             }
             this.QuickEntries();
             this.HistoryTimeline();
+            // 弹性底部 spacer：保证内容少时也能上滑，消除顶部留白
+            Column()
+              .width('100%')
+              .height(300)
           }
           .width('100%')
           .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 32 })
@@ -699,11 +702,9 @@ export struct HomePage {
   @Builder
   private EmptyHero() {
     Column({ space: 8 }) {
-      EmptyIllustration({ type: 'trip' })
       Text('点击下方开始你的第一次出发')
         .fontSize(14)
         .fontColor(TEXT_TERTIARY)
-        .margin({ top: 4 })
       Button('创建第一个行程')
         .height(44)
         .fontSize(14)
@@ -716,7 +717,7 @@ export struct HomePage {
         })
     }
     .width('100%')
-    .height(240)
+    .padding({ top: 40, bottom: 40 })
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(CARD_BG)
