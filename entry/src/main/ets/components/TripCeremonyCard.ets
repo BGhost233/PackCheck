@@ -725,7 +725,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         .fontWeight(FontWeight.Bold)
         .fontColor(WHITE)
         .opacity(0.9)
-      Text('装备清单 · 轻装出发')
+      Text('装备就绪 · 轻装出发')
         .fontSize(12)
         .fontColor(WHITE)
         .opacity(0.6)

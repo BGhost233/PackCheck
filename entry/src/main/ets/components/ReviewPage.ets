@@ -242,7 +242,7 @@ export struct ReviewPage {
           .fontColor(TEXT_TERTIARY)
           .fontFeature(FONT_FEATURE_TNUM)
       }
-      Button('返回清单')
+      Button('返回行程')
         .height(46)
         .fontSize(14)
         .fontColor(WHITE)

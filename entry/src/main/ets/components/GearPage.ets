@@ -906,7 +906,7 @@ export struct GearPage {
           .fontColor(TEXT_MAIN)
           .fontFeature(FONT_FEATURE_TNUM)
           .layoutWeight(1)
-        Button('生成清单')
+        Button('生成行程')
           .height(32)
           .fontSize(13)
           .fontColor(WHITE)
@@ -1140,7 +1140,7 @@ export struct GearPage {
         .onClick(() => {
           this.onBatchDeleteGears(this.selectedMultiGearIds);
         })
-      Button('生成清单')
+      Button('生成行程')
         .height(32)
         .fontSize(12)
         .fontColor(WHITE)

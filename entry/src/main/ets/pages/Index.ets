@@ -1757,7 +1757,7 @@ struct Index {
                 }
               });
             }
-            .tabBar(this.customTabBar(0, $r('sys.symbol.list_checkmark'), '清单'))
+            .tabBar(this.customTabBar(0, $r('sys.symbol.map'), '行程'))
 
             TabContent() {
               GearPage({

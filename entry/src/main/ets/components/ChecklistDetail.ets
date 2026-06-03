@@ -538,9 +538,9 @@ export struct ChecklistDetail {
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
-          this.RingProgress(this.currentChecklist());
+          this.RingProgress();
         }
-        this.ProgressLine(this.progressPercent(this.currentChecklist()!));
+        this.ProgressLine();
       }
       .alignItems(HorizontalAlign.Center)
       .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 14 })
@@ -575,9 +575,9 @@ export struct ChecklistDetail {
   }
 
   @Builder
-  private RingProgress(checklist: TripChecklist | undefined) {
-    if (checklist !== undefined) {
-      if (this.isChecklistDone(checklist)) {
+  private RingProgress() {
+    if (this.currentChecklist() !== undefined) {
+      if (this.isChecklistDone(this.currentChecklist()!)) {
         Stack({ alignContent: Alignment.Center }) {
           Circle({ width: 44, height: 44 })
             .fill(PRIMARY_COLOR)
@@ -594,15 +594,15 @@ export struct ChecklistDetail {
             .stroke(LIGHT_PRIMARY_COLOR)
             .strokeWidth(5)
           Progress({
-            value: this.progressValue(checklist),
-            total: this.progressTotal(checklist),
+            value: this.progressValue(this.currentChecklist()!),
+            total: this.progressTotal(this.currentChecklist()!),
             type: ProgressType.Ring
           })
             .width(44)
             .height(44)
             .color(PRIMARY_COLOR)
             .style({ strokeWidth: 5, enableSmoothEffect: true })
-          Text(this.progressText(checklist))
+          Text(this.progressText(this.currentChecklist()!))
             .fontSize(11)
             .fontWeight(FontWeight.Bold)
             .fontColor(PRIMARY_COLOR)
@@ -615,7 +615,7 @@ export struct ChecklistDetail {
   }
 
   @Builder
-  private ProgressLine(percent: number) {
+  private ProgressLine() {
     Row({ space: 8 }) {
       Stack({ alignContent: Alignment.Start }) {
         Row()
@@ -624,18 +624,18 @@ export struct ChecklistDetail {
           .borderRadius(3)
           .backgroundColor(DIVIDER_COLOR)
         Row()
-          .width(percent.toString() + '%')
+          .width(this.currentChecklist() !== undefined ? this.progressPercent(this.currentChecklist()!).toString() + '%' : '0%')
           .height(6)
           .borderRadius(3)
           .linearGradient({
             angle: 90,
             colors: [[PROGRESS_END_COLOR, 0], [PRIMARY_COLOR, 1]]
           })
-          .opacity(this.progressPulse && percent >= 100 ? 0.55 : 1)
+          .opacity(this.progressPulse && this.currentChecklist() !== undefined && this.progressPercent(this.currentChecklist()!) >= 100 ? 0.55 : 1)
       }
       .height(6)
       .layoutWeight(1)
-      Text(percent.toString() + '%')
+      Text(this.currentChecklist() !== undefined ? this.progressPercent(this.currentChecklist()!).toString() + '%' : '0%')
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor(PRIMARY_COLOR)

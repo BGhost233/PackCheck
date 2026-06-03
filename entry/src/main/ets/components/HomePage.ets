@@ -43,7 +43,7 @@ import { EmptyIllustration } from './EmptyIllustration';
 export struct HomePage {
   @Prop checklists: TripChecklist[] = [];
   @Prop gears: GearItem[] = [];
-  @Prop checklistRenderNonce: number = 0;
+  @Prop @Watch('onChecklistRenderNonceChange') checklistRenderNonce: number = 0;
   @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
 
   onOpenTrip: () => void = (): void => {};
@@ -68,8 +68,18 @@ export struct HomePage {
   private scroller: Scroller = new Scroller();
   private historyListScroller: ListScroller = new ListScroller();
 
+  private onChecklistRenderNonceChange(): void {
+    const checklist = this.latestChecklist();
+    if (checklist !== undefined) {
+      this.progressNumeratorDisplay = this.checkedCount(checklist);
+      this.progressAnimated = true;
+    }
+  }
+
   private onSwipeResetNonceChange(): void {
-    this.historyListScroller.closeAllSwipeActions({ onFinish: () => {} });
+    if (this.checklists.length > 0) {
+      this.historyListScroller.closeAllSwipeActions({ onFinish: () => {} });
+    }
   }
 
   aboutToAppear(): void {
@@ -119,13 +129,6 @@ export struct HomePage {
       return this.countdownLead(checklist);
     }
     return Math.round(this.heroDaysDisplay).toString();
-  }
-
-  private getAnimatedProgressText(checklist: TripChecklist): string {
-    if (this.progressAnimated) {
-      return this.progressText(checklist);
-    }
-    return Math.round(this.progressNumeratorDisplay).toString() + '/' + checklist.items.length.toString();
   }
 
   private startHeroNumberAnimation(): void {
@@ -511,7 +514,7 @@ export struct HomePage {
           this.smoothScrollOffset = raw;
         })
         .onTouch((event: TouchEvent) => {
-          if (event.type === TouchType.Down) {
+          if (event.type === TouchType.Down && this.checklists.length > 0) {
             this.historyListScroller.closeAllSwipeActions({ onFinish: () => {} });
           }
         })
@@ -623,7 +626,7 @@ export struct HomePage {
             .fontSize(13)
             .fontColor(TEXT_TERTIARY)
             .layoutWeight(1)
-          this.RingProgress(this.latestChecklist()!);
+          this.RingProgress();
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
@@ -661,15 +664,15 @@ export struct HomePage {
   }
 
   @Builder
-  private RingProgress(checklist: TripChecklist) {
+  private RingProgress() {
     Stack({ alignContent: Alignment.Center }) {
       Circle({ width: 52, height: 52 })
         .fill(TRANSPARENT)
         .stroke(DIVIDER_COLOR)
         .strokeWidth(5)
       Progress({
-        value: this.progressValue(checklist),
-        total: this.progressTotal(checklist),
+        value: this.progressNumeratorDisplay,
+        total: this.latestChecklist() !== undefined ? this.progressTotal(this.latestChecklist()!) : 1,
         type: ProgressType.Ring
       })
         .width(52)
@@ -677,7 +680,8 @@ export struct HomePage {
         .color(this.ringCelebrateColor)
         .style({ strokeWidth: 5, enableSmoothEffect: true })
         .animation({ curve: SPRING_GENERAL() })
-      Text(this.getAnimatedProgressText(checklist))
+      Text(this.progressNumeratorDisplay.toString() + '/' +
+        (this.latestChecklist() !== undefined ? this.latestChecklist()!.items.length.toString() : '0'))
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.ringCelebrateColor)

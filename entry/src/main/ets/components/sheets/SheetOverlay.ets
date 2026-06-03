@@ -226,7 +226,7 @@ export struct SheetOverlay {
       return '排序方式';
     }
     if (this.sheetMode === SHEET_GENERATE_TRIP) {
-      return '生成清单';
+      return '生成行程';
     }
     return '';
   }
