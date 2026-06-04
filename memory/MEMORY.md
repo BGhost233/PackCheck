@@ -43,7 +43,7 @@
 - 导航架构：单 Page（Index.ets）+ Navigation NavPathStack，两个 NavDestination（ChecklistDetail、ReviewPage）
 - TripCeremonyCard 暴露 `onExitStart` 回调，退场动画启动第一帧触发，供父组件并行驱动背景恢复
 
-## ArkUI 避坑清单（实战总结，共 34 条）
+## ArkUI 避坑清单（实战总结，共 36 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -81,6 +81,7 @@
 33. **大规模机械性修改用并行 subagent** — 跨 12+ 文件的模式化修改（如去除 Spring+duration）适合拆分为并行 subagent 批量处理，但需要事后人工复查是否有遗漏（本次 subagent 漏了 2 处 Index.ets + 误保留 1 处 DURATION_GAUGE）
 34. **Colors token 补充透明色** — `Color.Transparent` 不走 token 体系，新增 `TRANSPARENT`/`PRIMARY_TRANSPARENT`/`WHITE_SEMI_TRANSPARENT` 确保所有颜色统一管理
 35. **`.animation()` 作用域隔离 translate 的正确姿势** — `.animation()` 只捕获它与前一个 `.animation()` 之间的属性变化。利用此规则：`.backgroundColor(...).animation({ press }).translate(...)` — animation 只作用于 backgroundColor，translate 在其后不被捕获，可由 `animateTo` 自由驱动。**禁止**用 `.animation({ duration: 0 })` 来"隔离"——它会与 `animateTo` 冲突（避坑 #7），导致 translate 变化无动画（硬切）
+36. **`.overlay()` 对 @Builder 内条件渲染不可靠** — `.overlay(this.MyBuilder(), ...)` 中如果 Builder 内部有 `if (stateVar)` 条件分支，当 stateVar 变化时 overlay 内容**不会重新渲染**。解法：放弃 `.overlay()`，改用 Stack 包裹 + 子组件直接写 `if` 条件渲染 + `.position()` 绝对定位 + `.clip(false)` 允许溢出。需要阻止点击穿透时用 `.hitTestBehavior(HitTestMode.Block)`
 
 ### 补充验证结论
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.5.8 (2025-07-01)
+
+编辑模式 Bug 修复 & 装备库空态重设计。
+
+- **修复：编辑模式删除角标不显示** — `.overlay()` 内条件渲染（`if isEditMode`）不可靠触发重绘，改为 Stack + `.position({top:-5, right:-5})` + `.clip(false)` 方案，角标点击用 `.hitTestBehavior(HitTestMode.Block)` 阻止穿透
+- **修复：重命名分类变成新建** — `validateCategoryName` 和 `CategoryService.renameCategory` 的重复检测未排除 oldName，导致 "已存在" 误判。修复：校验前从列表中过滤掉 oldName
+- **装备库空态重设计** — 移除漂流瓶插画和白色卡片容器（宽度与上方 AssetTrendCard 不对齐），改为透明背景 + 64vp 圆形图标 + 双行文案 + 绿色胶囊按钮的轻量空态
+- MEMORY.md 新增避坑 #36：`.overlay()` 条件渲染不可靠
+
 ## v0.5.7 (2026-05-31)
 
 装备库左滑删除修复 & 动效架构优化。
