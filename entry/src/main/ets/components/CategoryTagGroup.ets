@@ -161,7 +161,7 @@ export struct CategoryTagGroup {
     this.wiggleTick = 0;
   }
 
-  private triggerHaptic(duration: number = 25): void {
+  private triggerHaptic(duration: number = 10): void {
     try {
       vibrator.startVibration({ type: 'time', duration: duration }, { usage: 'touch' });
     } catch (e) {
@@ -247,64 +247,56 @@ export struct CategoryTagGroup {
 
   @Builder
   private CategoryChip(category: string) {
-    // 编辑态需要额外空间容纳删除按钮
+    // 外层容器：仅负责 scale/rotate 动画，不绑定事件
     Column() {
-      Stack({ alignContent: Alignment.TopEnd }) {
-        Row({ space: 4 }) {
-          Text(category)
-            .fontSize(13)
-            .fontWeight(this.isSelected(category) ? FontWeight.Medium : FontWeight.Normal)
-            .fontColor(this.isSelected(category) ? WHITE : (this.isEditing ? TEXT_MAIN : TEXT_SECONDARY))
-            .maxLines(1)
-          if (this.showCount && this.chipCount(category) > 0) {
-            Text(this.chipCount(category).toString())
-              .fontSize(11)
-              .fontColor(this.isSelected(category) ? WHITE_SECONDARY : TEXT_TERTIARY)
-          }
-        }
-        .height(32)
-        .padding({ left: 12, right: 12 })
-        .backgroundColor(this.chipBgColor(category))
-        .border({
-          width: this.isEditing && !isProtectedCategory(category) && category !== '全部' ? 1.5 : 1,
-          color: this.chipBorderColor(category),
-          style: this.isEditing && !isProtectedCategory(category) && category !== '全部'
-            ? BorderStyle.Dashed : BorderStyle.Solid
-        })
-        .borderRadius(16)
-        // onClick 绑定在 Row 上，不会拦截删除按钮
-        .onClick(() => {
-          this.handleTap(category);
-        })
-        .gesture(
-          LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
-            .onAction(() => {
-              this.handleLongPress(category);
-            })
-        )
-
-        // 编辑态：删除按钮（在 Stack 内，不溢出）
-        if (this.isEditing && !isProtectedCategory(category) && category !== '全部') {
-          Row() {
-            SymbolGlyph($r('sys.symbol.xmark'))
-              .fontSize(8)
-              .fontColor([WHITE])
-          }
-          .width(20)
-          .height(20)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(DANGER_COLOR)
-          .borderRadius(10)
-          .onClick(() => {
-            this.handleDelete(category);
-          })
-          .hitTestBehavior(HitTestMode.Block)
-          .transition(TransitionEffect.scale({ x: 0, y: 0 }).animation({
-            curve: SPRING_GENERAL()
-          }))
+      // 标签主体 — 绑定 onTouch/onClick/LongPress
+      Row({ space: 4 }) {
+        Text(category)
+          .fontSize(13)
+          .fontWeight(this.isSelected(category) ? FontWeight.Medium : FontWeight.Normal)
+          .fontColor(this.isSelected(category) ? WHITE : (this.isEditing ? TEXT_MAIN : TEXT_SECONDARY))
+          .maxLines(1)
+        if (this.showCount && this.chipCount(category) > 0) {
+          Text(this.chipCount(category).toString())
+            .fontSize(11)
+            .fontColor(this.isSelected(category) ? WHITE_SECONDARY : TEXT_TERTIARY)
         }
       }
-      .padding({ top: this.isEditing ? 6 : 0, right: this.isEditing ? 6 : 0 })
+      .height(32)
+      .padding({ left: 12, right: 12 })
+      .backgroundColor(this.chipBgColor(category))
+      .border({
+        width: this.isEditing && !isProtectedCategory(category) && category !== '全部' ? 1.5 : 1,
+        color: this.chipBorderColor(category),
+        style: this.isEditing && !isProtectedCategory(category) && category !== '全部'
+          ? BorderStyle.Dashed : BorderStyle.Solid
+      })
+      .borderRadius(16)
+      .onClick(() => {
+        this.handleTap(category);
+      })
+      .gesture(
+        LongPressGesture({ fingers: 1, repeat: false, duration: 500 })
+          .onAction(() => {
+            this.handleLongPress(category);
+          })
+      )
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.triggerHaptic();
+          this.getUIContext().animateTo({
+            curve: SPRING_FILTER_PRESS()
+          }, () => {
+            this.pressedChip = category;
+          });
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.getUIContext().animateTo({
+            curve: SPRING_FILTER_RELEASE()
+          }, () => {
+            this.pressedChip = '';
+          });
+        }
+      })
     }
     .scale({
       x: this.chipScale(category),
@@ -312,23 +304,8 @@ export struct CategoryTagGroup {
     })
     .rotate({ angle: this.chipRotation(category) })
     .animation({ curve: SPRING_FILTER_RELEASE() })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        // 按下瞬间触发震动 — 不依赖 onClick
-        this.triggerHaptic();
-        this.getUIContext().animateTo({
-          curve: SPRING_FILTER_PRESS()
-        }, () => {
-          this.pressedChip = category;
-        });
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.getUIContext().animateTo({
-          curve: SPRING_FILTER_RELEASE()
-        }, () => {
-          this.pressedChip = '';
-        });
-      }
-    })
+    // 编辑态：删除按钮 — 绝对定位在右上角外侧
+    .overlay(this.DeleteBadge(category), { align: Alignment.TopEnd, offset: { x: 6, y: -6 } })
   }
 
   @Builder
@@ -365,6 +342,29 @@ export struct CategoryTagGroup {
     .transition(TransitionEffect.scale({ x: 0, y: 0 }).animation({
       curve: SPRING_GENERAL()
     }))
+  }
+
+  @Builder
+  private DeleteBadge(category: string) {
+    if (this.isEditing && !isProtectedCategory(category) && category !== '全部') {
+      Row() {
+        SymbolGlyph($r('sys.symbol.xmark'))
+          .fontSize(7)
+          .fontColor([WHITE])
+      }
+      .width(18)
+      .height(18)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(DANGER_COLOR)
+      .borderRadius(9)
+      .shadow({ radius: 4, color: '#33000000', offsetX: 0, offsetY: 1 })
+      .onClick(() => {
+        this.handleDelete(category);
+      })
+      .transition(TransitionEffect.scale({ x: 0, y: 0 }).animation({
+        curve: SPRING_GENERAL()
+      }))
+    }
   }
 
   private chipBgColor(category: string): string {
