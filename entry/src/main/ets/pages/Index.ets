@@ -751,7 +751,14 @@ struct Index {
   }
 
   private async executeCategoryRename(oldName: string, newName: string): Promise<void> {
-    const error = validateCategoryName(newName, this.categories);
+    // rename 场景：验证时排除 oldName，避免"同名已存在"误判
+    const categoriesExcludingOld: string[] = [];
+    for (let i = 0; i < this.categories.length; i++) {
+      if (this.categories[i] !== oldName) {
+        categoriesExcludingOld.push(this.categories[i]);
+      }
+    }
+    const error = validateCategoryName(newName, categoriesExcludingOld);
     if (error.length > 0) {
       return;
     }

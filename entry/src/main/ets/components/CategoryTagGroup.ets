@@ -247,8 +247,8 @@ export struct CategoryTagGroup {
 
   @Builder
   private CategoryChip(category: string) {
-    // 外层容器：仅负责 scale/rotate 动画，不绑定事件
-    Column() {
+    // 外层 Stack：承载标签主体 + 删除按钮（绝对定位）
+    Stack() {
       // 标签主体 — 绑定 onTouch/onClick/LongPress
       Row({ space: 4 }) {
         Text(category)
@@ -297,15 +297,37 @@ export struct CategoryTagGroup {
           });
         }
       })
+
+      // 编辑态：删除按钮 — 绝对定位在右上角外侧
+      if (this.isEditing && !isProtectedCategory(category) && category !== '全部') {
+        Row() {
+          SymbolGlyph($r('sys.symbol.xmark'))
+            .fontSize(7)
+            .fontColor([WHITE])
+        }
+        .width(18)
+        .height(18)
+        .justifyContent(FlexAlign.Center)
+        .backgroundColor(DANGER_COLOR)
+        .borderRadius(9)
+        .shadow({ radius: 4, color: '#33000000', offsetX: 0, offsetY: 1 })
+        .position({ top: -5, right: -5 })
+        .hitTestBehavior(HitTestMode.Block)
+        .onClick(() => {
+          this.handleDelete(category);
+        })
+        .transition(TransitionEffect.scale({ x: 0, y: 0 }).animation({
+          curve: SPRING_GENERAL()
+        }))
+      }
     }
+    .clip(false)
     .scale({
       x: this.chipScale(category),
       y: this.chipScale(category)
     })
     .rotate({ angle: this.chipRotation(category) })
     .animation({ curve: SPRING_FILTER_RELEASE() })
-    // 编辑态：删除按钮 — 绝对定位在右上角外侧
-    .overlay(this.DeleteBadge(category), { align: Alignment.TopEnd, offset: { x: 6, y: -6 } })
   }
 
   @Builder
@@ -344,28 +366,6 @@ export struct CategoryTagGroup {
     }))
   }
 
-  @Builder
-  private DeleteBadge(category: string) {
-    if (this.isEditing && !isProtectedCategory(category) && category !== '全部') {
-      Row() {
-        SymbolGlyph($r('sys.symbol.xmark'))
-          .fontSize(7)
-          .fontColor([WHITE])
-      }
-      .width(18)
-      .height(18)
-      .justifyContent(FlexAlign.Center)
-      .backgroundColor(DANGER_COLOR)
-      .borderRadius(9)
-      .shadow({ radius: 4, color: '#33000000', offsetX: 0, offsetY: 1 })
-      .onClick(() => {
-        this.handleDelete(category);
-      })
-      .transition(TransitionEffect.scale({ x: 0, y: 0 }).animation({
-        curve: SPRING_GENERAL()
-      }))
-    }
-  }
 
   private chipBgColor(category: string): string {
     if (this.isSelected(category)) {

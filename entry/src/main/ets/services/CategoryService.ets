@@ -130,8 +130,14 @@ export function migrateChecklistsOnDelete(checklists: TripChecklist[], deletedCa
 /** 重命名分组，返回新的分组列表 */
 export function renameCategory(categories: string[], oldName: string, newName: string): string[] {
   const trimmed = newName.trim();
-  if (isProtectedCategory(oldName) || trimmed.length === 0 || categories.indexOf(trimmed) >= 0) {
+  if (isProtectedCategory(oldName) || trimmed.length === 0) {
     return categories;
+  }
+  // 检查新名字是否与其他分组（排除 oldName 自身）重复
+  for (let i = 0; i < categories.length; i++) {
+    if (categories[i] === trimmed && categories[i] !== oldName) {
+      return categories;
+    }
   }
   const result: string[] = [];
   for (let i = 0; i < categories.length; i++) {
