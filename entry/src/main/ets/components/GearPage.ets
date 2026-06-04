@@ -14,7 +14,6 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { AssetEvent, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import { AssetTrendCard } from './AssetTrendCard';
-import { EmptyIllustration } from './EmptyIllustration';
 import {
   ARROW_COLOR,
   CARD_BG,
@@ -1859,28 +1858,48 @@ export struct GearPage {
 
   @Builder
   private EmptyState() {
-    Column({ space: 12 }) {
-      EmptyIllustration({ type: 'gear' })
-      Text('还没有装备，添加第一件吧')
-        .fontSize(14)
-        .fontColor(TEXT_TERTIARY)
+    Column({ space: 20 }) {
+      // 图标：轻量圆形背景 + 系统图标
+      Row() {
+        SymbolGlyph($r('sys.symbol.bag'))
+          .fontSize(32)
+          .fontColor([PRIMARY_COLOR])
+      }
+      .width(64)
+      .height(64)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(PRIMARY_TINT_COLOR)
+      .borderRadius(32)
+
+      // 文案
+      Column({ space: 6 }) {
+        Text('装备库空空如也')
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(TEXT_MAIN)
+        Text('添加你的第一件装备，开始记录户外家当')
+          .fontSize(13)
+          .fontColor(TEXT_TERTIARY)
+      }
+      .alignItems(HorizontalAlign.Center)
+
+      // 行动按钮
       Button('添加装备')
-        .height(44)
+        .height(40)
         .fontSize(14)
+        .fontWeight(FontWeight.Medium)
         .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .padding({ left: 24, right: 24 })
-        .borderRadius(22)
+        .borderRadius(20)
         .onClick(() => {
           this.onOpenAddGear();
         })
     }
     .width('100%')
-    .height(260)
+    .padding({ top: 48, bottom: 48 })
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
-    .backgroundColor(CARD_BG)
-    .borderRadius(16)
   }
 
   @Builder
