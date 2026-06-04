@@ -1,33 +1,22 @@
 import { LengthMetrics } from '@kit.ArkUI';
 import { vibrator } from '@kit.SensorServiceKit';
 import {
-  CARD_BG,
-  CHIP_BG_DEFAULT,
-  CHIP_BORDER,
   GLASS_BG_HEAVY,
-  LIGHT_PRIMARY_COLOR,
   OVERLAY_MASK_LIGHT,
-  PAGE_BG,
   PRIMARY_COLOR,
-  PRIMARY_PRESSED,
   SHADOW_DEFAULT,
   TEXT_MAIN,
-  TEXT_SECONDARY,
   TEXT_TERTIARY,
-  WHITE,
-  WHITE_SECONDARY
+  WHITE
 } from '../constants/DesignTokens';
 import {
-  DURATION_NORMAL,
   DURATION_SLOW,
   SPRING_GENERAL,
-  SPRING_PANEL_EXIT,
-  SPRING_FILTER_PRESS,
-  SPRING_FILTER_RELEASE,
-  STAGGER_OFFSET_Y
+  SPRING_PANEL_EXIT
 } from '../constants/AnimationTokens';
 import { GearItem } from '../models/PackModels';
 import { normalizeGearCategories, allGearFilterCategories, gearCategoryCount, tempGearFilterText } from '../services/GearService';
+import { CategoryTagGroup } from './CategoryTagGroup';
 
 @Component
 export struct GearFilterPanel {
@@ -37,12 +26,15 @@ export struct GearFilterPanel {
 
   onApply: (categories: string[]) => void = () => {};
   onDismiss: () => void = () => {};
+  onRename: (oldName: string, newName: string) => void = () => {};
+  onDelete: (category: string) => void = () => {};
+  onReorder: (categories: string[]) => void = () => {};
+  onAddCategory: (name: string) => void = () => {};
 
   // 内部状态：临时选择 + 动画
   @State private tempCategories: string[] = ['全部'];
   @State private panelTranslateY: number = -600;
   @State private overlayOpacity: number = 0;
-  @State private pressedCategory: string = '';
 
   aboutToAppear(): void {
     // 初始化临时筛选为外部传入值
@@ -63,18 +55,6 @@ export struct GearFilterPanel {
     return normalizeGearCategories(input);
   }
 
-  private allFilterCategories(): string[] {
-    return allGearFilterCategories(this.categories);
-  }
-
-  private categoryCount(category: string): number {
-    return gearCategoryCount(this.gears, category);
-  }
-
-  private isCategorySelected(category: string): boolean {
-    return this.normalizeCategories(this.tempCategories).indexOf(category) >= 0;
-  }
-
   private filterText(): string {
     return tempGearFilterText(this.tempCategories);
   }
@@ -93,30 +73,6 @@ export struct GearFilterPanel {
     return count;
   }
 
-  private toggleCategory(category: string): void {
-    // 触觉反馈
-    try {
-      vibrator.startVibration({ type: 'time', duration: 25 }, { usage: 'touch' });
-    } catch (e) {
-      // 静默失败
-    }
-    if (category === '全部') {
-      this.tempCategories = ['全部'];
-      return;
-    }
-    const nextCategories: string[] = [];
-    const normalized = this.normalizeCategories(this.tempCategories);
-    for (let index = 0; index < normalized.length; index++) {
-      if (normalized[index] !== '全部' && normalized[index] !== category) {
-        nextCategories.push(normalized[index]);
-      }
-    }
-    if (normalized.indexOf(category) < 0) {
-      nextCategories.push(category);
-    }
-    this.tempCategories = nextCategories.length === 0 ? ['全部'] : nextCategories;
-  }
-
   private clearSelection(): void {
     this.tempCategories = ['全部'];
   }
@@ -132,6 +88,15 @@ export struct GearFilterPanel {
       this.panelTranslateY = -600;
       this.overlayOpacity = 0;
     });
+  }
+
+  private buildCountMap(): Record<string, number> {
+    const map: Record<string, number> = {};
+    const allCats = allGearFilterCategories(this.categories);
+    for (let i = 0; i < allCats.length; i++) {
+      map[allCats[i]] = gearCategoryCount(this.gears, allCats[i]);
+    }
+    return map;
   }
 
   build() {
@@ -185,12 +150,32 @@ export struct GearFilterPanel {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         Scroll() {
-          Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-            ForEach(this.allFilterCategories(), (category: string) => {
-              this.CategoryChip(category)
-            }, (category: string) => category)
+          Column() {
+            CategoryTagGroup({
+              categories: this.categories,
+              selectedCategories: this.tempCategories,
+              mode: 'multi',
+              showAllOption: true,
+              editable: true,
+              showCount: true,
+              countMap: this.buildCountMap(),
+              onMultiSelect: (categories: string[]) => {
+                this.tempCategories = categories;
+              },
+              onRename: (oldName: string, _newName: string) => {
+                this.onRename(oldName, '');
+              },
+              onDelete: (category: string) => {
+                this.onDelete(category);
+              },
+              onReorder: (categories: string[]) => {
+                this.onReorder(categories);
+              },
+              onAdd: (_name: string) => {
+                this.onAddCategory('');
+              }
+            })
           }
-          .width('100%')
           .padding({ left: 16, right: 16, bottom: 12, top: 4 })
         }
         .scrollBar(BarState.Off)
@@ -208,50 +193,5 @@ export struct GearFilterPanel {
     }
     .width('100%')
     .height('100%')
-  }
-
-  @Builder
-  private CategoryChip(category: string) {
-    Row({ space: 4 }) {
-      Text(category)
-        .fontSize(13)
-        .fontWeight(this.isCategorySelected(category) ? FontWeight.Medium : FontWeight.Normal)
-        .fontColor(this.isCategorySelected(category) ? WHITE : TEXT_MAIN)
-        .maxLines(1)
-      if (this.categoryCount(category) > 0) {
-        Text(this.categoryCount(category).toString())
-          .fontSize(11)
-          .fontColor(this.isCategorySelected(category) ? WHITE_SECONDARY : TEXT_TERTIARY)
-      }
-    }
-    .height(32)
-    .padding({ left: 12, right: 12 })
-    .backgroundColor(this.isCategorySelected(category) ?
-      (this.pressedCategory === category ? PRIMARY_PRESSED : PRIMARY_COLOR) :
-      (this.pressedCategory === category ? CHIP_BORDER : CHIP_BG_DEFAULT))
-    .borderRadius(16)
-    .scale({
-      x: this.pressedCategory === category ? 0.88 : 1,
-      y: this.pressedCategory === category ? 0.88 : 1
-    })
-    .transition({ type: TransitionType.Insert, translate: { y: STAGGER_OFFSET_Y }, opacity: 0 })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.getUIContext().animateTo({
-          curve: SPRING_FILTER_PRESS()
-        }, () => {
-          this.pressedCategory = category;
-        });
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.getUIContext().animateTo({
-          curve: SPRING_FILTER_RELEASE()
-        }, () => {
-          this.pressedCategory = '';
-        });
-      }
-    })
-    .onClick(() => {
-      this.toggleCategory(category);
-    })
   }
 }

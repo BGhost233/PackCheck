@@ -3,14 +3,12 @@ import {
   FONT_FEATURE_TNUM,
   PAGE_BG,
   PRIMARY_COLOR,
-  CARD_BG,
   TEXT_MAIN,
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
 import {
   WHITE,
-  DISABLED_COLOR,
-  CHIP_BORDER
+  DISABLED_COLOR
 } from '../../constants/Colors';
 import {
   SPRING_PRESS,
@@ -22,6 +20,7 @@ import {
   importGearMetaText,
   categoryTabs
 } from '../../services/GearService';
+import { CategoryTagGroup } from '../CategoryTagGroup';
 
 @Component
 export struct ImportSheet {
@@ -36,7 +35,6 @@ export struct ImportSheet {
 
   @State private buttonPressed: boolean = false;
   @State private addButtonPressed: boolean = false;
-  @State private pressedChip: string = '';
 
   build() {
     Column({ space: 12 }) {
@@ -74,32 +72,16 @@ export struct ImportSheet {
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
       } else {
-        Flex({ wrap: FlexWrap.Wrap }) {
-          ForEach(categoryTabs(this.categories), (category: string) => {
-            Text(category)
-              .fontSize(13)
-              .fontColor(this.importGearCategory === category ? WHITE : TEXT_SECONDARY)
-              .padding({ left: 12, right: 12, top: 7, bottom: 7 })
-              .backgroundColor(this.importGearCategory === category ? PRIMARY_COLOR : CARD_BG)
-              .border({ width: 1, color: this.importGearCategory === category ? PRIMARY_COLOR : CHIP_BORDER })
-              .borderRadius(12)
-              .margin({ right: 8, bottom: 8 })
-              .scale({ x: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
-                y: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
-              .animation({ curve: SPRING_PRESS() })
-              .onTouch((event: TouchEvent) => {
-                if (event.type === TouchType.Down) {
-                  this.pressedChip = category;
-                } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-                  this.pressedChip = '';
-                }
-              })
-              .onClick(() => {
-                this.onCategoryChange(category);
-              })
-          }, (category: string) => category)
-        }
-        .width('100%')
+        CategoryTagGroup({
+          categories: this.categories,
+          selectedCategory: this.importGearCategory,
+          mode: 'single',
+          showAllOption: true,
+          editable: false,
+          onSelect: (category: string) => {
+            this.onCategoryChange(category);
+          }
+        })
 
         List({ space: 8 }) {
           ForEach(filteredImportGears(this.gears, this.importGearCategory), (item: GearItem) => {

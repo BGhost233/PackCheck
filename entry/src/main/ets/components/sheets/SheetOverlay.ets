@@ -82,6 +82,11 @@ export struct SheetOverlay {
   // Generate trip callbacks
   onGenerateTripTitleChange: (value: string) => void = (value: string): void => {};
   onGenerateTrip: () => void = (): void => {};
+  // Category editing callbacks
+  onCategoryRename: (oldName: string, newName: string) => void = () => {};
+  onCategoryDelete: (category: string) => void = () => {};
+  onCategoryReorder: (categories: string[]) => void = () => {};
+  onCategoryAdd: (name: string) => void = () => {};
 
   build() {
     Column() {
@@ -134,7 +139,11 @@ export struct SheetOverlay {
             onWeightChange: this.onGearWeightChange,
             onPriceChange: this.onGearPriceChange,
             onNoteChange: this.onGearNoteChange,
-            onSave: this.onSaveGear
+            onSave: this.onSaveGear,
+            onRename: this.onCategoryRename,
+            onDelete: this.onCategoryDelete,
+            onReorder: this.onCategoryReorder,
+            onAddCategory: this.onCategoryAdd
           })
         } else if (this.sheetMode === SHEET_TRIP) {
           TripFormSheet({
@@ -162,7 +171,11 @@ export struct SheetOverlay {
             categories: this.categories,
             onNameChange: this.onTempItemNameChange,
             onGroupChange: this.onTempItemGroupChange,
-            onConfirm: this.onAddTempItem
+            onConfirm: this.onAddTempItem,
+            onRename: this.onCategoryRename,
+            onDelete: this.onCategoryDelete,
+            onReorder: this.onCategoryReorder,
+            onAddCategory: this.onCategoryAdd
           })
         } else if (this.sheetMode === SHEET_IMPORT) {
           ImportSheet({

@@ -1,6 +1,4 @@
-import { LengthMetrics } from '@kit.ArkUI';
 import {
-  CARD_BG,
   PAGE_BG,
   PRIMARY_COLOR,
   TEXT_MAIN,
@@ -8,14 +6,14 @@ import {
 } from '../../constants/DesignTokens';
 import {
   WHITE,
-  DISABLED_COLOR,
-  CHIP_BORDER
+  DISABLED_COLOR
 } from '../../constants/Colors';
 import {
   SPRING_PRESS,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST
 } from '../../constants/AnimationTokens';
+import { CategoryTagGroup } from '../CategoryTagGroup';
 
 @Component
 export struct GearFormSheet {
@@ -32,9 +30,12 @@ export struct GearFormSheet {
   onPriceChange: (value: string) => void = (value: string): void => {};
   onNoteChange: (value: string) => void = (value: string): void => {};
   onSave: () => void = (): void => {};
+  onRename: (oldName: string, newName: string) => void = () => {};
+  onDelete: (category: string) => void = () => {};
+  onReorder: (categories: string[]) => void = () => {};
+  onAddCategory: (name: string) => void = () => {};
 
   @State private buttonPressed: boolean = false;
-  @State private pressedChip: string = '';
 
   build() {
     Scroll() {
@@ -55,7 +56,27 @@ export struct GearFormSheet {
           .fontSize(12)
           .fontColor(TEXT_SECONDARY)
           .width('100%')
-        this.CategoryTags()
+        CategoryTagGroup({
+          categories: this.categories,
+          selectedCategory: this.gearCategory,
+          mode: 'single',
+          editable: true,
+          onSelect: (category: string) => {
+            this.onCategoryChange(category);
+          },
+          onRename: (oldName: string, _newName: string) => {
+            this.onRename(oldName, '');
+          },
+          onDelete: (category: string) => {
+            this.onDelete(category);
+          },
+          onReorder: (categories: string[]) => {
+            this.onReorder(categories);
+          },
+          onAdd: (_name: string) => {
+            this.onAddCategory('');
+          }
+        })
         Row({ space: 12 }) {
           TextInput({ placeholder: '重量(g)', text: this.gearWeight })
             .type(InputType.Number)
@@ -118,34 +139,5 @@ export struct GearFormSheet {
     }
     .edgeEffect(EdgeEffect.Spring)
     .layoutWeight(1)
-  }
-
-  @Builder
-  private CategoryTags() {
-    Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-      ForEach(this.categories, (category: string) => {
-        Text(category)
-          .fontSize(13)
-          .fontColor(this.gearCategory === category ? WHITE : TEXT_SECONDARY)
-          .padding({ left: 12, right: 12, top: 7, bottom: 7 })
-          .backgroundColor(this.gearCategory === category ? PRIMARY_COLOR : CARD_BG)
-          .border({ width: 1, color: this.gearCategory === category ? PRIMARY_COLOR : CHIP_BORDER })
-          .borderRadius(12)
-          .scale({ x: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
-            y: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
-          .animation({ curve: SPRING_PRESS() })
-          .onTouch((event: TouchEvent) => {
-            if (event.type === TouchType.Down) {
-              this.pressedChip = category;
-            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-              this.pressedChip = '';
-            }
-          })
-          .onClick(() => {
-            this.onCategoryChange(category);
-          })
-      }, (category: string) => category)
-    }
-    .width('100%')
   }
 }

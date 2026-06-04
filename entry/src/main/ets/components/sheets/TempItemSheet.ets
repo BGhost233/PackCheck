@@ -1,6 +1,4 @@
-import { LengthMetrics } from '@kit.ArkUI';
 import {
-  CARD_BG,
   PAGE_BG,
   PRIMARY_COLOR,
   TEXT_MAIN,
@@ -8,14 +6,14 @@ import {
 } from '../../constants/DesignTokens';
 import {
   WHITE,
-  DISABLED_COLOR,
-  CHIP_BORDER
+  DISABLED_COLOR
 } from '../../constants/Colors';
 import {
   SPRING_PRESS,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST
 } from '../../constants/AnimationTokens';
+import { CategoryTagGroup } from '../CategoryTagGroup';
 
 @Component
 export struct TempItemSheet {
@@ -26,9 +24,12 @@ export struct TempItemSheet {
   onNameChange: (value: string) => void = (value: string): void => {};
   onGroupChange: (value: string) => void = (value: string): void => {};
   onConfirm: () => void = (): void => {};
+  onRename: (oldName: string, newName: string) => void = () => {};
+  onDelete: (category: string) => void = () => {};
+  onReorder: (categories: string[]) => void = () => {};
+  onAddCategory: (name: string) => void = () => {};
 
   @State private buttonPressed: boolean = false;
-  @State private pressedChip: string = '';
 
   build() {
     Column({ space: 12 }) {
@@ -48,7 +49,27 @@ export struct TempItemSheet {
         .fontSize(12)
         .fontColor(TEXT_SECONDARY)
         .width('100%')
-      this.CategoryTags()
+      CategoryTagGroup({
+        categories: this.categories,
+        selectedCategory: this.tempItemGroup,
+        mode: 'single',
+        editable: true,
+        onSelect: (category: string) => {
+          this.onGroupChange(category);
+        },
+        onRename: (oldName: string, _newName: string) => {
+          this.onRename(oldName, '');
+        },
+        onDelete: (category: string) => {
+          this.onDelete(category);
+        },
+        onReorder: (categories: string[]) => {
+          this.onReorder(categories);
+        },
+        onAdd: (_name: string) => {
+          this.onAddCategory('');
+        }
+      })
       if (this.showTempAddNotice) {
         Row({ space: 4 }) {
           SymbolGlyph($r('sys.symbol.checkmark'))
@@ -81,34 +102,5 @@ export struct TempItemSheet {
           this.onConfirm();
         })
     }
-  }
-
-  @Builder
-  private CategoryTags() {
-    Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-      ForEach(this.categories, (category: string) => {
-        Text(category)
-          .fontSize(13)
-          .fontColor(this.tempItemGroup === category ? WHITE : TEXT_SECONDARY)
-          .padding({ left: 12, right: 12, top: 7, bottom: 7 })
-          .backgroundColor(this.tempItemGroup === category ? PRIMARY_COLOR : CARD_BG)
-          .border({ width: 1, color: this.tempItemGroup === category ? PRIMARY_COLOR : CHIP_BORDER })
-          .borderRadius(12)
-          .scale({ x: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
-            y: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
-          .animation({ curve: SPRING_PRESS() })
-          .onTouch((event: TouchEvent) => {
-            if (event.type === TouchType.Down) {
-              this.pressedChip = category;
-            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-              this.pressedChip = '';
-            }
-          })
-          .onClick(() => {
-            this.onGroupChange(category);
-          })
-      }, (category: string) => category)
-    }
-    .width('100%')
   }
 }

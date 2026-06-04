@@ -1,6 +1,4 @@
-import { LengthMetrics } from '@kit.ArkUI';
 import {
-  CARD_BG,
   DANGER_COLOR,
   PAGE_BG,
   PRIMARY_COLOR,
@@ -11,7 +9,6 @@ import {
   WHITE,
   DISABLED_COLOR,
   OVERLAY_MASK,
-  CHIP_BORDER,
   TRANSPARENT,
   SHADOW_LIGHT
 } from '../constants/Colors';
@@ -22,6 +19,7 @@ import {
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST
 } from '../constants/AnimationTokens';
+import { CategoryTagGroup } from './CategoryTagGroup';
 
 @Component
 export struct EditItemPanel {
@@ -38,13 +36,16 @@ export struct EditItemPanel {
   onPriceChange: (value: string) => void = () => {};
   onSave: () => void = () => {};
   onClose: () => void = () => {};
+  onRename: (oldName: string, newName: string) => void = () => {};
+  onDelete: (category: string) => void = () => {};
+  onReorder: (categories: string[]) => void = () => {};
+  onAddCategory: (name: string) => void = () => {};
 
   // 内部动画状态
   @State private panelScale: number = 0.85;
   @State private panelOpacity: number = 0;
   @State private buttonPressed: boolean = false;
   @State private closePressed: boolean = false;
-  @State private pressedChip: string = '';
 
   aboutToAppear(): void {
     setTimeout(() => {
@@ -67,20 +68,6 @@ export struct EditItemPanel {
       this.panelScale = 0.9;
       this.panelOpacity = 0;
     });
-  }
-
-  private presetCategories(): string[] {
-    const defaults: string[] = ['帐篷', '睡眠', '炊具', '电子', '衣物', '鞋袜', '配件', '食品', '其他'];
-    const result: string[] = [];
-    for (let i = 0; i < defaults.length; i++) {
-      result.push(defaults[i]);
-    }
-    for (let i = 0; i < this.categories.length; i++) {
-      if (result.indexOf(this.categories[i]) < 0) {
-        result.push(this.categories[i]);
-      }
-    }
-    return result;
   }
 
   build() {
@@ -147,31 +134,27 @@ export struct EditItemPanel {
           .width('100%')
 
         // 分组标签
-        Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-          ForEach(this.presetCategories(), (category: string) => {
-            Text(category)
-              .fontSize(13)
-              .fontColor(this.editingItemGroup === category ? WHITE : TEXT_SECONDARY)
-              .padding({ left: 12, right: 12, top: 7, bottom: 7 })
-              .backgroundColor(this.editingItemGroup === category ? PRIMARY_COLOR : CARD_BG)
-              .border({ width: 1, color: this.editingItemGroup === category ? PRIMARY_COLOR : CHIP_BORDER })
-              .borderRadius(12)
-              .scale({ x: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
-                y: this.pressedChip === category ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
-              .animation({ curve: SPRING_PRESS() })
-              .onTouch((event: TouchEvent) => {
-                if (event.type === TouchType.Down) {
-                  this.pressedChip = category;
-                } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-                  this.pressedChip = '';
-                }
-              })
-              .onClick(() => {
-                this.onGroupChange(category);
-              })
-          }, (category: string) => category)
-        }
-        .width('100%')
+        CategoryTagGroup({
+          categories: this.categories,
+          selectedCategory: this.editingItemGroup,
+          mode: 'single',
+          editable: true,
+          onSelect: (category: string) => {
+            this.onGroupChange(category);
+          },
+          onRename: (oldName: string, _newName: string) => {
+            this.onRename(oldName, '');
+          },
+          onDelete: (category: string) => {
+            this.onDelete(category);
+          },
+          onReorder: (categories: string[]) => {
+            this.onReorder(categories);
+          },
+          onAdd: (_name: string) => {
+            this.onAddCategory('');
+          }
+        })
 
         // 重量 + 价格
         Row({ space: 12 }) {
@@ -215,7 +198,7 @@ export struct EditItemPanel {
       }
       .width('85%')
       .padding({ left: 24, right: 24, top: 24, bottom: 24 })
-      .backgroundColor(CARD_BG)
+      .backgroundColor('#FFFFFF')
       .borderRadius(24)
       .shadow({ radius: 24, color: SHADOW_LIGHT, offsetX: 0, offsetY: 8 })
       .scale({ x: this.panelScale, y: this.panelScale })

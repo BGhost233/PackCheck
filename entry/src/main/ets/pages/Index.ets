@@ -67,6 +67,19 @@ import {
   uniqueGearIds
 } from '../services/GearService';
 import {
+  addCategory,
+  deleteCategory,
+  renameCategory,
+  reorderCategories,
+  migrateGearsOnDelete,
+  migrateChecklistsOnDelete,
+  renameGearsCategory,
+  renameChecklistsCategory,
+  countGearsInCategory,
+  countChecklistItemsInCategory,
+  validateCategoryName
+} from '../services/CategoryService';
+import {
   startOfDay,
   checklistGroups,
   checklistItemsByGroup,
@@ -174,6 +187,12 @@ struct Index {
   @State private showTripCeremony: boolean = false;
   @State private ceremonyTripTitle: string = '';
   @State private ceremonyTripDate: string = '';
+
+  // ===== 分组编辑 Dialog =====
+  @State private showCategoryDialog: boolean = false;
+  @State private categoryDialogMode: string = 'add'; // 'add' | 'rename'
+  @State private categoryDialogOldName: string = '';
+  @State private categoryDialogInput: string = '';
 
   private shakeListening: boolean = false;
   private lastShakeAt: number = 0;
@@ -697,6 +716,124 @@ struct Index {
     nextCategories.push(category);
     await this.store.saveCategories(nextCategories);
     this.categories = nextCategories;
+  }
+
+  // ===== 分组标签编辑 =====
+
+  private handleCategoryRename(oldName: string, _newName: string): void {
+    // _newName 为空表示需要弹出 Dialog 让用户输入
+    this.showCategoryRenameDialog(oldName);
+  }
+
+  private handleCategoryDelete(category: string): void {
+    const gearCount = countGearsInCategory(this.gears, category);
+    const itemCount = countChecklistItemsInCategory(this.checklists, category);
+    const totalCount = gearCount + itemCount;
+    if (totalCount === 0) {
+      // 空分组直接删除
+      this.executeCategoryDelete(category);
+    } else {
+      // 有数据，弹确认
+      this.showCategoryDeleteConfirm(category, gearCount, itemCount);
+    }
+  }
+
+  private async executeCategoryDelete(category: string): Promise<void> {
+    const nextCategories = deleteCategory(this.categories, category);
+    const nextGears = migrateGearsOnDelete(this.gears, category);
+    const nextChecklists = migrateChecklistsOnDelete(this.checklists, category);
+    await this.store.saveCategories(nextCategories);
+    await this.store.saveGears(nextGears);
+    await this.store.saveChecklists(nextChecklists);
+    this.categories = nextCategories;
+    this.gears = nextGears;
+    this.checklists = nextChecklists;
+  }
+
+  private async executeCategoryRename(oldName: string, newName: string): Promise<void> {
+    const error = validateCategoryName(newName, this.categories);
+    if (error.length > 0) {
+      return;
+    }
+    const nextCategories = renameCategory(this.categories, oldName, newName);
+    const nextGears = renameGearsCategory(this.gears, oldName, newName);
+    const nextChecklists = renameChecklistsCategory(this.checklists, oldName, newName);
+    await this.store.saveCategories(nextCategories);
+    await this.store.saveGears(nextGears);
+    await this.store.saveChecklists(nextChecklists);
+    this.categories = nextCategories;
+    this.gears = nextGears;
+    this.checklists = nextChecklists;
+    // 如果当前选中的分组被重命名了，同步更新
+    if (this.gearCategory === oldName) {
+      this.gearCategory = newName;
+    }
+    if (this.tempItemGroup === oldName) {
+      this.tempItemGroup = newName;
+    }
+  }
+
+  private async executeCategoryAdd(name: string): Promise<void> {
+    const error = validateCategoryName(name, this.categories);
+    if (error.length > 0) {
+      return;
+    }
+    const nextCategories = addCategory(this.categories, name);
+    await this.store.saveCategories(nextCategories);
+    this.categories = nextCategories;
+  }
+
+  private async executeCategoryReorder(newOrder: string[]): Promise<void> {
+    const nextCategories = reorderCategories(newOrder);
+    await this.store.saveCategories(nextCategories);
+    this.categories = nextCategories;
+  }
+
+  private showCategoryRenameDialog(oldName: string): void {
+    this.showCategoryInputPrompt(oldName, false);
+  }
+
+  private showCategoryDeleteConfirm(category: string, gearCount: number, itemCount: number): void {
+    let message = '「' + category + '」分组下有';
+    if (gearCount > 0) {
+      message += ' ' + gearCount.toString() + ' 件装备';
+    }
+    if (itemCount > 0) {
+      message += (gearCount > 0 ? '、' : ' ') + itemCount.toString() + ' 个行程物品';
+    }
+    message += '，删除后将自动归入「其他」分组。';
+    AlertDialog.show({
+      title: '删除分组',
+      message: message,
+      primaryButton: {
+        value: '取消',
+        action: () => {}
+      },
+      secondaryButton: {
+        value: '删除',
+        fontColor: DANGER_COLOR,
+        action: () => {
+          this.executeCategoryDelete(category);
+        }
+      }
+    });
+  }
+
+  private showCategoryInputPrompt(oldName: string, isAdd: boolean): void {
+    // 使用 promptAction.showDialog 不支持输入框
+    // 改用 @ohos.promptAction 的 showDialog 配合 TextInput
+    // ArkUI 限制：AlertDialog/promptAction 都不支持自定义输入框
+    // 方案：使用自定义 Dialog 状态
+    if (isAdd) {
+      this.categoryDialogMode = 'add';
+      this.categoryDialogOldName = '';
+      this.categoryDialogInput = '';
+    } else {
+      this.categoryDialogMode = 'rename';
+      this.categoryDialogOldName = oldName;
+      this.categoryDialogInput = oldName;
+    }
+    this.showCategoryDialog = true;
   }
 
   private async deleteGear(id: string): Promise<void> {
@@ -1920,7 +2057,11 @@ struct Index {
               },
               onDismiss: () => {
                 this.gearFilterPanelExpanded = false;
-              }
+              },
+              onRename: (oldName: string, _newName: string) => { this.handleCategoryRename(oldName, ''); },
+              onDelete: (category: string) => { this.handleCategoryDelete(category); },
+              onReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
+              onAddCategory: (_name: string) => { this.showCategoryInputPrompt('', true); }
             })
           }
         }
@@ -1981,7 +2122,11 @@ struct Index {
           onImportSelectedGear: () => { this.importSelectedGear(); },
           onAddGearFromImport: () => { this.openAddGearFromImport(); },
           onGenerateTripTitleChange: (value: string) => { this.generateTripTitle = value; },
-          onGenerateTrip: () => { this.generateChecklistFromSelectedGears(); }
+          onGenerateTrip: () => { this.generateChecklistFromSelectedGears(); },
+          onCategoryRename: (oldName: string, newName: string) => { this.handleCategoryRename(oldName, newName); },
+          onCategoryDelete: (category: string) => { this.handleCategoryDelete(category); },
+          onCategoryReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
+          onCategoryAdd: (_name: string) => { this.showCategoryInputPrompt('', true); }
         })
       }
       if (this.showEditItemPanel) {
@@ -2005,7 +2150,11 @@ struct Index {
             this.editingItemWeight = '';
             this.editingItemPrice = '';
             this.errorText = '';
-          }
+          },
+          onRename: (oldName: string, _newName: string) => { this.handleCategoryRename(oldName, ''); },
+          onDelete: (category: string) => { this.handleCategoryDelete(category); },
+          onReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
+          onAddCategory: (_name: string) => { this.showCategoryInputPrompt('', true); }
         })
       }
       if (this.showEditGearPanel) {
@@ -2037,7 +2186,11 @@ struct Index {
           },
           onClose: () => {
             this.closeEditGearPanel();
-          }
+          },
+          onRename: (oldName: string, _newName: string) => { this.handleCategoryRename(oldName, ''); },
+          onDelete: (category: string) => { this.handleCategoryDelete(category); },
+          onReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
+          onAddCategory: (_name: string) => { this.showCategoryInputPrompt('', true); }
         })
       }
       if (this.showTripCeremony) {
@@ -2063,6 +2216,9 @@ struct Index {
       }
       if (this.showCompletionToast) {
         this.CompletionToast();
+      }
+      if (this.showCategoryDialog) {
+        this.CategoryInputDialog();
       }
     }
     .width('100%')
@@ -2105,5 +2261,73 @@ struct Index {
     .height('100%')
     .padding({ top: 78 })
     .alignItems(HorizontalAlign.Center)
+  }
+
+  @Builder
+  private CategoryInputDialog() {
+    Stack() {
+      // 半透明遮罩
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor('#66000000')
+        .onClick(() => { this.showCategoryDialog = false; })
+
+      // 对话框
+      Column({ space: 16 }) {
+        Text(this.categoryDialogMode === 'add' ? '新增分组' : '重命名分组')
+          .fontSize(17)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#1A1A1A')
+
+        TextInput({ text: this.categoryDialogInput, placeholder: '输入分组名称' })
+          .width('100%')
+          .height(44)
+          .fontSize(15)
+          .borderRadius(10)
+          .backgroundColor('#F5F5F5')
+          .onChange((value: string) => { this.categoryDialogInput = value; })
+
+        Row({ space: 12 }) {
+          Button('取消')
+            .fontSize(15)
+            .fontColor(TEXT_TERTIARY)
+            .backgroundColor('#F0F0F0')
+            .borderRadius(10)
+            .height(40)
+            .layoutWeight(1)
+            .onClick(() => { this.showCategoryDialog = false; })
+
+          Button('确认')
+            .fontSize(15)
+            .fontColor('#FFFFFF')
+            .backgroundColor(PRIMARY_COLOR)
+            .borderRadius(10)
+            .height(40)
+            .layoutWeight(1)
+            .onClick(() => {
+              const input = this.categoryDialogInput.trim();
+              if (input.length === 0) {
+                return;
+              }
+              if (this.categoryDialogMode === 'add') {
+                this.executeCategoryAdd(input);
+              } else {
+                this.executeCategoryRename(this.categoryDialogOldName, input);
+              }
+              this.showCategoryDialog = false;
+            })
+        }
+        .width('100%')
+      }
+      .width('80%')
+      .padding(24)
+      .backgroundColor('#FFFFFF')
+      .borderRadius(16)
+      .shadow({ radius: 20, color: '#1A000000', offsetX: 0, offsetY: 4 })
+    }
+    .width('100%')
+    .height('100%')
+    .alignContent(Alignment.Center)
   }
 }
