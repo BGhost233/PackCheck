@@ -1,6 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
-import { AssetEvent, DEFAULT_CATEGORIES, GearItem, TripChecklist } from '../models/PackModels';
+import { DEFAULT_CATEGORIES, GearItem, TripChecklist } from '../models/PackModels';
 
 const STORE_NAME = 'packcheck_store';
 const KEY_GEARS = 'packcheck_gears';
@@ -9,7 +9,6 @@ const KEY_CATEGORIES = 'packcheck_categories';
 const KEY_GEAR_TARGET_WEIGHT = 'gear_target_weight';
 const KEY_COLLAPSED_GEAR_GROUPS = 'packcheck_collapsed_gear_groups';
 const KEY_CATEGORY_ORDER = 'packcheck_category_order';
-const KEY_ASSET_EVENTS = 'packcheck_asset_events';
 const DEFAULT_GEAR_TARGET_WEIGHT = 10000;
 
 export class PackStore {
@@ -86,21 +85,6 @@ export class PackStore {
 
   async saveCategoryOrder(order: string[]): Promise<void> {
     await this.writeString(KEY_CATEGORY_ORDER, JSON.stringify(order));
-  }
-
-  async getAssetEvents(): Promise<AssetEvent[]> {
-    const value = await this.readString(KEY_ASSET_EVENTS, '[]');
-    return JSON.parse(value) as AssetEvent[];
-  }
-
-  async saveAssetEvents(events: AssetEvent[]): Promise<void> {
-    await this.writeString(KEY_ASSET_EVENTS, JSON.stringify(events));
-  }
-
-  async appendAssetEvent(event: AssetEvent): Promise<void> {
-    const events = await this.getAssetEvents();
-    events.push(event);
-    await this.saveAssetEvents(events);
   }
 
   private async readString(key: string, fallback: string): Promise<string> {

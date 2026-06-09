@@ -7,6 +7,8 @@ export interface GearItem {
   note?: string;
   tripCount?: number;
   createdAt: number;
+  brand?: string;        // 品牌（packing：辨识/复购参考）
+  acquiredAt?: number;   // 入手时间戳（archive：陪伴天数 = now - acquiredAt；与 createdAt 录入时间区分）
 }
 
 export interface ChecklistItem {
@@ -26,21 +28,13 @@ export interface TripChecklist {
   dateAt?: number;
   items: ChecklistItem[];
   createdAt: number;
+  destination?: string;     // 目的地
+  distanceKm?: number;      // 里程（km）
+  maxAltitude?: number;     // 最高海拔（m）
+  ascentM?: number;         // 累计爬升（m）
+  durationHours?: number;   // 时长（h）
 }
 
-export interface AssetEvent {
-  timestamp: number;          // 毫秒时间戳
-  totalValue: number;         // 事件后的累计总价（元）
-  totalCount: number;         // 事件后的装备总件数
-  event: 'add' | 'remove' | 'edit';
-  gearName?: string;          // 触发事件的装备名称
-  gearPrice?: number;         // 该装备的价格（元）
-}
-
-export interface AssetTotals {
-  totalValue: number;
-  totalCount: number;
-}
 
 export const DEFAULT_CATEGORIES: string[] = [
   '证件',

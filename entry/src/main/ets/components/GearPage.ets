@@ -11,9 +11,8 @@ import {
 STAGGER_OFFSET_Y, staggerDelay
 } from '../constants/AnimationTokens';
 import { vibrator } from '@kit.SensorServiceKit';
-import { AssetEvent, GearItem, TripChecklist } from '../models/PackModels';
+import { GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
-import { AssetTrendCard } from './AssetTrendCard';
 import {
   ARROW_COLOR,
   CARD_BG,
@@ -113,8 +112,6 @@ export struct GearPage {
   @State private dragOverTripId: string = '';
   @State private showTripTray: boolean = false;
   @Prop checklists: TripChecklist[] = [];
-  @Prop assetEvents: AssetEvent[] = [];
-
   private store: PackStore = new PackStore();
   private gearListScroller: Scroller = new Scroller();
   private tripTrayScroller: Scroller = new Scroller();
@@ -1080,14 +1077,6 @@ export struct GearPage {
                 this.onOpenFilterPanel();
               })
 
-              AssetTrendCard({
-                assetEvents: this.assetEvents,
-                currentTotal: this.totalGearPrice(),
-                gearCount: this.gears.length,
-                totalWeight: this.totalGearWeight()
-              })
-                .opacity(this.gearRingOpacity())
-                .scale({ x: this.gearRingScale(), y: this.gearRingScale() })
             }
             .width('100%')
             .height((GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED) * (1 - this.gearScrollProgress()))
