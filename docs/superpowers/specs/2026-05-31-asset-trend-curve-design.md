@@ -1,5 +1,13 @@
 # 装备资产趋势曲线设计规格
 
+> ⚠️ **已废弃（2026-06-09）** —— 本设计已被 v2「服役档案」产品转型推翻。
+> 资产趋势图把装备库导向「投资组合/家底成长」的物质叙事，与新方向「装备的服役档案 · 温柔陪伴叙事」相悖（纲领文档 §0.1：里子＞面子、情感连接＞资产炫耀）。
+> AssetTrendCard 组件及其整条数据链路将在地基层第一步删除。
+> 现行方向见：纲领 `docs/design/2026-06-04-product-vision-and-restructure.md`、spec `docs/superpowers/specs/2026-06-09-service-archive-restructure-design.md`、计划 `docs/superpowers/plans/2026-06-09-service-archive-foundation.md`。
+> 以下内容仅作历史存档，不再作为开发依据。
+
+---
+
 > 替换装备库页面顶部的 WeightGauge 圆盘组件，改为类似 Apple Stocks 迷你曲线风格的资产价值趋势图，为用户提供装备资产的成长叙事和情绪价值。
 
 ---

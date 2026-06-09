@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.5.6
+## 当前版本：v0.5.8
 
 ### 已实现功能
 
@@ -41,7 +41,7 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（~2045 行）
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2341 行）
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
@@ -83,9 +83,14 @@ PackCheck/
 ├── AppScope/                — 应用级配置 & 资源
 ├── entry/                   — 主模块源码
 ├── docs/
-│   ├── design/              — 设计文档
+│   ├── DEVELOPMENT_STANDARDS.md — 开发规范（架构/设计语言/动效/组件封装，必读）
+│   ├── design/              — 设计文档（含产品愿景纲领）
+│   │   ├── 2026-06-04-product-vision-and-restructure.md — v2 产品愿景纲领（服役档案转型）
 │   │   ├── plans/           — 版本实施计划
 │   │   └── specs/           — 设计规格说明
+│   ├── superpowers/         — 重构 spec & 落地计划（service-archive 系列）
+│   │   ├── specs/           — 技术方案 spec
+│   │   └── plans/           — 可执行实现计划
 │   └── archive/             — 已完成的历史文档
 ├── hvigor/                  — 构建配置
 ├── CLAUDE.md                — AI 协作规范 & 动效避坑清单
@@ -120,7 +125,10 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.5.3 | ✅ 已完成 | 清单页 Bug 修复 + 快速核查快捷入口 + 装备库弹性回弹/分组拖拽 |
 | v0.5.4 | ✅ 已完成 | 装备库 5 项体验优化（搜索展开/拖拽定位/折叠动画/多选点击/托盘滚速） |
 | v0.5.5 | ✅ 已完成 | 装备库布局 Bug 修复（Stack 高度循环依赖 → position 绝对定位） |
-| v0.5.6 | ✅ 当前 | 动效 Token 体系审查修复（3 个 P0 运行时 bug + 全量代码质量清理） |
+| v0.5.6 | ✅ 已完成 | 动效 Token 体系审查修复（3 个 P0 运行时 bug + 全量代码质量清理） |
+| v0.5.7 | ✅ 已完成 | 装备库左滑删除修复 + 动效架构优化（左滑动效硬切修复 + 删除按钮出场动效） |
+| v0.5.8 | ✅ 当前 | 编辑模式 Bug 修复 + 装备库空态轻量重设计 |
+| v2 服役档案 | 🚧 规划中 | 产品转型：装备清单 App → 装备的服役档案。3 Tab 重构 + 人生足迹 + 塔科夫式配装。详见 `docs/superpowers/specs/2026-06-09-service-archive-restructure-design.md` |
 
 ## 开发约定
 
