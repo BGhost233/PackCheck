@@ -534,6 +534,7 @@ export struct ChecklistDetail {
               .onClick(() => {
                 this.onOpenDatePicker();
               })
+            this.TripProfileBar(this.currentChecklist());
             this.MetaRow(this.currentChecklist());
           }
           .alignItems(HorizontalAlign.Start)
@@ -545,6 +546,59 @@ export struct ChecklistDetail {
       .alignItems(HorizontalAlign.Center)
       .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 14 })
     }
+  }
+
+  @Builder
+  private TripProfileBar(checklist: TripChecklist | undefined) {
+    if (checklist !== undefined && this.hasTripProfile(checklist)) {
+      Row({ space: 6 }) {
+        if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
+          this.ProfileTag(checklist.destination.trim())
+        }
+        if (typeof checklist.distanceKm === 'number' && checklist.distanceKm > 0) {
+          this.ProfileTag(`${checklist.distanceKm}km`)
+        }
+        if (typeof checklist.ascentM === 'number' && checklist.ascentM > 0) {
+          this.ProfileTag(`${checklist.ascentM}m↑`)
+        }
+        if (typeof checklist.maxAltitude === 'number' && checklist.maxAltitude > 0) {
+          this.ProfileTag(`${checklist.maxAltitude}m`)
+        }
+        if (typeof checklist.durationHours === 'number' && checklist.durationHours > 0) {
+          this.ProfileTag(`${checklist.durationHours}h`)
+        }
+      }
+      .width('100%')
+    }
+  }
+
+  @Builder
+  private ProfileTag(text: string) {
+    Text(text)
+      .fontSize(11)
+      .fontColor(TEXT_SECONDARY)
+      .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+      .backgroundColor(LIGHT_PRIMARY_COLOR)
+      .borderRadius(6)
+  }
+
+  private hasTripProfile(checklist: TripChecklist): boolean {
+    if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
+      return true;
+    }
+    if (typeof checklist.distanceKm === 'number' && checklist.distanceKm > 0) {
+      return true;
+    }
+    if (typeof checklist.ascentM === 'number' && checklist.ascentM > 0) {
+      return true;
+    }
+    if (typeof checklist.maxAltitude === 'number' && checklist.maxAltitude > 0) {
+      return true;
+    }
+    if (typeof checklist.durationHours === 'number' && checklist.durationHours > 0) {
+      return true;
+    }
+    return false;
   }
 
   @Builder

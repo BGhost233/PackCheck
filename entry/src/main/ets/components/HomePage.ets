@@ -360,6 +360,24 @@ export struct HomePage {
     return (Math.round(weightGram / 100) / 10).toString() + 'kg';
   }
 
+  private heroSubtitleText(): string {
+    const checklist = this.latestChecklist()!;
+    const parts: string[] = [];
+    // 目的地（优先展示）
+    if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
+      parts.push(checklist.destination.trim());
+    }
+    // 日期
+    if (checklist.date !== undefined && checklist.date.length > 0) {
+      parts.push(checklist.date);
+    } else {
+      parts.push('未设置日期');
+    }
+    // 总重
+    parts.push(this.formatKg(this.checklistTotalWeight(checklist)));
+    return parts.join(' · ');
+  }
+
   private formatDateText(timestamp: number): string {
     const date = new Date(timestamp);
     return date.getFullYear().toString() + '-' + (date.getMonth() + 1).toString() + '-' + date.getDate().toString();
@@ -624,8 +642,7 @@ export struct HomePage {
         })
 
         Row() {
-          Text((this.latestChecklist()!.date !== undefined && this.latestChecklist()!.date!.length > 0 ? this.latestChecklist()!.date! : '未设置日期') +
-            ' · ' + this.formatKg(this.checklistTotalWeight(this.latestChecklist()!)))
+          Text(this.heroSubtitleText())
             .fontSize(13)
             .fontColor(TEXT_TERTIARY)
             .layoutWeight(1)

@@ -43,6 +43,11 @@ export struct SheetOverlay {
   // Trip form
   @Prop tripTitle: string = '';
   @Prop tripDate: string = '';
+  @Prop tripDestination: string = '';
+  @Prop tripDistanceKm: string = '';
+  @Prop tripMaxAltitude: string = '';
+  @Prop tripAscentM: string = '';
+  @Prop tripDurationHours: string = '';
   // Temp item
   @Prop tempItemName: string = '';
   @Prop tempItemGroup: string = '其他';
@@ -68,6 +73,11 @@ export struct SheetOverlay {
   // Trip form callbacks
   onTripTitleChange: (value: string) => void = (value: string): void => {};
   onTripDateChange: (value: string) => void = (value: string): void => {};
+  onTripDestinationChange: (value: string) => void = (value: string): void => {};
+  onTripDistanceKmChange: (value: string) => void = (value: string): void => {};
+  onTripMaxAltitudeChange: (value: string) => void = (value: string): void => {};
+  onTripAscentMChange: (value: string) => void = (value: string): void => {};
+  onTripDurationHoursChange: (value: string) => void = (value: string): void => {};
   onCreateTrip: () => void = (): void => {};
   onSaveTrip: () => void = (): void => {};
   // Temp item callbacks
@@ -159,8 +169,18 @@ export struct SheetOverlay {
             tripTitle: this.tripTitle,
             tripDate: this.tripDate,
             isEditMode: true,
+            tripDestination: this.tripDestination,
+            tripDistanceKm: this.tripDistanceKm,
+            tripMaxAltitude: this.tripMaxAltitude,
+            tripAscentM: this.tripAscentM,
+            tripDurationHours: this.tripDurationHours,
             onTitleChange: this.onTripTitleChange,
             onDateChange: this.onTripDateChange,
+            onDestinationChange: this.onTripDestinationChange,
+            onDistanceKmChange: this.onTripDistanceKmChange,
+            onMaxAltitudeChange: this.onTripMaxAltitudeChange,
+            onAscentMChange: this.onTripAscentMChange,
+            onDurationHoursChange: this.onTripDurationHoursChange,
             onConfirm: this.onSaveTrip
           })
         } else if (this.sheetMode === SHEET_TEMP_ITEM) {

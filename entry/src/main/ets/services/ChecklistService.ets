@@ -492,10 +492,11 @@ export function removeItemFromChecklists(checklists: TripChecklist[], checklistI
 }
 
 /**
- * 更新指定 checklist 的元信息（title/date/dateAt），返回新数组。
+ * 更新指定 checklist 的元信息（title/date/dateAt + 可选 profile 字段），返回新数组。
  */
 export function updateChecklistMeta(checklists: TripChecklist[], checklistId: string,
-  title: string, date: string | undefined, dateAt: number | undefined): TripChecklist[] {
+  title: string, date: string | undefined, dateAt: number | undefined,
+  profile?: TripProfileUpdate): TripChecklist[] {
   const result: TripChecklist[] = [];
   for (let index = 0; index < checklists.length; index++) {
     const source = checklists[index];
@@ -507,11 +508,11 @@ export function updateChecklistMeta(checklists: TripChecklist[], checklistId: st
         dateAt: dateAt,
         items: source.items,
         createdAt: source.createdAt,
-        destination: source.destination,
-        distanceKm: source.distanceKm,
-        maxAltitude: source.maxAltitude,
-        ascentM: source.ascentM,
-        durationHours: source.durationHours
+        destination: profile !== undefined ? profile.destination : source.destination,
+        distanceKm: profile !== undefined ? profile.distanceKm : source.distanceKm,
+        maxAltitude: profile !== undefined ? profile.maxAltitude : source.maxAltitude,
+        ascentM: profile !== undefined ? profile.ascentM : source.ascentM,
+        durationHours: profile !== undefined ? profile.durationHours : source.durationHours
       };
       result.push(updated);
     } else {
@@ -519,6 +520,14 @@ export function updateChecklistMeta(checklists: TripChecklist[], checklistId: st
     }
   }
   return result;
+}
+
+export interface TripProfileUpdate {
+  destination?: string;
+  distanceKm?: number;
+  maxAltitude?: number;
+  ascentM?: number;
+  durationHours?: number;
 }
 
 /**

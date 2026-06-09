@@ -5,6 +5,7 @@ export interface Footprint {
   tripCount: number;         // 同行次数
   totalDistanceKm: number;   // 累计里程
   totalAscentM: number;      // 累计爬升
+  totalDurationHours: number; // 累计时长
   maxAltitude: number;       // 到过的最高海拔
   placeCount: number;        // 去过的地方数（destination 去重计数）
   gearCount: number;         // 装备总数
@@ -33,6 +34,7 @@ const MS_PER_DAY = 86400000;
 export function computeFootprint(trips: TripChecklist[], gears: GearItem[]): Footprint {
   let totalDistanceKm = 0;
   let totalAscentM = 0;
+  let totalDurationHours = 0;
   let maxAltitude = 0;
   const places: Set<string> = new Set<string>();
 
@@ -43,6 +45,9 @@ export function computeFootprint(trips: TripChecklist[], gears: GearItem[]): Foo
     }
     if (typeof t.ascentM === 'number') {
       totalAscentM += t.ascentM;
+    }
+    if (typeof t.durationHours === 'number') {
+      totalDurationHours += t.durationHours;
     }
     if (typeof t.maxAltitude === 'number' && t.maxAltitude > maxAltitude) {
       maxAltitude = t.maxAltitude;
@@ -56,6 +61,7 @@ export function computeFootprint(trips: TripChecklist[], gears: GearItem[]): Foo
     tripCount: trips.length,
     totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
     totalAscentM: Math.round(totalAscentM),
+    totalDurationHours: Math.round(totalDurationHours * 10) / 10,
     maxAltitude: maxAltitude,
     placeCount: places.size,
     gearCount: gears.length,

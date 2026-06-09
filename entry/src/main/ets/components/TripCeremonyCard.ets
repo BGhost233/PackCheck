@@ -777,7 +777,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
       // 展开的输入框（仅激活的 chip 显示）
       if (this.activeChips[0]) {
-        TextInput({ placeholder: '去哪里？', text: this.tripDestination })
+        TextInput({ placeholder: '目的地', text: this.tripDestination })
           .width('100%')
           .height(40)
           .fontSize(13)
@@ -790,7 +790,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .onChange((value: string) => { this.onDestinationChange(value); })
       }
       if (this.activeChips[1]) {
-        TextInput({ placeholder: '里程（km）', text: this.tripDistanceKm })
+        TextInput({ placeholder: '预计里程 km', text: this.tripDistanceKm })
           .width('100%')
           .height(40)
           .fontSize(13)
@@ -804,7 +804,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .onChange((value: string) => { this.onDistanceChange(value); })
       }
       if (this.activeChips[2]) {
-        TextInput({ placeholder: '最高海拔（m）', text: this.tripMaxAltitude })
+        TextInput({ placeholder: '最高海拔 m', text: this.tripMaxAltitude })
           .width('100%')
           .height(40)
           .fontSize(13)
@@ -818,7 +818,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .onChange((value: string) => { this.onAltitudeChange(value); })
       }
       if (this.activeChips[3]) {
-        TextInput({ placeholder: '累计爬升（m）', text: this.tripAscentM })
+        TextInput({ placeholder: '累计爬升 m', text: this.tripAscentM })
           .width('100%')
           .height(40)
           .fontSize(13)
@@ -832,7 +832,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .onChange((value: string) => { this.onAscentChange(value); })
       }
       if (this.activeChips[4]) {
-        TextInput({ placeholder: '时长（小时）', text: this.tripDurationHours })
+        TextInput({ placeholder: '预计时长 h', text: this.tripDurationHours })
           .width('100%')
           .height(40)
           .fontSize(13)

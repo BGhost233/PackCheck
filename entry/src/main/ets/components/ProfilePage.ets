@@ -18,7 +18,7 @@ export struct ProfilePage {
   @Prop @Watch('onDataChange') gears: GearItem[] = [];
 
   @State private footprint: Footprint = {
-    tripCount: 0, totalDistanceKm: 0, totalAscentM: 0,
+    tripCount: 0, totalDistanceKm: 0, totalAscentM: 0, totalDurationHours: 0,
     maxAltitude: 0, placeCount: 0, gearCount: 0, recentTrips: [],
   };
 
@@ -30,6 +30,7 @@ export struct ProfilePage {
   @State private animDays: number = 0;
   @State private animGearCount: number = 0;
   @State private animMaxAlt: number = 0;
+  @State private animDuration: number = 0;
 
   // 段落 staggered 入场
   @State private heroOpacity: number = 0;
@@ -137,6 +138,9 @@ export struct ProfilePage {
       counterAnimate(0, this.footprint.maxAltitude, (v: number) => {
         this.animMaxAlt = Math.round(v);
       });
+      counterAnimate(0, this.footprint.totalDurationHours, (v: number) => {
+        this.animDuration = Math.round(v * 10) / 10;
+      });
       const companion: LongestCompanion | undefined = this.footprint.longestCompanion;
       if (companion !== undefined) {
         counterAnimate(0, companion.days, (v: number) => {
@@ -161,6 +165,9 @@ export struct ProfilePage {
       });
       counterAnimate(prev.maxAltitude, this.footprint.maxAltitude, (v: number) => {
         this.animMaxAlt = Math.round(v);
+      });
+      counterAnimate(prev.totalDurationHours, this.footprint.totalDurationHours, (v: number) => {
+        this.animDuration = Math.round(v * 10) / 10;
       });
       const companion: LongestCompanion | undefined = this.footprint.longestCompanion;
       const prevDays = prev.longestCompanion !== undefined ? prev.longestCompanion.days : 0;
@@ -420,13 +427,29 @@ export struct ProfilePage {
                 this.StatCell('—', '世界在等你')
               }
             }
+            // 累计在路上
+            GridItem() {
+              if (this.footprint.totalDurationHours > 0) {
+                this.StatCell(`${this.animDuration}h`, '累计在路上')
+              } else {
+                this.StatCell('—', '出发就是意义')
+              }
+            }
+            // 累计里程
+            GridItem() {
+              if (this.footprint.totalDistanceKm > 0) {
+                this.StatCell(`${this.animDistance}km`, '双脚丈量过')
+              } else {
+                this.StatCell('—', '每一步都算数')
+              }
+            }
           }
           .columnsTemplate('1fr 1fr')
-          .rowsTemplate('1fr 1fr')
+          .rowsTemplate('1fr 1fr 1fr')
           .columnsGap(12)
           .rowsGap(12)
           .width('100%')
-          .height(240)
+          .height(360)
         }
         .width('100%')
         .padding({ top: 48, left: PAGE_PADDING, right: PAGE_PADDING })

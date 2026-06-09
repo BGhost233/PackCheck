@@ -1,4 +1,5 @@
 import {
+  INPUT_BG,
   PAGE_BG,
   PRIMARY_COLOR,
   TEXT_MAIN,
@@ -17,8 +18,20 @@ export struct TripFormSheet {
   @Prop tripTitle: string = '';
   @Prop tripDate: string = '';
   @Prop isEditMode: boolean = false;
+  // 行程画像字段（编辑模式可用）
+  @Prop tripDestination: string = '';
+  @Prop tripDistanceKm: string = '';
+  @Prop tripMaxAltitude: string = '';
+  @Prop tripAscentM: string = '';
+  @Prop tripDurationHours: string = '';
+
   onTitleChange: (value: string) => void = (value: string): void => {};
   onDateChange: (value: string) => void = (value: string): void => {};
+  onDestinationChange: (value: string) => void = (value: string): void => {};
+  onDistanceKmChange: (value: string) => void = (value: string): void => {};
+  onMaxAltitudeChange: (value: string) => void = (value: string): void => {};
+  onAscentMChange: (value: string) => void = (value: string): void => {};
+  onDurationHoursChange: (value: string) => void = (value: string): void => {};
   onConfirm: () => void = (): void => {};
 
   @State private buttonPressed: boolean = false;
@@ -39,6 +52,78 @@ export struct TripFormSheet {
           this.onTitleChange(value);
         })
       this.DatePickerField('出发日期（可选）', this.tripDate)
+
+      // 行程画像字段（编辑模式展示）
+      if (this.isEditMode) {
+        Column({ space: 8 }) {
+          Text('行程信息')
+            .fontSize(12)
+            .fontColor(TEXT_TERTIARY)
+            .margin({ top: 4 })
+          TextInput({ placeholder: '目的地', text: this.tripDestination })
+            .height(44)
+            .fontSize(14)
+            .fontColor(TEXT_MAIN)
+            .placeholderColor(TEXT_SECONDARY)
+            .backgroundColor(INPUT_BG)
+            .borderRadius(10)
+            .padding({ left: 12, right: 12 })
+            .onChange((value: string) => { this.onDestinationChange(value); })
+          Row({ space: 8 }) {
+            TextInput({ placeholder: '里程 km', text: this.tripDistanceKm })
+              .height(44)
+              .fontSize(14)
+              .fontColor(TEXT_MAIN)
+              .placeholderColor(TEXT_SECONDARY)
+              .backgroundColor(INPUT_BG)
+              .borderRadius(10)
+              .padding({ left: 12, right: 12 })
+              .type(InputType.Number)
+              .layoutWeight(1)
+              .onChange((value: string) => { this.onDistanceKmChange(value); })
+            TextInput({ placeholder: '海拔 m', text: this.tripMaxAltitude })
+              .height(44)
+              .fontSize(14)
+              .fontColor(TEXT_MAIN)
+              .placeholderColor(TEXT_SECONDARY)
+              .backgroundColor(INPUT_BG)
+              .borderRadius(10)
+              .padding({ left: 12, right: 12 })
+              .type(InputType.Number)
+              .layoutWeight(1)
+              .onChange((value: string) => { this.onMaxAltitudeChange(value); })
+          }
+          .width('100%')
+          Row({ space: 8 }) {
+            TextInput({ placeholder: '爬升 m', text: this.tripAscentM })
+              .height(44)
+              .fontSize(14)
+              .fontColor(TEXT_MAIN)
+              .placeholderColor(TEXT_SECONDARY)
+              .backgroundColor(INPUT_BG)
+              .borderRadius(10)
+              .padding({ left: 12, right: 12 })
+              .type(InputType.Number)
+              .layoutWeight(1)
+              .onChange((value: string) => { this.onAscentMChange(value); })
+            TextInput({ placeholder: '时长 h', text: this.tripDurationHours })
+              .height(44)
+              .fontSize(14)
+              .fontColor(TEXT_MAIN)
+              .placeholderColor(TEXT_SECONDARY)
+              .backgroundColor(INPUT_BG)
+              .borderRadius(10)
+              .padding({ left: 12, right: 12 })
+              .type(InputType.Number)
+              .layoutWeight(1)
+              .onChange((value: string) => { this.onDurationHoursChange(value); })
+          }
+          .width('100%')
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+      }
+
       Button(this.isEditMode ? '确认保存' : '创建')
         .height(48)
         .fontSize(14)

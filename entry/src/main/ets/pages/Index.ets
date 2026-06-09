@@ -113,7 +113,8 @@ import {
   updateItemFields,
   buildItemsFromGears,
   prependChecklist,
-  findLatestChecklist
+  findLatestChecklist,
+  TripProfileUpdate
 } from '../services/ChecklistService';
 import { ProfilePage } from '../components/ProfilePage';
 
@@ -159,6 +160,11 @@ struct Index {
   @State private gearNote: string = '';
   @State private tripTitle: string = '';
   @State private tripDate: string = '';
+  @State private tripDestination: string = '';
+  @State private tripDistanceKm: string = '';
+  @State private tripMaxAltitude: string = '';
+  @State private tripAscentM: string = '';
+  @State private tripDurationHours: string = '';
   @State private tempItemName: string = '';
   @State private tempItemGroup: string = '其他';
   @State private importGearIds: string[] = [];
@@ -1232,6 +1238,11 @@ struct Index {
     }
     this.tripTitle = checklist.title;
     this.tripDate = checklist.date === undefined ? '' : checklist.date;
+    this.tripDestination = checklist.destination !== undefined ? checklist.destination : '';
+    this.tripDistanceKm = typeof checklist.distanceKm === 'number' ? checklist.distanceKm.toString() : '';
+    this.tripMaxAltitude = typeof checklist.maxAltitude === 'number' ? checklist.maxAltitude.toString() : '';
+    this.tripAscentM = typeof checklist.ascentM === 'number' ? checklist.ascentM.toString() : '';
+    this.tripDurationHours = typeof checklist.durationHours === 'number' ? checklist.durationHours.toString() : '';
     this.sheetMode = SHEET_EDIT_TRIP;
     this.openSheetAnimated();
   }
@@ -1243,12 +1254,20 @@ struct Index {
       this.errorText = '行程名称不能为空';
       return;
     }
-    await this.updateChecklistInfo(checklist.id, title, this.tripDate.trim(), parseTripDateAt(this.tripDate));
+    const profile: TripProfileUpdate = {
+      destination: this.tripDestination.trim().length > 0 ? this.tripDestination.trim() : undefined,
+      distanceKm: normalizeNumber(this.tripDistanceKm),
+      maxAltitude: normalizeNumber(this.tripMaxAltitude),
+      ascentM: normalizeNumber(this.tripAscentM),
+      durationHours: normalizeNumber(this.tripDurationHours)
+    };
+    await this.updateChecklistInfo(checklist.id, title, this.tripDate.trim(), parseTripDateAt(this.tripDate), profile);
     this.closeSheet();
   }
 
-  private async updateChecklistInfo(checklistId: string, title: string, date: string, dateAt: number | undefined): Promise<void> {
-    const nextChecklists = updateChecklistMeta(this.checklists, checklistId, title, date, dateAt);
+  private async updateChecklistInfo(checklistId: string, title: string, date: string,
+    dateAt: number | undefined, profile?: TripProfileUpdate): Promise<void> {
+    const nextChecklists = updateChecklistMeta(this.checklists, checklistId, title, date, dateAt, profile);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
   }
@@ -2026,6 +2045,11 @@ struct Index {
           categories: this.presetCategories(),
           tripTitle: this.tripTitle,
           tripDate: this.tripDate,
+          tripDestination: this.tripDestination,
+          tripDistanceKm: this.tripDistanceKm,
+          tripMaxAltitude: this.tripMaxAltitude,
+          tripAscentM: this.tripAscentM,
+          tripDurationHours: this.tripDurationHours,
           tempItemName: this.tempItemName,
           tempItemGroup: this.tempItemGroup,
           showTempAddNotice: this.showTempAddNotice,
@@ -2047,6 +2071,11 @@ struct Index {
           onSaveGear: () => { this.saveGear(); },
           onTripTitleChange: (value: string) => { this.tripTitle = value; },
           onTripDateChange: (value: string) => { this.tripDate = value; },
+          onTripDestinationChange: (value: string) => { this.tripDestination = value; },
+          onTripDistanceKmChange: (value: string) => { this.tripDistanceKm = value; },
+          onTripMaxAltitudeChange: (value: string) => { this.tripMaxAltitude = value; },
+          onTripAscentMChange: (value: string) => { this.tripAscentM = value; },
+          onTripDurationHoursChange: (value: string) => { this.tripDurationHours = value; },
           onCreateTrip: () => { this.createChecklist(); },
           onSaveTrip: () => { this.saveTripInfo(); },
           onTempItemNameChange: (value: string) => { this.tempItemName = value; },
