@@ -185,6 +185,11 @@ struct Index {
   @State private showTripCeremony: boolean = false;
   @State private ceremonyTripTitle: string = '';
   @State private ceremonyTripDate: string = '';
+  @State private ceremonyDestination: string = '';
+  @State private ceremonyDistanceKm: string = '';
+  @State private ceremonyMaxAltitude: string = '';
+  @State private ceremonyAscentM: string = '';
+  @State private ceremonyDurationHours: string = '';
 
   // ===== 分组编辑 Dialog =====
   @State private showCategoryDialog: boolean = false;
@@ -953,6 +958,11 @@ struct Index {
   private startTripCeremony(): void {
     this.ceremonyTripTitle = '';
     this.ceremonyTripDate = '';
+    this.ceremonyDestination = '';
+    this.ceremonyDistanceKm = '';
+    this.ceremonyMaxAltitude = '';
+    this.ceremonyAscentM = '';
+    this.ceremonyDurationHours = '';
     this.errorText = '';
     this.showTripCeremony = true;
     // 背景下沉 + 模糊，营造空间纵深
@@ -997,7 +1007,12 @@ struct Index {
       date: this.tripDate.trim(),
       dateAt: parseTripDateAt(this.tripDate),
       items: [],
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      destination: this.ceremonyDestination.trim().length > 0 ? this.ceremonyDestination.trim() : undefined,
+      distanceKm: this.ceremonyDistanceKm.trim().length > 0 ? parseFloat(this.ceremonyDistanceKm) : undefined,
+      maxAltitude: this.ceremonyMaxAltitude.trim().length > 0 ? parseFloat(this.ceremonyMaxAltitude) : undefined,
+      ascentM: this.ceremonyAscentM.trim().length > 0 ? parseFloat(this.ceremonyAscentM) : undefined,
+      durationHours: this.ceremonyDurationHours.trim().length > 0 ? parseFloat(this.ceremonyDurationHours) : undefined
     };
     const nextChecklists = prependChecklist(this.checklists, created);
     this.applyChecklistState(nextChecklists);
@@ -2106,11 +2121,31 @@ struct Index {
         TripCeremonyCard({
           tripTitle: this.ceremonyTripTitle,
           tripDate: this.ceremonyTripDate,
+          tripDestination: this.ceremonyDestination,
+          tripDistanceKm: this.ceremonyDistanceKm,
+          tripMaxAltitude: this.ceremonyMaxAltitude,
+          tripAscentM: this.ceremonyAscentM,
+          tripDurationHours: this.ceremonyDurationHours,
           onTitleChange: (value: string) => {
             this.ceremonyTripTitle = value;
           },
           onDateChange: (value: string) => {
             this.ceremonyTripDate = value;
+          },
+          onDestinationChange: (value: string) => {
+            this.ceremonyDestination = value;
+          },
+          onDistanceChange: (value: string) => {
+            this.ceremonyDistanceKm = value;
+          },
+          onAltitudeChange: (value: string) => {
+            this.ceremonyMaxAltitude = value;
+          },
+          onAscentChange: (value: string) => {
+            this.ceremonyAscentM = value;
+          },
+          onDurationChange: (value: string) => {
+            this.ceremonyDurationHours = value;
           },
           onFinish: () => {
             this.finishTripCeremony();

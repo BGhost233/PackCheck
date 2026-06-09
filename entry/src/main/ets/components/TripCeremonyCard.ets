@@ -12,8 +12,10 @@ import { inputMethod } from '@kit.IMEKit';
 import {
   CARD_BG,
   CARD_FOOTER_BG,
+  CHIP_BG_DEFAULT,
   ERROR_BORDER,
   INPUT_BG,
+  LIGHT_PRIMARY_COLOR,
   PLACEHOLDER_COLOR,
   PRIMARY_COLOR,
   PRIMARY_FILL_SUBTLE,
@@ -23,18 +25,30 @@ import {
   PRIMARY_PRESSED_DEEP,
   SHADOW_DEFAULT,
   TEXT_MAIN,
+  TEXT_SECONDARY,
   TRANSPARENT,
   WHITE,
   WHITE_SEMI_TRANSPARENT
 } from '../constants/Colors';
+import { CHIP_RADIUS } from '../constants/Layout';
 
 @Component
 export struct TripCeremonyCard {
   @Prop tripTitle: string = '';
   @Prop tripDate: string = '';
+  @Prop tripDestination: string = '';
+  @Prop tripDistanceKm: string = '';
+  @Prop tripMaxAltitude: string = '';
+  @Prop tripAscentM: string = '';
+  @Prop tripDurationHours: string = '';
 
   onTitleChange: (value: string) => void = () => {};
   onDateChange: (value: string) => void = () => {};
+  onDestinationChange: (value: string) => void = () => {};
+  onDistanceChange: (value: string) => void = () => {};
+  onAltitudeChange: (value: string) => void = () => {};
+  onAscentChange: (value: string) => void = () => {};
+  onDurationChange: (value: string) => void = () => {};
   onFinish: () => void = () => {};
   onDismiss: () => void = () => {};
   onExitStart: () => void = () => {};
@@ -58,6 +72,10 @@ export struct TripCeremonyCard {
   // === 输入框抖动 ===
   @State private titleShakeX: number = 0;
   @State private titleBorderHighlight: boolean = false;
+
+  // === 渐进式 chip 状态 ===
+  @State private activeChips: boolean[] = [false, false, false, false, false];
+  @State private chipAreaHeight: number = 0;
 
   // === 滑动状态 ===
   @State private slideX: number = 0;
@@ -678,6 +696,154 @@ return this.trackWidth - this.SLIDER_WIDTH;
   // ============================================================
   // Builders
   // ============================================================
+  // ============================================================
+  // 渐进式 chip（5 结构化字段按需点亮）
+  // ============================================================
+  private chipLabels: string[] = ['目的地', '里程', '海拔', '爬升', '时长'];
+  private chipUnits: string[] = ['', 'km', 'm', 'm', 'h'];
+
+  private toggleChip(index: number): void {
+    const next = [...this.activeChips];
+    next[index] = !next[index];
+    this.getUIContext().animateTo({
+      curve: SPRING_GENERAL()
+    }, () => {
+      this.activeChips = next;
+    });
+  }
+
+  private getChipValue(index: number): string {
+    const values: string[] = [
+      this.tripDestination, this.tripDistanceKm,
+      this.tripMaxAltitude, this.tripAscentM, this.tripDurationHours
+    ];
+    return values[index];
+  }
+
+  private isChipFilled(index: number): boolean {
+    return this.getChipValue(index).trim().length > 0;
+  }
+
+  private onChipValueChange(index: number, value: string): void {
+    switch (index) {
+      case 0: this.onDestinationChange(value); break;
+      case 1: this.onDistanceChange(value); break;
+      case 2: this.onAltitudeChange(value); break;
+      case 3: this.onAscentChange(value); break;
+      case 4: this.onDurationChange(value); break;
+      default: break;
+    }
+  }
+
+  @Builder
+  private ChipTag(label: string, index: number) {
+    Row({ space: 4 }) {
+      Text(label)
+        .fontSize(12)
+        .fontColor(this.activeChips[index] || this.isChipFilled(index) ? PRIMARY_COLOR : TEXT_SECONDARY)
+        .fontWeight(this.activeChips[index] ? FontWeight.Medium : FontWeight.Normal)
+      if (this.isChipFilled(index) && this.chipUnits[index].length > 0) {
+        Text(this.getChipValue(index) + this.chipUnits[index])
+          .fontSize(11)
+          .fontColor(PRIMARY_COLOR)
+          .fontWeight(FontWeight.Medium)
+      }
+    }
+    .height(28)
+    .padding({ left: 10, right: 10 })
+    .borderRadius(CHIP_RADIUS)
+    .backgroundColor(this.activeChips[index] || this.isChipFilled(index) ? LIGHT_PRIMARY_COLOR : CHIP_BG_DEFAULT)
+    .onClick(() => {
+      this.toggleChip(index);
+    })
+  }
+
+  @Builder
+  private ProgressiveChips() {
+    Column({ space: 8 }) {
+      // chip 行
+      Row({ space: 6 }) {
+        ForEach([0, 1, 2, 3, 4], (index: number) => {
+          this.ChipTag(this.chipLabels[index], index)
+        })
+      }
+      .opacity(this.contentStep >= 3 ? 1 : 0)
+      .translate({ y: this.contentStep >= 3 ? 0 : 8 })
+
+      // 展开的输入框（仅激活的 chip 显示）
+      if (this.activeChips[0]) {
+        TextInput({ placeholder: '去哪里？', text: this.tripDestination })
+          .width('100%')
+          .height(40)
+          .fontSize(13)
+          .fontColor(TEXT_MAIN)
+          .placeholderColor(PLACEHOLDER_COLOR)
+          .backgroundColor(INPUT_BG)
+          .borderRadius(10)
+          .padding({ left: 12, right: 12 })
+          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
+          .onChange((value: string) => { this.onDestinationChange(value); })
+      }
+      if (this.activeChips[1]) {
+        TextInput({ placeholder: '里程（km）', text: this.tripDistanceKm })
+          .width('100%')
+          .height(40)
+          .fontSize(13)
+          .fontColor(TEXT_MAIN)
+          .placeholderColor(PLACEHOLDER_COLOR)
+          .backgroundColor(INPUT_BG)
+          .borderRadius(10)
+          .padding({ left: 12, right: 12 })
+          .type(InputType.Number)
+          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
+          .onChange((value: string) => { this.onDistanceChange(value); })
+      }
+      if (this.activeChips[2]) {
+        TextInput({ placeholder: '最高海拔（m）', text: this.tripMaxAltitude })
+          .width('100%')
+          .height(40)
+          .fontSize(13)
+          .fontColor(TEXT_MAIN)
+          .placeholderColor(PLACEHOLDER_COLOR)
+          .backgroundColor(INPUT_BG)
+          .borderRadius(10)
+          .padding({ left: 12, right: 12 })
+          .type(InputType.Number)
+          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
+          .onChange((value: string) => { this.onAltitudeChange(value); })
+      }
+      if (this.activeChips[3]) {
+        TextInput({ placeholder: '累计爬升（m）', text: this.tripAscentM })
+          .width('100%')
+          .height(40)
+          .fontSize(13)
+          .fontColor(TEXT_MAIN)
+          .placeholderColor(PLACEHOLDER_COLOR)
+          .backgroundColor(INPUT_BG)
+          .borderRadius(10)
+          .padding({ left: 12, right: 12 })
+          .type(InputType.Number)
+          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
+          .onChange((value: string) => { this.onAscentChange(value); })
+      }
+      if (this.activeChips[4]) {
+        TextInput({ placeholder: '时长（小时）', text: this.tripDurationHours })
+          .width('100%')
+          .height(40)
+          .fontSize(13)
+          .fontColor(TEXT_MAIN)
+          .placeholderColor(PLACEHOLDER_COLOR)
+          .backgroundColor(INPUT_BG)
+          .borderRadius(10)
+          .padding({ left: 12, right: 12 })
+          .type(InputType.Number)
+          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
+          .onChange((value: string) => { this.onDurationChange(value); })
+      }
+    }
+    .width('100%')
+  }
+
   @Builder
   private InsetInput(placeholder: string, text: string, showCalendar: boolean, stepIndex: number,
     onTextChange?: (value: string) => void, onTap?: () => void) {
@@ -833,8 +999,14 @@ return this.trackWidth - this.SLIDER_WIDTH;
         });
       })
 
-      // 跨组间距 24vp
-      Column().height(24)
+      // 跨组间距 16vp
+      Column().height(16)
+
+      // ========== 渐进式 chip（5 结构化字段）==========
+      this.ProgressiveChips()
+
+      // 跨组间距 16vp
+      Column().height(16)
 
       // ========== 滑动出发滑轨 ==========
       Stack({ alignContent: Alignment.Center }) {
