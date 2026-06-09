@@ -41,7 +41,6 @@ import {
   PAGE_PADDING,
   PRIMARY_COLOR,
   PRIMARY_SHADOW,
-  PRIMARY_STROKE_GHOST,
   PRIMARY_TINT_COLOR,
   SHADOW_DEFAULT,
   SHADOW_LIGHT,
@@ -951,28 +950,6 @@ export struct GearPage {
     } else {
       // 普通模式：可折叠 Header
       Stack({ alignContent: Alignment.TopStart }) {
-        // 等高线视差装饰层（最底层）
-        Shape() {
-          Path()
-            .commands(
-              'M 0 60 C 30 55 60 65 90 58 C 120 51 150 62 180 56 C 210 50 240 60 270 54 C 300 48 330 58 360 52 ' +
-              'M 0 120 C 40 112 80 125 120 115 C 160 105 200 118 240 110 C 280 102 320 115 360 108 ' +
-              'M 0 180 C 35 172 70 182 105 175 C 140 168 175 178 210 170 C 245 162 280 174 315 166 C 340 160 355 168 360 165 ' +
-              'M 0 240 C 45 232 90 244 135 235 C 180 226 225 238 270 230 C 315 222 345 234 360 228'
-            )
-            .stroke(PRIMARY_STROKE_GHOST)
-            .strokeWidth(1)
-            .fill(TRANSPARENT)
-            .strokeLineCap(LineCapStyle.Round)
-            .antiAlias(true)
-        }
-        .viewPort({ x: 0, y: 0, width: 360, height: 340 })
-        .width('100%')
-        .height(GEAR_HEADER_EXPANDED)
-        .translate({ y: -(this.gearScrollOffset * 0.3) })
-        .animation({ duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE })
-        .hitTestBehavior(HitTestMode.None)
-
         // 主内容层
         Column() {
           Row() {
@@ -1075,26 +1052,38 @@ export struct GearPage {
 
           if (this.gearScrollProgress() < 1) {
             Column() {
-              Row({ space: 4 }) {
-                Text(this.activeCategoryText())
-                  .fontSize(14)
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor(PRIMARY_COLOR)
-                  .maxLines(1)
-                SymbolGlyph($r('sys.symbol.chevron_down'))
-                  .fontSize(12)
-                  .fontColor([PRIMARY_COLOR])
-              }
-              .height(32)
-              .padding({ left: 12, right: 12 })
-              .backgroundColor(PRIMARY_TINT_COLOR)
-              .borderRadius(16)
-              .margin({ left: PAGE_PADDING, top: 6, bottom: 4 })
-              .opacity(this.gearPillOpacity())
-              .onClick(() => {
-                this.onOpenFilterPanel();
-              })
+              Row() {
+                // 分类筛选 pill
+                Row({ space: 4 }) {
+                  Text(this.activeCategoryText())
+                    .fontSize(14)
+                    .fontWeight(FontWeight.Medium)
+                    .fontColor(PRIMARY_COLOR)
+                    .maxLines(1)
+                  SymbolGlyph($r('sys.symbol.chevron_down'))
+                    .fontSize(12)
+                    .fontColor([PRIMARY_COLOR])
+                }
+                .height(32)
+                .padding({ left: 12, right: 12 })
+                .backgroundColor(PRIMARY_TINT_COLOR)
+                .borderRadius(16)
+                .onClick(() => {
+                  this.onOpenFilterPanel();
+                })
 
+                Blank()
+
+                // 轻量统计摘要
+                Text(this.gearSummaryText())
+                  .fontSize(12)
+                  .fontColor(TEXT_TERTIARY)
+                  .fontFeature(FONT_FEATURE_TNUM)
+              }
+              .width('100%')
+              .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 10 })
+              .alignItems(VerticalAlign.Center)
+              .opacity(this.gearPillOpacity())
             }
             .width('100%')
             .height((GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED) * (1 - this.gearScrollProgress()))
