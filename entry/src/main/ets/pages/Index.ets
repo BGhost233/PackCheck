@@ -115,6 +115,7 @@ import {
   prependChecklist,
   findLatestChecklist
 } from '../services/ChecklistService';
+import { ProfilePage } from '../components/ProfilePage';
 
 @Entry
 @Component
@@ -1862,6 +1863,14 @@ struct Index {
               });
             }
             .tabBar(this.customTabBar(1, $r('sys.symbol.bag'), '装备库'))
+
+            TabContent() {
+              ProfilePage({
+                trips: this.checklists,
+                gears: this.gears,
+              });
+            }
+            .tabBar(this.customTabBar(2, $r('sys.symbol.person'), '我'))
           }
           .animationDuration(200)
           .barOverlap(true)
@@ -1904,10 +1913,10 @@ struct Index {
               if (this.isSwiping && this.tabsWidth > 0) {
                 // deltaX > 0 = 手指向右 = 内容向右 = 趋向 index-1（progress > 0）
                 let progress = deltaX / this.tabsWidth;
-                // 边界限制：不能超出有效范围
+                // 边界限制：不能超出有效范围（3 Tab：左边界 index=0，右边界 index=2）
                 if (this.currentTabIndex === 0 && progress > 0) {
                   progress = 0;
-                } else if (this.currentTabIndex === 1 && progress < 0) {
+                } else if (this.currentTabIndex === 2 && progress < 0) {
                   progress = 0;
                 }
                 this.tabSwipeProgress = Math.max(-1, Math.min(1, progress));
