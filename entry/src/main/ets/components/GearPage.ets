@@ -16,6 +16,7 @@ import { PackStore } from '../services/PackStore';
 import {
   ARROW_COLOR,
   CARD_BG,
+  CHIP_RADIUS,
   DANGER_COLOR,
   DANGER_TINT,
   DISABLED_COLOR,
@@ -608,6 +609,23 @@ export struct GearPage {
   private formatDateText(timestamp: number): string {
     const date = new Date(timestamp);
     return date.getFullYear().toString() + '-' + (date.getMonth() + 1).toString() + '-' + date.getDate().toString();
+  }
+
+  private companionDaysText(item: GearItem): string {
+    const start: number = typeof item.acquiredAt === 'number' ? item.acquiredAt : item.createdAt;
+    const days = Math.max(0, Math.floor((Date.now() - start) / 86400000));
+    return days.toString();
+  }
+
+  @Builder
+  private CompanionChip(text: string) {
+    Text(text)
+      .fontSize(11)
+      .fontColor(TEXT_SECONDARY)
+      .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+      .backgroundColor(PRIMARY_TINT_COLOR)
+      .borderRadius(CHIP_RADIUS)
+      .margin({ bottom: 4 })
   }
 
   private gearSummaryText(): string {
@@ -1649,16 +1667,56 @@ export struct GearPage {
 
   @Builder
   private Detail(item: GearItem) {
-    Column({ space: 8 }) {
-      Divider()
-        .strokeWidth(1)
-        .color(DIVIDER_COLOR)
-      this.DetailLine('分组', item.category);
-      this.DetailLine('重量', item.weight === undefined ? '未填写' : item.weight.toString() + 'g');
-      this.DetailLine('价格', item.price === undefined ? '未填写' : '¥' + item.price.toString());
-      this.DetailLine('备注', item.note === undefined || item.note.length === 0 ? '未填写' : item.note);
-      this.DetailLine('添加时间', this.formatDateText(item.createdAt));
-      this.DetailLine('出行次数', '×' + this.gearTripCount(item).toString());
+    Column({ space: 0 }) {
+      // ——— 属性区（packing：出行前看实用属性）———
+      Column({ space: 8 }) {
+        Divider()
+          .strokeWidth(1)
+          .color(DIVIDER_COLOR)
+        this.DetailLine('分组', item.category);
+        this.DetailLine('重量', item.weight === undefined ? '未填写' : item.weight.toString() + 'g');
+        if (item.brand !== undefined && item.brand.length > 0) {
+          this.DetailLine('品牌', item.brand);
+        }
+        this.DetailLine('价格', item.price === undefined ? '未填写' : '¥' + item.price.toString());
+        if (item.note !== undefined && item.note.length > 0) {
+          this.DetailLine('备注', item.note);
+        }
+      }
+      .width('100%')
+
+      // ——— 分隔 ———
+      Row()
+        .width('100%')
+        .height(1)
+        .backgroundColor(DIVIDER_COLOR)
+        .margin({ top: 12, bottom: 12 })
+
+      // ——— 陪伴区（archive：出行后看情感记录）———
+      Column({ space: 8 }) {
+        // 陪伴天数大数字
+        Row() {
+          Text(this.companionDaysText(item))
+            .fontSize(24)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+            .fontFeature("'tnum'")
+          Text(' 天')
+            .fontSize(13)
+            .fontColor(TEXT_SECONDARY)
+            .margin({ bottom: 2 })
+        }
+        .alignItems(VerticalAlign.Bottom)
+
+        // 三 chip
+        Row({ space: 8 }) {
+          this.CompanionChip('同行 ' + this.gearTripCount(item).toString() + ' 次');
+          this.CompanionChip('相伴 ' + this.companionDaysText(item) + ' 天');
+          this.CompanionChip('添加于 ' + this.formatDateText(item.createdAt));
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .padding({ top: 12 })
