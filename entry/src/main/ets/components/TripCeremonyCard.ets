@@ -77,6 +77,9 @@ export struct TripCeremonyCard {
   @State private activeChips: boolean[] = [false, false, false, false, false];
   @State private chipAreaHeight: number = 0;
 
+  // === 卡片动态高度 ===
+  @State private cardContentHeight: number = 300;
+
   // === 滑动状态 ===
   @State private slideX: number = 0;
   @State private isSliding: boolean = false;
@@ -632,7 +635,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       // ===== 光晕层（卡片之下）=====
       Column()
         .width('87%')
-        .height(308)
+        .height(this.cardContentHeight + 8)
         .constraintSize({ maxWidth: 348 })
         .borderRadius(28)
         .backgroundColor(PRIMARY_COLOR)
@@ -649,29 +652,31 @@ return this.trackWidth - this.SLIDER_WIDTH;
         })
 
       // ===== 主卡片 =====
-      Column() {
-        Stack() {
-          // 卡背
-          Column() {
-            this.CeremonyCardBack()
-          }
-          .width('100%')
-          .height('100%')
-          .position({ x: 0, y: 0 })
-          .opacity(this.cardRotateY > 90 ? 1 : 0)
-          .hitTestBehavior(this.cardRotateY > 90 ? HitTestMode.Default : HitTestMode.None)
-
-          // 卡面
-          this.CeremonyCardFront()
+      Stack() {
+        // 卡背
+        Column() {
+          this.CeremonyCardBack()
         }
         .width('100%')
-        .layoutWeight(1)
+        .height('100%')
+        .position({ x: 0, y: 0 })
+        .opacity(this.cardRotateY > 90 ? 1 : 0)
+        .hitTestBehavior(this.cardRotateY > 90 ? HitTestMode.Default : HitTestMode.None)
+
+        // 卡面（内容驱动高度）
+        this.CeremonyCardFront()
       }
       .width('85%')
-      .height(300)
-      .constraintSize({ maxWidth: 340 })
+      .constraintSize({ minHeight: 300, maxHeight: 540, maxWidth: 340 })
       .borderRadius(24)
       .clip(true)
+      .animation({ curve: SPRING_GENERAL() })
+      .onAreaChange((_oldArea: Area, newArea: Area) => {
+        const h = newArea.height as number;
+        if (h > 0 && Math.abs(h - this.cardContentHeight) > 1) {
+          this.cardContentHeight = h;
+        }
+      })
       .shadow({
         radius: this.cardElevation,
         color: SHADOW_DEFAULT,
@@ -1124,7 +1129,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
       })
     }
     .width('100%')
-    .height('100%')
     .padding({ left: 24, right: 24, bottom: 20 })
     .backgroundColor(CARD_BG)
     .justifyContent(FlexAlign.Start)
