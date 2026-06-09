@@ -13,8 +13,8 @@ import {
 
 @Component
 export struct ProfilePage {
-  @Prop trips: TripChecklist[] = [];
-  @Prop gears: GearItem[] = [];
+  @Prop @Watch('onDataChange') trips: TripChecklist[] = [];
+  @Prop @Watch('onDataChange') gears: GearItem[] = [];
 
   @State private footprint: Footprint = {
     tripCount: 0, totalDistanceKm: 0, totalAscentM: 0,
@@ -29,28 +29,11 @@ export struct ProfilePage {
   // staggered 入场
   @State private cardOpacity: number = 0;
   @State private cardTranslateY: number = STAGGER_OFFSET_Y;
+  // 是否已完成首次入场动画
+  private hasAppeared: boolean = false;
 
   aboutToAppear(): void {
-    this.footprint = computeFootprint(this.trips, this.gears);
-    // counter 滚动动画
-    counterAnimate(0, this.footprint.totalDistanceKm, (v: number) => {
-      this.animDistance = Math.round(v);
-    });
-    counterAnimate(0, this.footprint.totalAscentM, (v: number) => {
-      this.animAscent = Math.round(v);
-    });
-    counterAnimate(0, this.footprint.tripCount, (v: number) => {
-      this.animTrips = Math.round(v);
-    });
-    counterAnimate(0, this.footprint.placeCount, (v: number) => {
-      this.animPlaces = Math.round(v);
-    });
-    const companion: LongestCompanion | undefined = this.footprint.longestCompanion;
-    if (companion !== undefined) {
-      counterAnimate(0, companion.days, (v: number) => {
-        this.animDays = Math.round(v);
-      });
-    }
+    this.refreshFootprint(true);
     // staggered 入场
     setTimeout(() => {
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
@@ -58,6 +41,60 @@ export struct ProfilePage {
         this.cardTranslateY = 0;
       });
     }, 60);
+    this.hasAppeared = true;
+  }
+
+  onDataChange(): void {
+    if (this.hasAppeared) {
+      this.refreshFootprint(false);
+    }
+  }
+
+  private refreshFootprint(animate: boolean): void {
+    const prev = this.footprint;
+    this.footprint = computeFootprint(this.trips, this.gears);
+    if (animate) {
+      // 首次入场：从 0 滚动到真实值
+      counterAnimate(0, this.footprint.totalDistanceKm, (v: number) => {
+        this.animDistance = Math.round(v * 10) / 10;
+      });
+      counterAnimate(0, this.footprint.totalAscentM, (v: number) => {
+        this.animAscent = Math.round(v);
+      });
+      counterAnimate(0, this.footprint.tripCount, (v: number) => {
+        this.animTrips = Math.round(v);
+      });
+      counterAnimate(0, this.footprint.placeCount, (v: number) => {
+        this.animPlaces = Math.round(v);
+      });
+      const companion: LongestCompanion | undefined = this.footprint.longestCompanion;
+      if (companion !== undefined) {
+        counterAnimate(0, companion.days, (v: number) => {
+          this.animDays = Math.round(v);
+        });
+      }
+    } else {
+      // 数据变化时：从旧值滚动到新值
+      counterAnimate(prev.totalDistanceKm, this.footprint.totalDistanceKm, (v: number) => {
+        this.animDistance = Math.round(v * 10) / 10;
+      });
+      counterAnimate(prev.totalAscentM, this.footprint.totalAscentM, (v: number) => {
+        this.animAscent = Math.round(v);
+      });
+      counterAnimate(prev.tripCount, this.footprint.tripCount, (v: number) => {
+        this.animTrips = Math.round(v);
+      });
+      counterAnimate(prev.placeCount, this.footprint.placeCount, (v: number) => {
+        this.animPlaces = Math.round(v);
+      });
+      const companion: LongestCompanion | undefined = this.footprint.longestCompanion;
+      const prevDays = prev.longestCompanion !== undefined ? prev.longestCompanion.days : 0;
+      if (companion !== undefined) {
+        counterAnimate(prevDays, companion.days, (v: number) => {
+          this.animDays = Math.round(v);
+        });
+      }
+    }
   }
 
   build() {

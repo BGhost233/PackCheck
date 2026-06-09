@@ -76,7 +76,9 @@ export function migrateGearsOnDelete(gears: GearItem[], deletedCategory: string)
         price: gears[i].price,
         note: gears[i].note,
         tripCount: gears[i].tripCount,
-        createdAt: gears[i].createdAt
+        createdAt: gears[i].createdAt,
+        brand: gears[i].brand,
+        acquiredAt: gears[i].acquiredAt
       };
       result.push(updated);
     } else {
@@ -117,7 +119,12 @@ export function migrateChecklistsOnDelete(checklists: TripChecklist[], deletedCa
         date: checklist.date,
         dateAt: checklist.dateAt,
         items: newItems,
-        createdAt: checklist.createdAt
+        createdAt: checklist.createdAt,
+        destination: checklist.destination,
+        distanceKm: checklist.distanceKm,
+        maxAltitude: checklist.maxAltitude,
+        ascentM: checklist.ascentM,
+        durationHours: checklist.durationHours
       };
       result.push(updatedChecklist);
     } else {
@@ -163,7 +170,9 @@ export function renameGearsCategory(gears: GearItem[], oldName: string, newName:
         price: gears[i].price,
         note: gears[i].note,
         tripCount: gears[i].tripCount,
-        createdAt: gears[i].createdAt
+        createdAt: gears[i].createdAt,
+        brand: gears[i].brand,
+        acquiredAt: gears[i].acquiredAt
       };
       result.push(updated);
     } else {
@@ -204,7 +213,12 @@ export function renameChecklistsCategory(checklists: TripChecklist[], oldName: s
         date: checklist.date,
         dateAt: checklist.dateAt,
         items: newItems,
-        createdAt: checklist.createdAt
+        createdAt: checklist.createdAt,
+        destination: checklist.destination,
+        distanceKm: checklist.distanceKm,
+        maxAltitude: checklist.maxAltitude,
+        ascentM: checklist.ascentM,
+        durationHours: checklist.durationHours
       };
       result.push(updatedChecklist);
     } else {

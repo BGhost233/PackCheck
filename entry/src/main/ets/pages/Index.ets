@@ -595,7 +595,9 @@ struct Index {
           price: newPrice,
           note: this.gearNote.trim(),
           tripCount: item.tripCount,
-          createdAt: item.createdAt
+          createdAt: item.createdAt,
+          brand: item.brand,
+          acquiredAt: item.acquiredAt
         };
         nextGears.push(edited);
         updated = true;
@@ -840,7 +842,9 @@ struct Index {
           price: gear.price,
           note: gear.note,
           createdAt: gear.createdAt,
-          tripCount: gear.tripCount
+          tripCount: gear.tripCount,
+          brand: gear.brand,
+          acquiredAt: gear.acquiredAt
         };
         nextGears.push(updated);
       } else {
@@ -924,7 +928,9 @@ struct Index {
           price: gear.price,
           note: gear.note,
           tripCount: gearTripCount(gear) + 1,
-          createdAt: gear.createdAt
+          createdAt: gear.createdAt,
+          brand: gear.brand,
+          acquiredAt: gear.acquiredAt
         };
         nextGears.push(updated);
       } else {
@@ -1009,10 +1015,10 @@ struct Index {
       items: [],
       createdAt: Date.now(),
       destination: this.ceremonyDestination.trim().length > 0 ? this.ceremonyDestination.trim() : undefined,
-      distanceKm: this.ceremonyDistanceKm.trim().length > 0 ? parseFloat(this.ceremonyDistanceKm) : undefined,
-      maxAltitude: this.ceremonyMaxAltitude.trim().length > 0 ? parseFloat(this.ceremonyMaxAltitude) : undefined,
-      ascentM: this.ceremonyAscentM.trim().length > 0 ? parseFloat(this.ceremonyAscentM) : undefined,
-      durationHours: this.ceremonyDurationHours.trim().length > 0 ? parseFloat(this.ceremonyDurationHours) : undefined
+      distanceKm: normalizeNumber(this.ceremonyDistanceKm),
+      maxAltitude: normalizeNumber(this.ceremonyMaxAltitude),
+      ascentM: normalizeNumber(this.ceremonyAscentM),
+      durationHours: normalizeNumber(this.ceremonyDurationHours)
     };
     const nextChecklists = prependChecklist(this.checklists, created);
     this.applyChecklistState(nextChecklists);
@@ -1497,7 +1503,12 @@ struct Index {
           date: source.date,
           dateAt: source.dateAt,
           items: nextItems,
-          createdAt: source.createdAt
+          createdAt: source.createdAt,
+          destination: source.destination,
+          distanceKm: source.distanceKm,
+          maxAltitude: source.maxAltitude,
+          ascentM: source.ascentM,
+          durationHours: source.durationHours
         };
         updatedCurrent = updatedChecklist;
         nextChecklists.push(updatedChecklist);

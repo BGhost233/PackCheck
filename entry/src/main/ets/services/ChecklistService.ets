@@ -291,7 +291,12 @@ export function addItemsToChecklist(checklists: TripChecklist[], checklistId: st
         date: checklist.date,
         dateAt: checklist.dateAt,
         items: nextItems,
-        createdAt: checklist.createdAt
+        createdAt: checklist.createdAt,
+        destination: checklist.destination,
+        distanceKm: checklist.distanceKm,
+        maxAltitude: checklist.maxAltitude,
+        ascentM: checklist.ascentM,
+        durationHours: checklist.durationHours
       };
       nextChecklists.push(updated);
     } else {
@@ -441,7 +446,12 @@ export function toggleItemInChecklists(checklists: TripChecklist[], checklistId:
         date: source.date,
         dateAt: source.dateAt,
         items: nextItems,
-        createdAt: source.createdAt
+        createdAt: source.createdAt,
+        destination: source.destination,
+        distanceKm: source.distanceKm,
+        maxAltitude: source.maxAltitude,
+        ascentM: source.ascentM,
+        durationHours: source.durationHours
       };
       result.push(updatedChecklist);
     } else {
@@ -466,7 +476,12 @@ export function removeItemFromChecklists(checklists: TripChecklist[], checklistI
         date: source.date,
         dateAt: source.dateAt,
         items: nextItems,
-        createdAt: source.createdAt
+        createdAt: source.createdAt,
+        destination: source.destination,
+        distanceKm: source.distanceKm,
+        maxAltitude: source.maxAltitude,
+        ascentM: source.ascentM,
+        durationHours: source.durationHours
       };
       result.push(updatedChecklist);
     } else {
@@ -491,7 +506,12 @@ export function updateChecklistMeta(checklists: TripChecklist[], checklistId: st
         date: date,
         dateAt: dateAt,
         items: source.items,
-        createdAt: source.createdAt
+        createdAt: source.createdAt,
+        destination: source.destination,
+        distanceKm: source.distanceKm,
+        maxAltitude: source.maxAltitude,
+        ascentM: source.ascentM,
+        durationHours: source.durationHours
       };
       result.push(updated);
     } else {
@@ -535,7 +555,12 @@ export function updateItemFields(checklists: TripChecklist[], checklistId: strin
         date: source.date,
         dateAt: source.dateAt,
         items: nextItems,
-        createdAt: source.createdAt
+        createdAt: source.createdAt,
+        destination: source.destination,
+        distanceKm: source.distanceKm,
+        maxAltitude: source.maxAltitude,
+        ascentM: source.ascentM,
+        durationHours: source.durationHours
       };
       result.push(updatedChecklist);
     } else {
@@ -544,4 +569,3 @@ export function updateItemFields(checklists: TripChecklist[], checklistId: strin
   }
   return result;
 }
-

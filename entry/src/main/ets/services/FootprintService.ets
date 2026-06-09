@@ -42,7 +42,7 @@ export function computeFootprint(trips: TripChecklist[], gears: GearItem[]): Foo
 
   const result: Footprint = {
     tripCount: trips.length,
-    totalDistanceKm: Math.round(totalDistanceKm),
+    totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
     totalAscentM: Math.round(totalAscentM),
     maxAltitude: maxAltitude,
     placeCount: places.size,
