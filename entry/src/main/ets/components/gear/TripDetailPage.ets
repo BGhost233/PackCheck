@@ -80,6 +80,7 @@ export struct TripDetailPage {
           onLayerChange: this.onLayerChange
         })
           .layoutWeight(1)
+          .transition(TransitionEffect.OPACITY.animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() }))
       } else {
         ChecklistDetail({
           checklists: this.checklists,
@@ -102,6 +103,7 @@ export struct TripDetailPage {
           onDeleteChecklistItem: this.onDeleteChecklistItem
         })
           .layoutWeight(1)
+          .transition(TransitionEffect.OPACITY.animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() }))
       }
     }
     .width('100%')
