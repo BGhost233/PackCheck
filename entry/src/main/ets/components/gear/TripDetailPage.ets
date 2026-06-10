@@ -15,7 +15,7 @@ import {
   DANGER_COLOR
 } from '../../constants/Colors';
 import { PAGE_PADDING, CARD_RADIUS } from '../../constants/Layout';
-import { SPRING_GENERAL, SPRING_PRESS } from '../../constants/AnimationTokens';
+import { SPRING_GENERAL, SPRING_PRESS, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { LoadoutView } from './LoadoutView';
 import { ChecklistDetail } from '../ChecklistDetail';
@@ -141,7 +141,7 @@ export struct TripDetailPage {
       .onTouch((e: TouchEvent) => {
         if (e.type === TouchType.Down) {
           this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
-            this.backScale = 0.9;
+            this.backScale = PRESS_SCALE_DOWN;
           });
         } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
           this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
@@ -178,7 +178,7 @@ export struct TripDetailPage {
       .animation({ curve: SPRING_PRESS() })
       .onTouch((e: TouchEvent) => {
         if (e.type === TouchType.Down) {
-          this.menuScale = 0.9;
+          this.menuScale = PRESS_SCALE_DOWN;
         } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
           this.menuScale = 1.0;
         }
@@ -226,7 +226,7 @@ export struct TripDetailPage {
       .animation({ curve: SPRING_PRESS() })
       .onTouch((e: TouchEvent) => {
         if (e.type === TouchType.Down) {
-          this.infoScale = 0.97;
+          this.infoScale = PRESS_SCALE_DOWN;
         } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
           this.infoScale = 1.0;
         }

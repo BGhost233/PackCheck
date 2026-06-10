@@ -4,12 +4,12 @@ import {
   SPRING_SWIPE_RESET, SPRING_FAB_SNAP, SPRING_GENERAL, SPRING_SEARCH,
   SPRING_CHEVRON, SPRING_PRESS, SPRING_CEREMONY_FLIP, SPRING_CONTEXT_EXIT,
   SPRING_TRAY_CARD, SPRING_SCROLL,
-  DURATION_NORMAL, DURATION_TICK, DURATION_FAST,
-  DURATION_CEREMONY_SHAKE, DURATION_PRESS,
+  DURATION_TICK, DURATION_FAST,
+  DURATION_CEREMONY_SHAKE,
   DURATION_NONE,
   PRESS_SCALE_DOWN,
-  CURVE_DECELERATE, CURVE_LINEAR,
-STAGGER_OFFSET_Y, staggerDelay
+  CURVE_LINEAR,
+  STAGGER_OFFSET_Y, staggerDelay
 } from '../constants/AnimationTokens';
 import { vibrator } from '@kit.SensorServiceKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
@@ -582,7 +582,7 @@ export struct GearPage {
     }, () => {
       const idx = this.collapsedGearGroups.indexOf(group);
       if (idx >= 0) {
-        const next = this.collapsedGearGroups;
+        const next = [...this.collapsedGearGroups];
         next.splice(idx, 1);
         this.collapsedGearGroups = next;
         this.gearGroupExpandTrigger++;
@@ -1245,7 +1245,7 @@ export struct GearPage {
     }
     .width('100%')
     .opacity(this.groupDragMode && this.groupDragGroup === group ? 0 : (this.groupDragMode ? 0.6 : 1.0))
-    .animation({ duration: DURATION_NORMAL, curve: CURVE_DECELERATE })
+    .animation({ curve: SPRING_GENERAL() })
     .onAreaChange((_oldArea: Area, newArea: Area) => {
       const h = newArea.height as number;
       if (h > 0) {
@@ -1337,9 +1337,9 @@ export struct GearPage {
       }
       .width('100%')
       .padding({ left: 14, right: 14, top: 4, bottom: 4 })
-      .backgroundColor(this.hasMultiGearSelection(item.id) ? LIGHT_PRIMARY_COLOR : CARD_BG)
-      .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : 1)
-      .animation({ duration: DURATION_NORMAL, curve: CURVE_DECELERATE })
+    .backgroundColor(this.hasMultiGearSelection(item.id) ? LIGHT_PRIMARY_COLOR : CARD_BG)
+    .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : 1)
+    .animation({ curve: SPRING_GENERAL() })
       .onClick(() => {
         this.onToggleMultiGearSelection(item.id);
       })
@@ -1453,8 +1453,8 @@ export struct GearPage {
         }
         .width('100%')
         .padding({ left: 14, right: 14, top: 4, bottom: 4 })
-        .backgroundColor(this.pressedGearId === item.id ? GROUP_HEADER_BG : CARD_BG)
-        .animation({ duration: DURATION_PRESS, curve: CURVE_DECELERATE })
+    .backgroundColor(this.pressedGearId === item.id ? GROUP_HEADER_BG : CARD_BG)
+    .animation({ curve: SPRING_PRESS() })
         .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
         .onTouch((event: TouchEvent) => {
           if (event.type === TouchType.Down) {
@@ -1725,7 +1725,7 @@ export struct GearPage {
           this.fabStartX = this.fabX;
           this.fabStartY = this.fabY;
           this.getUIContext().animateTo({
-            duration: DURATION_PRESS, curve: CURVE_DECELERATE
+            curve: SPRING_PRESS()
           }, () => {
             this.fabDragging = true;
           });
@@ -1736,7 +1736,7 @@ export struct GearPage {
         })
         .onActionEnd(() => {
           this.getUIContext().animateTo({
-            duration: DURATION_PRESS, curve: CURVE_DECELERATE
+            curve: SPRING_GENERAL()
           }, () => {
             this.fabDragging = false;
           });
@@ -2184,8 +2184,10 @@ export struct GearPage {
         this.getUIContext().animateTo({
           curve: SPRING_GENERAL()
         }, () => {
-          this.groupReorderList.splice(currentIdx, 1);
-          this.groupReorderList.splice(i, 0, this.groupDragGroup);
+          const next = [...this.groupReorderList];
+          next.splice(currentIdx, 1);
+          next.splice(i, 0, this.groupDragGroup);
+          this.groupReorderList = next;
         });
         try {
           vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });
@@ -2196,8 +2198,10 @@ export struct GearPage {
         this.getUIContext().animateTo({
           curve: SPRING_GENERAL()
         }, () => {
-          this.groupReorderList.splice(currentIdx, 1);
-          this.groupReorderList.splice(i, 0, this.groupDragGroup);
+          const next = [...this.groupReorderList];
+          next.splice(currentIdx, 1);
+          next.splice(i, 0, this.groupDragGroup);
+          this.groupReorderList = next;
         });
         try {
           vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });

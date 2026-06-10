@@ -23,7 +23,10 @@ import {
   TEXT_MAIN,
   TEXT_SECONDARY,
   TRANSPARENT,
-  WHITE
+  WHITE,
+  WHITE_TRANSPARENT,
+  SHIMMER_WHITE_FAINT,
+  SHIMMER_GREEN_GLOSS
 } from '../constants/Colors';
 import { CHIP_RADIUS } from '../constants/Layout';
 
@@ -344,16 +347,15 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 未到磁吸点，弹回
     if (this.getProgress() < this.MAGNET_THRESHOLD) {
       this.getUIContext().animateTo({
-        curve: SPRING_CEREMONY_FLIP()
+        curve: SPRING_CEREMONY_FLIP(),
+        onFinish: () => {
+          this.startShimmer();
+        }
       }, () => {
         this.slideX = 0;
         this.targetGlowScale = 1.0;
         this.targetGlowOpacity = 0.05;
       });
-      // 恢复 shimmer
-      setTimeout(() => {
-        this.startShimmer();
-      }, 500);
     }
   }
 
@@ -510,7 +512,10 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 卡片飘走
     this.getUIContext().animateTo({
-      curve: SPRING_CEREMONY_FLIP()
+      curve: SPRING_CEREMONY_FLIP(),
+      onFinish: () => {
+        this.onDismiss();
+      }
     }, () => {
       this.launchTranslateY = -800;
       this.launchScale = 0.85;
@@ -524,11 +529,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
     }, () => {
       this.overlayOpacity = 0;
     });
-
-    // 飘走完成后移除组件
-    setTimeout(() => {
-      this.onDismiss();
-    }, 500);
   }
 
   // ============================================================
@@ -589,7 +589,10 @@ return this.trackWidth - this.SLIDER_WIDTH;
     this.onExitStart();
     this.stopShimmer();
     this.getUIContext().animateTo({
-      curve: SPRING_CEREMONY_DISMISS()
+      curve: SPRING_CEREMONY_DISMISS(),
+      onFinish: () => {
+        this.onDismiss();
+      }
     }, () => {
       this.cardScale = 0.8;
       this.cardOpacity = 0;
@@ -601,10 +604,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
     }, () => {
       this.overlayOpacity = 0;
     });
-
-    setTimeout(() => {
-      this.onDismiss();
-    }, 300);
   }
 
   // ============================================================
@@ -794,7 +793,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .height('100%')
           .linearGradient({
             angle: 0,
-            colors: [['#00FFFFFF', 0.0], ['#FFFFFFFF', 1.0]]
+            colors: [[WHITE_TRANSPARENT, 0.0], [WHITE, 1.0]]
           })
           .hitTestBehavior(HitTestMode.Transparent)
           .position({ right: 0, top: 0 })
@@ -978,7 +977,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .height('200%')
           .linearGradient({
             angle: 75,
-            colors: [[TRANSPARENT, 0.0], ['#18FFFFFF', 0.25], ['#30E8F5E9', 0.5], ['#18FFFFFF', 0.75], [TRANSPARENT, 1.0]]
+            colors: [[TRANSPARENT, 0.0], [SHIMMER_WHITE_FAINT, 0.25], [SHIMMER_GREEN_GLOSS, 0.5], [SHIMMER_WHITE_FAINT, 0.75], [TRANSPARENT, 1.0]]
           })
           .translate({ x: this.titleShimmerX })
       }

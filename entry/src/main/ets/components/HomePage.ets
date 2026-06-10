@@ -28,8 +28,6 @@ import {
   SPRING_PRESS,
   SPRING_GENERAL,
   SPRING_SCROLL,
-  DURATION_CEREMONY_SHAKE,
-  CURVE_DECELERATE,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
@@ -569,7 +567,7 @@ export struct HomePage {
     const t = Math.min(1, (p - 0.2) / 0.8);
     const alpha = Math.round(t * 0xCC);
     const hex = alpha < 16 ? '0' + alpha.toString(16).toUpperCase() : alpha.toString(16).toUpperCase();
-    return '#' + hex + 'F8F9FA'; // PAGE_BG with dynamic alpha
+    return '#' + hex + PAGE_BG.substring(1); // PAGE_BG with dynamic alpha
   }
 
   @Builder
@@ -579,7 +577,7 @@ export struct HomePage {
         .fontSize(this.titleFontSize())
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
-        .animation({ duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE })
+        .animation({ curve: SPRING_SCROLL() })
       if (this.latestChecklist() !== undefined) {
         Text(this.compactHeaderText())
           .fontSize(13)
@@ -596,7 +594,7 @@ export struct HomePage {
           .fontSize(13)
           .fontColor(TEXT_TERTIARY)
           .opacity(1 - this.scrollProgress() * 2)
-          .animation({ duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE })
+          .animation({ curve: SPRING_SCROLL() })
       }
     }
     .width('100%')

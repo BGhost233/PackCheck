@@ -19,7 +19,8 @@ import {
   ZONE_MISC_COLOR
 } from '../../constants/Colors';
 import { BodyZone } from '../../constants/GearLoadout';
-import { SPRING_PRESS } from '../../constants/AnimationTokens';
+import { SPRING_PRESS, PRESS_SCALE_DOWN, PRESS_SCALE_REST } from '../../constants/AnimationTokens';
+import { pressHandler } from '../../utils/AnimationUtils';
 import { ChecklistItem } from '../../models/PackModels';
 import { zoneDisplayName, allZones } from '../../services/LoadoutService';
 
@@ -35,6 +36,7 @@ export struct GearItemActionSheet {
 
   // 内部状态
   @State private showZoneSelector: boolean = false;
+  @State private pressedKey: string = '';
 
   build() {
     Column({ space: 0 }) {
@@ -62,6 +64,10 @@ export struct GearItemActionSheet {
         }
         .width('100%')
         .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+        .scale({ x: this.pressedKey === 'move' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.pressedKey === 'move' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch(pressHandler((v: boolean) => { this.pressedKey = v ? 'move' : ''; }))
         .onClick(() => {
           this.showZoneSelector = true;
         })
@@ -76,6 +82,10 @@ export struct GearItemActionSheet {
         }
         .width('100%')
         .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+        .scale({ x: this.pressedKey === 'detail' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.pressedKey === 'detail' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch(pressHandler((v: boolean) => { this.pressedKey = v ? 'detail' : ''; }))
         .onClick(() => {
           this.onViewDetail(this.item);
         })
@@ -90,6 +100,10 @@ export struct GearItemActionSheet {
         }
         .width('100%')
         .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+        .scale({ x: this.pressedKey === 'remove' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.pressedKey === 'remove' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch(pressHandler((v: boolean) => { this.pressedKey = v ? 'remove' : ''; }))
         .onClick(() => {
           this.onRemove(this.item.id);
         })
@@ -105,6 +119,10 @@ export struct GearItemActionSheet {
         .width('100%')
         .padding({ left: 16, right: 16, top: 14, bottom: 14 })
         .justifyContent(FlexAlign.Center)
+        .scale({ x: this.pressedKey === 'cancel' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.pressedKey === 'cancel' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch(pressHandler((v: boolean) => { this.pressedKey = v ? 'cancel' : ''; }))
         .onClick(() => {
           this.onClose();
         })
@@ -126,10 +144,13 @@ export struct GearItemActionSheet {
               .backgroundColor(this.item.group === zone ? this.getZoneColor(zone) : INPUT_BG)
               .borderRadius(16)
               .padding({ left: 14, right: 14, top: 8, bottom: 8 })
+              .scale({ x: this.pressedKey === zone ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+                y: this.pressedKey === zone ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+              .animation({ curve: SPRING_PRESS() })
+              .onTouch(pressHandler((v: boolean) => { this.pressedKey = v ? zone : ''; }))
               .onClick(() => {
                 this.onMoveToZone(this.item.id, zone);
               })
-              .animation({ curve: SPRING_PRESS() })
           }, (zone: string) => zone)
         }
         .width('100%')
@@ -146,6 +167,10 @@ export struct GearItemActionSheet {
         .width('100%')
         .padding({ left: 16, right: 16, top: 14, bottom: 14 })
         .justifyContent(FlexAlign.Center)
+        .scale({ x: this.pressedKey === 'back' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.pressedKey === 'back' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch(pressHandler((v: boolean) => { this.pressedKey = v ? 'back' : ''; }))
         .onClick(() => {
           this.showZoneSelector = false;
         })

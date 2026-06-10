@@ -321,7 +321,7 @@ export struct ProfilePage {
                 .alignItems(VerticalAlign.Top)
                 .opacity(this.timelineItemOpacities[index] !== undefined ? this.timelineItemOpacities[index] : 0)
                 .translate({ y: this.timelineItemTranslateY[index] !== undefined ? this.timelineItemTranslateY[index] : STAGGER_OFFSET_Y })
-              })
+              }, (trip: TripSummary) => trip.id)
             }
           } else {
             // 空数据态
@@ -402,46 +402,46 @@ export struct ProfilePage {
           Grid() {
             // 装备伙伴数
             GridItem() {
-              this.StatCell(`${this.animGearCount}`, '件装备陪着你')
+              this.StatCell(`${this.animGearCount}`, '件装备陪着你', 0)
             }
             // 到过的最高处
             GridItem() {
               if (this.footprint.maxAltitude > 0) {
-                this.StatCell(`${this.animMaxAlt}m`, '到过的最高处')
+                this.StatCell(`${this.animMaxAlt}m`, '到过的最高处', 1)
               } else {
-                this.StatCell('—', '等你去探索')
+                this.StatCell('—', '等你去探索', 1)
               }
             }
             // 累计爬升
             GridItem() {
               if (this.footprint.totalAscentM > 0) {
-                this.StatCell(`${this.animAscent}m`, '累计向上攀登')
+                this.StatCell(`${this.animAscent}m`, '累计向上攀登', 2)
               } else {
-                this.StatCell('—', '每一步都是向上')
+                this.StatCell('—', '每一步都是向上', 2)
               }
             }
             // 去过的地方
             GridItem() {
               if (this.footprint.placeCount > 0) {
-                this.StatCell(`${this.animPlaces}`, '个地方留下足迹')
+                this.StatCell(`${this.animPlaces}`, '个地方留下足迹', 3)
               } else {
-                this.StatCell('—', '世界在等你')
+                this.StatCell('—', '世界在等你', 3)
               }
             }
             // 累计在路上
             GridItem() {
               if (this.footprint.totalDurationHours > 0) {
-                this.StatCell(`${this.animDuration}h`, '累计在路上')
+                this.StatCell(`${this.animDuration}h`, '累计在路上', 4)
               } else {
-                this.StatCell('—', '出发就是意义')
+                this.StatCell('—', '出发就是意义', 4)
               }
             }
             // 累计里程
             GridItem() {
               if (this.footprint.totalDistanceKm > 0) {
-                this.StatCell(`${this.animDistance}km`, '双脚丈量过')
+                this.StatCell(`${this.animDistance}km`, '双脚丈量过', 5)
               } else {
-                this.StatCell('—', '每一步都算数')
+                this.StatCell('—', '每一步都算数', 5)
               }
             }
           }
@@ -495,7 +495,7 @@ export struct ProfilePage {
   }
 
   @Builder
-  StatCell(value: string, label: string) {
+  StatCell(value: string, label: string, index: number) {
     Column() {
       Text(value)
         .fontSize(28)
@@ -514,7 +514,15 @@ export struct ProfilePage {
     .borderRadius(CARD_RADIUS)
     .alignItems(HorizontalAlign.Start)
     .justifyContent(FlexAlign.End)
-    .scale({ x: this.gridPressedIndex >= 0 ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.gridPressedIndex >= 0 ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .scale({ x: this.gridPressedIndex === index ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+      y: this.gridPressedIndex === index ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
     .animation({ curve: SPRING_PRESS() })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.gridPressedIndex = index;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.gridPressedIndex = -1;
+      }
+    })
   }
 }

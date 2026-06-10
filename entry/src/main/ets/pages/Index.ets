@@ -1871,6 +1871,12 @@ struct Index {
           },
           onLayerChange: (itemId: string, layer: string) => {
             // TODO: Phase 5 - 层级切换逻辑
+          },
+          onDeleteTrip: () => {
+            const checklist = this.checklists.find(c => c.id === this.selectedChecklistId);
+            if (checklist) {
+              this.confirmDeleteChecklist(checklist);
+            }
           }
         })
       }

@@ -64,15 +64,17 @@ export struct GearSortSheet {
       if (event.type === TouchType.Down) {
         this.pressedOption = mode;
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        // 三段式: 0.96 → 1.02 → 1.0
-        this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
+        // 三段式: 0.96 → 1.02 → 1.0（onFinish 链式，不用 setTimeout）
+        this.getUIContext().animateTo({
+          curve: SPRING_PRESS(),
+          onFinish: () => {
+            this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+              this.pressedOption = '';
+            });
+          }
+        }, () => {
           this.pressedOption = '__bounce_' + mode;
         });
-        setTimeout(() => {
-          this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
-            this.pressedOption = '';
-          });
-        }, 80);
       }
     })
     .onClick(() => {

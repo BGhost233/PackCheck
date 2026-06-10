@@ -3,6 +3,8 @@ import {
   PAGE_BG,
   TEXT_MAIN
 } from '../../constants/DesignTokens';
+import { SPRING_PRESS, PRESS_SCALE_DOWN, PRESS_SCALE_REST } from '../../constants/AnimationTokens';
+import { pressHandler } from '../../utils/AnimationUtils';
 import { getGroupColor } from '../../utils/ColorUtils';
 
 @Component
@@ -10,6 +12,7 @@ export struct MoveGroupSheet {
   @Prop categories: string[] = [];
   @Prop selectedCount: number = 0;
   onSelectGroup: (group: string) => void = (group: string): void => {};
+  @State private pressedGroup: string = '';
 
   build() {
     Column({ space: 8 }) {
@@ -38,6 +41,10 @@ export struct MoveGroupSheet {
         .padding({ left: 16, right: 16 })
         .borderRadius(12)
         .backgroundColor(PAGE_BG)
+        .scale({ x: this.pressedGroup === group ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.pressedGroup === group ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch(pressHandler((v: boolean) => { this.pressedGroup = v ? group : ''; }))
         .onClick(() => {
           this.onSelectGroup(group);
         })

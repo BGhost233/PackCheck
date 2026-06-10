@@ -253,17 +253,17 @@ export struct WeightGauge {
         this.ringEntranceScale = 1.0;
       });
       setTimeout(() => {
-        const indices = this.pillEntranceIndices;
+        const indices = [...this.pillEntranceIndices];
         indices[0] = true;
         this.pillEntranceIndices = indices;
       }, 50);
       setTimeout(() => {
-        const indices = this.pillEntranceIndices;
+        const indices = [...this.pillEntranceIndices];
         indices[1] = true;
         this.pillEntranceIndices = indices;
       }, 130);
       setTimeout(() => {
-        const indices = this.pillEntranceIndices;
+        const indices = [...this.pillEntranceIndices];
         indices[2] = true;
         this.pillEntranceIndices = indices;
       }, 210);

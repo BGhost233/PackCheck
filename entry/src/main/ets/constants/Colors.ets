@@ -99,6 +99,11 @@ export const ZONE_CARRY_TINT: string = '#33FFA726';
 export const ZONE_SLEEP_TINT: string = '#337E57C2';
 export const ZONE_MISC_TINT: string = '#3378909C';
 
+// ============ Ceremony 渐变/光效 ============
+export const WHITE_TRANSPARENT: string = '#00FFFFFF';
+export const SHIMMER_WHITE_FAINT: string = '#18FFFFFF';
+export const SHIMMER_GREEN_GLOSS: string = '#30E8F5E9';
+
 // ============ Layer Badge 背景色（配装系统） ============
 export const LAYER_BASE_BG: string = '#E3F2FD';
 export const LAYER_MID_BG: string = '#FFF3E0';
