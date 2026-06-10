@@ -111,6 +111,9 @@ export struct GearPickerSheet {
         } else if (this.filteredGears().length === 0 && this.searchText.length > 0) {
           // 搜索无结果
           this.buildSearchEmpty()
+        } else if (this.filteredGears().length === 0) {
+          // 品类筛选无结果
+          this.buildCategoryEmpty()
         } else {
           Scroll() {
             Column({ space: 0 }) {
@@ -256,7 +259,8 @@ export struct GearPickerSheet {
               .enabled(this.tempName.trim().length > 0)
               .opacity(this.tempName.trim().length > 0 ? 1.0 : 0.5)
               .onClick(() => {
-                const weight = this.tempWeight.trim().length > 0 ? Number(this.tempWeight) : undefined;
+                const parsed = Number(this.tempWeight);
+                const weight = (this.tempWeight.trim().length > 0 && !Number.isNaN(parsed)) ? parsed : undefined;
                 this.onTempAdd(this.tempName.trim(), this.tempZone, weight);
                 this.closeTempOverlay();
               })
@@ -353,6 +357,21 @@ export struct GearPickerSheet {
         .fontSize(14)
         .fontColor(TEXT_SECONDARY)
       Text('试试换个关键词，或临时添加一件')
+        .fontSize(12)
+        .fontColor(TEXT_TERTIARY)
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+  }
+
+  @Builder
+  private buildCategoryEmpty() {
+    Column({ space: 8 }) {
+      Text('该品类下没有装备')
+        .fontSize(14)
+        .fontColor(TEXT_SECONDARY)
+      Text('切换品类或临时添加一件')
         .fontSize(12)
         .fontColor(TEXT_TERTIARY)
     }

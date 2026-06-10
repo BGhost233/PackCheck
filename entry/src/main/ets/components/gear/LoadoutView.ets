@@ -74,11 +74,15 @@ export struct LoadoutView {
 
   aboutToAppear() {
     this.refreshCache();
-    setTimeout(() => {
-      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
-        this.appeared = true;
-      });
-    }, 80);
+    // 无 setTimeout——直接触发，子元素各自的 .animation({ delay }) 天然形成 stagger
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.appeared = true;
+    });
+  }
+
+  aboutToDisappear() {
+    // 组件销毁时重置状态（无 timer 需清理，但保持防御性语义）
+    this.appeared = false;
   }
 
   onTripChange(): void {

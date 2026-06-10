@@ -25,11 +25,19 @@ export struct LoadoutProgressBar {
     this.displayChecked = this.checked;
   }
 
-  // 监听 checked 变化驱动 counter 动画
-  onCheckedChange(): void {
-    if (this.displayChecked !== this.checked) {
-      this.animateCounter(this.displayChecked, this.checked);
+  aboutToDisappear(): void {
+    // 组件销毁时清除 setInterval，防止僵尸 timer
+    if (this.counterTimerId >= 0) {
+      clearInterval(this.counterTimerId);
+      this.counterTimerId = -1;
     }
+  }
+
+  // 监听 checked 变化驱动 counter 动画
+  // 无条件启动新动画（旧动画在 animateCounter 头部 clearInterval 取消）
+  // 解决快速双击时 displayChecked 卡在中间值的问题
+  onCheckedChange(): void {
+    this.animateCounter(this.displayChecked, this.checked);
   }
 
   build() {

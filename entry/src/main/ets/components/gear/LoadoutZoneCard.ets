@@ -82,6 +82,11 @@ export struct LoadoutZoneCard {
     .borderRadius(16)
     .shadow({ radius: 8, color: SHADOW_SUBTLE, offsetY: 2 })
     .clip(true)
+    .transition(
+      TransitionEffect.OPACITY.combine(
+        TransitionEffect.scale({ x: 0.95, y: 0.95 })
+      ).animation({ curve: SPRING_GENERAL() })
+    )
   }
 
   @Builder
