@@ -25,8 +25,6 @@ import {
   SPRING_GENERAL,
   SPRING_CHEVRON,
   DURATION_NONE,
-  DURATION_NORMAL,
-  DURATION_HEADER,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
@@ -47,6 +45,10 @@ export struct ChecklistDetail {
   @State private headerAnimating: boolean = false;
   @State private pressedItemId: string = '';
   @State private listEntered: boolean = false;
+  @State private backPressed: boolean = false;
+  @State private pressedGroupName: string = '';
+  @State private pressedChipLabel: string = '';
+  @State private pressedMiniAction: string = '';
 
   private listScroller: Scroller = new Scroller();
   private readonly collapseThreshold: number = 80;
@@ -352,7 +354,6 @@ export struct ChecklistDetail {
     }
     this.headerAnimating = true;
     this.getUIContext().animateTo({
-      duration: DURATION_HEADER,
       curve: SPRING_GENERAL(),
       onFinish: () => {
         this.headerAnimating = false;
@@ -368,7 +369,6 @@ export struct ChecklistDetail {
     }
     this.headerAnimating = true;
     this.getUIContext().animateTo({
-      duration: DURATION_HEADER,
       curve: SPRING_GENERAL(),
       onFinish: () => {
         this.headerAnimating = false;
@@ -470,7 +470,7 @@ export struct ChecklistDetail {
       }
       .width('100%')
       .backgroundColor(PAGE_BG)
-      .animation({ duration: DURATION_HEADER, curve: SPRING_GENERAL() })
+      .animation({ curve: SPRING_GENERAL() })
     }
   }
 
@@ -517,7 +517,7 @@ export struct ChecklistDetail {
       .alignItems(VerticalAlign.Center)
       .backgroundColor(PAGE_BG)
       .shadow({ radius: 4, color: SHADOW_SUBTLE, offsetX: 0, offsetY: 2 })
-      .animation({ duration: DURATION_HEADER, curve: SPRING_GENERAL() })
+      .animation({ curve: SPRING_GENERAL() })
     }
   }
 
@@ -533,6 +533,16 @@ export struct ChecklistDetail {
     .justifyContent(FlexAlign.Center)
     .backgroundColor(PRIMARY_TINT_COLOR)
     .borderRadius(16)
+    .scale({ x: this.pressedMiniAction === icon.toString() ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+      y: this.pressedMiniAction === icon.toString() ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .animation({ curve: SPRING_PRESS() })
+    .onTouch((e: TouchEvent) => {
+      if (e.type === TouchType.Down) {
+        this.pressedMiniAction = icon.toString();
+      } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+        this.pressedMiniAction = '';
+      }
+    })
     .onClick(action)
   }
 
@@ -548,6 +558,16 @@ export struct ChecklistDetail {
       .height(44)
       .justifyContent(FlexAlign.Start)
       .alignItems(VerticalAlign.Center)
+      .scale({ x: this.backPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+        y: this.backPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+      .animation({ curve: SPRING_PRESS() })
+      .onTouch((e: TouchEvent) => {
+        if (e.type === TouchType.Down) {
+          this.backPressed = true;
+        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+          this.backPressed = false;
+        }
+      })
       .onClick(() => {
         this.onReturnHome();
       })
@@ -700,6 +720,16 @@ export struct ChecklistDetail {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(PRIMARY_TINT_COLOR)
     .borderRadius(20)
+    .scale({ x: this.pressedChipLabel === label ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+      y: this.pressedChipLabel === label ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .animation({ curve: SPRING_PRESS() })
+    .onTouch((e: TouchEvent) => {
+      if (e.type === TouchType.Down) {
+        this.pressedChipLabel = label;
+      } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+        this.pressedChipLabel = '';
+      }
+    })
     .onClick(action)
   }
 
@@ -735,10 +765,19 @@ export struct ChecklistDetail {
     .backgroundColor(GROUP_HEADER_BG)
     .borderRadius(10)
     .margin({ top: this.isFirstGroup(group) ? 4 : 20, bottom: 2 })
+    .scale({ x: this.pressedGroupName === group ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+      y: this.pressedGroupName === group ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .animation({ curve: SPRING_PRESS() })
+    .onTouch((e: TouchEvent) => {
+      if (e.type === TouchType.Down) {
+        this.pressedGroupName = group;
+      } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+        this.pressedGroupName = '';
+      }
+    })
     .onClick(() => {
       this.onToggleGroup(group);
     })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
   }
 
   @Builder

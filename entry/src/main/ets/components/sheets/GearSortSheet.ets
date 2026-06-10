@@ -12,7 +12,9 @@ import {
 } from '../../constants/DesignTokens';
 import {
   SPRING_PRESS,
+  SPRING_GENERAL,
   PRESS_SCALE_DOWN,
+  PRESS_SCALE_BOUNCE,
   PRESS_SCALE_REST
 } from '../../constants/AnimationTokens';
 
@@ -53,14 +55,24 @@ export struct GearSortSheet {
     .padding({ left: 12, right: 12 })
     .backgroundColor(this.gearSortMode === mode ? LIGHT_PRIMARY_COLOR : PAGE_BG)
     .borderRadius(12)
-    .scale({ x: this.pressedOption === mode ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
-      y: this.pressedOption === mode ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .scale({ x: this.pressedOption === mode ? PRESS_SCALE_DOWN :
+        (this.pressedOption === '__bounce_' + mode ? PRESS_SCALE_BOUNCE : PRESS_SCALE_REST),
+      y: this.pressedOption === mode ? PRESS_SCALE_DOWN :
+        (this.pressedOption === '__bounce_' + mode ? PRESS_SCALE_BOUNCE : PRESS_SCALE_REST) })
     .animation({ curve: SPRING_PRESS() })
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
         this.pressedOption = mode;
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.pressedOption = '';
+        // 三段式: 0.96 → 1.02 → 1.0
+        this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
+          this.pressedOption = '__bounce_' + mode;
+        });
+        setTimeout(() => {
+          this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+            this.pressedOption = '';
+          });
+        }, 80);
       }
     })
     .onClick(() => {

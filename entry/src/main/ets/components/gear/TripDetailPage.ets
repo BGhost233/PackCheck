@@ -9,10 +9,13 @@ import {
   TEXT_TERTIARY,
   CARD_BG,
   PAGE_BG,
-  DIVIDER_COLOR
+  DIVIDER_COLOR,
+  SHADOW_MICRO,
+  TRANSPARENT,
+  DANGER_COLOR
 } from '../../constants/Colors';
 import { PAGE_PADDING, CARD_RADIUS } from '../../constants/Layout';
-import { SPRING_GENERAL, SPRING_PRESS, DURATION_NORMAL } from '../../constants/AnimationTokens';
+import { SPRING_GENERAL, SPRING_PRESS } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { LoadoutView } from './LoadoutView';
 import { ChecklistDetail } from '../ChecklistDetail';
@@ -32,6 +35,12 @@ export struct TripDetailPage {
 
   // 返回按钮按压
   @State private backScale: number = 1.0;
+  // 更多菜单按压
+  @State private menuScale: number = 1.0;
+  // 共享信息区按压
+  @State private infoScale: number = 1.0;
+  // 更多菜单展开
+  @State private showMoreMenu: boolean = false;
 
   // ChecklistDetail callbacks (透传)
   onReturnHome: () => void = () => {};
@@ -41,6 +50,7 @@ export struct TripDetailPage {
   onOpenTempItem: () => void = () => {};
   onOpenImport: () => void = () => {};
   onOpenReview: () => void = () => {};
+  onDeleteTrip: () => void = () => {};
   onToggleGroup: (group: string) => void = () => {};
   onOpenEditItem: (item: ChecklistItem) => void = () => {};
   onToggleChecklistItem: (itemId: string) => void = () => {};
@@ -83,7 +93,7 @@ export struct TripDetailPage {
           onLayerChange: this.onLayerChange
         })
           .layoutWeight(1)
-          .transition(TransitionEffect.OPACITY.animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() }))
+          .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_GENERAL() }))
       } else {
         ChecklistDetail({
           checklists: this.checklists,
@@ -106,7 +116,7 @@ export struct TripDetailPage {
           onDeleteChecklistItem: this.onDeleteChecklistItem
         })
           .layoutWeight(1)
-          .transition(TransitionEffect.OPACITY.animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() }))
+          .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_GENERAL() }))
       }
     }
     .width('100%')
@@ -130,11 +140,11 @@ export struct TripDetailPage {
       .scale({ x: this.backScale, y: this.backScale })
       .onTouch((e: TouchEvent) => {
         if (e.type === TouchType.Down) {
-          animateTo({ duration: 100, curve: SPRING_PRESS() }, () => {
+          this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
             this.backScale = 0.9;
           });
         } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-          animateTo({ duration: 200, curve: SPRING_GENERAL() }, () => {
+          this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
             this.backScale = 1.0;
           });
         }
@@ -164,8 +174,33 @@ export struct TripDetailPage {
       .height(40)
       .borderRadius(20)
       .justifyContent(FlexAlign.Center)
+      .scale({ x: this.menuScale, y: this.menuScale })
+      .animation({ curve: SPRING_PRESS() })
+      .onTouch((e: TouchEvent) => {
+        if (e.type === TouchType.Down) {
+          this.menuScale = 0.9;
+        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+          this.menuScale = 1.0;
+        }
+      })
       .onClick(() => {
-        this.onOpenEditTrip();
+        this.showMoreMenu = true;
+      })
+      .bindMenu(this.showMoreMenu, [
+        {
+          value: '编辑行程信息',
+          action: () => { this.onOpenEditTrip(); }
+        },
+        {
+          value: '逐项核查',
+          action: () => { this.onOpenReview(); }
+        },
+        {
+          value: '删除行程',
+          action: () => { this.onDeleteTrip(); }
+        }
+      ], {
+        onDisappear: () => { this.showMoreMenu = false; }
       })
     }
     .width('100%')
@@ -187,6 +222,18 @@ export struct TripDetailPage {
       .width('100%')
       .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
       .justifyContent(FlexAlign.Center)
+      .scale({ x: this.infoScale, y: this.infoScale })
+      .animation({ curve: SPRING_PRESS() })
+      .onTouch((e: TouchEvent) => {
+        if (e.type === TouchType.Down) {
+          this.infoScale = 0.97;
+        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+          this.infoScale = 1.0;
+        }
+      })
+      .onClick(() => {
+        this.onOpenEditProfile();
+      })
     }
   }
 
@@ -235,21 +282,21 @@ export struct TripDetailPage {
       .fontSize(14)
       .fontWeight(this.activeView === view ? FontWeight.Medium : FontWeight.Normal)
       .fontColor(this.activeView === view ? TEXT_MAIN : TEXT_SECONDARY)
-      .backgroundColor(this.activeView === view ? CARD_BG : 'transparent')
+      .backgroundColor(this.activeView === view ? CARD_BG : TRANSPARENT)
       .borderRadius(15)
       .height('100%')
       .layoutWeight(1)
       .textAlign(TextAlign.Center)
       .shadow(this.activeView === view ? {
         radius: 4,
-        color: '#0D000000',
+        color: SHADOW_MICRO,
         offsetX: 0,
         offsetY: 1
       } : undefined)
-      .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
+      .animation({ curve: SPRING_GENERAL() })
       .onClick(() => {
         if (this.activeView !== view) {
-          animateTo({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() }, () => {
+          this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
             this.activeView = view;
           });
         }

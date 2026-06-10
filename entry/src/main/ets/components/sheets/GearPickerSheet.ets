@@ -18,7 +18,14 @@ import {
   ZONE_FEET_COLOR,
   ZONE_CARRY_COLOR,
   ZONE_SLEEP_COLOR,
-  ZONE_MISC_COLOR
+  ZONE_MISC_COLOR,
+  ZONE_HEAD_TINT,
+  ZONE_UPPER_TINT,
+  ZONE_LOWER_TINT,
+  ZONE_FEET_TINT,
+  ZONE_CARRY_TINT,
+  ZONE_SLEEP_TINT,
+  ZONE_MISC_TINT
 } from '../../constants/Colors';
 import { BodyZone } from '../../constants/GearLoadout';
 import { SPRING_PRESS, SPRING_GENERAL, PANEL_SCALE_START } from '../../constants/AnimationTokens';
@@ -301,7 +308,7 @@ export struct GearPickerSheet {
       }
       .padding({ left: 8, right: 8, top: 4, bottom: 4 })
       .borderRadius(12)
-      .backgroundColor(this.isSelected(gear.id) ? PRIMARY_COLOR : '#33' + this.getZoneColor(assignSlot(gear).zone).substring(1))
+      .backgroundColor(this.isSelected(gear.id) ? PRIMARY_COLOR : this.getZoneTintColor(assignSlot(gear).zone))
       .animation({ curve: SPRING_PRESS() })
     }
     .width('100%')
@@ -404,6 +411,16 @@ export struct GearPickerSheet {
     if (zone === BodyZone.Carry) return ZONE_CARRY_COLOR;
     if (zone === BodyZone.Sleep) return ZONE_SLEEP_COLOR;
     return ZONE_MISC_COLOR;
+  }
+
+  private getZoneTintColor(zone: string): string {
+    if (zone === BodyZone.Head) return ZONE_HEAD_TINT;
+    if (zone === BodyZone.UpperBody) return ZONE_UPPER_TINT;
+    if (zone === BodyZone.LowerBody) return ZONE_LOWER_TINT;
+    if (zone === BodyZone.Feet) return ZONE_FEET_TINT;
+    if (zone === BodyZone.Carry) return ZONE_CARRY_TINT;
+    if (zone === BodyZone.Sleep) return ZONE_SLEEP_TINT;
+    return ZONE_MISC_TINT;
   }
 
   private openTempOverlay(): void {

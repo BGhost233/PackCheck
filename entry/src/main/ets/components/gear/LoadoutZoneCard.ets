@@ -8,7 +8,8 @@ import {
   TEXT_SECONDARY,
   TEXT_TERTIARY,
   SHADOW_SUBTLE,
-  DIVIDER_COLOR
+  DIVIDER_COLOR,
+  ZONE_MISC_COLOR
 } from '../../constants/Colors';
 import { BodyZone } from '../../constants/GearLoadout';
 import { SPRING_GENERAL } from '../../constants/AnimationTokens';
@@ -27,7 +28,7 @@ export struct LoadoutZoneCard {
   @Prop zone: string = BodyZone.Misc;
   @Prop @Watch('onItemsChange') items: ChecklistItem[] = [];
   @Prop gears: GearItem[] = [];
-  @Prop zoneColor: string = '#78909C';
+  @Prop zoneColor: string = ZONE_MISC_COLOR;
 
   // Misc 子分区缓存
   private miscMapCache: Map<string, ChecklistItem[]> = new Map();
@@ -96,7 +97,7 @@ export struct LoadoutZoneCard {
           onLongPress: this.onLongPress,
           onTapLayerBadge: this.onTapLayerBadge
         })
-      }, (item: ChecklistItem) => item.id)
+      }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
     }
     .width('100%')
     .padding({ bottom: 4 })
@@ -131,7 +132,7 @@ export struct LoadoutZoneCard {
             onLongPress: this.onLongPress,
             onTapLayerBadge: this.onTapLayerBadge
           })
-        }, (item: ChecklistItem) => item.id)
+        }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
       }, (category: string) => category)
     }
     .width('100%')

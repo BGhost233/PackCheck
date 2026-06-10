@@ -9,7 +9,7 @@ import {
   TEXT_TERTIARY,
   PROGRESS_INACTIVE
 } from '../../constants/Colors';
-import { SPRING_GENERAL, SPRING_PRESS, DURATION_COUNTER, CURVE_DECELERATE } from '../../constants/AnimationTokens';
+import { SPRING_GENERAL, SPRING_PRESS, DURATION_COUNTER } from '../../constants/AnimationTokens';
 
 @Component
 export struct LoadoutProgressBar {
@@ -19,6 +19,7 @@ export struct LoadoutProgressBar {
   @State private displayChecked: number = 0;
   @State private celebrateScale: number = 1.0;
   @State private barWidth: number = 0;
+  private counterTimerId: number = -1;
 
   aboutToAppear(): void {
     this.displayChecked = this.checked;
@@ -100,20 +101,25 @@ export struct LoadoutProgressBar {
   }
 
   private animateCounter(from: number, to: number): void {
+    // 取消上一轮动画（并发防护）
+    if (this.counterTimerId >= 0) {
+      clearInterval(this.counterTimerId);
+      this.counterTimerId = -1;
+    }
     const startTime = Date.now();
     const duration = DURATION_COUNTER;
     const diff = to - from;
 
-    const tick = (): void => {
+    this.counterTimerId = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(1.0, elapsed / duration);
       // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       this.displayChecked = Math.round(from + diff * eased);
 
-      if (progress < 1.0) {
-        setTimeout(tick, 16);
-      } else {
+      if (progress >= 1.0) {
+        clearInterval(this.counterTimerId);
+        this.counterTimerId = -1;
         this.displayChecked = to;
         // 100% 庆祝弹动
         if (this.isComplete()) {
@@ -123,7 +129,6 @@ export struct LoadoutProgressBar {
           }, 200);
         }
       }
-    };
-    tick();
+    }, 16);
   }
 }

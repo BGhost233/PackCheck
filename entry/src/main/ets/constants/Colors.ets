@@ -90,6 +90,15 @@ export const ZONE_CARRY_COLOR: string = '#FFA726';
 export const ZONE_SLEEP_COLOR: string = '#7E57C2';
 export const ZONE_MISC_COLOR: string = '#78909C';
 
+// ============ Zone 颜色半透明变体（20% opacity） ============
+export const ZONE_HEAD_TINT: string = '#3342A5F5';
+export const ZONE_UPPER_TINT: string = '#33EF5350';
+export const ZONE_LOWER_TINT: string = '#335C6BC0';
+export const ZONE_FEET_TINT: string = '#338D6E63';
+export const ZONE_CARRY_TINT: string = '#33FFA726';
+export const ZONE_SLEEP_TINT: string = '#337E57C2';
+export const ZONE_MISC_TINT: string = '#3378909C';
+
 // ============ Layer Badge 背景色（配装系统） ============
 export const LAYER_BASE_BG: string = '#E3F2FD';
 export const LAYER_MID_BG: string = '#FFF3E0';

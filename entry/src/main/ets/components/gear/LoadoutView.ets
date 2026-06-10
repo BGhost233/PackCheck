@@ -10,6 +10,7 @@ import {
   TEXT_TERTIARY,
   CARD_BG,
   PAGE_BG,
+  OVERLAY_DIM,
   ZONE_HEAD_COLOR,
   ZONE_UPPER_COLOR,
   ZONE_LOWER_COLOR,
@@ -23,8 +24,7 @@ import {
   SPRING_GENERAL,
   SPRING_PRESS,
   STAGGER_OFFSET_Y,
-  staggerDelay,
-  DURATION_NORMAL
+  staggerDelay
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
@@ -75,7 +75,7 @@ export struct LoadoutView {
   aboutToAppear() {
     this.refreshCache();
     setTimeout(() => {
-      animateTo({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() }, () => {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.appeared = true;
       });
     }, 80);
@@ -122,20 +122,20 @@ export struct LoadoutView {
           .fontColor([TEXT_TERTIARY])
           .opacity(this.appeared ? 1 : 0)
           .translate({ y: this.appeared ? 0 : 20 })
-          .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
+          .animation({ curve: SPRING_GENERAL() })
 
         Text('还没有装备')
           .fontSize(20)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
           .opacity(this.appeared ? 1 : 0)
-          .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL(), delay: 60 })
+          .animation({ curve: SPRING_GENERAL(), delay: 60 })
 
         Text('点击下方按钮，从装备库中选择出行装备')
           .fontSize(14)
           .fontColor(TEXT_SECONDARY)
           .opacity(this.appeared ? 1 : 0)
-          .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL(), delay: 120 })
+          .animation({ curve: SPRING_GENERAL(), delay: 120 })
 
         Button('选择装备')
           .type(ButtonType.Capsule)
@@ -148,7 +148,7 @@ export struct LoadoutView {
           .margin({ top: 8 })
           .opacity(this.appeared ? 1 : 0)
           .scale({ x: this.appeared ? 1 : 0.9, y: this.appeared ? 1 : 0.9 })
-          .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL(), delay: 180 })
+          .animation({ curve: SPRING_GENERAL(), delay: 180 })
           .onClick(() => {
             this.onOpenPicker();
           })
@@ -197,12 +197,11 @@ export struct LoadoutView {
           zoneColor: this.getZoneColor(zone),
           onToggleCheck: this.onToggleCheck,
           onLongPress: this.onLongPressItem,
-          onTapLayerBadge: this.onLongPressItem
+          onTapLayerBadge: (item: ChecklistItem) => { this.onLongPressItem(item); }
         })
           .opacity(this.appeared ? 1 : 0)
           .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
           .animation({
-            duration: DURATION_NORMAL,
             curve: SPRING_GENERAL(),
             delay: staggerDelay(index)
           })
@@ -226,18 +225,18 @@ export struct LoadoutView {
     .justifyContent(FlexAlign.Center)
     .shadow({
       radius: 12,
-      color: '#33000000',
+      color: OVERLAY_DIM,
       offsetX: 0,
       offsetY: 4
     })
     .position({ right: PAGE_PADDING, bottom: 32 })
     .onTouch((e: TouchEvent) => {
       if (e.type === TouchType.Down) {
-        animateTo({ duration: 100, curve: SPRING_PRESS() }, () => {
+        this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
           this.fabScale = 0.9;
         });
       } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-        animateTo({ duration: 200, curve: SPRING_GENERAL() }, () => {
+        this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
           this.fabScale = 1.0;
         });
       }
@@ -250,7 +249,7 @@ export struct LoadoutView {
       x: (this.appeared ? 1 : 0.8) * this.fabScale,
       y: (this.appeared ? 1 : 0.8) * this.fabScale
     })
-    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL(), delay: 200 })
+    .animation({ curve: SPRING_GENERAL(), delay: 200 })
   }
 
   // --- Helpers ---

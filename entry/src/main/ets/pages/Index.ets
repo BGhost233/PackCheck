@@ -2353,13 +2353,37 @@ struct Index {
           actionItem: this.actionSheetItem,
           onActionMoveToZone: (itemId: string, zone: string) => { this.moveItemToZone(itemId, zone); },
           onActionViewDetail: (item: ChecklistItem) => {
-            this.closeSheet();
             // 返回首页 → 切换到装备库 Tab → 展开对应装备卡片
-            if (item.fromGearId !== undefined && item.fromGearId !== '') {
-              this.expandedGearId = item.fromGearId;
-              this.returnToHome();
-              this.currentTabIndex = 1; // 装备库 Tab
-            }
+            // 序列化：先关闭 Sheet 动画完成后再执行 Tab 切换，避免 Spring 竞争
+            this.errorText = '';
+            this.returnToImportAfterGear = false;
+            this.editingItemId = '';
+            this.showTempAddNotice = false;
+            this.getUIContext().animateTo({
+              curve: SPRING_PANEL_EXIT(),
+              onFinish: () => {
+                this.sheetMode = SHEET_NONE;
+                // Sheet 关闭完毕后执行导航
+                if (item.fromGearId !== undefined && item.fromGearId !== '') {
+                  this.expandedGearId = item.fromGearId;
+                  this.stopShakeListening();
+                  if (this.navPathStack.size() > 0) {
+                    this.getUIContext().animateTo({
+                      curve: SPRING_HERO_COLLAPSE()
+                    }, () => {
+                      this.navPathStack.pop(false);
+                    });
+                  }
+                  this.currentTabIndex = 1;
+                  this.tabsController.changeIndex(1);
+                }
+              }
+            }, () => {
+              this.sheetTranslateY = 800;
+              this.sheetOverlayOpacity = 0;
+              this.contentScale = 1.0;
+              this.contentBlur = 0;
+            });
           },
           onActionRemove: (itemId: string) => { this.removeItemFromTrip(itemId); }
         })
