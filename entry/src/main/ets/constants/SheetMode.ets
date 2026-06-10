@@ -2,6 +2,7 @@ export const SHEET_NONE = '';
 export const SHEET_GEAR = 'gear';
 export const SHEET_TRIP = 'trip';
 export const SHEET_EDIT_TRIP = 'edit_trip';
+export const SHEET_EDIT_PROFILE = 'edit_profile';
 export const SHEET_TEMP_ITEM = 'temp_item';
 export const SHEET_EDIT_ITEM = 'edit_item';
 export const SHEET_IMPORT = 'import';

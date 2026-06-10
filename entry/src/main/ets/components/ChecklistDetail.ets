@@ -56,6 +56,7 @@ export struct ChecklistDetail {
 
   onReturnHome: () => void = (): void => {};
   onOpenEditTrip: () => void = (): void => {};
+  onOpenEditProfile: () => void = (): void => {};
   onOpenDatePicker: () => void = (): void => {};
   onOpenTempItem: () => void = (): void => {};
   onOpenImport: () => void = (): void => {};
@@ -553,33 +554,48 @@ export struct ChecklistDetail {
     if (checklist !== undefined && this.hasTripProfile(checklist)) {
       Row({ space: 6 }) {
         if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
-          this.ProfileTag(checklist.destination.trim())
+          this.ProfileTag(checklist.destination.trim(), '')
         }
         if (typeof checklist.distanceKm === 'number' && checklist.distanceKm > 0) {
-          this.ProfileTag(`${checklist.distanceKm}km`)
-        }
-        if (typeof checklist.ascentM === 'number' && checklist.ascentM > 0) {
-          this.ProfileTag(`${checklist.ascentM}m↑`)
+          this.ProfileTag(`${checklist.distanceKm}km`, '里程')
         }
         if (typeof checklist.maxAltitude === 'number' && checklist.maxAltitude > 0) {
-          this.ProfileTag(`${checklist.maxAltitude}m`)
+          this.ProfileTag(`${checklist.maxAltitude}m`, '海拔')
+        }
+        if (typeof checklist.ascentM === 'number' && checklist.ascentM > 0) {
+          this.ProfileTag(`${checklist.ascentM}m`, '爬升')
         }
         if (typeof checklist.durationHours === 'number' && checklist.durationHours > 0) {
-          this.ProfileTag(`${checklist.durationHours}h`)
+          this.ProfileTag(`${checklist.durationHours}h`, '时长')
         }
+        // 编辑暗示
+        Text('编辑')
+          .fontSize(10)
+          .fontColor(TEXT_SECONDARY)
       }
       .width('100%')
+      .onClick(() => {
+        this.onOpenEditProfile();
+      })
     }
   }
 
   @Builder
-  private ProfileTag(text: string) {
-    Text(text)
-      .fontSize(11)
-      .fontColor(TEXT_SECONDARY)
-      .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-      .backgroundColor(LIGHT_PRIMARY_COLOR)
-      .borderRadius(6)
+  private ProfileTag(value: string, label: string) {
+    Row({ space: 2 }) {
+      if (label.length > 0) {
+        Text(label)
+          .fontSize(10)
+          .fontColor(TEXT_SECONDARY)
+      }
+      Text(value)
+        .fontSize(11)
+        .fontColor(TEXT_MAIN)
+        .fontWeight(FontWeight.Medium)
+    }
+    .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+    .backgroundColor(LIGHT_PRIMARY_COLOR)
+    .borderRadius(6)
   }
 
   private hasTripProfile(checklist: TripChecklist): boolean {

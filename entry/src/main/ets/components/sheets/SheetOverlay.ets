@@ -4,6 +4,7 @@ import {
   DANGER_COLOR,
   PRIMARY_COLOR,
   SHEET_EDIT_ITEM,
+  SHEET_EDIT_PROFILE,
   SHEET_EDIT_TRIP,
   SHEET_GEAR,
   SHEET_GEAR_SORT,
@@ -24,6 +25,7 @@ import { GearFormSheet } from './GearFormSheet';
 import { TripFormSheet } from './TripFormSheet';
 import { TempItemSheet } from './TempItemSheet';
 import { ImportSheet } from './ImportSheet';
+import { ProfileEditSheet } from './ProfileEditSheet';
 
 @Component
 export struct SheetOverlay {
@@ -80,6 +82,7 @@ export struct SheetOverlay {
   onTripDurationHoursChange: (value: string) => void = (value: string): void => {};
   onCreateTrip: () => void = (): void => {};
   onSaveTrip: () => void = (): void => {};
+  onSaveProfile: () => void = (): void => {};
   // Temp item callbacks
   onTempItemNameChange: (value: string) => void = (value: string): void => {};
   onTempItemGroupChange: (value: string) => void = (value: string): void => {};
@@ -164,6 +167,20 @@ export struct SheetOverlay {
             onDateChange: this.onTripDateChange,
             onConfirm: this.onCreateTrip
           })
+        } else if (this.sheetMode === SHEET_EDIT_PROFILE) {
+          ProfileEditSheet({
+            tripDestination: this.tripDestination,
+            tripDistanceKm: this.tripDistanceKm,
+            tripMaxAltitude: this.tripMaxAltitude,
+            tripAscentM: this.tripAscentM,
+            tripDurationHours: this.tripDurationHours,
+            onDestinationChange: this.onTripDestinationChange,
+            onDistanceKmChange: this.onTripDistanceKmChange,
+            onMaxAltitudeChange: this.onTripMaxAltitudeChange,
+            onAscentMChange: this.onTripAscentMChange,
+            onDurationHoursChange: this.onTripDurationHoursChange,
+            onConfirm: this.onSaveProfile
+          })
         } else if (this.sheetMode === SHEET_EDIT_TRIP) {
           TripFormSheet({
             tripTitle: this.tripTitle,
@@ -245,6 +262,9 @@ export struct SheetOverlay {
     }
     if (this.sheetMode === SHEET_EDIT_TRIP) {
       return '编辑行程';
+    }
+    if (this.sheetMode === SHEET_EDIT_PROFILE) {
+      return '编辑行程信息';
     }
     if (this.sheetMode === SHEET_TEMP_ITEM) {
       return '添加物品';

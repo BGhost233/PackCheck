@@ -19,6 +19,7 @@ import {
   PAGE_BG_TRANSLUCENT,
   PRIMARY_COLOR,
   PRIMARY_SHADOW_LIGHT,
+  SHEET_EDIT_PROFILE,
   SHEET_EDIT_TRIP,
   SHEET_GEAR,
   SHEET_GEAR_SORT,
@@ -1265,6 +1266,36 @@ struct Index {
     this.closeSheet();
   }
 
+  private openEditProfileSheet(): void {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    this.tripDestination = checklist.destination !== undefined ? checklist.destination : '';
+    this.tripDistanceKm = typeof checklist.distanceKm === 'number' ? checklist.distanceKm.toString() : '';
+    this.tripMaxAltitude = typeof checklist.maxAltitude === 'number' ? checklist.maxAltitude.toString() : '';
+    this.tripAscentM = typeof checklist.ascentM === 'number' ? checklist.ascentM.toString() : '';
+    this.tripDurationHours = typeof checklist.durationHours === 'number' ? checklist.durationHours.toString() : '';
+    this.sheetMode = SHEET_EDIT_PROFILE;
+    this.openSheetAnimated();
+  }
+
+  private async saveProfileInfo(): Promise<void> {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    const profile: TripProfileUpdate = {
+      destination: this.tripDestination.trim().length > 0 ? this.tripDestination.trim() : undefined,
+      distanceKm: normalizeNumber(this.tripDistanceKm),
+      maxAltitude: normalizeNumber(this.tripMaxAltitude),
+      ascentM: normalizeNumber(this.tripAscentM),
+      durationHours: normalizeNumber(this.tripDurationHours)
+    };
+    await this.updateChecklistInfo(checklist.id, checklist.title, checklist.date !== undefined ? checklist.date : '', checklist.dateAt, profile);
+    this.closeSheet();
+  }
+
   private async updateChecklistInfo(checklistId: string, title: string, date: string,
     dateAt: number | undefined, profile?: TripProfileUpdate): Promise<void> {
     const nextChecklists = updateChecklistMeta(this.checklists, checklistId, title, date, dateAt, profile);
@@ -1649,6 +1680,9 @@ struct Index {
           },
           onOpenEditTrip: () => {
             this.openEditTripSheet();
+          },
+          onOpenEditProfile: () => {
+            this.openEditProfileSheet();
           },
           onOpenDatePicker: () => {
             this.openDatePicker();
@@ -2078,6 +2112,7 @@ struct Index {
           onTripDurationHoursChange: (value: string) => { this.tripDurationHours = value; },
           onCreateTrip: () => { this.createChecklist(); },
           onSaveTrip: () => { this.saveTripInfo(); },
+          onSaveProfile: () => { this.saveProfileInfo(); },
           onTempItemNameChange: (value: string) => { this.tempItemName = value; },
           onTempItemGroupChange: (value: string) => { this.tempItemGroup = value; },
           onAddTempItem: () => { this.addTempItem(); },

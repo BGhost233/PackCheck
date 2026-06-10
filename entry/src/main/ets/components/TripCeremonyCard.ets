@@ -27,8 +27,7 @@ import {
   TEXT_MAIN,
   TEXT_SECONDARY,
   TRANSPARENT,
-  WHITE,
-  WHITE_SEMI_TRANSPARENT
+  WHITE
 } from '../constants/Colors';
 import { CHIP_RADIUS } from '../constants/Layout';
 
@@ -763,15 +762,55 @@ return this.trackWidth - this.SLIDER_WIDTH;
     })
   }
 
+  // chip 行滑动状态
+  @State private chipScrollAtEnd: boolean = false;
+  @State private chipScrollAtStart: boolean = true;
+
   @Builder
   private ProgressiveChips() {
     Column({ space: 8 }) {
-      // chip 行
-      Row({ space: 6 }) {
-        ForEach([0, 1, 2, 3, 4], (index: number) => {
-          this.ChipTag(this.chipLabels[index], index)
+      // chip 行：Scroll 包裹 + 右侧渐变遮罩
+      Stack() {
+        Scroll() {
+          Row({ space: 6 }) {
+            ForEach([0, 1, 2, 3, 4], (index: number) => {
+              this.ChipTag(this.chipLabels[index], index)
+            })
+          }
+          .padding({ right: 24 })
+        }
+        .scrollable(ScrollDirection.Horizontal)
+        .scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.Spring)
+        .width('100%')
+        .onScroll((_xOffset: number, _yOffset: number) => {})
+        .onScrollEdge((side: Edge) => {
+          if (side === Edge.End) {
+            this.chipScrollAtEnd = true;
+          } else if (side === Edge.Start) {
+            this.chipScrollAtStart = true;
+          }
         })
+        .onScrollStart(() => {
+          this.chipScrollAtEnd = false;
+          this.chipScrollAtStart = false;
+        })
+
+        // 右侧渐变遮罩（暗示可继续滑动）
+        Row()
+          .width(32)
+          .height('100%')
+          .linearGradient({
+            angle: 0,
+            colors: [['#00FFFFFF', 0.0], ['#FFFFFFFF', 1.0]]
+          })
+          .hitTestBehavior(HitTestMode.Transparent)
+          .position({ right: 0, top: 0 })
+          .opacity(this.chipScrollAtEnd ? 0 : 1)
+          .animation({ duration: 200, curve: CURVE_DECELERATE })
       }
+      .width('100%')
+      .height(28)
       .opacity(this.contentStep >= 3 ? 1 : 0)
       .translate({ y: this.contentStep >= 3 ? 0 : 8 })
 
@@ -941,14 +980,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
           this.titleRowWidth = newValue.width as number;
         })
 
-        // shimmer 高光条
+        // shimmer 高光条（斜切光带 + 微绿光泽）
         Row()
-          .width(40)
-          .height('100%')
-          .borderRadius(20)
+          .width(60)
+          .height('200%')
           .linearGradient({
-            angle: 90,
-            colors: [[TRANSPARENT, 0], [WHITE_SEMI_TRANSPARENT, 0.5], [TRANSPARENT, 1.0]]
+            angle: 75,
+            colors: [[TRANSPARENT, 0.0], ['#18FFFFFF', 0.25], ['#30E8F5E9', 0.5], ['#18FFFFFF', 0.75], [TRANSPARENT, 1.0]]
           })
           .translate({ x: this.titleShimmerX })
       }
