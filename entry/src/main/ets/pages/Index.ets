@@ -7,6 +7,7 @@ import { ChecklistDetail } from '../components/ChecklistDetail';
 import { GearPage } from '../components/GearPage';
 import { HomePage } from '../components/HomePage';
 import { ReviewPage } from '../components/ReviewPage';
+import { TripDetailPage } from '../components/gear/TripDetailPage';
 import { TripCeremonyCard } from '../components/TripCeremonyCard';
 import { EditItemPanel } from '../components/EditItemPanel';
 import { EditGearPanel } from '../components/EditGearPanel';
@@ -35,6 +36,8 @@ import {
   SHEET_NONE,
   SHEET_TEMP_ITEM,
   SHEET_TRIP,
+  SHEET_GEAR_PICKER,
+  SHEET_GEAR_ITEM_ACTION,
   TEXT_MAIN,
   TEXT_TERTIARY,
   TRANSPARENT,
@@ -180,6 +183,7 @@ struct Index {
   @State private tempItemGroup: string = '其他';
   @State private importGearIds: string[] = [];
   @State private importGearCategory: string = CATEGORY_ALL;
+  @State private actionSheetItem: ChecklistItem = { id: '', name: '', group: '', checked: false };
   @State private collapsedGroups: string[] = [];
   @State private returnToImportAfterGear: boolean = false;
   @State private errorText: string = '';
@@ -1434,6 +1438,16 @@ struct Index {
     this.openSheetAnimated();
   }
 
+  private openGearPickerSheet(): void {
+    this.sheetMode = SHEET_GEAR_PICKER;
+    this.openSheetAnimated();
+  }
+
+  private openGearItemActionSheet(item: ChecklistItem): void {
+    this.actionSheetItem = item;
+    this.sheetMode = SHEET_GEAR_ITEM_ACTION;
+    this.openSheetAnimated();
+  }
 
   private hasImportSelection(id: string): boolean {
     return this.importGearIds.indexOf(id) >= 0;
@@ -1698,7 +1712,71 @@ struct Index {
 
   @Builder
   NavDestinationMap(name: string, param: Object) {
-    if (name === 'ChecklistDetail') {
+    if (name === 'TripDetailPage') {
+      NavDestination() {
+        TripDetailPage({
+          checklists: this.checklists,
+          gears: this.gears,
+          selectedChecklistId: this.selectedChecklistId,
+          collapsedGroups: this.collapsedGroups,
+          highlightedItemId: this.highlightedItemId,
+          checklistRenderNonce: this.checklistRenderNonce,
+          onReturnHome: () => {
+            this.returnToHome();
+          },
+          onOpenEditTrip: () => {
+            this.openEditTripSheet();
+          },
+          onOpenEditProfile: () => {
+            this.openEditProfileSheet();
+          },
+          onOpenDatePicker: () => {
+            this.openDatePicker();
+          },
+          onOpenTempItem: () => {
+            this.openTempItemSheet();
+          },
+          onOpenImport: () => {
+            this.openImportSheet();
+          },
+          onOpenReview: () => {
+            this.openReviewMode();
+          },
+          onToggleGroup: (group: string) => {
+            this.toggleGroup(group);
+          },
+          onOpenEditItem: (item: ChecklistItem) => {
+            this.openEditItemSheet(item);
+          },
+          onToggleChecklistItem: (itemId: string) => {
+            this.toggleChecklistItem(itemId);
+          },
+          onSaveChecklistItemToGear: (item: ChecklistItem) => {
+            this.saveChecklistItemToGear(item);
+          },
+          onDeleteChecklistItem: (itemId: string) => {
+            this.deleteChecklistItem(itemId);
+          },
+          onOpenGearPicker: () => {
+            this.openGearPickerSheet();
+          },
+          onLongPressItem: (item: ChecklistItem) => {
+            this.openGearItemActionSheet(item);
+          },
+          onLayerChange: (itemId: string, layer: string) => {
+            // TODO: Phase 5 - 层级切换逻辑
+          }
+        })
+      }
+      .hideTitleBar(true)
+      .width('100%')
+      .height('100%')
+      .transition(TransitionEffect.opacity(0.99))
+      .onBackPressed(() => {
+        this.returnToHome();
+        return true;
+      })
+    } else if (name === 'ChecklistDetail') {
       NavDestination() {
         ChecklistDetail({
           checklists: this.checklists,

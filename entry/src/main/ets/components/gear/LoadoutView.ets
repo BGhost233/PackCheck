@@ -43,18 +43,18 @@ import { LoadoutProgressBar } from './LoadoutProgressBar';
 
 // Zone 展示顺序（人体从上到下）
 const ZONE_ORDER: string[] = [
-  BodyZone.HEAD,
-  BodyZone.UPPER,
-  BodyZone.LOWER,
-  BodyZone.FEET,
-  BodyZone.CARRY,
-  BodyZone.SLEEP,
-  BodyZone.MISC
+  BodyZone.Head,
+  BodyZone.UpperBody,
+  BodyZone.LowerBody,
+  BodyZone.Feet,
+  BodyZone.Carry,
+  BodyZone.Sleep,
+  BodyZone.Misc
 ];
 
 @Component
 export struct LoadoutView {
-  @Prop trip: TripChecklist = { id: '', name: '', items: [], createdAt: 0 };
+  @Prop trip: TripChecklist = { id: '', title: '', items: [], createdAt: 0 };
   @Prop gears: GearItem[] = [];
 
   // callbacks
@@ -174,12 +174,12 @@ export struct LoadoutView {
       ForEach(this.getVisibleZones(), (zone: string, index: number) => {
         LoadoutZoneCard({
           zone: zone,
-          items: sortItemsByLayer(this.getItemsForZone(zone)),
+          items: sortItemsByLayer(this.getItemsForZone(zone), this.gears),
           gears: this.gears,
           zoneColor: this.getZoneColor(zone),
           onToggleCheck: this.onToggleCheck,
-          onLongPressItem: this.onLongPressItem,
-          onLayerChange: this.onLayerChange
+          onLongPress: this.onLongPressItem,
+          onTapLayerBadge: this.onLongPressItem
         })
           .opacity(this.appeared ? 1 : 0)
           .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
@@ -236,7 +236,7 @@ export struct LoadoutView {
   // --- Helpers ---
 
   private getVisibleZones(): string[] {
-    const zoneMap = groupByZone(this.trip.items, this.gears);
+    const zoneMap = groupByZone(this.trip.items);
     return ZONE_ORDER.filter(z => {
       const items = zoneMap.get(z);
       return items !== undefined && items.length > 0;
@@ -244,19 +244,19 @@ export struct LoadoutView {
   }
 
   private getItemsForZone(zone: string): ChecklistItem[] {
-    const zoneMap = groupByZone(this.trip.items, this.gears);
+    const zoneMap = groupByZone(this.trip.items);
     return zoneMap.get(zone) ?? [];
   }
 
   private getZoneColor(zone: string): string {
     switch (zone) {
-      case BodyZone.HEAD: return ZONE_HEAD_COLOR;
-      case BodyZone.UPPER: return ZONE_UPPER_COLOR;
-      case BodyZone.LOWER: return ZONE_LOWER_COLOR;
-      case BodyZone.FEET: return ZONE_FEET_COLOR;
-      case BodyZone.CARRY: return ZONE_CARRY_COLOR;
-      case BodyZone.SLEEP: return ZONE_SLEEP_COLOR;
-      case BodyZone.MISC: return ZONE_MISC_COLOR;
+      case BodyZone.Head: return ZONE_HEAD_COLOR;
+      case BodyZone.UpperBody: return ZONE_UPPER_COLOR;
+      case BodyZone.LowerBody: return ZONE_LOWER_COLOR;
+      case BodyZone.Feet: return ZONE_FEET_COLOR;
+      case BodyZone.Carry: return ZONE_CARRY_COLOR;
+      case BodyZone.Sleep: return ZONE_SLEEP_COLOR;
+      case BodyZone.Misc: return ZONE_MISC_COLOR;
       default: return TEXT_SECONDARY;
     }
   }

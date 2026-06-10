@@ -72,7 +72,7 @@ export struct TripDetailPage {
       // 视图内容
       if (this.activeView === 'loadout') {
         LoadoutView({
-          trip: this.currentChecklist() ?? { id: '', name: '', items: [], createdAt: 0 },
+          trip: this.currentChecklist() ?? { id: '', title: '', items: [], createdAt: 0 },
           gears: this.gears,
           onOpenPicker: this.onOpenGearPicker,
           onToggleCheck: this.onToggleChecklistItem,
@@ -139,7 +139,7 @@ export struct TripDetailPage {
       })
 
       // 行程名称
-      Text(this.currentChecklist()?.name ?? '')
+      Text(this.currentChecklist()?.title ?? '')
         .fontSize(17)
         .fontWeight(FontWeight.Medium)
         .fontColor(TEXT_MAIN)
