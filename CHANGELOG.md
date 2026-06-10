@@ -1,6 +1,30 @@
 # Changelog
 
-## v0.5.9 (2026-07-01)
+## v0.6.1 (2026-06-10)
+
+Sheet 体系统一 & 交互打磨 & GearPage 瘦身起步。
+
+- **Sheet 体系统一**：9 种 Sheet 全部走集中式 SheetOverlay；移除 GearPage 中唯一的原生 `.bindSheet()`（移动到分组），新增 `SHEET_MOVE_GROUP` 模式 + `MoveGroupSheet` 组件
+- **下滑关闭手势**：SheetOverlay 卡片新增 `PanGesture` 垂直下滑关闭（25% 高度阈值 + 0.3 边缘阻尼 + Spring 回弹），与 Scroll 内容手势自动协调
+- **景深统一**：Sheet 弹出时主内容 `scale(0.94) + blur(12)`，与仪式卡片/页面转场景深参数对齐
+- **GearPage 瘦身**：删除无用 `@Prop gearBudget`；删除 `showMoveGroupSheet` @State + `MoveGroupSheetContent` @Builder（@State 27→26，@Prop 10→9，回调 16→15）
+- **文档重组**：删除 10 个废弃/已完成的设计/规划文档；docs/ 目录重组为 vision/v2-foundation/archive 三层结构；新增中短期路线图 ROADMAP.md
+
+## v0.6.0 (2026-06-09)
+
+v2「服役档案」转型 · 第一步地基层完整落地。
+
+- **Tab 架构 2→3**：新增「我」Tab + `ProfilePage` 人生足迹年报叙事（沉浸绿幕、counter 滚动数字、拟人化文案、留白）
+- **数据模型补全**：`GearItem` 加 `brand?`/`acquiredAt?`（optional）；`TripChecklist` 加 5 个结构化字段（`destination?`/`distanceKm?`/`maxAltitude?`/`ascentM?`/`durationHours?`）
+- **删除趋势图链路**：`AssetTrendCard.ets` + `AssetEvent`/`AssetTotals` 接口 + `KEY_ASSET_EVENTS` 持久化链路全部删除
+- **装备展开区改双段结构**：上段属性区（packing：重量/分组/品牌/价格）+ 下段陪伴区（archive：陪伴天数大数字 + 三 chip）
+- **行程录入改渐进式 chip**：5 个结构化字段藏成可点亮 chip，点亮才展开输入，规避记账困境
+- **配装数据种子**：新增 `GearLoadout.ets`（`BodyZone`/`LayerOrder` 枚举 + `CATEGORY_SLOT_MAP` 映射表），为第二步塔科夫配装预埋
+- **人生足迹引擎**：新增 `FootprintService` 纯函数聚合（累计里程/爬升/海拔/地点数/相伴最久伙伴）
+- **全局文案温柔化**：按 spec 文案词典替换军事/资产措辞
+- **CATEGORY_ALL/CATEGORY_FALLBACK sentinel constants**：统一替换全项目 `'全部'`/`'其他'` 硬编码字符串
+
+## v0.5.9 (2026-06-10)
 
 全量代码审查修复：213 项问题一次性清零。
 

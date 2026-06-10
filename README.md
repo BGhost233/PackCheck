@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.5.9
+## 当前版本：v0.6.1
 
 ### 已实现功能
 
@@ -45,7 +45,7 @@ entry/src/main/ets/
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
-│   ├── ProfilePage.ets      — 个人中心（足迹统计 + 成就卡）
+│   ├── ProfilePage.ets      — 「我」Tab 人生足迹年报叙事
 │   ├── ReviewPage.ets       — 核查复盘
 │   ├── ChecklistDetail.ets  — 清单详情（打勾核查）
 │   ├── TripCeremonyCard.ets — 新建行程仪式卡片（翻转 + 滑动出发）
@@ -55,14 +55,16 @@ entry/src/main/ets/
 │   ├── GearFilterPanel.ets  — 装备筛选面板
 │   ├── EmptyIllustration.ets— 空态插画组件
 │   ├── WeightGauge.ets      — 重量/价格环形仪表
-│   └── sheets/              — Sheet 面板组件（从 Index.ets 提取）
-│       ├── SheetOverlay.ets — 遮罩容器 + Sheet 路由
+│   └── sheets/              — Sheet 面板组件（统一通过 SheetOverlay 路由）
+│       ├── SheetOverlay.ets — 遮罩容器 + Sheet 路由 + 下滑关闭手势
 │       ├── GearSortSheet.ets
 │       ├── GenerateTripSheet.ets
 │       ├── GearFormSheet.ets
 │       ├── TripFormSheet.ets
 │       ├── TempItemSheet.ets
-│       └── ImportSheet.ets
+│       ├── ImportSheet.ets
+│       ├── ProfileEditSheet.ets
+│       └── MoveGroupSheet.ets
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
 │   ├── PackStore.ets        — Preferences 持久化封装（schema 版本化 + 错误守卫）
@@ -71,13 +73,14 @@ entry/src/main/ets/
 │   ├── CategoryService.ets  — 分类管理（增删改查 + 重命名）
 │   └── FootprintService.ets — 足迹统计（海拔/距离/活动天数）
 ├── constants/               — 设计 Token
-│   ├── Colors.ets           — 色彩语义 token（含透明色系列）
+│   ├── Colors.ets           — 色彩语义 token
 │   ├── Typography.ets       — 字阶 token
 │   ├── Layout.ets           — 间距/尺寸 token
-│   ├── AnimationTokens.ets  — Spring 预设 + Bezier 曲线 + 时长/缩放常量
-│   ├── GearSort.ets         — 排序模式枚举
-│   ├── SheetMode.ets        — Sheet 面板模式枚举
-│   └── DesignTokens.ets     — Barrel re-export（兼容旧路径）
+│   ├── AnimationTokens.ets  — Spring 预设 + Bezier + 时长/缩放常量
+│   ├── GearSort.ets         — 排序模式
+│   ├── SheetMode.ets        — Sheet 模式（9 种 + 空态）
+│   ├── GearLoadout.ets      — 配装数据种子（BodyZone/LayerOrder 枚举 + 品类→槽位映射）
+│   └── DesignTokens.ets     — Barrel re-export
 └── utils/
     ├── ColorUtils.ets       — 分组颜色辅助函数
     └── AnimationUtils.ets   — 通用动画封装（按压/错落/面板/转场）
@@ -90,15 +93,14 @@ PackCheck/
 ├── AppScope/                — 应用级配置 & 资源
 ├── entry/                   — 主模块源码
 ├── docs/
-│   ├── DEVELOPMENT_STANDARDS.md — 开发规范（架构/设计语言/动效/组件封装，必读）
-│   ├── design/              — 设计文档（含产品愿景纲领）
-│   │   ├── 2026-06-04-product-vision-and-restructure.md — v2 产品愿景纲领（服役档案转型）
-│   │   ├── plans/           — 版本实施计划
-│   │   └── specs/           — 设计规格说明
-│   ├── superpowers/         — 重构 spec & 落地计划（service-archive 系列）
-│   │   ├── specs/           — 技术方案 spec
-│   │   └── plans/           — 可执行实现计划
-│   └── archive/             — 已完成的历史文档
+│   ├── DEVELOPMENT_STANDARDS.md   — 开发规范（必读）
+│   ├── vision/                    — 产品愿景
+│   │   └── 2026-06-04-product-vision-and-restructure.md
+│   ├── v2-foundation/             — v2 地基层 spec & plan（已完成）
+│   │   ├── specs/
+│   │   └── plans/
+│   ├── archive/                   — 历史文档存档
+│   └── ROADMAP.md                 — 中短期路线图
 ├── hvigor/                  — 构建配置
 ├── CLAUDE.md                — AI 协作规范 & 动效避坑清单
 ├── CHANGELOG.md             — 版本变更记录
@@ -108,8 +110,9 @@ PackCheck/
 ## 构建 & 运行
 
 ```bash
-# 构建（需要 HarmonyOS command-line-tools）
-/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin/hvigorw assembleApp --no-daemon
+# 构建（需要 DevEco Studio 环境）
+DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
+  /Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleApp --no-daemon
 ```
 
 构建产物位于 `build/` 目录，可通过 DevEco Studio 直接部署到设备或模拟器。
@@ -131,8 +134,12 @@ PackCheck/
 | v0.5.6 | ✅ 已完成 | 动效 Token 体系审查修复（3 个 P0 运行时 bug + 全量代码质量清理） |
 | v0.5.7 | ✅ 已完成 | 装备库左滑删除修复 + 动效架构优化（左滑动效硬切修复 + 删除按钮出场动效） |
 | v0.5.8 | ✅ 已完成 | 编辑模式 Bug 修复 + 装备库空态轻量重设计 |
-| v0.5.9 | ✅ 当前 | 全量代码审查修复（213 项问题清零，覆盖安全/动效/Token/类型安全） |
-| v2 服役档案 | 🚧 规划中 | 产品转型：装备清单 App → 装备的服役档案。3 Tab 重构 + 人生足迹 + 塔科夫式配装。详见 `docs/superpowers/specs/2026-06-09-service-archive-restructure-design.md` |
+| v0.5.9 | ✅ 已完成 | 全量代码审查修复（213 项问题，覆盖安全/动效/Token/类型） |
+| v0.6.0 | ✅ 已完成 | v2 服役档案 · 第一步地基层（3 Tab + 人生足迹 + 双段展开 + 渐进 chip + 配装种子 + 趋势图删除） |
+| v0.6.1 | ✅ 当前 | Sheet 体系统一 + 下滑关闭手势 + 文档重组 |
+| v0.7.0 | 🚧 下一步 | 塔科夫式配装系统（第二步·引擎）：两阶段流水线 + 槽位 UI + 行程→装备自动反哺 |
+| v0.8.0 | 📋 计划中 | GearPage 组件瘦身（FabController/DragToTripOverlay/GroupDragController 提取） |
+| v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 
 ## 开发约定
 
