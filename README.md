@@ -64,13 +64,20 @@ entry/src/main/ets/
 │       ├── TempItemSheet.ets
 │       ├── ImportSheet.ets
 │       ├── ProfileEditSheet.ets
-│       └── MoveGroupSheet.ets
+│       ├── MoveGroupSheet.ets
+│       └── GearPickerSheet.ets — 配装装备选择器（品类筛选+搜索+临时添加）
+│   ├── gear/                — 配装系统组件
+│   │   ├── LoadoutView.ets      — 配装视图主组件（Zone 卡片网格 + FAB）
+│   │   ├── LoadoutProgressBar.ets — 配装进度条（counter 动画 + 庆祝弹动）
+│   │   ├── LoadoutZoneCard.ets  — Zone 卡片（按身体部位分组展示）
+│   │   └── LoadoutGearItem.ets  — 单个装备项（勾选+层级badge+按压反馈）
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
 │   ├── PackStore.ets        — Preferences 持久化封装（schema 版本化 + 错误守卫）
 │   ├── GearService.ets      — 装备业务逻辑（export class GearCalc 聚合导出）
 │   ├── ChecklistService.ets — 清单业务逻辑（export class CheckCalc 聚合导出）
 │   ├── CategoryService.ets  — 分类管理（增删改查 + 重命名）
+│   ├── LoadoutService.ets   — 配装业务逻辑（Zone 分组/Layer 排序/进度计算）
 │   └── FootprintService.ets — 足迹统计（海拔/距离/活动天数）
 ├── constants/               — 设计 Token
 │   ├── Colors.ets           — 色彩语义 token
@@ -99,7 +106,6 @@ PackCheck/
 │   ├── v2-foundation/             — v2 地基层 spec & plan（已完成）
 │   │   ├── specs/
 │   │   └── plans/
-│   ├── archive/                   — 历史文档存档
 │   └── ROADMAP.md                 — 中短期路线图
 ├── hvigor/                  — 构建配置
 ├── CLAUDE.md                — AI 协作规范 & 动效避坑清单

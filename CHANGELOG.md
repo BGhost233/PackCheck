@@ -2,12 +2,20 @@
 
 ## v0.6.1 (2026-06-10)
 
-Sheet 体系统一 & 交互打磨 & GearPage 瘦身起步。
+Sheet 体系统一 & 交互打磨 & GearPage 瘦身起步 & 配装系统质量加固。
 
 - **Sheet 体系统一**：9 种 Sheet 全部走集中式 SheetOverlay；移除 GearPage 中唯一的原生 `.bindSheet()`（移动到分组），新增 `SHEET_MOVE_GROUP` 模式 + `MoveGroupSheet` 组件
 - **下滑关闭手势**：SheetOverlay 卡片新增 `PanGesture` 垂直下滑关闭（25% 高度阈值 + 0.3 边缘阻尼 + Spring 回弹），与 Scroll 内容手势自动协调
 - **景深统一**：Sheet 弹出时主内容 `scale(0.94) + blur(12)`，与仪式卡片/页面转场景深参数对齐
 - **GearPage 瘦身**：删除无用 `@Prop gearBudget`；删除 `showMoveGroupSheet` @State + `MoveGroupSheetContent` @Builder（@State 27→26，@Prop 10→9，回调 16→15）
+- **配装系统质量加固**（三轮审查修复）：
+  - Critical：7 处 @State 数组原地 splice → spread 副本（GearPage + WeightGauge）
+  - Timer 泄漏：LoadoutView 去除 setTimeout 改纯属性动画；LoadoutProgressBar 新增 aboutToDisappear 清除 counterTimerId
+  - 退场动画：LoadoutZoneCard + LoadoutGearItem 添加 TransitionEffect（opacity + scale 0.95）
+  - Counter 脱同步：移除 displayChecked !== checked 前置判断，无条件启动新动画
+  - 空态补全：GearPickerSheet 品类筛选空态文案
+  - 防御：tempWeight NaN 校验；onDeleteTrip 接线；TripDetailPage 按压缩放统一；GearItemActionSheet/MoveGroupSheet 全行按压反馈
+  - Token 统一：TripCeremonyCard setTimeout→onFinish + 硬编码hex→token；HomePage/GearPage CURVE_DECELERATE→Spring
 - **文档重组**：删除 10 个废弃/已完成的设计/规划文档；docs/ 目录重组为 vision/v2-foundation/archive 三层结构；新增中短期路线图 ROADMAP.md
 
 ## v0.6.0 (2026-06-09)

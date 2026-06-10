@@ -48,7 +48,7 @@
 - 导航架构：单 Page（Index.ets）+ Navigation NavPathStack，两个 NavDestination（ChecklistDetail、ReviewPage）
 - TripCeremonyCard 暴露 `onExitStart` 回调，退场动画启动第一帧触发，供父组件并行驱动背景恢复
 
-## ArkUI 避坑清单（实战总结，共 37 条）
+## ArkUI 避坑清单（实战总结，共 41 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -88,6 +88,11 @@
 35. **`.animation()` 作用域隔离 translate 的正确姿势** — `.animation()` 只捕获它与前一个 `.animation()` 之间的属性变化。利用此规则：`.backgroundColor(...).animation({ press }).translate(...)` — animation 只作用于 backgroundColor，translate 在其后不被捕获，可由 `animateTo` 自由驱动。**禁止**用 `.animation({ duration: 0 })` 来"隔离"——它会与 `animateTo` 冲突（避坑 #7），导致 translate 变化无动画（硬切）
 36. **`.overlay()` 对 @Builder 内条件渲染不可靠** — `.overlay(this.MyBuilder(), ...)` 中如果 Builder 内部有 `if (stateVar)` 条件分支，当 stateVar 变化时 overlay 内容**不会重新渲染**。解法：放弃 `.overlay()`，改用 Stack 包裹 + 子组件直接写 `if` 条件渲染 + `.position()` 绝对定位 + `.clip(false)` 允许溢出。需要阻止点击穿透时用 `.hitTestBehavior(HitTestMode.Block)`
 37. **`.shadow()` + `backdropBlur` 产生亮色伪影** — 当组件设置了 `.shadow({ color: '#1A000000', ... })` 且位于 `backdropBlur` 层之上时，ArkUI 渲染管线会在 shadow 区域产生可见的亮色半透明圆角矩形轮廓（ghost artifact）。即使 shadow color 是纯黑低透明度，合成结果仍为亮色。**根因**：shadow 的离屏缓冲区与 blur 层的混合模式冲突，blur 对 shadow 的半透明像素做了反向提亮。**解法**：在暗色覆盖层/毛玻璃场景中直接移除 `.shadow()`（全屏暗背景下 shadow 本身无视觉意义）。若必须保留阴影效果，改用手动 Column + blur + opacity 模拟（参见避坑 #90 光晕层方案）
+
+38. **@State 数组禁止原地 mutation** — `splice()/push()/unshift()` 不触发 UI 刷新（引用不变）。**必须 spread 副本再操作再赋值**：`const arr = [...this.items]; arr.splice(i, 1); this.items = arr;`。七处同类 bug 复现于 GearPage + WeightGauge
+39. **组件 aboutToDisappear 必须清 timer** — `if/else` 条件渲染销毁组件时 `setTimeout`/`setInterval` 不会自动清除。必须在 `aboutToDisappear()` 中 `clearInterval(id)` / `clearTimeout(id)`。否则 stale `this` 引用上调 `animateTo` 抛运行时异常
+40. **ForEach 退场动画** — ForEach diff 移除节点默认无动画（瞬间消失）。需在子组件根容器加 `.transition(TransitionEffect.OPACITY.combine(TransitionEffect.scale({x:0.95,y:0.95})).animation({curve: SPRING_GENERAL()}))`。入场同理
+41. **counter 动画 onCheckedChange 不做相等判断** — `if (display !== target)` 在快速连击时 display 可能卡在中间值导致判断失效。正确做法：无条件启动新动画，在 `animateCounter` 头部 `clearInterval` 取消旧动画即可
 
 ### 补充验证结论
 
