@@ -1449,6 +1449,112 @@ struct Index {
     this.openSheetAnimated();
   }
 
+  private currentTripGearIds(): string[] {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return [];
+    }
+    const ids: string[] = [];
+    for (let i = 0; i < checklist.items.length; i++) {
+      const gid = checklist.items[i].fromGearId;
+      if (gid !== undefined && gid !== '') {
+        ids.push(gid);
+      }
+    }
+    return ids;
+  }
+
+  private toggleGearInTrip(gear: GearItem): void {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    // 如果已存在则移除，否则添加
+    const existingIndex = checklist.items.findIndex(item => item.fromGearId === gear.id);
+    if (existingIndex >= 0) {
+      const nextChecklists = removeItemFromChecklists(this.checklists, checklist.id, checklist.items[existingIndex].id);
+      this.applyChecklistState(nextChecklists);
+      this.store.saveChecklists(nextChecklists);
+    } else {
+      const newItems = buildItemsFromGears(this.gears, [gear.id]);
+      const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, newItems);
+      this.applyChecklistState(nextChecklists);
+      this.store.saveChecklists(nextChecklists);
+    }
+  }
+
+  private addTempGearToTrip(name: string, zone: string, weight: number | undefined): void {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    const tempItem: ChecklistItem = {
+      id: makeId('item'),
+      name: name,
+      group: zone,
+      checked: false,
+      weight: weight
+    };
+    const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, [tempItem]);
+    this.applyChecklistState(nextChecklists);
+    this.store.saveChecklists(nextChecklists);
+  }
+
+  private moveItemToZone(itemId: string, zone: string): void {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    const nextChecklists = this.checklists.map(cl => {
+      if (cl.id !== checklist.id) {
+        return cl;
+      }
+      const updatedItems = cl.items.map(item => {
+        if (item.id === itemId) {
+          const copy: ChecklistItem = {
+            id: item.id,
+            name: item.name,
+            group: zone,
+            checked: item.checked,
+            weight: item.weight,
+            price: item.price,
+            fromGearId: item.fromGearId
+          };
+          return copy;
+        }
+        return item;
+      });
+      const updated: TripChecklist = {
+        id: cl.id,
+        title: cl.title,
+        date: cl.date,
+        dateAt: cl.dateAt,
+        items: updatedItems,
+        createdAt: cl.createdAt,
+        destination: cl.destination,
+        distanceKm: cl.distanceKm,
+        maxAltitude: cl.maxAltitude,
+        ascentM: cl.ascentM,
+        durationHours: cl.durationHours
+      };
+      return updated;
+    });
+    this.applyChecklistState(nextChecklists);
+    this.store.saveChecklists(nextChecklists);
+    this.closeSheet();
+  }
+
+  private removeItemFromTrip(itemId: string): void {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    const nextChecklists = removeItemFromChecklists(this.checklists, checklist.id, itemId);
+    this.applyChecklistState(nextChecklists);
+    this.store.saveChecklists(nextChecklists);
+    this.closeSheet();
+  }
+
   private hasImportSelection(id: string): boolean {
     return this.importGearIds.indexOf(id) >= 0;
   }
@@ -2239,7 +2345,21 @@ struct Index {
           onCategoryRename: (oldName: string, newName: string) => { this.handleCategoryRename(oldName, newName); },
           onCategoryDelete: (category: string) => { this.handleCategoryDelete(category); },
           onCategoryReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
-          onCategoryAdd: (_name: string) => { this.showCategoryInputPrompt('', true); }
+          onCategoryAdd: (_name: string) => { this.showCategoryInputPrompt('', true); },
+          pickerSelectedIds: this.currentTripGearIds(),
+          onPickerToggleGear: (gear: GearItem) => { this.toggleGearInTrip(gear); },
+          onPickerTempAdd: (name: string, zone: string, weight: number | undefined) => { this.addTempGearToTrip(name, zone, weight); },
+          actionItem: this.actionSheetItem,
+          onActionMoveToZone: (itemId: string, zone: string) => { this.moveItemToZone(itemId, zone); },
+          onActionViewDetail: (item: ChecklistItem) => {
+            this.closeSheet();
+            // 展开关联装备卡片
+            if (item.fromGearId !== undefined && item.fromGearId !== '') {
+              this.expandedGearId = item.fromGearId;
+              this.currentTabIndex = 0; // 切换到装备 Tab
+            }
+          },
+          onActionRemove: (itemId: string) => { this.removeItemFromTrip(itemId); }
         })
       }
       if (this.showEditItemPanel) {
