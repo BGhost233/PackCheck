@@ -12,6 +12,61 @@
 
 ---
 
+## 🔴 Critical — 运行时正确性
+
+### CR-1. `currentTabIndex`/`tabsController` 反同步 bug
+
+**文件**：`Index.ets:2355-2363`
+
+```typescript
+onActionViewDetail: (item: ChecklistItem) => {
+    this.closeSheet();
+    if (item.fromGearId !== undefined && item.fromGearId !== '') {
+      this.expandedGearId = item.fromGearId;
+      this.returnToHome();         // ← 内部调用 tabsController.changeIndex(0)
+      this.currentTabIndex = 1;    // ← 仅设置 @State，未调用 tabsController.changeIndex(1)!
+    }
+}
+```
+
+`returnToHome()` 内部调用 `this.tabsController.changeIndex(0)`，之后 `this.currentTabIndex = 1` 只更新了 @State 变量但**没有同步调用** `this.tabsController.changeIndex(1)`。结果：`tabsController` 认为在 index 0，`currentTabIndex` @State 是 1——两者不同步。会导致 Tab 滑动边界判断错误、指示器渲染错位。
+
+**修复**：在 `currentTabIndex = 1` 之后加上 `this.tabsController.changeIndex(1)`。
+
+### CR-2. `onActionViewDetail` 中两个动画竞争操作 contentScale/contentBlur
+
+**文件**：`Index.ets:2355-2363`
+
+`closeSheet()` 启动了 `SPRING_PANEL_EXIT` 动画（操作 `contentScale` 和 `contentBlur`）。紧接着 `returnToHome()` 又启动了一个 `SPRING_HERO_COLLAPSE` 动画（也操作 `contentScale` 和 `contentBlur`）。两个动画同时运行在相同的 @State 变量上，产生不可预测的视觉结果（Spring 竞争）。
+
+**修复**：`returnToHome()` 应在 `closeSheet()` 的 `onFinish` 回调中执行，或将两者序列化。
+
+---
+
+### CR-3. DesignTokens barrel 缺失 12 个 Zone/Layer 颜色 token 的 re-export
+
+**文件**：`constants/DesignTokens.ets:1-62`
+
+12 个在 `Colors.ets` 中正确定义的颜色 token（`ZONE_HEAD_COLOR`~`ZONE_MISC_COLOR` 7 个 + `LAYER_BASE_BG`~`LAYER_ACCESSORY_BG` 5 个）**未在 DesignTokens barrel 中 re-export**。如果任何组件从 `DesignTokens` 导入这些 token，会得到 `undefined`（运行时静默失败，颜色不显示）。
+
+**影响**：配装系统的 Zone 卡片标题色和层级 badge 色在从 DesignTokens 导入的组件中失效。
+
+**修复**：在 `DesignTokens.ets` 的 Colors re-export 块中添加这 12 个 token。
+
+### CR-4. `onActionViewDetail` 中 `currentTabIndex`/`tabsController` 反同步 bug
+
+**文件**：`Index.ets:2355-2363`
+
+`returnToHome()` 调用 `tabsController.changeIndex(0)`，之后 `currentTabIndex = 1` 只更新 @State 但**未调用** `tabsController.changeIndex(1)`。tab 控制器与实际渲染 index 不同步。
+
+### CR-5. `onActionViewDetail` 中两个动画竞争 contentScale/contentBlur
+
+**文件**：`Index.ets:2355-2363`
+
+`closeSheet()` 和 `returnToHome()` 同时操作 `contentScale`/`contentBlur`，Spring 动画竞争产生不可预测的视觉效果。
+
+---
+
 ## 🔴 Critical — 动效规范违规
 
 ### CR-1. 多处 Spring + duration 同时使用（DEVELOPMENT_STANDARDS §3.6 第 1 条禁止项）
