@@ -22,7 +22,7 @@ import { pressHandler } from '../../utils/AnimationUtils';
 
 @Component
 export struct LoadoutGearItem {
-  @Prop item: ChecklistItem = {
+  @Prop @Watch('onItemChange') item: ChecklistItem = {
     id: '', name: '', group: '', checked: false
   };
   @Prop layer: number = LayerOrder.Accessory;
@@ -39,6 +39,15 @@ export struct LoadoutGearItem {
 
   aboutToAppear(): void {
     this.checkScale = this.item.checked ? 1.0 : 0;
+  }
+
+  onItemChange(): void {
+    const target = this.item.checked ? 1.0 : 0;
+    if (this.checkScale !== target) {
+      this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
+        this.checkScale = target;
+      });
+    }
   }
 
   build() {
@@ -85,14 +94,13 @@ export struct LoadoutGearItem {
           .padding({ left: 4, right: 4, top: 2, bottom: 2 })
       }
 
-      // 勾选 icon
-      if (this.item.checked) {
-        SymbolGlyph($r('sys.symbol.checkmark'))
-          .fontSize(14)
-          .fontColor([PRIMARY_COLOR])
-          .scale({ x: this.checkScale, y: this.checkScale })
-          .animation({ curve: SPRING_PRESS() })
-      }
+      // 勾选 icon（始终渲染，通过 scale + opacity 控制动画）
+      SymbolGlyph($r('sys.symbol.checkmark'))
+        .fontSize(14)
+        .fontColor([PRIMARY_COLOR])
+        .scale({ x: this.checkScale, y: this.checkScale })
+        .opacity(this.checkScale)
+        .animation({ curve: SPRING_PRESS() })
     }
     .width('100%')
     .padding({ left: 12, right: 12, top: 10, bottom: 10 })
@@ -106,10 +114,6 @@ export struct LoadoutGearItem {
     }))
     .onClick(() => {
       this.onToggleCheck(this.item.id);
-      // 勾选动画
-      this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
-        this.checkScale = this.item.checked ? 0 : 1.0;
-      });
     })
     .gesture(
       LongPressGesture({ repeat: false, duration: 500 })

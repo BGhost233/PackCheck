@@ -100,6 +100,9 @@ export struct GearPickerSheet {
         if (this.filteredGears().length === 0 && this.gears.length === 0) {
           // 装备库为空态
           this.buildEmptyState()
+        } else if (this.filteredGears().length === 0 && this.searchText.length > 0) {
+          // 搜索无结果
+          this.buildSearchEmpty()
         } else {
           Scroll() {
             Column({ space: 0 }) {
@@ -288,7 +291,7 @@ export struct GearPickerSheet {
       }
       .padding({ left: 8, right: 8, top: 4, bottom: 4 })
       .borderRadius(12)
-      .backgroundColor(this.isSelected(gear.id) ? PRIMARY_COLOR : this.getZoneColor(assignSlot(gear).zone) + '33')
+      .backgroundColor(this.isSelected(gear.id) ? PRIMARY_COLOR : '#33' + this.getZoneColor(assignSlot(gear).zone).substring(1))
       .animation({ curve: SPRING_PRESS() })
     }
     .width('100%')
@@ -320,6 +323,21 @@ export struct GearPickerSheet {
         .onClick(() => {
           this.openTempOverlay();
         })
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+  }
+
+  @Builder
+  private buildSearchEmpty() {
+    Column({ space: 8 }) {
+      Text('没有找到匹配的装备')
+        .fontSize(14)
+        .fontColor(TEXT_SECONDARY)
+      Text('试试换个关键词，或临时添加一件')
+        .fontSize(12)
+        .fontColor(TEXT_TERTIARY)
     }
     .width('100%')
     .layoutWeight(1)

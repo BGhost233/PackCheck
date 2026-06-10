@@ -36,7 +36,8 @@ import {
   zoneDisplayName,
   zoneIconName,
   allZones,
-  groupMiscByCategory
+  groupMiscByCategory,
+  LoadoutProgress
 } from '../../services/LoadoutService';
 import { LoadoutZoneCard } from './LoadoutZoneCard';
 import { LoadoutProgressBar } from './LoadoutProgressBar';
@@ -54,7 +55,7 @@ const ZONE_ORDER: string[] = [
 
 @Component
 export struct LoadoutView {
-  @Prop trip: TripChecklist = { id: '', title: '', items: [], createdAt: 0 };
+  @Prop @Watch('onTripChange') trip: TripChecklist = { id: '', title: '', items: [], createdAt: 0 };
   @Prop gears: GearItem[] = [];
 
   // callbacks
@@ -67,13 +68,21 @@ export struct LoadoutView {
   @State private fabScale: number = 1.0;
   // 入场动画控制
   @State private appeared: boolean = false;
+  // 缓存计算结果（每次 build 刷新）
+  private zoneMapCache: Map<string, ChecklistItem[]> = new Map();
+  private progressCache: LoadoutProgress = { checked: 0, total: 0 };
 
   aboutToAppear() {
+    this.refreshCache();
     setTimeout(() => {
       animateTo({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() }, () => {
         this.appeared = true;
       });
     }, 80);
+  }
+
+  onTripChange(): void {
+    this.refreshCache();
   }
 
   build() {
@@ -92,6 +101,15 @@ export struct LoadoutView {
     }
     .width('100%')
     .height('100%')
+  }
+
+  private refreshCache(): void {
+    this.zoneMapCache = groupByZone(this.trip.items);
+    this.progressCache = calcProgress(this.trip.items);
+  }
+
+  private cachedProgress(): LoadoutProgress {
+    return this.progressCache;
   }
 
   @Builder
@@ -147,10 +165,10 @@ export struct LoadoutView {
   private buildContentState() {
     Scroll() {
       Column({ space: 16 }) {
-        // 进度条
+        // 进度条（一次计算）
         LoadoutProgressBar({
-          checked: calcProgress(this.trip.items).checked,
-          total: calcProgress(this.trip.items).total
+          checked: this.cachedProgress().checked,
+          total: this.cachedProgress().total
         })
           .margin({ left: PAGE_PADDING, right: PAGE_PADDING, top: 16 })
 
@@ -212,7 +230,6 @@ export struct LoadoutView {
       offsetX: 0,
       offsetY: 4
     })
-    .scale({ x: this.fabScale, y: this.fabScale })
     .position({ right: PAGE_PADDING, bottom: 32 })
     .onTouch((e: TouchEvent) => {
       if (e.type === TouchType.Down) {
@@ -229,23 +246,24 @@ export struct LoadoutView {
       this.onOpenPicker();
     })
     .opacity(this.appeared ? 1 : 0)
-    .scale({ x: this.appeared ? 1 : 0.8, y: this.appeared ? 1 : 0.8 })
+    .scale({
+      x: (this.appeared ? 1 : 0.8) * this.fabScale,
+      y: (this.appeared ? 1 : 0.8) * this.fabScale
+    })
     .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL(), delay: 200 })
   }
 
   // --- Helpers ---
 
   private getVisibleZones(): string[] {
-    const zoneMap = groupByZone(this.trip.items);
     return ZONE_ORDER.filter(z => {
-      const items = zoneMap.get(z);
+      const items = this.zoneMapCache.get(z);
       return items !== undefined && items.length > 0;
     });
   }
 
   private getItemsForZone(zone: string): ChecklistItem[] {
-    const zoneMap = groupByZone(this.trip.items);
-    return zoneMap.get(zone) ?? [];
+    return this.zoneMapCache.get(zone) ?? [];
   }
 
   private getZoneColor(zone: string): string {

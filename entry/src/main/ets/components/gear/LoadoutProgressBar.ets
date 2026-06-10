@@ -13,7 +13,7 @@ import { SPRING_GENERAL, SPRING_PRESS, DURATION_COUNTER, CURVE_DECELERATE } from
 
 @Component
 export struct LoadoutProgressBar {
-  @Prop checked: number = 0;
+  @Prop @Watch('onCheckedChange') checked: number = 0;
   @Prop total: number = 0;
 
   @State private displayChecked: number = 0;

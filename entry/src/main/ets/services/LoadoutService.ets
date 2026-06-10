@@ -97,6 +97,11 @@ export function inferZoneFromGroup(group: string): string {
   if (validZones.indexOf(group) >= 0) {
     return group;
   }
+  // 优先精确匹配 CATEGORY_SLOT_MAP（品类名 → Zone）
+  const hint = CATEGORY_SLOT_MAP[group];
+  if (hint !== undefined) {
+    return hint.zone;
+  }
   // 旧数据模糊推断：根据分组文本猜测 Zone
   if (group.indexOf('上身') >= 0 || group.indexOf('上装') >= 0) {
     return BodyZone.UpperBody;
@@ -115,11 +120,6 @@ export function inferZoneFromGroup(group: string): string {
   }
   if (group.indexOf('睡') >= 0 || group.indexOf('帐') >= 0) {
     return BodyZone.Sleep;
-  }
-  // 尝试从 CATEGORY_SLOT_MAP 匹配
-  const hint = CATEGORY_SLOT_MAP[group];
-  if (hint !== undefined) {
-    return hint.zone;
   }
   // 兜底
   return BodyZone.Misc;
