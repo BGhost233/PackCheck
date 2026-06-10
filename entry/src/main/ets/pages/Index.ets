@@ -1079,7 +1079,7 @@ struct Index {
     }, () => {
       this.contentBlur = 12;
       this.contentScale = 0.94;
-      this.navPathStack.pushPath({ name: 'ChecklistDetail' }, false);
+      this.navPathStack.pushPath({ name: 'TripDetailPage' }, false);
     });
   }
 
