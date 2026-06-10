@@ -47,6 +47,7 @@ export struct GearPickerSheet {
   @State private tempWeight: string = '';
   @State private overlayScale: number = PANEL_SCALE_START;
   @State private overlayOpacity: number = 0;
+  @State private tempRowScale: number = 1.0;
 
   build() {
     Stack() {
@@ -121,6 +122,15 @@ export struct GearPickerSheet {
               }
               .width('100%')
               .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+              .scale({ x: this.tempRowScale, y: this.tempRowScale })
+              .animation({ curve: SPRING_PRESS() })
+              .onTouch((e: TouchEvent) => {
+                if (e.type === TouchType.Down) {
+                  this.tempRowScale = 0.97;
+                } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                  this.tempRowScale = 1.0;
+                }
+              })
               .onClick(() => {
                 this.openTempOverlay();
               })
@@ -408,12 +418,14 @@ export struct GearPickerSheet {
   }
 
   private closeTempOverlay(): void {
-    this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
+    this.getUIContext().animateTo({
+      curve: SPRING_PRESS(),
+      onFinish: () => {
+        this.showTempOverlay = false;
+      }
+    }, () => {
       this.overlayScale = PANEL_SCALE_START;
       this.overlayOpacity = 0;
     });
-    setTimeout(() => {
-      this.showTempOverlay = false;
-    }, 250);
   }
 }

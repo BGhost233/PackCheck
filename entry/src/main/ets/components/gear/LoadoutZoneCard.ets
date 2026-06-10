@@ -25,14 +25,31 @@ import { LoadoutGearItem } from './LoadoutGearItem';
 @Component
 export struct LoadoutZoneCard {
   @Prop zone: string = BodyZone.Misc;
-  @Prop items: ChecklistItem[] = [];
+  @Prop @Watch('onItemsChange') items: ChecklistItem[] = [];
   @Prop gears: GearItem[] = [];
   @Prop zoneColor: string = '#78909C';
+
+  // Misc 子分区缓存
+  private miscMapCache: Map<string, ChecklistItem[]> = new Map();
 
   // 回调
   onToggleCheck: (itemId: string) => void = () => {};
   onLongPress: (item: ChecklistItem) => void = () => {};
   onTapLayerBadge: (item: ChecklistItem) => void = () => {};
+
+  aboutToAppear(): void {
+    this.refreshMiscCache();
+  }
+
+  onItemsChange(): void {
+    this.refreshMiscCache();
+  }
+
+  private refreshMiscCache(): void {
+    if (this.zone === BodyZone.Misc) {
+      this.miscMapCache = groupMiscByCategory(this.items, this.gears);
+    }
+  }
 
   build() {
     Column({ space: 4 }) {
@@ -121,19 +138,17 @@ export struct LoadoutZoneCard {
     .padding({ bottom: 4 })
   }
 
-  // 获取 Misc 下的品类列表（按品类分组）
+  // 获取 Misc 下的品类列表（从缓存读取）
   private getMiscCategories(): string[] {
-    const map = groupMiscByCategory(this.items, this.gears);
     const categories: string[] = [];
-    map.forEach((_items, key) => {
+    this.miscMapCache.forEach((_items, key) => {
       categories.push(key);
     });
     return categories;
   }
 
-  // 获取 Misc 某品类下的装备列表
+  // 获取 Misc 某品类下的装备列表（从缓存读取）
   private getItemsForMiscCategory(category: string): ChecklistItem[] {
-    const map = groupMiscByCategory(this.items, this.gears);
-    return map.get(category) || [];
+    return this.miscMapCache.get(category) || [];
   }
 }

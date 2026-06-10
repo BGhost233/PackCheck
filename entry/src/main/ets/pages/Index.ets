@@ -1464,7 +1464,7 @@ struct Index {
     return ids;
   }
 
-  private toggleGearInTrip(gear: GearItem): void {
+  private async toggleGearInTrip(gear: GearItem): Promise<void> {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
       return;
@@ -1474,16 +1474,16 @@ struct Index {
     if (existingIndex >= 0) {
       const nextChecklists = removeItemFromChecklists(this.checklists, checklist.id, checklist.items[existingIndex].id);
       this.applyChecklistState(nextChecklists);
-      this.store.saveChecklists(nextChecklists);
+      await this.store.saveChecklists(nextChecklists);
     } else {
       const newItems = buildItemsFromGears(this.gears, [gear.id]);
       const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, newItems);
       this.applyChecklistState(nextChecklists);
-      this.store.saveChecklists(nextChecklists);
+      await this.store.saveChecklists(nextChecklists);
     }
   }
 
-  private addTempGearToTrip(name: string, zone: string, weight: number | undefined): void {
+  private async addTempGearToTrip(name: string, zone: string, weight: number | undefined): Promise<void> {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
       return;
@@ -1497,10 +1497,10 @@ struct Index {
     };
     const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, [tempItem]);
     this.applyChecklistState(nextChecklists);
-    this.store.saveChecklists(nextChecklists);
+    await this.store.saveChecklists(nextChecklists);
   }
 
-  private moveItemToZone(itemId: string, zone: string): void {
+  private async moveItemToZone(itemId: string, zone: string): Promise<void> {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
       return;
@@ -1540,18 +1540,18 @@ struct Index {
       return updated;
     });
     this.applyChecklistState(nextChecklists);
-    this.store.saveChecklists(nextChecklists);
+    await this.store.saveChecklists(nextChecklists);
     this.closeSheet();
   }
 
-  private removeItemFromTrip(itemId: string): void {
+  private async removeItemFromTrip(itemId: string): Promise<void> {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
       return;
     }
     const nextChecklists = removeItemFromChecklists(this.checklists, checklist.id, itemId);
     this.applyChecklistState(nextChecklists);
-    this.store.saveChecklists(nextChecklists);
+    await this.store.saveChecklists(nextChecklists);
     this.closeSheet();
   }
 
@@ -1877,7 +1877,8 @@ struct Index {
       .hideTitleBar(true)
       .width('100%')
       .height('100%')
-      .transition(TransitionEffect.opacity(0.99))
+      .geometryTransition('trip-' + this.selectedChecklistId)
+      .transition(TransitionEffect.opacity(0))
       .onBackPressed(() => {
         this.returnToHome();
         return true;
@@ -2353,10 +2354,11 @@ struct Index {
           onActionMoveToZone: (itemId: string, zone: string) => { this.moveItemToZone(itemId, zone); },
           onActionViewDetail: (item: ChecklistItem) => {
             this.closeSheet();
-            // 展开关联装备卡片
+            // 返回首页 → 切换到装备库 Tab → 展开对应装备卡片
             if (item.fromGearId !== undefined && item.fromGearId !== '') {
               this.expandedGearId = item.fromGearId;
-              this.currentTabIndex = 0; // 切换到装备 Tab
+              this.returnToHome();
+              this.currentTabIndex = 1; // 装备库 Tab
             }
           },
           onActionRemove: (itemId: string) => { this.removeItemFromTrip(itemId); }

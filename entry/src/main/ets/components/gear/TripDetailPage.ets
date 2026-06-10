@@ -66,6 +66,9 @@ export struct TripDetailPage {
       // 顶部导航栏
       this.buildNavBar()
 
+      // 共享信息区：行程参数摘要
+      this.buildSharedInfo()
+
       // SegmentButton 视图切换
       this.buildSegment()
 
@@ -150,13 +153,65 @@ export struct TripDetailPage {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      // 占位（保持标题居中）
-      Row().width(40).height(40)
+      // 更多菜单
+      Row() {
+        Text('···')
+          .fontSize(20)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(TEXT_MAIN)
+      }
+      .width(40)
+      .height(40)
+      .borderRadius(20)
+      .justifyContent(FlexAlign.Center)
+      .onClick(() => {
+        this.onOpenEditTrip();
+      })
     }
     .width('100%')
     .height(56)
     .padding({ left: 12, right: 12 })
     .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  private buildSharedInfo() {
+    if (this.currentChecklist() !== undefined) {
+      Row() {
+        Text(this.buildInfoText())
+          .fontSize(12)
+          .fontColor(TEXT_TERTIARY)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .width('100%')
+      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
+      .justifyContent(FlexAlign.Center)
+    }
+  }
+
+  private buildInfoText(): string {
+    const trip = this.currentChecklist();
+    if (trip === undefined) {
+      return '';
+    }
+    const parts: string[] = [];
+    if (trip.date !== undefined && trip.date.length > 0) {
+      parts.push(trip.date);
+    }
+    if (trip.destination !== undefined && trip.destination.length > 0) {
+      parts.push(trip.destination);
+    }
+    if (trip.distanceKm !== undefined && trip.distanceKm > 0) {
+      parts.push(trip.distanceKm.toString() + 'km');
+    }
+    if (trip.maxAltitude !== undefined && trip.maxAltitude > 0) {
+      parts.push('海拔' + trip.maxAltitude.toString() + 'm');
+    }
+    if (trip.durationHours !== undefined && trip.durationHours > 0) {
+      parts.push(trip.durationHours.toString() + 'h');
+    }
+    return parts.join(' · ');
   }
 
   @Builder
