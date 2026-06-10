@@ -1,4 +1,5 @@
 import { common } from '@kit.AbilityKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 
 import { sensor, vibrator } from '@kit.SensorServiceKit';
 import { HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
@@ -12,13 +13,18 @@ import { EditGearPanel } from '../components/EditGearPanel';
 import { GearFilterPanel } from '../components/GearFilterPanel';
 import { SheetOverlay } from '../components/sheets/SheetOverlay';
 import {
+  CARD_BG,
   DANGER_COLOR,
+  DIVIDER_COLOR,
   GEAR_SORT_GROUP,
+  GROUP_HEADER_BG,
   LIGHT_PRIMARY_COLOR,
+  OVERLAY_MASK,
   PAGE_BG,
   PAGE_BG_TRANSLUCENT,
   PRIMARY_COLOR,
   PRIMARY_SHADOW_LIGHT,
+  SHADOW_DEFAULT,
   SHEET_EDIT_PROFILE,
   SHEET_EDIT_TRIP,
   SHEET_GEAR,
@@ -28,8 +34,10 @@ import {
   SHEET_NONE,
   SHEET_TEMP_ITEM,
   SHEET_TRIP,
+  TEXT_MAIN,
   TEXT_TERTIARY,
-  TRANSPARENT
+  TRANSPARENT,
+  WHITE
 } from '../constants/DesignTokens';
 import {
   SPRING_GENERAL,
@@ -45,7 +53,7 @@ import {
   CURVE_DECELERATE,
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
-import { ChecklistItem, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
+import { CATEGORY_ALL, ChecklistItem, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import {
   filterGears,
@@ -127,12 +135,13 @@ struct Index {
   @State private gears: GearItem[] = [];
   @State private checklists: TripChecklist[] = [];
   @State private categories: string[] = [];
-  @State private selectedGearCategories: string[] = ['全部'];
+  @State private selectedGearCategories: string[] = [CATEGORY_ALL];
   @State private gearFilterPanelExpanded: boolean = false;
   @State private currentTabIndex: number = 0;
   @State private homeSwipeResetNonce: number = 0;
   @State private gearSwipeResetNonce: number = 0;
   @State private tabSwipeProgress: number = 0; // [-1, 1] 滑动进度，跟手指示器用
+  private readonly tabCount: number = 3;
   private tabsWidth: number = 360; // Tabs 内容区宽度，onAreaChange 更新
   private touchStartX: number = 0; // 触摸起始 X 坐标
   private isSwiping: boolean = false; // 是否正在滑动中
@@ -169,7 +178,7 @@ struct Index {
   @State private tempItemName: string = '';
   @State private tempItemGroup: string = '其他';
   @State private importGearIds: string[] = [];
-  @State private importGearCategory: string = '全部';
+  @State private importGearCategory: string = CATEGORY_ALL;
   @State private collapsedGroups: string[] = [];
   @State private returnToImportAfterGear: boolean = false;
   @State private errorText: string = '';
@@ -182,11 +191,14 @@ struct Index {
   @State private showEditGearPanel: boolean = false;
   @State private showCompletionToast: boolean = false;
   @State private showTempAddNotice: boolean = false;
-  @State private progressPulse: boolean = false;
   @State private reviewIndex: number = 0;
   @State private reviewFinished: boolean = false;
   @State private reviewDragX: number = 0;
   @State private highlightedItemId: string = '';
+  // checklistRenderNonce：load-bearing 渲染强制刷新计数器。ArkUI 的 ForEach 对嵌套数组（checklist.items）
+  // 的深层不可变更新存在 diff 失效问题——仅替换数组引用时部分 item 不会重渲染。该 nonce 被拼进
+  // checklistItemRenderKey() 的 key，每次 applyChecklistState 自增以强制整段 ForEach 重建。
+  // 除非确认底层响应式已可靠工作，否则不要移除。
   @State private checklistRenderNonce: number = 0;
   // ===== 新建行程仪式感 =====
   @State private showTripCeremony: boolean = false;
@@ -229,7 +241,7 @@ struct Index {
       await this.store.init(context);
       this.gears = await this.store.getGears();
       this.checklists = await this.store.getChecklists();
-      this.checklists.sort((a, b) => b.createdAt - a.createdAt);
+      this.checklists = [...this.checklists].sort((a: TripChecklist, b: TripChecklist) => b.createdAt - a.createdAt);
       this.categories = await this.store.getCategories();
       this.targetWeightGram = await this.store.getGearTargetWeight();
       if (this.selectedChecklistId.length === 0 && this.checklists.length > 0) {
@@ -241,6 +253,7 @@ struct Index {
       this.tempItemGroup = '其他';
     } catch (error) {
       this.errorText = '数据加载失败';
+      hilog.error(0x0001, 'PackCheck', 'loadAppData failed: %{public}s', JSON.stringify(error));
     }
   }
 
@@ -699,7 +712,11 @@ struct Index {
     if (error.length > 0) {
       return;
     }
-    const nextCategories = renameCategory(this.categories, oldName, newName);
+    const renameResult = renameCategory(this.categories, oldName, newName);
+    if (!renameResult.renamed) {
+      return;
+    }
+    const nextCategories = renameResult.categories;
     const nextGears = renameGearsCategory(this.gears, oldName, newName);
     const nextChecklists = renameChecklistsCategory(this.checklists, oldName, newName);
     await this.store.saveCategories(nextCategories);
@@ -823,7 +840,9 @@ struct Index {
         value: '确定删除',
         fontColor: DANGER_COLOR,
         action: async () => {
-          const nextGears = this.gears.filter((item: GearItem) => ids.indexOf(item.id) < 0);
+          // O(1) 成员判断：在 filter 外构建一次 Set，避免每个 item 做 O(n) 的 indexOf
+          const idSet = new Set<string>(ids);
+          const nextGears = this.gears.filter((item: GearItem) => !idSet.has(item.id));
           await this.store.saveGears(nextGears);
           this.gears = nextGears;
 
@@ -837,10 +856,12 @@ struct Index {
     if (ids.length === 0) {
       return;
     }
+    // O(1) 成员判断：在循环外构建一次 Set，避免对每个 gear 做 O(n) 的 indexOf
+    const idSet = new Set<string>(ids);
     const nextGears: GearItem[] = [];
     for (let i = 0; i < this.gears.length; i++) {
       const gear = this.gears[i];
-      if (ids.indexOf(gear.id) >= 0) {
+      if (idSet.has(gear.id)) {
         const updated: GearItem = {
           id: gear.id,
           name: gear.name,
@@ -923,10 +944,12 @@ struct Index {
     if (dedupedIds.length === 0) {
       return;
     }
+    // O(1) 成员判断：在循环外构建一次 Set，避免对每个 gear 做 O(n) 的 indexOf
+    const idSet = new Set<string>(dedupedIds);
     const nextGears: GearItem[] = [];
     for (let index = 0; index < this.gears.length; index++) {
       const gear = this.gears[index];
-      if (dedupedIds.indexOf(gear.id) >= 0) {
+      if (idSet.has(gear.id)) {
         const updated: GearItem = {
           id: gear.id,
           name: gear.name,
@@ -934,8 +957,8 @@ struct Index {
           weight: gear.weight,
           price: gear.price,
           note: gear.note,
-          tripCount: gearTripCount(gear) + 1,
           createdAt: gear.createdAt,
+          tripCount: gearTripCount(gear) + 1,
           brand: gear.brand,
           acquiredAt: gear.acquiredAt
         };
@@ -1098,6 +1121,7 @@ struct Index {
       this.shakeListening = true;
     } catch (error) {
       this.shakeListening = false;
+      hilog.error(0x0001, 'PackCheck', 'startShakeListening failed: %{public}s', JSON.stringify(error));
     }
   }
 
@@ -1108,6 +1132,7 @@ struct Index {
     try {
       sensor.off(sensor.SensorId.ACCELEROMETER, this.shakeCallback);
     } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'stopShakeListening failed: %{public}s', JSON.stringify(error));
     }
     this.shakeListening = false;
   }
@@ -1271,6 +1296,7 @@ struct Index {
     if (checklist === undefined) {
       return;
     }
+    this.tripDate = checklist.date !== undefined ? checklist.date : '';
     this.tripDestination = checklist.destination !== undefined ? checklist.destination : '';
     this.tripDistanceKm = typeof checklist.distanceKm === 'number' ? checklist.distanceKm.toString() : '';
     this.tripMaxAltitude = typeof checklist.maxAltitude === 'number' ? checklist.maxAltitude.toString() : '';
@@ -1292,7 +1318,7 @@ struct Index {
       ascentM: normalizeNumber(this.tripAscentM),
       durationHours: normalizeNumber(this.tripDurationHours)
     };
-    await this.updateChecklistInfo(checklist.id, checklist.title, checklist.date !== undefined ? checklist.date : '', checklist.dateAt, profile);
+    await this.updateChecklistInfo(checklist.id, checklist.title, this.tripDate.trim(), parseTripDateAt(this.tripDate), profile);
     this.closeSheet();
   }
 
@@ -1309,7 +1335,8 @@ struct Index {
       return;
     }
     DatePickerDialog.show({
-      selected: new Date(),
+      // 编辑已有行程时默认选中其既有出发日期，新建/无日期时回退到今天
+      selected: checklist.dateAt !== undefined ? new Date(checklist.dateAt) : new Date(),
       lunar: false,
       showTime: false,
       onDateAccept: (date: Date) => {
@@ -1396,7 +1423,7 @@ struct Index {
 
   private openImportSheet(): void {
     this.importGearIds = [];
-    this.importGearCategory = '全部';
+    this.importGearCategory = CATEGORY_ALL;
     this.sheetMode = SHEET_IMPORT;
     this.openSheetAnimated();
   }
@@ -1599,21 +1626,18 @@ struct Index {
 
   private showAchievement(): void {
     this.showCompletionToast = true;
-    this.progressPulse = true;
     this.showToastMessage('全部就绪，出发吧！', 2000);
     this.triggerLightVibration();
     setTimeout(() => {
       this.showCompletionToast = false;
     }, 2000);
-    setTimeout(() => {
-      this.progressPulse = false;
-    }, 900);
   }
 
   private showToastMessage(message: string, duration: number = 1500): void {
     try {
       this.getUIContext().getPromptAction().showToast({ message: message, duration: duration });
     } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'showToastMessage failed: %{public}s', JSON.stringify(error));
     }
   }
 
@@ -1621,6 +1645,7 @@ struct Index {
     try {
       await vibrator.startVibration({ type: 'time', duration: 50 }, { usage: 'touch' });
     } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'triggerLightVibration failed: %{public}s', JSON.stringify(error));
     }
   }
 
@@ -1673,7 +1698,6 @@ struct Index {
           selectedChecklistId: this.selectedChecklistId,
           collapsedGroups: this.collapsedGroups,
           highlightedItemId: this.highlightedItemId,
-          progressPulse: this.progressPulse,
           checklistRenderNonce: this.checklistRenderNonce,
           onReturnHome: () => {
             this.returnToHome();
@@ -1995,7 +2019,7 @@ struct Index {
                 // 边界限制：不能超出有效范围（3 Tab：左边界 index=0，右边界 index=2）
                 if (this.currentTabIndex === 0 && progress > 0) {
                   progress = 0;
-                } else if (this.currentTabIndex === 2 && progress < 0) {
+                } else if (this.currentTabIndex === this.tabCount - 1 && progress < 0) {
                   progress = 0;
                 }
                 this.tabSwipeProgress = Math.max(-1, Math.min(1, progress));
@@ -2274,7 +2298,10 @@ struct Index {
       .backgroundColor(LIGHT_PRIMARY_COLOR)
       .borderRadius(24)
       .shadow({ radius: 8, color: PRIMARY_SHADOW_LIGHT, offsetX: 0, offsetY: 2 })
-      .transition({ type: TransitionType.Insert, translate: { y: -20 }, scale: { x: PANEL_SCALE_START, y: PANEL_SCALE_START }, opacity: 0 })
+      .transition(TransitionEffect.OPACITY
+        .combine(TransitionEffect.translate({ y: -20 }))
+        .combine(TransitionEffect.scale({ x: PANEL_SCALE_START, y: PANEL_SCALE_START }))
+      )
     }
     .width('100%')
     .height('100%')
@@ -2289,7 +2316,7 @@ struct Index {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('#66000000')
+        .backgroundColor(OVERLAY_MASK)
         .onClick(() => { this.showCategoryDialog = false; })
 
       // 对话框
@@ -2297,21 +2324,21 @@ struct Index {
         Text(this.categoryDialogMode === 'add' ? '新增分组' : '重命名分组')
           .fontSize(17)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#1A1A1A')
+          .fontColor(TEXT_MAIN)
 
         TextInput({ text: this.categoryDialogInput, placeholder: '输入分组名称' })
           .width('100%')
           .height(44)
           .fontSize(15)
           .borderRadius(10)
-          .backgroundColor('#F5F5F5')
+          .backgroundColor(GROUP_HEADER_BG)
           .onChange((value: string) => { this.categoryDialogInput = value; })
 
         Row({ space: 12 }) {
           Button('取消')
             .fontSize(15)
             .fontColor(TEXT_TERTIARY)
-            .backgroundColor('#F0F0F0')
+            .backgroundColor(DIVIDER_COLOR)
             .borderRadius(10)
             .height(40)
             .layoutWeight(1)
@@ -2319,7 +2346,7 @@ struct Index {
 
           Button('确认')
             .fontSize(15)
-            .fontColor('#FFFFFF')
+            .fontColor(WHITE)
             .backgroundColor(PRIMARY_COLOR)
             .borderRadius(10)
             .height(40)
@@ -2341,9 +2368,9 @@ struct Index {
       }
       .width('80%')
       .padding(24)
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(CARD_BG)
       .borderRadius(16)
-      .shadow({ radius: 20, color: '#1A000000', offsetX: 0, offsetY: 4 })
+      .shadow({ radius: 20, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 4 })
     }
     .width('100%')
     .height('100%')

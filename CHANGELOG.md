@@ -1,6 +1,28 @@
 # Changelog
 
-## v0.5.8 (2025-07-01)
+## v0.5.9 (2026-07-01)
+
+全量代码审查修复：213 项问题一次性清零。
+
+- **Critical 修复**：PackStore 无 try-catch → 全方法防御式错误处理 + schema 版本迁移 + hilog；`PRIMARY_FILL_SUBTLE` ARGB 字节序修正（`#2D7D4660` → `#602D7D46`）；GearFormSheet/TempItemSheet `onRename` 参数传空字符串 → 正确传递 oldName；ColorUtils `daysLeft > 0` 少算一天 → `>= 0`
+- **Medium 修复**：ChecklistService 消除 `!` non-null 断言（改 `?` + 默认值）、删除死代码、统一 `formatKg` 引用；FootprintService `maxAltitude` 初始值 0 → `-Infinity`、排序稳定性、NaN 守卫、dateLabel 兜底
+- **Index.ets 清理**：tabCount 常量化、`sort()` 拷贝防原地排序、CategoryInputDialog 色彩 token 化、TransitionEffect 链式组合、空 catch → hilog.warn、DatePicker 编辑模式共用逻辑消除重复、Set-based 去重替代 indexOf
+- **动效合规**：TripCeremonyCard 22 处非 Spring 动画统一为 `SPRING_GENERAL`/`SPRING_PRESS`（保留 3 处 shimmer/shine 用 CURVE_STANDARD）；ChecklistDetail 去除 `setTimeout` 驱动动画改 `animateTo` + opacity(0) 初始隐藏
+- **ProfilePage token 化**：硬编码色值/字号/按压缩放全部替换为 Design Token 引用；「征服」→「探索」措辞修正
+- **CategoryTagGroup**：`setInterval` 泄漏修复（`aboutToDisappear` 清除）；wiggle 状态 tick→flip 简化；`as number` cast 移除；CATEGORY_ALL 常量
+- **PackModels**：新增 `CATEGORY_ALL`/`CATEGORY_FALLBACK` 常量；`makeId` 加入单调递增计数器防碰撞
+- **CategoryService**：`renameCategory` 返回类型从 `string[]` 改为 `RenameCategoryResult { categories, renamed }`
+- **WeightGauge**：gaugeMode 切换包裹 `animateTo` 实现平滑过渡
+- **TripFormSheet**：日期格式改为距今年份不同时显示年份；新增字段校验防空提交
+- **EntryAbility/EntryBackupAbility**：hilog testTag 统一为 'PackCheck'，domain 0x0001；移除无意义 `await Promise.resolve()`
+- **Constants 类型标注**：Layout/GearSort/SheetMode/AnimationTokens 显式 `: number`/`: string` 类型注解
+- **暗色模式**：`dark/color.json` 背景从 `#F8F9FA` 修正为 `#121212`
+- **module.json5**：移除 `"wearable"` deviceTypes（手表不适配本 App）
+- **Press 反馈补全**：GearSortSheet/ProfileEditSheet/ImportSheet/HomePage 所有可点击元素添加 `pressScale()` 按压反馈
+- **不可行项**：ArkTS 禁止对象展开运算符 `arkts-no-spread`（#6）；`@Prop` 不支持接口分组（#11）— 标记为平台限制，不改
+- MEMORY.md 新增避坑经验 + 构建路径更新
+
+## v0.5.8 (2026-07-01)
 
 编辑模式 Bug 修复 & 装备库空态重设计。
 

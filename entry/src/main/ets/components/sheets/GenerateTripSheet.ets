@@ -47,9 +47,9 @@ export struct GenerateTripSheet {
         .height(48)
         .fontSize(14)
         .fontColor(WHITE)
-        .backgroundColor(this.generateTripTitle.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
+        .backgroundColor(this.generateTripTitle.trim().length === 0 || this.selectedCount === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')
-        .enabled(this.generateTripTitle.trim().length > 0)
+        .enabled(this.generateTripTitle.trim().length > 0 && this.selectedCount > 0)
         .scale({ x: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
           y: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
         .animation({ curve: SPRING_PRESS() })

@@ -64,8 +64,8 @@ export struct GearFormSheet {
           onSelect: (category: string) => {
             this.onCategoryChange(category);
           },
-          onRename: (oldName: string, _newName: string) => {
-            this.onRename(oldName, '');
+          onRename: (oldName: string, newName: string) => {
+            this.onRename(oldName, newName);
           },
           onDelete: (category: string) => {
             this.onDelete(category);
@@ -73,8 +73,8 @@ export struct GearFormSheet {
           onReorder: (categories: string[]) => {
             this.onReorder(categories);
           },
-          onAdd: (_name: string) => {
-            this.onAddCategory('');
+          onAdd: (name: string) => {
+            this.onAddCategory(name);
           }
         })
         Row({ space: 12 }) {

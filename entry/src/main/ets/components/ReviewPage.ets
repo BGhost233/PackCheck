@@ -147,7 +147,7 @@ export struct ReviewPage {
       .backgroundColor(CARD_BG)
       .borderRadius(20)
       .shadow({ radius: 18, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 8 })
-      .translate({ x: this.reviewDragX, y: 0, z: 0 })
+      .translate({ x: this.reviewDragX, y: 0 })
       .gesture(
         PanGesture({ direction: PanDirection.Horizontal })
           .onActionUpdate((event: GestureEvent) => {

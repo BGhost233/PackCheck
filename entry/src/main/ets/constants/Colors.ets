@@ -19,7 +19,7 @@ export const PRIMARY_SHADOW: string = '#1A2D7D46';
 export const PRIMARY_TRANSPARENT: string = '#002D7D46';
 export const PRIMARY_SHADOW_LIGHT: string = '#262D7D46';
 export const PRIMARY_HALF: string = '#802D7D46';
-export const PRIMARY_FILL_SUBTLE: string = '#2D7D4660';
+export const PRIMARY_FILL_SUBTLE: string = '#602D7D46';
 export const PRIMARY_GRADIENT_START: string = '#1F2D7D46';
 export const PRIMARY_GRADIENT_END: string = '#4D2D7D46';
 

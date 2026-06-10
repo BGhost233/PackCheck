@@ -36,6 +36,12 @@ export interface TripChecklist {
 }
 
 
+// 「全部」分类哨兵值：用于筛选/标签组中表示「不限分类」。统一引用此常量，禁止硬编码字符串。
+export const CATEGORY_ALL = '全部';
+
+// 系统保留分组（不可删除/重命名的兜底分组）。统一引用此常量，禁止硬编码。
+export const CATEGORY_FALLBACK = '其他';
+
 export const DEFAULT_CATEGORIES: string[] = [
   '证件',
   '穿着·上身',
@@ -52,9 +58,12 @@ export const DEFAULT_CATEGORIES: string[] = [
   '其他'
 ];
 
+let idCounter = 0;
+
 export function makeId(prefix: string): string {
+  idCounter = (idCounter + 1) % 1000000;
   const randomPart = Math.floor(Math.random() * 1000000).toString();
-  return prefix + '_' + Date.now().toString() + '_' + randomPart;
+  return prefix + '_' + Date.now().toString() + '_' + idCounter.toString() + '_' + randomPart;
 }
 
 export function normalizeNumber(value: string): number | undefined {

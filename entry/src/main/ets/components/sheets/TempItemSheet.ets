@@ -57,8 +57,8 @@ export struct TempItemSheet {
         onSelect: (category: string) => {
           this.onGroupChange(category);
         },
-        onRename: (oldName: string, _newName: string) => {
-          this.onRename(oldName, '');
+        onRename: (oldName: string, newName: string) => {
+          this.onRename(oldName, newName);
         },
         onDelete: (category: string) => {
           this.onDelete(category);
@@ -66,8 +66,8 @@ export struct TempItemSheet {
         onReorder: (categories: string[]) => {
           this.onReorder(categories);
         },
-        onAdd: (_name: string) => {
-          this.onAddCategory('');
+        onAdd: (name: string) => {
+          this.onAddCategory(name);
         }
       })
       if (this.showTempAddNotice) {

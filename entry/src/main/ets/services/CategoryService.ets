@@ -1,4 +1,4 @@
-import { GearItem, ChecklistItem, TripChecklist } from '../models/PackModels';
+import { CATEGORY_FALLBACK, GearItem, ChecklistItem, TripChecklist } from '../models/PackModels';
 
 /**
  * 分组标签 CRUD + 全局数据同步逻辑
@@ -6,7 +6,7 @@ import { GearItem, ChecklistItem, TripChecklist } from '../models/PackModels';
  */
 
 /** 系统保留分组，不可删除/重命名 */
-const PROTECTED_CATEGORY = '其他';
+const PROTECTED_CATEGORY: string = CATEGORY_FALLBACK;
 
 /** 判断是否为受保护分组 */
 export function isProtectedCategory(category: string): boolean {
@@ -134,27 +134,37 @@ export function migrateChecklistsOnDelete(checklists: TripChecklist[], deletedCa
   return result;
 }
 
-/** 重命名分组，返回新的分组列表 */
-export function renameCategory(categories: string[], oldName: string, newName: string): string[] {
+/** 重命名分组，返回 { categories, renamed }。renamed=false 表示 oldName 不存在或操作无效。 */
+export function renameCategory(categories: string[], oldName: string, newName: string): RenameCategoryResult {
   const trimmed = newName.trim();
   if (isProtectedCategory(oldName) || trimmed.length === 0) {
-    return categories;
+    return { categories, renamed: false };
   }
   // 检查新名字是否与其他分组（排除 oldName 自身）重复
   for (let i = 0; i < categories.length; i++) {
     if (categories[i] === trimmed && categories[i] !== oldName) {
-      return categories;
+      return { categories, renamed: false };
     }
   }
+  let found = false;
   const result: string[] = [];
   for (let i = 0; i < categories.length; i++) {
     if (categories[i] === oldName) {
       result.push(trimmed);
+      found = true;
     } else {
       result.push(categories[i]);
     }
   }
-  return result;
+  if (!found) {
+    return { categories, renamed: false };
+  }
+  return { categories: result, renamed: true };
+}
+
+export interface RenameCategoryResult {
+  categories: string[];
+  renamed: boolean;
 }
 
 /** 重命名后，同步装备库 */

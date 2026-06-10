@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.5.8
+## 当前版本：v0.5.9
 
 ### 已实现功能
 
@@ -41,16 +41,19 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2341 行）
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2386 行）
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
+│   ├── ProfilePage.ets      — 个人中心（足迹统计 + 成就卡）
 │   ├── ReviewPage.ets       — 核查复盘
 │   ├── ChecklistDetail.ets  — 清单详情（打勾核查）
 │   ├── TripCeremonyCard.ets — 新建行程仪式卡片（翻转 + 滑动出发）
+│   ├── CategoryTagGroup.ets — 分类标签组（横向滚动 + 操作动效）
 │   ├── EditGearPanel.ets    — 装备编辑半屏面板
 │   ├── EditItemPanel.ets    — 清单项编辑面板
 │   ├── GearFilterPanel.ets  — 装备筛选面板
+│   ├── EmptyIllustration.ets— 空态插画组件
 │   ├── WeightGauge.ets      — 重量/价格环形仪表
 │   └── sheets/              — Sheet 面板组件（从 Index.ets 提取）
 │       ├── SheetOverlay.ets — 遮罩容器 + Sheet 路由
@@ -62,14 +65,18 @@ entry/src/main/ets/
 │       └── ImportSheet.ets
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
-│   ├── PackStore.ets        — Preferences 持久化封装
+│   ├── PackStore.ets        — Preferences 持久化封装（schema 版本化 + 错误守卫）
 │   ├── GearService.ets      — 装备业务逻辑（export class GearCalc 聚合导出）
-│   └── ChecklistService.ets — 清单业务逻辑（export class CheckCalc 聚合导出）
+│   ├── ChecklistService.ets — 清单业务逻辑（export class CheckCalc 聚合导出）
+│   ├── CategoryService.ets  — 分类管理（增删改查 + 重命名）
+│   └── FootprintService.ets — 足迹统计（海拔/距离/活动天数）
 ├── constants/               — 设计 Token
 │   ├── Colors.ets           — 色彩语义 token（含透明色系列）
 │   ├── Typography.ets       — 字阶 token
 │   ├── Layout.ets           — 间距/尺寸 token
 │   ├── AnimationTokens.ets  — Spring 预设 + Bezier 曲线 + 时长/缩放常量
+│   ├── GearSort.ets         — 排序模式枚举
+│   ├── SheetMode.ets        — Sheet 面板模式枚举
 │   └── DesignTokens.ets     — Barrel re-export（兼容旧路径）
 └── utils/
     ├── ColorUtils.ets       — 分组颜色辅助函数
@@ -101,12 +108,8 @@ PackCheck/
 ## 构建 & 运行
 
 ```bash
-# 构建（需要 DevEco Studio 环境）
-hvigorw assembleApp
-
-# 或指定 SDK 路径
-DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
-  /Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleApp
+# 构建（需要 HarmonyOS command-line-tools）
+/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin/hvigorw assembleApp --no-daemon
 ```
 
 构建产物位于 `build/` 目录，可通过 DevEco Studio 直接部署到设备或模拟器。
@@ -127,7 +130,8 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.5.5 | ✅ 已完成 | 装备库布局 Bug 修复（Stack 高度循环依赖 → position 绝对定位） |
 | v0.5.6 | ✅ 已完成 | 动效 Token 体系审查修复（3 个 P0 运行时 bug + 全量代码质量清理） |
 | v0.5.7 | ✅ 已完成 | 装备库左滑删除修复 + 动效架构优化（左滑动效硬切修复 + 删除按钮出场动效） |
-| v0.5.8 | ✅ 当前 | 编辑模式 Bug 修复 + 装备库空态轻量重设计 |
+| v0.5.8 | ✅ 已完成 | 编辑模式 Bug 修复 + 装备库空态轻量重设计 |
+| v0.5.9 | ✅ 当前 | 全量代码审查修复（213 项问题清零，覆盖安全/动效/Token/类型安全） |
 | v2 服役档案 | 🚧 规划中 | 产品转型：装备清单 App → 装备的服役档案。3 Tab 重构 + 人生足迹 + 塔科夫式配装。详见 `docs/superpowers/specs/2026-06-09-service-archive-restructure-design.md` |
 
 ## 开发约定

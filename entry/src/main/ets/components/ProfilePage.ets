@@ -3,13 +3,14 @@
 import { GearItem, TripChecklist } from '../models/PackModels';
 import { computeFootprint, Footprint, LongestCompanion, TripSummary } from '../services/FootprintService';
 import {
-  PRIMARY_COLOR, CARD_BG, PAGE_BG, TEXT_MAIN, TEXT_SECONDARY, TEXT_TERTIARY,
-  WHITE_SECONDARY, PRIMARY_TINT_COLOR, LIGHT_PRIMARY_COLOR
+  PRIMARY_COLOR, PRIMARY_PRESSED, CARD_BG, PAGE_BG, TEXT_MAIN, TEXT_SECONDARY, TEXT_TERTIARY,
+  WHITE_SECONDARY, WHITE_SEMI_TRANSPARENT, PRIMARY_TINT_COLOR, LIGHT_PRIMARY_COLOR
 } from '../constants/Colors';
-import { PAGE_PADDING, CARD_RADIUS, CARD_PADDING, CHIP_RADIUS } from '../constants/Layout';
+import { PAGE_PADDING, CARD_RADIUS, CARD_PADDING, CHIP_RADIUS, FONT_FEATURE_TNUM } from '../constants/Layout';
 import { counterAnimate } from '../utils/AnimationUtils';
 import {
-  SPRING_GENERAL, SPRING_PRESS, STAGGER_OFFSET_Y, staggerDelay
+  SPRING_GENERAL, SPRING_PRESS, STAGGER_OFFSET_Y, staggerDelay,
+  PRESS_SCALE_DOWN, PRESS_SCALE_REST
 } from '../constants/AnimationTokens';
 
 @Component
@@ -197,7 +198,7 @@ export struct ProfilePage {
                 .fontSize(56)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(CARD_BG)
-                .fontFeature("'tnum'")
+                .fontFeature(FONT_FEATURE_TNUM)
               Text(' 公里')
                 .fontSize(16)
                 .fontColor(WHITE_SECONDARY)
@@ -229,7 +230,7 @@ export struct ProfilePage {
         .padding({ top: 80, bottom: 48, left: PAGE_PADDING, right: PAGE_PADDING })
         .linearGradient({
           angle: 160,
-          colors: [[PRIMARY_COLOR, 0], ['#1B5E20', 1]]
+          colors: [[PRIMARY_COLOR, 0], [PRIMARY_PRESSED, 1]]
         })
         .borderRadius({ bottomLeft: 24, bottomRight: 24 })
         .alignItems(HorizontalAlign.Start)
@@ -360,7 +361,7 @@ export struct ProfilePage {
                 .fontSize(36)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(PRIMARY_COLOR)
-                .fontFeature("'tnum'")
+                .fontFeature(FONT_FEATURE_TNUM)
               Text(' 天了')
                 .fontSize(15)
                 .fontColor(TEXT_SECONDARY)
@@ -383,7 +384,7 @@ export struct ProfilePage {
           .alignItems(HorizontalAlign.Start)
           .opacity(this.companionOpacity)
           .translate({ y: this.companionTranslateY })
-          .scale({ x: this.companionPressed ? 0.97 : 1, y: this.companionPressed ? 0.97 : 1 })
+          .scale({ x: this.companionPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.companionPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
           .animation({ curve: SPRING_PRESS() })
           .onTouch((event: TouchEvent) => {
             if (event.type === TouchType.Down) {
@@ -408,7 +409,7 @@ export struct ProfilePage {
               if (this.footprint.maxAltitude > 0) {
                 this.StatCell(`${this.animMaxAlt}m`, '到过的最高处')
               } else {
-                this.StatCell('—', '等你去征服')
+                this.StatCell('—', '等你去探索')
               }
             }
             // 累计爬升
@@ -489,7 +490,7 @@ export struct ProfilePage {
       .fontSize(12)
       .fontColor(CARD_BG)
       .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-      .backgroundColor('#33FFFFFF')
+      .backgroundColor(WHITE_SEMI_TRANSPARENT)
       .borderRadius(CHIP_RADIUS)
   }
 
@@ -500,7 +501,7 @@ export struct ProfilePage {
         .fontSize(28)
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
-        .fontFeature("'tnum'")
+        .fontFeature(FONT_FEATURE_TNUM)
       Text(label)
         .fontSize(12)
         .fontColor(TEXT_TERTIARY)
@@ -513,7 +514,7 @@ export struct ProfilePage {
     .borderRadius(CARD_RADIUS)
     .alignItems(HorizontalAlign.Start)
     .justifyContent(FlexAlign.End)
-    .scale({ x: this.gridPressedIndex >= 0 ? 0.97 : 1, y: this.gridPressedIndex >= 0 ? 0.97 : 1 })
+    .scale({ x: this.gridPressedIndex >= 0 ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.gridPressedIndex >= 0 ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
     .animation({ curve: SPRING_PRESS() })
   }
 }

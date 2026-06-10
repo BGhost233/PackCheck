@@ -6,7 +6,10 @@ import {
   TEXT_SECONDARY,
   TEXT_TERTIARY
 } from '../../constants/DesignTokens';
-import { WHITE } from '../../constants/Colors';
+import {
+  WHITE,
+  DISABLED_COLOR
+} from '../../constants/Colors';
 import {
   SPRING_PRESS,
   PRESS_SCALE_DOWN,
@@ -128,8 +131,9 @@ export struct TripFormSheet {
         .height(48)
         .fontSize(14)
         .fontColor(WHITE)
-        .backgroundColor(PRIMARY_COLOR)
+        .backgroundColor(this.tripTitle.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')
+        .enabled(this.tripTitle.trim().length > 0)
         .scale({ x: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
           y: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
         .animation({ curve: SPRING_PRESS() })
@@ -179,9 +183,11 @@ export struct TripFormSheet {
         selected: new Date(),
         lunar: false,
         onDateAccept: (value: Date) => {
+          const year = value.getFullYear();
           const month = value.getMonth() + 1;
           const day = value.getDate();
-          this.onDateChange(month.toString() + '\u6708' + day.toString() + '\u65e5');
+          const yearPrefix = year !== new Date().getFullYear() ? year.toString() + '\u5e74' : '';
+          this.onDateChange(yearPrefix + month.toString() + '\u6708' + day.toString() + '\u65e5');
         }
       });
     })

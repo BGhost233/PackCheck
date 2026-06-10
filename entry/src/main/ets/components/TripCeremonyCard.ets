@@ -1,11 +1,8 @@
 import {
   SPRING_CEREMONY_FLIP, SPRING_CEREMONY_DISMISS, SPRING_PRESS,
-  SPRING_COUNTER, SPRING_GENERAL,
-  DURATION_CEREMONY_OVERLAY, DURATION_CEREMONY_SHINE,
-  DURATION_CEREMONY_STAGGER, DURATION_CEREMONY_SHIMMER, DURATION_SCROLL_SMOOTH,
-  DURATION_COUNTER, DURATION_FAST, DURATION_NORMAL,
-  DURATION_COLOR_FADE, DURATION_CEREMONY_SHAKE,
-  CURVE_DECELERATE, CURVE_STANDARD
+  SPRING_COUNTER, SPRING_GENERAL, SPRING_FAB_SNAP, SPRING_SCROLL,
+  DURATION_CEREMONY_SHINE, DURATION_CEREMONY_SHIMMER,
+  CURVE_STANDARD
 } from '../constants/AnimationTokens';
 import { vibrator } from '@kit.SensorServiceKit';
 import { inputMethod } from '@kit.IMEKit';
@@ -23,7 +20,6 @@ import {
   PRIMARY_GRADIENT_START,
   PRIMARY_HALF,
   PRIMARY_PRESSED_DEEP,
-  SHADOW_DEFAULT,
   TEXT_MAIN,
   TEXT_SECONDARY,
   TRANSPARENT,
@@ -61,7 +57,7 @@ export struct TripCeremonyCard {
   @State private cardOpacity: number = 0;
   @State private shineX: number = -200;
   @State private contentStep: number = 0;
-  @State private cardElevation: number = 0;
+  
 
   // === 标题 shimmer ===
   @State private titleShimmerX: number = -60;
@@ -77,7 +73,7 @@ export struct TripCeremonyCard {
   @State private chipAreaHeight: number = 0;
 
   // === 卡片动态高度 ===
-  @State private cardContentHeight: number = 300;
+  @State private cardContentHeight: number = 0;
 
   // === 滑动状态 ===
   @State private slideX: number = 0;
@@ -161,7 +157,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
   // ============================================================
   private startEntrance(): void {
     this.getUIContext().animateTo({
-      duration: DURATION_CEREMONY_OVERLAY, curve: CURVE_DECELERATE
+      curve: SPRING_GENERAL()
     }, () => {
       this.overlayOpacity = 0.6;
     });
@@ -175,7 +171,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         this.cardRotateZ = 0;
         this.cardTranslateY = 0;
         this.cardOpacity = 1;
-        this.cardElevation = 24;
+        
       });
     }, 50);
 
@@ -189,7 +185,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 内容错落入场：紧跟翻转，不等完全 settle
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE }, () => {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.contentStep = 1;
       });
       // 标题入场完成后 300ms 启动标题 shimmer
@@ -198,17 +194,17 @@ return this.trackWidth - this.SLIDER_WIDTH;
       }, 300);
     }, 300);
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE }, () => {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.contentStep = 2;
       });
     }, 360);
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE }, () => {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.contentStep = 3;
       });
     }, 420);
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE }, () => {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.contentStep = 4;
       });
       // 入场完毕后启动 shimmer
@@ -374,8 +370,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 吸附到终点 + 恢复按压态
     const maxSlide = this.getMaxSlide();
     this.getUIContext().animateTo({
-      duration: DURATION_FAST,
-      curve: CURVE_DECELERATE
+      curve: SPRING_FAB_SNAP()
     }, () => {
       this.slideX = maxSlide;
       this.sliderPressed = false;
@@ -453,8 +448,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 光晕显现
     this.getUIContext().animateTo({
-      duration: DURATION_NORMAL,
-      curve: CURVE_DECELERATE
+      curve: SPRING_GENERAL()
     }, () => {
       this.glowLayerOpacity = 0.10;
     });
@@ -509,8 +503,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 光晕消散
     this.getUIContext().animateTo({
-      duration: DURATION_NORMAL,
-      curve: CURVE_DECELERATE
+      curve: SPRING_GENERAL()
     }, () => {
       this.glowLayerOpacity = 0;
     });
@@ -527,8 +520,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
     // 遮罩消散
     this.getUIContext().animateTo({
-      duration: DURATION_COLOR_FADE,
-      curve: CURVE_DECELERATE
+      curve: SPRING_GENERAL()
     }, () => {
       this.overlayOpacity = 0;
     });
@@ -548,7 +540,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     let delay = 0;
     sequence.forEach((x: number) => {
       setTimeout(() => {
-        this.getUIContext().animateTo({ duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE }, () => {
+        this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
           this.titleShakeX = x;
         });
       }, delay);
@@ -558,7 +550,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 边框闪红
     this.titleBorderHighlight = true;
     setTimeout(() => {
-      this.getUIContext().animateTo({ duration: DURATION_CEREMONY_OVERLAY, curve: CURVE_DECELERATE }, () => {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.titleBorderHighlight = false;
       });
     }, 600);
@@ -605,7 +597,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       this.cardRotateZ = 5;
     });
     this.getUIContext().animateTo({
-      duration: DURATION_NORMAL, curve: CURVE_DECELERATE
+      curve: SPRING_GENERAL()
     }, () => {
       this.overlayOpacity = 0;
     });
@@ -620,35 +612,34 @@ return this.trackWidth - this.SLIDER_WIDTH;
   // ============================================================
   build() {
     Stack({ alignContent: Alignment.Center }) {
-      // ===== 遮罩层 =====
+      // ===== 遮罩层（纯视觉，不参与事件分发）=====
       Column()
         .width('100%')
         .height('100%')
         .backgroundColor(`rgba(0, 0, 0, ${this.overlayOpacity})`)
         .backdropBlur(this.overlayOpacity > 0 ? 25 : 0)
-        .onClick(() => {
-          inputMethod.getController().stopInputSession();
-          this.handleDismiss();
-        })
+        .hitTestBehavior(HitTestMode.None)
 
       // ===== 光晕层（卡片之下）=====
-      Column()
-        .width('87%')
-        .height(this.cardContentHeight + 8)
-        .constraintSize({ maxWidth: 348 })
-        .borderRadius(28)
-        .backgroundColor(PRIMARY_COLOR)
-        .opacity(this.glowLayerOpacity)
-        .blur(16)
-        .animation({ duration: DURATION_NORMAL, curve: CURVE_DECELERATE })
-        .scale({
-          x: this.cardScale * this.launchScale * this.ceremonyCardScale,
-          y: this.cardScale * this.launchScale * this.ceremonyCardScale
-        })
-        .translate({
-          x: 0,
-          y: this.cardTranslateY + this.launchTranslateY + this.ceremonyCardSinkY
-        })
+      if (this.glowLayerOpacity > 0) {
+        Column()
+          .width('87%')
+          .height(this.cardContentHeight + 8)
+          .constraintSize({ maxWidth: 348 })
+          .borderRadius(28)
+          .backgroundColor(PRIMARY_COLOR)
+          .opacity(this.glowLayerOpacity)
+          .hitTestBehavior(HitTestMode.None)
+          .animation({ curve: SPRING_GENERAL() })
+          .scale({
+            x: this.cardScale * this.launchScale * this.ceremonyCardScale,
+            y: this.cardScale * this.launchScale * this.ceremonyCardScale
+          })
+          .translate({
+            x: 0,
+            y: this.cardTranslateY + this.launchTranslateY + this.ceremonyCardSinkY
+          })
+      }
 
       // ===== 主卡片 =====
       Stack() {
@@ -666,7 +657,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         this.CeremonyCardFront()
       }
       .width('85%')
-      .constraintSize({ minHeight: 300, maxHeight: 540, maxWidth: 340 })
+      .constraintSize({ maxHeight: 540, maxWidth: 340 })
       .borderRadius(24)
       .clip(true)
       .animation({ curve: SPRING_GENERAL() })
@@ -675,11 +666,6 @@ return this.trackWidth - this.SLIDER_WIDTH;
         if (h > 0 && Math.abs(h - this.cardContentHeight) > 1) {
           this.cardContentHeight = h;
         }
-      })
-      .shadow({
-        radius: this.cardElevation,
-        color: SHADOW_DEFAULT,
-        offsetY: this.cardElevation / 3
       })
       .scale({
         x: this.cardScale * this.launchScale * this.ceremonyCardScale,
@@ -695,6 +681,12 @@ return this.trackWidth - this.SLIDER_WIDTH;
     }
     .width('100%')
     .height('100%')
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Up) {
+        inputMethod.getController().stopInputSession();
+        this.handleDismiss();
+      }
+    })
   }
 
   // ============================================================
@@ -807,7 +799,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .hitTestBehavior(HitTestMode.Transparent)
           .position({ right: 0, top: 0 })
           .opacity(this.chipScrollAtEnd ? 0 : 1)
-          .animation({ duration: 200, curve: CURVE_DECELERATE })
+          .animation({ curve: SPRING_GENERAL() })
       }
       .width('100%')
       .height(28)
@@ -1007,7 +999,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         color: this.titleBorderHighlight ? ERROR_BORDER : TRANSPARENT,
         radius: 12
       })
-      .animation({ duration: DURATION_NORMAL, curve: CURVE_DECELERATE })
+      .animation({ curve: SPRING_GENERAL() })
 
       // 间距 16vp（同组内）
       Column().height(16)
@@ -1078,13 +1070,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
             .fontWeight(FontWeight.Medium)
             .fontColor(PRIMARY_HALF)
             .opacity(this.trackTextOpacity)
-            .animation({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE })
+            .animation({ curve: SPRING_GENERAL() })
           Text('准备出发！')
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
             .fontColor(PRIMARY_COLOR)
             .opacity(this.readyTextOpacity)
-            .animation({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE })
+            .animation({ curve: SPRING_GENERAL() })
         }
 
         // ③ 白色遮罩（盖住左侧轨道 + 文字）
@@ -1101,13 +1093,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .position({ x: this.getMaxSlide(), y: 0 })
           .scale({ x: this.ripple1Scale, y: this.ripple1Scale })
           .opacity(this.ripple1Opacity)
-          .animation({ duration: DURATION_COUNTER, curve: CURVE_DECELERATE })
+          .animation({ curve: SPRING_CEREMONY_FLIP() })
         Circle({ width: 48, height: 48 })
           .fill(PRIMARY_COLOR)
           .position({ x: this.getMaxSlide(), y: 0 })
           .scale({ x: this.ripple2Scale, y: this.ripple2Scale })
           .opacity(this.ripple2Opacity)
-          .animation({ duration: DURATION_COLOR_FADE, curve: CURVE_DECELERATE })
+          .animation({ curve: SPRING_CEREMONY_FLIP() })
 
         // ⑤ 滑块：纯色正圆 + 白色飞机
         Stack({ alignContent: Alignment.Center }) {
@@ -1116,7 +1108,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
             .height(this.SLIDER_HEIGHT)
             .borderRadius(this.SLIDER_HEIGHT / 2)
             .backgroundColor(this.sliderBgColor)
-            .animation({ duration: DURATION_CEREMONY_STAGGER, curve: CURVE_DECELERATE })
+            .animation({ curve: SPRING_GENERAL() })
 
           SymbolGlyph($r('sys.symbol.airplane'))
             .fontSize(20)
@@ -1146,7 +1138,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       .height(this.SLIDER_HEIGHT)
       .clip(false)
       .translate({ y: (this.contentStep >= 4 ? 0 : 10) + this.trackSinkY })
-      .animation({ duration: DURATION_SCROLL_SMOOTH, curve: CURVE_DECELERATE })
+      .animation({ curve: SPRING_SCROLL() })
       .opacity(this.contentStep >= 4 ? 1 : 0)
       .scale({
         x: this.contentStep >= 4 ? 1.0 : 0.9,
@@ -1177,6 +1169,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       if (event.type === TouchType.Down) {
         inputMethod.getController().stopInputSession();
       }
+      event.stopPropagation();
     })
     .opacity(this.cardRotateY <= 90 ? 1 : 0)
     .hitTestBehavior(this.cardRotateY <= 90 ? HitTestMode.Default : HitTestMode.None)

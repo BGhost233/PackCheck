@@ -54,26 +54,26 @@ export const CURVE_LINEAR: Curve = Curve.Linear;
 // ============================================================
 
 // 通用时长
-export const DURATION_NONE = 0;
-export const DURATION_TICK = 32;
-export const DURATION_FAST = 100;
-export const DURATION_PRESS = 150;
-export const DURATION_NORMAL = 200;
-export const DURATION_HEADER = 250;
-export const DURATION_RECOVER = 280;
-export const DURATION_SLOW = 300;
-export const DURATION_COLOR_FADE = 350;
-export const DURATION_COUNTER = 400;
-export const DURATION_GAUGE_COUNTER = 800;
-export const DURATION_SCROLL_SMOOTH = 120;
+export const DURATION_NONE: number = 0;
+export const DURATION_TICK: number = 32;
+export const DURATION_FAST: number = 100;
+export const DURATION_PRESS: number = 150;
+export const DURATION_NORMAL: number = 200;
+export const DURATION_HEADER: number = 250;
+export const DURATION_RECOVER: number = 280;
+export const DURATION_SLOW: number = 300;
+export const DURATION_COLOR_FADE: number = 350;
+export const DURATION_COUNTER: number = 400;
+export const DURATION_GAUGE_COUNTER: number = 800;
+export const DURATION_SCROLL_SMOOTH: number = 120;
 
 // 仪式动画专用时长
-export const DURATION_CEREMONY_SHAKE = 80;
-export const DURATION_CEREMONY_STAGGER = 150;
-export const DURATION_CEREMONY_OVERLAY = 300;
-export const DURATION_CEREMONY_SHINE = 400;
-export const DURATION_CHART_DRAW = 1200;
-export const DURATION_CEREMONY_SHIMMER = 1200;
+export const DURATION_CEREMONY_SHAKE: number = 80;
+export const DURATION_CEREMONY_STAGGER: number = 150;
+export const DURATION_CEREMONY_OVERLAY: number = 300;
+export const DURATION_CEREMONY_SHINE: number = 400;
+export const DURATION_CHART_DRAW: number = 1200;
+export const DURATION_CEREMONY_SHIMMER: number = 1200;
 
 // ============================================================
 // 错落入场
@@ -89,12 +89,12 @@ export function staggerDelay(index: number, base: number = 30, accel: number = 4
 // ============================================================
 
 // 按压三段式
-export const PRESS_SCALE_DOWN = 0.96;
-export const PRESS_SCALE_BOUNCE = 1.02;
-export const PRESS_SCALE_REST = 1.0;
+export const PRESS_SCALE_DOWN: number = 0.96;
+export const PRESS_SCALE_BOUNCE: number = 1.02;
+export const PRESS_SCALE_REST: number = 1.0;
 
 // 面板动画
-export const PANEL_SCALE_START = 0.9;
+export const PANEL_SCALE_START: number = 0.9;
 
 // 错落入场偏移 (vp)
-export const STAGGER_OFFSET_Y = 12;
+export const STAGGER_OFFSET_Y: number = 12;

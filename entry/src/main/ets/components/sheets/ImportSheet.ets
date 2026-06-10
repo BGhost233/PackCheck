@@ -1,4 +1,4 @@
-import { GearItem } from '../../models/PackModels';
+import { CATEGORY_ALL, GearItem } from '../../models/PackModels';
 import {
   FONT_FEATURE_TNUM,
   PAGE_BG,
@@ -26,7 +26,7 @@ import { CategoryTagGroup } from '../CategoryTagGroup';
 export struct ImportSheet {
   @Prop gears: GearItem[] = [];
   @Prop importGearIds: string[] = [];
-  @Prop importGearCategory: string = '全部';
+  @Prop importGearCategory: string = CATEGORY_ALL;
   @Prop categories: string[] = [];
   onCategoryChange: (value: string) => void = (value: string): void => {};
   onToggleSelection: (id: string, checked: boolean) => void = (id: string, checked: boolean): void => {};
@@ -35,6 +35,7 @@ export struct ImportSheet {
 
   @State private buttonPressed: boolean = false;
   @State private addButtonPressed: boolean = false;
+  @State private pressedGearId: string = '';
 
   build() {
     Column({ space: 12 }) {
@@ -110,6 +111,16 @@ export struct ImportSheet {
               .padding(12)
               .backgroundColor(PAGE_BG)
               .borderRadius(12)
+              .scale({ x: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+                y: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+              .animation({ curve: SPRING_PRESS() })
+              .onTouch((event: TouchEvent) => {
+                if (event.type === TouchType.Down) {
+                  this.pressedGearId = item.id;
+                } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                  this.pressedGearId = '';
+                }
+              })
             }
           }, (item: GearItem) => item.id)
         }

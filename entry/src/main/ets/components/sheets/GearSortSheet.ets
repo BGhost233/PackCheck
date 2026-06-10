@@ -11,7 +11,8 @@ import {
   TEXT_MAIN
 } from '../../constants/DesignTokens';
 import {
-  SPRING_GENERAL,
+  SPRING_PRESS,
+  PRESS_SCALE_DOWN,
   PRESS_SCALE_REST
 } from '../../constants/AnimationTokens';
 
@@ -19,6 +20,8 @@ import {
 export struct GearSortSheet {
   @Prop gearSortMode: string = GEAR_SORT_GROUP;
   onSelectSort: (mode: string) => void = (mode: string): void => {};
+
+  @State private pressedOption: string = '';
 
   build() {
     Column({ space: 10 }) {
@@ -50,8 +53,16 @@ export struct GearSortSheet {
     .padding({ left: 12, right: 12 })
     .backgroundColor(this.gearSortMode === mode ? LIGHT_PRIMARY_COLOR : PAGE_BG)
     .borderRadius(12)
-    .scale({ x: PRESS_SCALE_REST, y: PRESS_SCALE_REST })
-    .animation({ curve: SPRING_GENERAL() })
+    .scale({ x: this.pressedOption === mode ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+      y: this.pressedOption === mode ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+    .animation({ curve: SPRING_PRESS() })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.pressedOption = mode;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.pressedOption = '';
+      }
+    })
     .onClick(() => {
       this.onSelectSort(mode);
     })

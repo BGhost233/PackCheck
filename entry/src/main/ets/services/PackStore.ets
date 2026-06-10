@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DEFAULT_CATEGORIES, GearItem, TripChecklist } from '../models/PackModels';
 
 const STORE_NAME = 'packcheck_store';
@@ -9,10 +10,16 @@ const KEY_CATEGORIES = 'packcheck_categories';
 const KEY_GEAR_TARGET_WEIGHT = 'gear_target_weight';
 const KEY_COLLAPSED_GEAR_GROUPS = 'packcheck_collapsed_gear_groups';
 const KEY_CATEGORY_ORDER = 'packcheck_category_order';
+const KEY_SCHEMA_VERSION = 'packcheck_schema_version';
 const DEFAULT_GEAR_TARGET_WEIGHT = 10000;
+const CURRENT_SCHEMA_VERSION = 1;
+const DEFAULT_ARRAY = '[]';
+const LOG_DOMAIN = 0x0001;
+const LOG_TAG = 'PackStore';
 
 export class PackStore {
   private prefs?: preferences.Preferences;
+  private initFailed: boolean = false;
 
   async init(context: common.UIAbilityContext): Promise<void> {
     if (this.prefs !== undefined) {
@@ -20,17 +27,35 @@ export class PackStore {
     }
     try {
       this.prefs = await preferences.getPreferences(context, STORE_NAME);
+      this.initFailed = false;
     } catch (error) {
+      this.initFailed = true;
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'Failed to init preferences: %{public}s', String(error));
       return;
     }
+    await this.migrateSchema();
     const categories = await this.getCategories();
     if (categories.length === 0) {
       await this.saveCategories(DEFAULT_CATEGORIES);
     }
   }
 
+  isInitFailed(): boolean {
+    return this.initFailed;
+  }
+
+  private async migrateSchema(): Promise<void> {
+    const versionStr = await this.readString(KEY_SCHEMA_VERSION, '0');
+    const version = Number(versionStr);
+    if (version >= CURRENT_SCHEMA_VERSION) {
+      return;
+    }
+    // 未来在这里添加迁移逻辑（version 0 → 1 无需迁移，仅标记版本）
+    await this.writeString(KEY_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION.toString());
+  }
+
   async getGears(): Promise<GearItem[]> {
-    const value = await this.readString(KEY_GEARS, '[]');
+    const value = await this.readString(KEY_GEARS, DEFAULT_ARRAY);
     return JSON.parse(value) as GearItem[];
   }
 
@@ -39,7 +64,7 @@ export class PackStore {
   }
 
   async getChecklists(): Promise<TripChecklist[]> {
-    const value = await this.readString(KEY_CHECKLISTS, '[]');
+    const value = await this.readString(KEY_CHECKLISTS, DEFAULT_ARRAY);
     return JSON.parse(value) as TripChecklist[];
   }
 
@@ -48,7 +73,7 @@ export class PackStore {
   }
 
   async getCategories(): Promise<string[]> {
-    const value = await this.readString(KEY_CATEGORIES, '[]');
+    const value = await this.readString(KEY_CATEGORIES, DEFAULT_ARRAY);
     return JSON.parse(value) as string[];
   }
 
@@ -70,7 +95,7 @@ export class PackStore {
   }
 
   async getCollapsedGearGroups(): Promise<string[]> {
-    const value = await this.readString(KEY_COLLAPSED_GEAR_GROUPS, '[]');
+    const value = await this.readString(KEY_COLLAPSED_GEAR_GROUPS, DEFAULT_ARRAY);
     return JSON.parse(value) as string[];
   }
 
@@ -79,7 +104,7 @@ export class PackStore {
   }
 
   async getCategoryOrder(): Promise<string[]> {
-    const value = await this.readString(KEY_CATEGORY_ORDER, '[]');
+    const value = await this.readString(KEY_CATEGORY_ORDER, DEFAULT_ARRAY);
     return JSON.parse(value) as string[];
   }
 
@@ -97,6 +122,7 @@ export class PackStore {
         return value;
       }
     } catch (error) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'readString failed for key=%{public}s: %{public}s', key, String(error));
       return fallback;
     }
     return fallback;
@@ -104,12 +130,14 @@ export class PackStore {
 
   private async writeString(key: string, value: string): Promise<void> {
     if (this.prefs === undefined) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'writeString skipped (prefs undefined), key=%{public}s', key);
       return;
     }
     try {
       await this.prefs.put(key, value);
       await this.prefs.flush();
     } catch (error) {
+      hilog.error(LOG_DOMAIN, LOG_TAG, 'writeString failed for key=%{public}s: %{public}s', key, String(error));
     }
   }
 }

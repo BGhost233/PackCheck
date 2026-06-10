@@ -26,6 +26,7 @@ export interface SlotHint {
 }
 
 // 品类 → 默认槽位（弱映射，第二步可手动微调）。key 与 DEFAULT_CATEGORIES 严格一致
+// 注：中文品类名作为 key，产品仅面向中文用户，无 i18n 需求，此耦合可接受
 export const CATEGORY_SLOT_MAP: Record<string, SlotHint> = {
   '证件':       { zone: BodyZone.Misc,      layer: LayerOrder.Accessory },
   '穿着·上身':  { zone: BodyZone.UpperBody, layer: LayerOrder.Mid },

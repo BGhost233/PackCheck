@@ -153,7 +153,12 @@ export struct WeightGauge {
       });
     }, 50);
 
-    this.gaugeMode = this.gaugeMode === GaugeMode.WEIGHT ? GaugeMode.PRICE : GaugeMode.WEIGHT;
+    const nextMode: GaugeMode = this.gaugeMode === GaugeMode.WEIGHT ? GaugeMode.PRICE : GaugeMode.WEIGHT;
+    this.getUIContext().animateTo({
+      curve: SPRING_GENERAL()
+    }, () => {
+      this.gaugeMode = nextMode;
+    });
     this.counterAnimated = false;
     this.startCounterAnimation();
   }

@@ -3,7 +3,7 @@ import {
   PRIMARY_COLOR,
   TEXT_MAIN,
   TEXT_SECONDARY,
-  TEXT_TERTIARY
+  PLACEHOLDER_COLOR
 } from '../../constants/DesignTokens';
 import { WHITE } from '../../constants/Colors';
 import {
@@ -14,12 +14,14 @@ import {
 
 @Component
 export struct ProfileEditSheet {
+  @Prop tripDate: string = '';
   @Prop tripDestination: string = '';
   @Prop tripDistanceKm: string = '';
   @Prop tripMaxAltitude: string = '';
   @Prop tripAscentM: string = '';
   @Prop tripDurationHours: string = '';
 
+  onDateChange: (value: string) => void = (value: string): void => {};
   onDestinationChange: (value: string) => void = (value: string): void => {};
   onDistanceKmChange: (value: string) => void = (value: string): void => {};
   onMaxAltitudeChange: (value: string) => void = (value: string): void => {};
@@ -28,9 +30,51 @@ export struct ProfileEditSheet {
   onConfirm: () => void = (): void => {};
 
   @State private buttonPressed: boolean = false;
+  @State private dateRowPressed: boolean = false;
 
   build() {
     Column({ space: 12 }) {
+      // 出行时间（点击弹出日期选择器）
+      Row() {
+        Text(this.tripDate.length > 0 ? this.tripDate : '出发日期')
+          .fontSize(14)
+          .fontColor(this.tripDate.length > 0 ? TEXT_MAIN : PLACEHOLDER_COLOR)
+          .layoutWeight(1)
+        SymbolGlyph($r('sys.symbol.calendar'))
+          .fontSize(18)
+          .fontColor([TEXT_SECONDARY])
+      }
+      .width('100%')
+      .height(44)
+      .padding({ left: 12, right: 12 })
+      .backgroundColor(INPUT_BG)
+      .borderRadius(10)
+      .scale({ x: this.dateRowPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+        y: this.dateRowPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+      .animation({ curve: SPRING_PRESS() })
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          this.dateRowPressed = true;
+        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+          this.dateRowPressed = false;
+        }
+      })
+      .onClick(() => {
+        DatePickerDialog.show({
+          start: new Date('2020-1-1'),
+          end: new Date(`${new Date().getFullYear() + 10}-12-31`),
+          selected: new Date(),
+          lunar: false,
+          onDateAccept: (value: Date) => {
+            const year = value.getFullYear();
+            const month = value.getMonth() + 1;
+            const day = value.getDate();
+            const dateStr = year.toString() + '年' + month.toString() + '月' + day.toString() + '日';
+            this.onDateChange(dateStr);
+          }
+        });
+      })
+
       // 目的地（全宽）
       TextInput({ placeholder: '目的地', text: this.tripDestination })
         .height(44)

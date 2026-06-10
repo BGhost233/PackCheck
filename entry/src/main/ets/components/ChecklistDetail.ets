@@ -13,7 +13,6 @@ import {
   PLACEHOLDER_COLOR,
   PRIMARY_COLOR,
   PRIMARY_TINT_COLOR,
-  PROGRESS_END_COLOR,
   SHADOW_SUBTLE,
   TEXT_MAIN,
   TEXT_SECONDARY,
@@ -25,13 +24,13 @@ import {
   SPRING_PRESS,
   SPRING_GENERAL,
   SPRING_CHEVRON,
+  DURATION_NONE,
   DURATION_NORMAL,
   DURATION_HEADER,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
   STAGGER_OFFSET_Y,
-  staggerDelay,
-  CURVE_STANDARD
+  staggerDelay
 } from '../constants/AnimationTokens';
 import { getGroupColor } from '../utils/ColorUtils';
 
@@ -42,7 +41,6 @@ export struct ChecklistDetail {
   @Prop selectedChecklistId: string = '';
   @Prop collapsedGroups: string[] = [];
   @Prop highlightedItemId: string = '';
-  @Prop progressPulse: boolean = false;
   @Prop checklistRenderNonce: number = 0;
 
   @State private headerCollapsed: boolean = false;
@@ -68,9 +66,14 @@ export struct ChecklistDetail {
   onDeleteChecklistItem: (itemId: string) => void = (itemId: string): void => {};
 
   aboutToAppear(): void {
-    setTimeout(() => {
+    // 用 animateTo 的 delay 确保首帧以初始态渲染后再触发入场动画，避免首帧跳变。
+    // 列表项各自的 .animation() 会接管错落入场，这里仅负责延迟翻转 listEntered。
+    this.getUIContext().animateTo({
+      duration: DURATION_NONE,
+      delay: 20
+    }, () => {
       this.listEntered = true;
-    }, 20);
+    });
   }
 
   private currentChecklist(): TripChecklist | undefined {
@@ -131,18 +134,57 @@ export struct ChecklistDetail {
     return checklist.date;
   }
 
+  private profileSummary(): string {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return '';
+    }
+    const parts: string[] = [];
+    // 目的地
+    if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
+      parts.push(checklist.destination.trim());
+    }
+    // 里程
+    if (typeof checklist.distanceKm === 'number' && checklist.distanceKm > 0) {
+      parts.push(`${checklist.distanceKm}km`);
+    }
+    // 海拔
+    if (typeof checklist.maxAltitude === 'number' && checklist.maxAltitude > 0) {
+      parts.push(`海拔${checklist.maxAltitude}m`);
+    }
+    // 爬升
+    if (typeof checklist.ascentM === 'number' && checklist.ascentM > 0) {
+      parts.push(`爬升${checklist.ascentM}m`);
+    }
+    // 时长
+    if (typeof checklist.durationHours === 'number' && checklist.durationHours > 0) {
+      parts.push(`${checklist.durationHours}h`);
+    }
+    return parts.join(' · ');
+  }
+
   private startOfDay(date: Date): number {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
   }
 
   private parseTripDateAt(text: string): number | undefined {
+    const yearIndex = text.indexOf('年');
     const monthIndex = text.indexOf('月');
     const dayIndex = text.indexOf('日');
     if (monthIndex > 0 && dayIndex > monthIndex) {
-      const month = Number(text.substring(0, monthIndex));
+      // 可选年份前缀（如 "2025年3月15日"），缺省时取当前年份
+      let year = new Date().getFullYear();
+      if (yearIndex > 0 && yearIndex < monthIndex) {
+        const parsedYear = Number(text.substring(0, yearIndex));
+        if (!Number.isNaN(parsedYear)) {
+          year = parsedYear;
+        }
+      }
+      const monthStart = yearIndex > 0 && yearIndex < monthIndex ? yearIndex + 1 : 0;
+      const month = Number(text.substring(monthStart, monthIndex));
       const day = Number(text.substring(monthIndex + 1, dayIndex));
       if (!Number.isNaN(month) && !Number.isNaN(day)) {
-        return new Date(new Date().getFullYear(), month - 1, day).getTime();
+        return new Date(year, month - 1, day).getTime();
       }
     }
     return undefined;
@@ -311,7 +353,7 @@ export struct ChecklistDetail {
     this.headerAnimating = true;
     this.getUIContext().animateTo({
       duration: DURATION_HEADER,
-      curve: CURVE_STANDARD,
+      curve: SPRING_GENERAL(),
       onFinish: () => {
         this.headerAnimating = false;
       }
@@ -327,7 +369,7 @@ export struct ChecklistDetail {
     this.headerAnimating = true;
     this.getUIContext().animateTo({
       duration: DURATION_HEADER,
-      curve: CURVE_STANDARD,
+      curve: SPRING_GENERAL(),
       onFinish: () => {
         this.headerAnimating = false;
       }
@@ -413,7 +455,7 @@ export struct ChecklistDetail {
     .backgroundColor(PAGE_BG)
     .borderRadius(0)
     .geometryTransition('trip-' + this.selectedChecklistId)
-    .transition(TransitionEffect.opacity(0.99))
+    .transition(TransitionEffect.opacity(0))
   }
 
   @Builder
@@ -428,7 +470,7 @@ export struct ChecklistDetail {
       }
       .width('100%')
       .backgroundColor(PAGE_BG)
-      .animation({ duration: DURATION_HEADER, curve: CURVE_STANDARD })
+      .animation({ duration: DURATION_HEADER, curve: SPRING_GENERAL() })
     }
   }
 
@@ -475,7 +517,7 @@ export struct ChecklistDetail {
       .alignItems(VerticalAlign.Center)
       .backgroundColor(PAGE_BG)
       .shadow({ radius: 4, color: SHADOW_SUBTLE, offsetX: 0, offsetY: 2 })
-      .animation({ duration: DURATION_HEADER, curve: CURVE_STANDARD })
+      .animation({ duration: DURATION_HEADER, curve: SPRING_GENERAL() })
     }
   }
 
@@ -517,9 +559,9 @@ export struct ChecklistDetail {
   @Builder
   private Header() {
     if (this.currentChecklist() !== undefined) {
-      Column({ space: 12 }) {
+      Column({ space: 8 }) {
         Row({ space: 12 }) {
-          Column({ space: 8 }) {
+          Column({ space: 4 }) {
             Text(this.currentChecklistTitle())
               .fontSize(24)
               .fontWeight(FontWeight.Bold)
@@ -533,88 +575,29 @@ export struct ChecklistDetail {
               .fontColor(TEXT_TERTIARY)
               .width('100%')
               .onClick(() => {
-                this.onOpenDatePicker();
+                this.onOpenEditProfile();
               })
-            this.TripProfileBar(this.currentChecklist());
+            if (this.profileSummary().length > 0) {
+              Text(this.profileSummary())
+                .fontSize(13)
+                .fontColor(TEXT_SECONDARY)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .width('100%')
+                .onClick(() => {
+                  this.onOpenEditProfile();
+                })
+            }
             this.MetaRow(this.currentChecklist());
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
           this.RingProgress();
         }
-        this.ProgressLine();
       }
-      .alignItems(HorizontalAlign.Center)
+      .alignItems(HorizontalAlign.Start)
       .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 14 })
     }
-  }
-
-  @Builder
-  private TripProfileBar(checklist: TripChecklist | undefined) {
-    if (checklist !== undefined && this.hasTripProfile(checklist)) {
-      Row({ space: 6 }) {
-        if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
-          this.ProfileTag(checklist.destination.trim(), '')
-        }
-        if (typeof checklist.distanceKm === 'number' && checklist.distanceKm > 0) {
-          this.ProfileTag(`${checklist.distanceKm}km`, '里程')
-        }
-        if (typeof checklist.maxAltitude === 'number' && checklist.maxAltitude > 0) {
-          this.ProfileTag(`${checklist.maxAltitude}m`, '海拔')
-        }
-        if (typeof checklist.ascentM === 'number' && checklist.ascentM > 0) {
-          this.ProfileTag(`${checklist.ascentM}m`, '爬升')
-        }
-        if (typeof checklist.durationHours === 'number' && checklist.durationHours > 0) {
-          this.ProfileTag(`${checklist.durationHours}h`, '时长')
-        }
-        // 编辑暗示
-        Text('编辑')
-          .fontSize(10)
-          .fontColor(TEXT_SECONDARY)
-      }
-      .width('100%')
-      .onClick(() => {
-        this.onOpenEditProfile();
-      })
-    }
-  }
-
-  @Builder
-  private ProfileTag(value: string, label: string) {
-    Row({ space: 2 }) {
-      if (label.length > 0) {
-        Text(label)
-          .fontSize(10)
-          .fontColor(TEXT_SECONDARY)
-      }
-      Text(value)
-        .fontSize(11)
-        .fontColor(TEXT_MAIN)
-        .fontWeight(FontWeight.Medium)
-    }
-    .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-    .backgroundColor(LIGHT_PRIMARY_COLOR)
-    .borderRadius(6)
-  }
-
-  private hasTripProfile(checklist: TripChecklist): boolean {
-    if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
-      return true;
-    }
-    if (typeof checklist.distanceKm === 'number' && checklist.distanceKm > 0) {
-      return true;
-    }
-    if (typeof checklist.ascentM === 'number' && checklist.ascentM > 0) {
-      return true;
-    }
-    if (typeof checklist.maxAltitude === 'number' && checklist.maxAltitude > 0) {
-      return true;
-    }
-    if (typeof checklist.durationHours === 'number' && checklist.durationHours > 0) {
-      return true;
-    }
-    return false;
   }
 
   @Builder
@@ -684,35 +667,6 @@ export struct ChecklistDetail {
     }
   }
 
-  @Builder
-  private ProgressLine() {
-    Row({ space: 8 }) {
-      Stack({ alignContent: Alignment.Start }) {
-        Row()
-          .width('100%')
-          .height(6)
-          .borderRadius(3)
-          .backgroundColor(DIVIDER_COLOR)
-        Row()
-          .width(this.currentChecklist() !== undefined ? this.progressPercent(this.currentChecklist()!).toString() + '%' : '0%')
-          .height(6)
-          .borderRadius(3)
-          .linearGradient({
-            angle: 90,
-            colors: [[PROGRESS_END_COLOR, 0], [PRIMARY_COLOR, 1]]
-          })
-          .opacity(this.progressPulse && this.currentChecklist() !== undefined && this.progressPercent(this.currentChecklist()!) >= 100 ? 0.55 : 1)
-      }
-      .height(6)
-      .layoutWeight(1)
-      Text(this.currentChecklist() !== undefined ? this.progressPercent(this.currentChecklist()!).toString() + '%' : '0%')
-        .fontSize(12)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(PRIMARY_COLOR)
-        .fontFeature(FONT_FEATURE_TNUM)
-    }
-    .width('100%')
-  }
 
   @Builder
   private ActionRow() {
@@ -784,7 +738,7 @@ export struct ChecklistDetail {
     .onClick(() => {
       this.onToggleGroup(group);
     })
-    .animation({ duration: DURATION_NORMAL, curve: CURVE_STANDARD })
+    .animation({ duration: DURATION_NORMAL, curve: SPRING_GENERAL() })
   }
 
   @Builder

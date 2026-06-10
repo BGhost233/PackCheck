@@ -35,7 +35,7 @@ export function computeFootprint(trips: TripChecklist[], gears: GearItem[]): Foo
   let totalDistanceKm = 0;
   let totalAscentM = 0;
   let totalDurationHours = 0;
-  let maxAltitude = 0;
+  let maxAltitude = -Infinity;
   const places: Set<string> = new Set<string>();
 
   for (let i = 0; i < trips.length; i++) {
@@ -62,7 +62,7 @@ export function computeFootprint(trips: TripChecklist[], gears: GearItem[]): Foo
     totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
     totalAscentM: Math.round(totalAscentM),
     totalDurationHours: Math.round(totalDurationHours * 10) / 10,
-    maxAltitude: maxAltitude,
+    maxAltitude: maxAltitude === -Infinity ? 0 : maxAltitude,
     placeCount: places.size,
     gearCount: gears.length,
     longestCompanion: computeLongestCompanion(gears),
@@ -81,12 +81,15 @@ function computeLongestCompanion(gears: GearItem[]): LongestCompanion | undefine
   for (let i = 0; i < gears.length; i++) {
     const g = gears[i];
     const start: number = typeof g.acquiredAt === 'number' ? g.acquiredAt : g.createdAt;
+    if (Number.isNaN(start) || start <= 0) {
+      continue;
+    }
     if (start < bestStart) {
       bestStart = start;
       best = g;
     }
   }
-  if (best === undefined) {
+  if (best === undefined || Number.isNaN(bestStart)) {
     return undefined;
   }
   const days = Math.max(0, Math.floor((now - bestStart) / MS_PER_DAY));
@@ -94,27 +97,29 @@ function computeLongestCompanion(gears: GearItem[]): LongestCompanion | undefine
   return companion;
 }
 
-// 最近 5 条行程摘要，按时间倒序
+// 最近 5 条行程摘要，按出行日期倒序（无 dateAt 时用 createdAt 兜底 + id 稳定排序）
 function computeRecentTrips(trips: TripChecklist[]): TripSummary[] {
   if (trips.length === 0) {
     return [];
   }
-  // 按 dateAt > createdAt 倒序排列
   const sorted = trips.slice().sort((a: TripChecklist, b: TripChecklist) => {
     const aTime = typeof a.dateAt === 'number' ? a.dateAt : a.createdAt;
     const bTime = typeof b.dateAt === 'number' ? b.dateAt : b.createdAt;
-    return bTime - aTime;
+    if (bTime !== aTime) {
+      return bTime - aTime;
+    }
+    return a.id < b.id ? -1 : 1;
   });
   const result: TripSummary[] = [];
   const limit = Math.min(5, sorted.length);
   for (let i = 0; i < limit; i++) {
     const t = sorted[i];
-    const ts = typeof t.dateAt === 'number' ? t.dateAt : t.createdAt;
+    const dateLabel = typeof t.dateAt === 'number' ? formatDateLabel(t.dateAt) : '';
     result.push({
       id: t.id,
       title: t.title,
       destination: t.destination !== undefined ? t.destination.trim() : '',
-      dateLabel: formatDateLabel(ts),
+      dateLabel: dateLabel,
       distanceKm: t.distanceKm,
       ascentM: t.ascentM,
       gearCount: t.items.length,

@@ -57,7 +57,8 @@ export {
   SHADOW_LIGHT,
   SHADOW_SUBTLE,
   SHADOW_MICRO,
-  SHADOW_MEDIUM
+  SHADOW_MEDIUM,
+  WHITE_SEMI_TRANSPARENT
 } from './Colors';
 
 export {
@@ -86,7 +87,8 @@ export {
   SHEET_EDIT_ITEM,
   SHEET_IMPORT,
   SHEET_GEAR_SORT,
-  SHEET_GENERATE_TRIP
+  SHEET_GENERATE_TRIP,
+  SHEET_MOVE_GROUP
 } from './SheetMode';
 
 export {
@@ -121,7 +123,7 @@ export {
   LINE_HEIGHT_RATIO
 } from './Typography';
 
-export const VIEW_HOME = 'home';
-export const VIEW_GEAR = 'gear';
-export const VIEW_CHECKLIST = 'checklist';
-export const VIEW_REVIEW = 'review';
+export const VIEW_HOME: string = 'home';
+export const VIEW_GEAR: string = 'gear';
+export const VIEW_CHECKLIST: string = 'checklist';
+export const VIEW_REVIEW: string = 'review';

@@ -3,7 +3,7 @@
 ## 工作流约定
 
 - **每次改动即 commit**：每次修改构建验证通过后，立即 `git add -A && git commit`，保持细粒度回滚点，方便随时回滚。
-- **构建命令**：`DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk /Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleApp --no-daemon`
+- **构建命令**：`/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin/hvigorw assembleApp --no-daemon`（hvigorw 位于 command-line-tools 独立安装目录，无需 DEVECO_SDK_HOME）
 - **先出方案再动手**：任何需求先输出理解+方案+理由，确认后才写代码。
 
 ## 设计决策
@@ -39,11 +39,16 @@
 - 已提取 Sheet 面板组件到 `components/sheets/`：SheetOverlay（容器）、GearSortSheet、GenerateTripSheet、GearFormSheet、TripFormSheet、TempItemSheet、ImportSheet
 - GearService.ets 导出 `class GearCalc`，ChecklistService.ets 导出 `class CheckCalc`，Index.ets 通过 namespace import 调用
 - 已删除废弃组件：EdgeFade.ets
+- CategoryService.ets 导出 `renameCategory` 返回 `RenameCategoryResult { categories: string[], renamed: number }`
+- FootprintService.ets 提供足迹/海拔/距离统计
+- PackModels.ets 导出 `CATEGORY_ALL`（哨兵常量替代魔法字符串 '全部'）和 `CATEGORY_FALLBACK`（受保护分类 '其他'）
+- `makeId()` 使用 `Date.now()` + 模块级单调递增计数器防碰撞
+- PackStore.ets schema 版本化（v1），初始化失败时 `initFailed` 标志位阻止写入
 - AnimationTokens.ets 中定义了 9 个 Spring 预设：SPRING_GENERAL / PRESS / TAB / COUNTER / SCROLL / HERO_EXPAND / HERO_COLLAPSE / PANEL_ENTER / PANEL_EXIT + 时长/缩放常量
 - 导航架构：单 Page（Index.ets）+ Navigation NavPathStack，两个 NavDestination（ChecklistDetail、ReviewPage）
 - TripCeremonyCard 暴露 `onExitStart` 回调，退场动画启动第一帧触发，供父组件并行驱动背景恢复
 
-## ArkUI 避坑清单（实战总结，共 36 条）
+## ArkUI 避坑清单（实战总结，共 37 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -82,6 +87,7 @@
 34. **Colors token 补充透明色** — `Color.Transparent` 不走 token 体系，新增 `TRANSPARENT`/`PRIMARY_TRANSPARENT`/`WHITE_SEMI_TRANSPARENT` 确保所有颜色统一管理
 35. **`.animation()` 作用域隔离 translate 的正确姿势** — `.animation()` 只捕获它与前一个 `.animation()` 之间的属性变化。利用此规则：`.backgroundColor(...).animation({ press }).translate(...)` — animation 只作用于 backgroundColor，translate 在其后不被捕获，可由 `animateTo` 自由驱动。**禁止**用 `.animation({ duration: 0 })` 来"隔离"——它会与 `animateTo` 冲突（避坑 #7），导致 translate 变化无动画（硬切）
 36. **`.overlay()` 对 @Builder 内条件渲染不可靠** — `.overlay(this.MyBuilder(), ...)` 中如果 Builder 内部有 `if (stateVar)` 条件分支，当 stateVar 变化时 overlay 内容**不会重新渲染**。解法：放弃 `.overlay()`，改用 Stack 包裹 + 子组件直接写 `if` 条件渲染 + `.position()` 绝对定位 + `.clip(false)` 允许溢出。需要阻止点击穿透时用 `.hitTestBehavior(HitTestMode.Block)`
+37. **`.shadow()` + `backdropBlur` 产生亮色伪影** — 当组件设置了 `.shadow({ color: '#1A000000', ... })` 且位于 `backdropBlur` 层之上时，ArkUI 渲染管线会在 shadow 区域产生可见的亮色半透明圆角矩形轮廓（ghost artifact）。即使 shadow color 是纯黑低透明度，合成结果仍为亮色。**根因**：shadow 的离屏缓冲区与 blur 层的混合模式冲突，blur 对 shadow 的半透明像素做了反向提亮。**解法**：在暗色覆盖层/毛玻璃场景中直接移除 `.shadow()`（全屏暗背景下 shadow 本身无视觉意义）。若必须保留阴影效果，改用手动 Column + blur + opacity 模拟（参见避坑 #90 光晕层方案）
 
 ### 补充验证结论
 
@@ -126,4 +132,6 @@
 
 ## 已知限制
 
-- hvigorw 不在默认 shell PATH 中，需设置 `DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk` 后使用完整路径 `/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleApp`
+- hvigorw 位于 `/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin/hvigorw`，不在默认 shell PATH 中，需使用完整路径调用
+- ArkTS 禁止对象展开运算符 `{ ...obj }` — 编译错误 `arkts-no-spread`，展平属性需逐字段赋值
+- `@Prop` 装饰器不支持接口（interface）类型分组，只能 `@Prop` 基础类型或 class 实例

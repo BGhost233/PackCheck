@@ -60,7 +60,7 @@ export function heroGradientStart(daysLeft: number | undefined): string {
   if (daysLeft > 3) {
     return '#DCF1E3';
   }
-  if (daysLeft > 0) {
+  if (daysLeft >= 0) {
     return '#FFF5E6';
   }
   return '#E8F5E9';

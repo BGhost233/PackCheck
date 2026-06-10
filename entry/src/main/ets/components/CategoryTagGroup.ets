@@ -19,8 +19,10 @@ import {
   SPRING_FILTER_PRESS,
   SPRING_FILTER_RELEASE,
   PRESS_SCALE_DOWN,
-  PRESS_SCALE_REST
+  PRESS_SCALE_REST,
+  DURATION_CEREMONY_SHAKE
 } from '../constants/AnimationTokens';
+import { CATEGORY_ALL } from '../models/PackModels';
 import { isProtectedCategory } from '../services/CategoryService';
 
 /**
@@ -55,8 +57,10 @@ export struct CategoryTagGroup {
   @State private isEditing: boolean = false;
   @State private pressedChip: string = '';
   @State private wiggleAngle: number = 0;
-  @State private wiggleTimerId: number = -1;
-  @State private wiggleTick: number = 0;
+  // 定时器 id 无需驱动 UI，使用普通成员避免无谓的状态刷新
+  private wiggleTimerId: number = -1;
+  // 抖动方向交替标记（不进入 @State，仅在 setInterval 闭包内使用）
+  private wiggleFlip: boolean = false;
 
   aboutToDisappear(): void {
     this.stopWiggle();
@@ -64,7 +68,7 @@ export struct CategoryTagGroup {
 
   private displayCategories(): string[] {
     if (this.showAllOption) {
-      const result: string[] = ['全部'];
+      const result: string[] = [CATEGORY_ALL];
       for (let i = 0; i < this.categories.length; i++) {
         result.push(this.categories[i]);
       }
@@ -84,7 +88,7 @@ export struct CategoryTagGroup {
     // haptic 已在 onTouch(Down) 触发，此处不重复
     if (this.isEditing) {
       // 编辑态下点击 = 重命名（受保护分组除外）
-      if (!isProtectedCategory(category) && category !== '全部') {
+      if (!isProtectedCategory(category) && category !== CATEGORY_ALL) {
         this.onRename(category, '');
       }
       return;
@@ -97,24 +101,24 @@ export struct CategoryTagGroup {
   }
 
   private handleMultiSelect(category: string): void {
-    if (category === '全部') {
-      this.onMultiSelect(['全部']);
+    if (category === CATEGORY_ALL) {
+      this.onMultiSelect([CATEGORY_ALL]);
       return;
     }
     const next: string[] = [];
     for (let i = 0; i < this.selectedCategories.length; i++) {
-      if (this.selectedCategories[i] !== '全部' && this.selectedCategories[i] !== category) {
+      if (this.selectedCategories[i] !== CATEGORY_ALL && this.selectedCategories[i] !== category) {
         next.push(this.selectedCategories[i]);
       }
     }
     if (this.selectedCategories.indexOf(category) < 0) {
       next.push(category);
     }
-    this.onMultiSelect(next.length === 0 ? ['全部'] : next);
+    this.onMultiSelect(next.length === 0 ? [CATEGORY_ALL] : next);
   }
 
   private handleLongPress(category: string): void {
-    if (!this.editable || category === '全部') {
+    if (!this.editable || category === CATEGORY_ALL) {
       return;
     }
     this.triggerHaptic(50);
@@ -144,12 +148,19 @@ export struct CategoryTagGroup {
   }
 
   private startWiggle(): void {
-    this.wiggleTick = 0;
+    // 防重入：若已有定时器在跑，先清掉旧的，杜绝 timer id 被覆盖导致的泄漏
+    if (this.wiggleTimerId >= 0) {
+      clearInterval(this.wiggleTimerId);
+      this.wiggleTimerId = -1;
+    }
+    this.wiggleFlip = false;
     this.wiggleTimerId = setInterval(() => {
-      this.wiggleTick++;
-      // 交替正负角度，模拟 iOS 图标抖动
-      this.wiggleAngle = this.wiggleTick % 2 === 0 ? 1.5 : -1.5;
-    }, 80) as number;
+      // 交替正负角度，模拟 iOS 图标抖动；用 spring 让每次摆动更柔顺
+      this.wiggleFlip = !this.wiggleFlip;
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+        this.wiggleAngle = this.wiggleFlip ? -1.5 : 1.5;
+      });
+    }, DURATION_CEREMONY_SHAKE);
   }
 
   private stopWiggle(): void {
@@ -157,8 +168,11 @@ export struct CategoryTagGroup {
       clearInterval(this.wiggleTimerId);
       this.wiggleTimerId = -1;
     }
-    this.wiggleAngle = 0;
-    this.wiggleTick = 0;
+    this.wiggleFlip = false;
+    // 平滑归位，避免抖动戛然而止
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.wiggleAngle = 0;
+    });
   }
 
   private triggerHaptic(duration: number = 10): void {
@@ -266,9 +280,9 @@ export struct CategoryTagGroup {
       .padding({ left: 12, right: 12 })
       .backgroundColor(this.chipBgColor(category))
       .border({
-        width: this.isEditing && !isProtectedCategory(category) && category !== '全部' ? 1.5 : 1,
+        width: this.isEditing && !isProtectedCategory(category) && category !== CATEGORY_ALL ? 1.5 : 1,
         color: this.chipBorderColor(category),
-        style: this.isEditing && !isProtectedCategory(category) && category !== '全部'
+        style: this.isEditing && !isProtectedCategory(category) && category !== CATEGORY_ALL
           ? BorderStyle.Dashed : BorderStyle.Solid
       })
       .borderRadius(16)
@@ -299,7 +313,7 @@ export struct CategoryTagGroup {
       })
 
       // 编辑态：删除按钮 — 绝对定位在右上角外侧
-      if (this.isEditing && !isProtectedCategory(category) && category !== '全部') {
+      if (this.isEditing && !isProtectedCategory(category) && category !== CATEGORY_ALL) {
         Row() {
           SymbolGlyph($r('sys.symbol.xmark'))
             .fontSize(7)
@@ -378,7 +392,7 @@ export struct CategoryTagGroup {
     if (this.isSelected(category)) {
       return this.pressedChip === category ? PRIMARY_PRESSED : PRIMARY_COLOR;
     }
-    if (this.isEditing && !isProtectedCategory(category) && category !== '全部') {
+    if (this.isEditing && !isProtectedCategory(category) && category !== CATEGORY_ALL) {
       return PRIMARY_COLOR;
     }
     return CHIP_BORDER;
@@ -392,7 +406,7 @@ export struct CategoryTagGroup {
   }
 
   private chipRotation(category: string): number {
-    if (this.isEditing && !isProtectedCategory(category) && category !== '全部') {
+    if (this.isEditing && !isProtectedCategory(category) && category !== CATEGORY_ALL) {
       // 用 category 长度做相位偏移，让不同标签错开抖动
       const phaseOffset = category.length % 2 === 0 ? 1 : -1;
       return this.wiggleAngle * phaseOffset;

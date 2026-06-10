@@ -6,7 +6,7 @@ import {
   GEAR_SORT_VALUE,
   GEAR_SORT_WEIGHT
 } from '../constants/DesignTokens';
-import { DEFAULT_CATEGORIES, GearItem } from '../models/PackModels';
+import { CATEGORY_ALL, DEFAULT_CATEGORIES, GearItem } from '../models/PackModels';
 
 /**
  * 装备相关纯业务逻辑 — 不依赖 UI 上下文
@@ -59,7 +59,7 @@ export function sortedGears(items: GearItem[], sortMode: string): GearItem[] {
 export function filterGears(gears: GearItem[], keyword: string, activeCategories: string[], sortMode: string): GearItem[] {
   const filtered: GearItem[] = [];
   const lowerKeyword = keyword.trim().toLowerCase();
-  const showAllCategories = activeCategories.indexOf('全部') >= 0;
+  const showAllCategories = activeCategories.indexOf(CATEGORY_ALL) >= 0;
   for (let index = 0; index < gears.length; index++) {
     const item = gears[index];
     const categoryMatched = showAllCategories || activeCategories.indexOf(item.category) >= 0;
@@ -76,8 +76,8 @@ export function filterGears(gears: GearItem[], keyword: string, activeCategories
 }
 
 export function normalizeGearCategories(categories: string[]): string[] {
-  if (categories.length === 0 || categories.indexOf('全部') >= 0) {
-    return ['全部'];
+  if (categories.length === 0 || categories.indexOf(CATEGORY_ALL) >= 0) {
+    return [CATEGORY_ALL];
   }
   const normalized: string[] = [];
   for (let index = 0; index < categories.length; index++) {
@@ -87,13 +87,13 @@ export function normalizeGearCategories(categories: string[]): string[] {
     }
   }
   if (normalized.length === 0) {
-    return ['全部'];
+    return [CATEGORY_ALL];
   }
   return normalized;
 }
 
 export function allGearFilterCategories(userCategories: string[]): string[] {
-  const result: string[] = ['全部'];
+  const result: string[] = [CATEGORY_ALL];
   for (let index = 0; index < DEFAULT_CATEGORIES.length; index++) {
     result.push(DEFAULT_CATEGORIES[index]);
   }
@@ -106,7 +106,7 @@ export function allGearFilterCategories(userCategories: string[]): string[] {
 }
 
 export function gearCategoryCount(gears: GearItem[], category: string): number {
-  if (category === '全部') {
+  if (category === CATEGORY_ALL) {
     return gears.length;
   }
   let count = 0;
@@ -231,7 +231,11 @@ export function formatKg(weightGram: number): string {
   if (weightGram <= 0) {
     return '0kg';
   }
-  return (Math.round(weightGram / 100) / 10).toString() + 'kg';
+  const kg = weightGram / 1000;
+  if (kg >= 10) {
+    return Math.round(kg).toString() + 'kg';
+  }
+  return (Math.round(kg * 100) / 100).toString() + 'kg';
 }
 
 export function gearStatsText(gears: GearItem[]): string {
@@ -262,12 +266,7 @@ export function presetCategories(userCategories: string[]): string[] {
 }
 
 export function categoryTabs(userCategories: string[]): string[] {
-  const tabs: string[] = ['全部'];
-  const categories = presetCategories(userCategories);
-  for (let index = 0; index < categories.length; index++) {
-    tabs.push(categories[index]);
-  }
-  return tabs;
+  return allGearFilterCategories(userCategories);
 }
 
 export function uniqueGearIds(ids: string[]): string[] {
@@ -295,7 +294,7 @@ export function importGearMetaText(item: GearItem): string {
 }
 
 export function filteredImportGears(gears: GearItem[], category: string): GearItem[] {
-  if (category === '全部') {
+  if (category === CATEGORY_ALL) {
     return gears;
   }
   return gears.filter((item: GearItem) => item.category === category);
@@ -303,8 +302,8 @@ export function filteredImportGears(gears: GearItem[], category: string): GearIt
 
 export function tempGearFilterText(categories: string[]): string {
   const normalized = normalizeGearCategories(categories);
-  if (normalized.indexOf('全部') >= 0) {
-    return '全部';
+  if (normalized.indexOf(CATEGORY_ALL) >= 0) {
+    return CATEGORY_ALL;
   }
   if (normalized.length === 1) {
     return normalized[0];

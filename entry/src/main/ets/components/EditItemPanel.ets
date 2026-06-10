@@ -198,7 +198,7 @@ export struct EditItemPanel {
       }
       .width('85%')
       .padding({ left: 24, right: 24, top: 24, bottom: 24 })
-      .backgroundColor('#FFFFFF')
+      .backgroundColor(WHITE)
       .borderRadius(24)
       .shadow({ radius: 24, color: SHADOW_LIGHT, offsetX: 0, offsetY: 8 })
       .scale({ x: this.panelScale, y: this.panelScale })

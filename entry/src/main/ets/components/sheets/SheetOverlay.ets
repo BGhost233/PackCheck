@@ -1,4 +1,4 @@
-import { GearItem } from '../../models/PackModels';
+import { CATEGORY_ALL, GearItem } from '../../models/PackModels';
 import {
   CARD_BG,
   DANGER_COLOR,
@@ -57,7 +57,7 @@ export struct SheetOverlay {
   // Import
   @Prop gears: GearItem[] = [];
   @Prop importGearIds: string[] = [];
-  @Prop importGearCategory: string = '全部';
+  @Prop importGearCategory: string = CATEGORY_ALL;
   // Generate trip
   @Prop generateTripTitle: string = '';
   @Prop selectedMultiGearCount: number = 0;
@@ -169,11 +169,13 @@ export struct SheetOverlay {
           })
         } else if (this.sheetMode === SHEET_EDIT_PROFILE) {
           ProfileEditSheet({
+            tripDate: this.tripDate,
             tripDestination: this.tripDestination,
             tripDistanceKm: this.tripDistanceKm,
             tripMaxAltitude: this.tripMaxAltitude,
             tripAscentM: this.tripAscentM,
             tripDurationHours: this.tripDurationHours,
+            onDateChange: this.onTripDateChange,
             onDestinationChange: this.onTripDestinationChange,
             onDistanceKmChange: this.onTripDistanceKmChange,
             onMaxAltitudeChange: this.onTripMaxAltitudeChange,

@@ -1,5 +1,3 @@
-import { LengthMetrics } from '@kit.ArkUI';
-import { vibrator } from '@kit.SensorServiceKit';
 import {
   GLASS_BG_HEAVY,
   OVERLAY_MASK_LIGHT,
@@ -14,7 +12,7 @@ import {
   SPRING_GENERAL,
   SPRING_PANEL_EXIT
 } from '../constants/AnimationTokens';
-import { GearItem } from '../models/PackModels';
+import { CATEGORY_ALL, GearItem } from '../models/PackModels';
 import { normalizeGearCategories, allGearFilterCategories, gearCategoryCount, tempGearFilterText } from '../services/GearService';
 import { CategoryTagGroup } from './CategoryTagGroup';
 
@@ -22,7 +20,7 @@ import { CategoryTagGroup } from './CategoryTagGroup';
 export struct GearFilterPanel {
   @Prop categories: string[] = [];
   @Prop gears: GearItem[] = [];
-  @Prop selectedCategories: string[] = ['全部'];
+  @Prop selectedCategories: string[] = [CATEGORY_ALL];
 
   onApply: (categories: string[]) => void = () => {};
   onDismiss: () => void = () => {};
@@ -32,7 +30,7 @@ export struct GearFilterPanel {
   onAddCategory: (name: string) => void = () => {};
 
   // 内部状态：临时选择 + 动画
-  @State private tempCategories: string[] = ['全部'];
+  @State private tempCategories: string[] = [CATEGORY_ALL];
   @State private panelTranslateY: number = -600;
   @State private overlayOpacity: number = 0;
 
@@ -61,7 +59,7 @@ export struct GearFilterPanel {
 
   private filteredGearCount(): number {
     const normalized = this.normalizeCategories(this.tempCategories);
-    if (normalized.indexOf('全部') >= 0) {
+    if (normalized.indexOf(CATEGORY_ALL) >= 0) {
       return this.gears.length;
     }
     let count = 0;
@@ -74,7 +72,7 @@ export struct GearFilterPanel {
   }
 
   private clearSelection(): void {
-    this.tempCategories = ['全部'];
+    this.tempCategories = [CATEGORY_ALL];
   }
 
   private applyAndClose(): void {

@@ -1,6 +1,6 @@
 import { ChecklistItem, GearItem, makeId, TripChecklist } from '../models/PackModels';
 import { PRIMARY_COLOR, PROGRESS_END_COLOR, PROGRESS_INACTIVE } from '../constants/Colors';
-import { gearById, numberOrZero } from './GearService';
+import { formatKg, gearById } from './GearService';
 
 /**
  * 清单相关纯业务逻辑 — 不依赖 UI 上下文
@@ -70,6 +70,7 @@ export function homeStatusText(checklists: TripChecklist[]): string {
   return activeChecklistCount(checklists).toString() + ' 个行程进行中';
 }
 
+// 当日期文本不包含"年"时，默认使用当前年份（适用于"6月15日"这类省略年份的输入）
 export function parseTripDateAt(text: string): number | undefined {
   const value = text.trim();
   if (value.length === 0) {
@@ -186,9 +187,6 @@ export function progressStartColor(percent: number): string {
 export function progressEndColor(percent: number): string {
   if (percent < 30) {
     return PROGRESS_INACTIVE;
-  }
-  if (percent < 60) {
-    return PROGRESS_END_COLOR;
   }
   return PROGRESS_END_COLOR;
 }
@@ -313,22 +311,15 @@ export function latestChecklistHomeSubtitle(checklist: TripChecklist | undefined
   const countdown = countdownText(checklist);
   const weight = checklistTotalWeight(checklist, gears);
   if (countdown.length > 0 && weight > 0) {
-    return countdown + ' · ' + formatKgLocal(weight);
+    return countdown + ' · ' + formatKg(weight);
   }
   if (countdown.length > 0) {
     return countdown;
   }
   if (weight > 0) {
-    return formatKgLocal(weight);
+    return formatKg(weight);
   }
   return checklistMetaText(checklist);
-}
-
-function formatKgLocal(weightGram: number): string {
-  if (weightGram <= 0) {
-    return '0kg';
-  }
-  return (Math.round(weightGram / 100) / 10).toString() + 'kg';
 }
 
 /**
@@ -340,10 +331,12 @@ export function findLatestChecklist(checklists: TripChecklist[]): TripChecklist 
   }
   const today = startOfDay(new Date());
   let nearestFuture: TripChecklist | undefined = undefined;
+  let nearestFutureDate: number = Number.MAX_SAFE_INTEGER;
   for (let i = 0; i < checklists.length; i++) {
     const dateAt = checklistDateAt(checklists[i]);
     if (dateAt !== undefined && dateAt >= today) {
-      if (nearestFuture === undefined || dateAt < checklistDateAt(nearestFuture)!) {
+      if (dateAt < nearestFutureDate) {
+        nearestFutureDate = dateAt;
         nearestFuture = checklists[i];
       }
     }
@@ -352,10 +345,12 @@ export function findLatestChecklist(checklists: TripChecklist[]): TripChecklist 
     return nearestFuture;
   }
   let latestPast: TripChecklist | undefined = undefined;
+  let latestPastDate: number = -1;
   for (let i = 0; i < checklists.length; i++) {
     const dateAt = checklistDateAt(checklists[i]);
     if (dateAt !== undefined && dateAt < today) {
-      if (latestPast === undefined || dateAt > checklistDateAt(latestPast)!) {
+      if (dateAt > latestPastDate) {
+        latestPastDate = dateAt;
         latestPast = checklists[i];
       }
     }

@@ -7,11 +7,12 @@ import {
   DURATION_NORMAL, DURATION_TICK, DURATION_FAST,
   DURATION_CEREMONY_SHAKE, DURATION_PRESS,
   DURATION_NONE,
+  PRESS_SCALE_DOWN,
   CURVE_DECELERATE, CURVE_LINEAR,
 STAGGER_OFFSET_Y, staggerDelay
 } from '../constants/AnimationTokens';
 import { vibrator } from '@kit.SensorServiceKit';
-import { GearItem, TripChecklist } from '../models/PackModels';
+import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import {
   ARROW_COLOR,
@@ -66,7 +67,7 @@ interface TripCardArea {
 @Component
 export struct GearPage {
   @Prop gears: GearItem[] = [];
-  @Prop selectedGearCategories: string[] = ['全部'];
+  @Prop selectedGearCategories: string[] = [CATEGORY_ALL];
   @Prop gearSearchKeyword: string = '';
   @Prop gearSortMode: string = GEAR_SORT_GROUP;
   @Prop expandedGearId: string = '';
@@ -291,7 +292,7 @@ export struct GearPage {
         yOffset: 0,
         animation: { duration: DURATION_TICK, curve: CURVE_LINEAR }
       });
-    }, 16) as number;
+    }, 16);
   }
 
   private stopTrayAutoScroll(): void {
@@ -406,8 +407,8 @@ export struct GearPage {
   }
 
   private activeCategories(): string[] {
-    if (this.selectedGearCategories.length === 0 || this.selectedGearCategories.indexOf('全部') >= 0) {
-      return ['全部'];
+    if (this.selectedGearCategories.length === 0 || this.selectedGearCategories.indexOf(CATEGORY_ALL) >= 0) {
+      return [CATEGORY_ALL];
     }
     const categories: string[] = [];
     for (let index = 0; index < this.selectedGearCategories.length; index++) {
@@ -417,15 +418,15 @@ export struct GearPage {
       }
     }
     if (categories.length === 0) {
-      return ['全部'];
+      return [CATEGORY_ALL];
     }
     return categories;
   }
 
   private activeCategoryText(): string {
     const categories = this.activeCategories();
-    if (categories.length === 0 || categories.indexOf('全部') >= 0) {
-      return '全部';
+    if (categories.length === 0 || categories.indexOf(CATEGORY_ALL) >= 0) {
+      return CATEGORY_ALL;
     }
     if (categories.length === 1) {
       return categories[0];
@@ -440,7 +441,7 @@ export struct GearPage {
     const filtered: GearItem[] = [];
     const keyword = this.gearSearchKeyword.trim().toLowerCase();
     const activeCategories = this.activeCategories();
-    const showAllCategories = activeCategories.indexOf('全部') >= 0;
+    const showAllCategories = activeCategories.indexOf(CATEGORY_ALL) >= 0;
     for (let index = 0; index < this.gears.length; index++) {
       const item = this.gears[index];
       const note = item.note === undefined ? '' : item.note;
@@ -958,7 +959,7 @@ export struct GearPage {
                 .fontSize(this.gearTitleFontSize())
                 .fontWeight(FontWeight.Bold)
                 .fontColor(TEXT_MAIN)
-                .animation({ duration: DURATION_CEREMONY_SHAKE })
+                .animation({ curve: SPRING_GENERAL() })
               Text(this.gearSummaryText())
                 .fontSize(13)
                 .fontColor(TEXT_TERTIARY)
@@ -967,7 +968,7 @@ export struct GearPage {
                 .constraintSize({ maxWidth: 160 })
                 .margin({ left: 8 })
                 .opacity(this.gearCollapsedOpacity())
-                .translate({ x: this.gearCollapsedOpacity() > 0 ? 0 : -12 })
+                .translate({ x: -12 * (1 - this.gearCollapsedOpacity()) })
                 .animation({ curve: SPRING_SCROLL() })
               Blank()
             }
@@ -1225,8 +1226,8 @@ export struct GearPage {
       .alignItems(VerticalAlign.Center)
       .padding({ left: 4, right: 4 })
       .scale({
-        x: this.pressedGroupId === group ? 0.97 : 1.0,
-        y: this.pressedGroupId === group ? 0.97 : 1.0
+        x: this.pressedGroupId === group ? PRESS_SCALE_DOWN : 1.0,
+        y: this.pressedGroupId === group ? PRESS_SCALE_DOWN : 1.0
       })
       .animation({ curve: SPRING_PRESS() })
       .onTouch((event: TouchEvent) => {

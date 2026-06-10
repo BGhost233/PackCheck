@@ -61,6 +61,7 @@ export struct HomePage {
   @State private heroPressed: boolean = false;
   @State private historyStaggerReady: boolean = false;
   @State private emptyHeroBreathScale: number = 0.98;
+  @State private emptyBtnPressed: boolean = false;
   @State private heroRingCelebrateScale: number = 1.0;
   @State private ringCelebrateColor: string = PRIMARY_COLOR;
   private wasLatestChecklistDone: boolean = false;
@@ -729,6 +730,16 @@ export struct HomePage {
         .backgroundColor(PRIMARY_COLOR)
         .borderRadius(22)
         .margin({ top: 10 })
+        .scale({ x: this.emptyBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.emptyBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down) {
+            this.emptyBtnPressed = true;
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.emptyBtnPressed = false;
+          }
+        })
         .onClick(() => {
           this.onOpenTrip();
         })
