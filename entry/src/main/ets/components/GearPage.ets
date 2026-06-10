@@ -80,7 +80,6 @@ export struct GearPage {
 @State private pressedGearId: string = '';
 @State private swipedGearId: string = '';
 @State private swipeOffsetX: number = 0;
-@State private showMoveGroupSheet: boolean = false;
 @State private searchExpanded: boolean = false;
   @State private showWeightEditor: boolean = false;
   @State private targetWeightInput: string = '';
@@ -350,7 +349,7 @@ export struct GearPage {
   onCancelGearMultiSelect: () => void = (): void => {};
   onOpenGenerateTripSheet: () => void = (): void => {};
   onBatchDeleteGears: (ids: string[]) => void = (ids: string[]): void => {};
-  onBatchMoveGroup: (ids: string[], targetGroup: string) => void = (ids: string[], targetGroup: string): void => {};
+  onOpenMoveGroupSheet: () => void = (): void => {};
   onAddGearsToTrip: (gearIds: string[], tripId: string) => void = (gearIds: string[], tripId: string): void => {};
   onAddGearsToNewTrip: (gearIds: string[]) => void = (gearIds: string[]): void => {};
 
@@ -1120,12 +1119,7 @@ export struct GearPage {
         .backgroundColor(this.selectedMultiGearIds.length === 0 ? GROUP_HEADER_BG : DIVIDER_COLOR)
         .enabled(this.selectedMultiGearIds.length > 0)
         .onClick(() => {
-          this.showMoveGroupSheet = true;
-        })
-        .bindSheet($$this.showMoveGroupSheet, this.MoveGroupSheetContent(), {
-          height: SheetSize.FIT_CONTENT,
-          dragBar: true,
-          backgroundColor: CARD_BG
+          this.onOpenMoveGroupSheet();
         })
       Button('删除')
         .height(32)
@@ -1157,44 +1151,6 @@ export struct GearPage {
     .width('100%')
     .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
   }
-
-  @Builder
-  private MoveGroupSheetContent() {
-    Column({ space: 12 }) {
-      Text('移动到分组')
-        .fontSize(16)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(TEXT_MAIN)
-        .padding({ top: 8 })
-      ForEach(this.allGearGroups(), (group: string) => {
-        Row() {
-          Row()
-            .width(3)
-            .height(14)
-            .backgroundColor(getGroupColor(group))
-            .borderRadius(1.5)
-            .margin({ right: 10 })
-          Text(group)
-            .fontSize(15)
-            .fontColor(TEXT_MAIN)
-            .layoutWeight(1)
-        }
-        .width('100%')
-        .height(48)
-        .alignItems(VerticalAlign.Center)
-        .padding({ left: 16, right: 16 })
-        .borderRadius(12)
-        .backgroundColor(PAGE_BG)
-        .onClick(() => {
-          this.onBatchMoveGroup(this.selectedMultiGearIds, group);
-          this.showMoveGroupSheet = false;
-        })
-      }, (group: string) => group)
-    }
-    .width('100%')
-    .padding({ left: 20, right: 20, top: 12, bottom: 34 })
-  }
-
 
   @Builder
   private GearGroupCard(group: string) {

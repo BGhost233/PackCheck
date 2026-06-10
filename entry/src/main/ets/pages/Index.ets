@@ -31,6 +31,7 @@ import {
   SHEET_GEAR_SORT,
   SHEET_GENERATE_TRIP,
   SHEET_IMPORT,
+  SHEET_MOVE_GROUP,
   SHEET_NONE,
   SHEET_TEMP_ITEM,
   SHEET_TRIP,
@@ -1428,6 +1429,11 @@ struct Index {
     this.openSheetAnimated();
   }
 
+  private openMoveGroupSheet(): void {
+    this.sheetMode = SHEET_MOVE_GROUP;
+    this.openSheetAnimated();
+  }
+
 
   private hasImportSelection(id: string): boolean {
     return this.importGearIds.indexOf(id) >= 0;
@@ -1954,8 +1960,8 @@ struct Index {
                 onBatchDeleteGears: (ids: string[]) => {
                   this.batchDeleteGears(ids);
                 },
-                onBatchMoveGroup: (ids: string[], targetGroup: string) => {
-                  this.batchMoveGroup(ids, targetGroup);
+                onOpenMoveGroupSheet: () => {
+                  this.openMoveGroupSheet();
                 },
                 onAddGearsToTrip: (gearIds: string[], tripId: string) => {
                   this.addGearsToExistingTrip(gearIds, tripId);
@@ -2146,6 +2152,10 @@ struct Index {
           onAddGearFromImport: () => { this.openAddGearFromImport(); },
           onGenerateTripTitleChange: (value: string) => { this.generateTripTitle = value; },
           onGenerateTrip: () => { this.generateChecklistFromSelectedGears(); },
+          onSelectMoveGroup: (group: string) => {
+            this.batchMoveGroup(this.selectedMultiGearIds, group);
+            this.closeSheet();
+          },
           onCategoryRename: (oldName: string, newName: string) => { this.handleCategoryRename(oldName, newName); },
           onCategoryDelete: (category: string) => { this.handleCategoryDelete(category); },
           onCategoryReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
