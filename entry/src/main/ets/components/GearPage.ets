@@ -74,7 +74,6 @@ export struct GearPage {
   @Link targetWeightGram: number;
   @Prop multiSelectMode: boolean = false;
   @Prop selectedMultiGearIds: string[] = [];
-  @Prop gearBudget: number = 0;
   @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
 
 @State private pressedGearId: string = '';
