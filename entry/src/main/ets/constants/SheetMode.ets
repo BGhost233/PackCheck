@@ -9,3 +9,5 @@ export const SHEET_IMPORT: string = 'import';
 export const SHEET_GEAR_SORT: string = 'gear_sort';
 export const SHEET_GENERATE_TRIP: string = 'generate_trip';
 export const SHEET_MOVE_GROUP: string = 'move_group';
+export const SHEET_GEAR_PICKER: string = 'gear_picker';
+export const SHEET_GEAR_ITEM_ACTION: string = 'gear_item_action';

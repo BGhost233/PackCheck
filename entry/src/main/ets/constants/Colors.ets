@@ -80,3 +80,19 @@ export const SHADOW_LIGHT: string = '#14000000';
 export const SHADOW_SUBTLE: string = '#0A000000';
 export const SHADOW_MICRO: string = '#08000000';
 export const SHADOW_MEDIUM: string = '#28000000';
+
+// ============ Zone 颜色（配装系统） ============
+export const ZONE_HEAD_COLOR: string = '#42A5F5';
+export const ZONE_UPPER_COLOR: string = '#EF5350';
+export const ZONE_LOWER_COLOR: string = '#5C6BC0';
+export const ZONE_FEET_COLOR: string = '#8D6E63';
+export const ZONE_CARRY_COLOR: string = '#FFA726';
+export const ZONE_SLEEP_COLOR: string = '#7E57C2';
+export const ZONE_MISC_COLOR: string = '#78909C';
+
+// ============ Layer Badge 背景色（配装系统） ============
+export const LAYER_BASE_BG: string = '#E3F2FD';
+export const LAYER_MID_BG: string = '#FFF3E0';
+export const LAYER_SHELL_BG: string = '#E8F5E9';
+export const LAYER_INSULATION_BG: string = '#F3E5F5';
+export const LAYER_ACCESSORY_BG: string = '#F5F5F5';
