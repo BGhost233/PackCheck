@@ -1,4 +1,4 @@
-import { CATEGORY_ALL, GearItem } from '../../models/PackModels';
+import { CATEGORY_ALL, ChecklistItem, GearItem } from '../../models/PackModels';
 import {
   CARD_BG,
   DANGER_COLOR,
@@ -13,6 +13,8 @@ import {
   SHEET_MOVE_GROUP,
   SHEET_TEMP_ITEM,
   SHEET_TRIP,
+  SHEET_GEAR_PICKER,
+  SHEET_GEAR_ITEM_ACTION,
   TEXT_MAIN,
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
@@ -29,6 +31,8 @@ import { TempItemSheet } from './TempItemSheet';
 import { ImportSheet } from './ImportSheet';
 import { ProfileEditSheet } from './ProfileEditSheet';
 import { MoveGroupSheet } from './MoveGroupSheet';
+import { GearPickerSheet } from './GearPickerSheet';
+import { GearItemActionSheet } from './GearItemActionSheet';
 
 @Component
 export struct SheetOverlay {
@@ -109,6 +113,16 @@ export struct SheetOverlay {
   onCategoryDelete: (category: string) => void = () => {};
   onCategoryReorder: (categories: string[]) => void = () => {};
   onCategoryAdd: (name: string) => void = () => {};
+
+  // GearPicker callbacks
+  @Prop pickerSelectedIds: string[] = [];
+  onPickerToggleGear: (gear: GearItem) => void = () => {};
+  onPickerTempAdd: (name: string, zone: string, weight: number | undefined) => void = () => {};
+  // GearItemAction callbacks
+  @Prop actionItem: ChecklistItem = { id: '', name: '', group: '', checked: false };
+  onActionMoveToZone: (itemId: string, zone: string) => void = () => {};
+  onActionViewDetail: (item: ChecklistItem) => void = () => {};
+  onActionRemove: (itemId: string) => void = () => {};
 
   build() {
     Column() {
@@ -256,6 +270,23 @@ export struct SheetOverlay {
               this.onSelectMoveGroup(group);
             }
           })
+        } else if (this.sheetMode === SHEET_GEAR_PICKER) {
+          GearPickerSheet({
+            gears: this.gears,
+            categories: this.categories,
+            selectedItemIds: this.pickerSelectedIds,
+            onToggleGear: this.onPickerToggleGear,
+            onTempAdd: this.onPickerTempAdd,
+            onClose: this.onClose
+          })
+        } else if (this.sheetMode === SHEET_GEAR_ITEM_ACTION) {
+          GearItemActionSheet({
+            item: this.actionItem,
+            onMoveToZone: this.onActionMoveToZone,
+            onViewDetail: this.onActionViewDetail,
+            onRemove: this.onActionRemove,
+            onClose: this.onClose
+          })
         }
       }
       .width('100%')
@@ -331,6 +362,12 @@ export struct SheetOverlay {
     }
     if (this.sheetMode === SHEET_MOVE_GROUP) {
       return '移动到分组';
+    }
+    if (this.sheetMode === SHEET_GEAR_PICKER) {
+      return '选择装备';
+    }
+    if (this.sheetMode === SHEET_GEAR_ITEM_ACTION) {
+      return '';
     }
     return '';
   }

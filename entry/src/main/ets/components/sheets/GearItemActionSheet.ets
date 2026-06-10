@@ -1,6 +1,7 @@
 // 配装系统 - 装备操作 ActionSheet
 // 职责：移动到其他区域 / 查看装备详情 / 从行程移除
 
+import { LengthMetrics } from '@kit.ArkUI';
 import {
   TEXT_MAIN,
   TEXT_SECONDARY,
@@ -21,7 +22,6 @@ import { BodyZone } from '../../constants/GearLoadout';
 import { SPRING_PRESS } from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';
 import { zoneDisplayName, allZones } from '../../services/LoadoutService';
-import { LengthMetrics } from '@kit.ArkUI';
 
 @Component
 export struct GearItemActionSheet {
@@ -56,7 +56,7 @@ export struct GearItemActionSheet {
             .fontSize(15)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
-          SymbolGlyph($r('sys.symbol.chevron.right'))
+          SymbolGlyph($r('sys.symbol.chevron_right'))
             .fontSize(14)
             .fontColor([TEXT_TERTIARY])
         }

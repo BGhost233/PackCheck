@@ -1,6 +1,7 @@
 // 配装系统 - 装备选择 Sheet
 // 职责：展示装备库列表，按品类筛选，连续多选，内联临时添加覆盖层
 
+import { LengthMetrics } from '@kit.ArkUI';
 import {
   PRIMARY_COLOR,
   LIGHT_PRIMARY_COLOR,
@@ -300,7 +301,7 @@ export struct GearPickerSheet {
   @Builder
   private buildEmptyState() {
     Column({ space: 12 }) {
-      SymbolGlyph($r('sys.symbol.backpack'))
+      SymbolGlyph($r('sys.symbol.bag'))
         .fontSize(48)
         .fontColor([TEXT_TERTIARY])
       Text('装备库还是空的')
