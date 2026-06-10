@@ -27,7 +27,40 @@
 
 ---
 
-## 🟡 边缘场景问题
+## 🔴 HIGH — 边缘场景 Bug
+
+### EDGE-H1. 视图切换/TripDetailPage 销毁时 timer 泄漏
+
+**文件**：`LoadoutView.ets:77`、`LoadoutProgressBar.ets:113,127`
+
+视图切换（配装↔清单）时 `if/else` 条件渲染会**销毁** `LoadoutView` 和 `LoadoutProgressBar`。但两个组件中的 `setTimeout`（入场动画 80ms）和 `setInterval`（counter 动画 16ms tick）**从未在 `aboutToDisappear` 中清除**。
+
+**后果**：快速切换几次后，多个僵尸 timer 持续运行在已销毁的组件上，`this.getUIContext().animateTo(...)` 在 stale 引用上抛出运行时异常。`setInterval` 永久泄漏，每个 16ms。
+
+**修复**：在 `LoadoutView` 和 `LoadoutProgressBar` 中添加 `aboutToDisappear()`，清除所有 timer。
+
+### EDGE-H2. Counter 动画在快速双击时脱同步
+
+**文件**：`LoadoutProgressBar.ets:29-33`
+
+`onCheckedChange` 用 `if (this.displayChecked !== this.checked)` 判断是否需要动画。快速双击时：Tap1 ON → 动画 0→1 完成 → `displayChecked=1`。Tap2 OFF → `checked=0`，`displayChecked(1) !== checked(0)` true，动画启动。但如果 Tap3 ON 在前一个动画完成前到达：`displayChecked(~0.5) !== checked(1)`，动画反向。多次快速切换后 `displayChecked` 可能卡在中间值。
+
+**修复**：引入 `@State private animating: boolean` 标志。`animating` 为 true 时始终启动新动画（不依赖值相等判断）。
+
+### EDGE-H3. 装备/Zone 卡片移除无情退场动画
+
+**文件**：`LoadoutView.ets:190-211`、`LoadoutZoneCard.ets:90-103`
+
+当用户移除 Zone 中的最后一件装备时，Zone 卡片因 `getVisibleZones()` 过滤而**瞬间消失**——没有任何 fadeOut、scaleDown、slideOut 动画。同样，移除单个装备行时，`ForEach` 重建列表，被移除的项直接不见。
+
+**修复**：给 `LoadoutZoneCard` 和 `LoadoutGearItem` 添加 `TransitionEffect` 退场动画：
+```typescript
+.transition(TransitionEffect.OPACITY.animation({ curve: SPRING_GENERAL() }))
+```
+
+---
+
+## 🟡 MEDIUM — 边缘场景问题
 
 ### EDGE-1. GearPickerSheet 品类筛选结果为空时无提示
 
@@ -172,7 +205,8 @@ onDeleteTrip: () => {
 
 | 类别 | 数量 | 说明 |
 |------|------|------|
-| 新发现问题 | 7 | 3 个边缘场景 + 3 个 UX 打磨 + 1 个 NaN 风险 |
-| 已正确处理 | 8 | 空态/极端数据/快速操作场景覆盖良好 |
+| 🔴 HIGH | 3 | Timer 泄漏、Counter 动画脱同步、无退场动画 |
+| 🟡 MEDIUM | 4 | NaN 传播、TransitionEffect 冲突、大列表无虚拟化、ActionSheet 无过渡 |
+| 🔵 LOW | 6 | 品类空态、固定宽度溢出、无数据操作的加载/错误态、移动无效 Zone、搜索空态分支错误、重复 callback |
 
-**核心评价**：这轮修复质量很高——上一轮所有 Critical 和绝大多数 Medium 都已正确修复。新发现的边缘场景都是「锦上添花」级别（品类筛选空态提示、Zone 卡片入场动画、NaN 防护），不影响核心功能。如果要排优先级：EDGE-5（NaN 风险）> EDGE-1（品类空态）> 其余。
+**核心评价**：修复质量很高。上一轮所有 Critical 已清零。本轮发现的 HIGH 问题聚焦于**组件生命周期管理**（timer 泄漏在视图销毁时）和**动画完整性**（退场动画缺失）。建议优先修复 EDGE-H1（timer 泄漏），其次是 EDGE-H3（退场动画），再次是 EDGE-H2（counter 脱同步）。
