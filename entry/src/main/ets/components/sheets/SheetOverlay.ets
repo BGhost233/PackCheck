@@ -20,6 +20,7 @@ import {
   TRANSPARENT,
   OVERLAY_SUBTLE
 } from '../../constants/Colors';
+import { SPRING_GENERAL } from '../../constants/AnimationTokens';
 import { GearSortSheet } from './GearSortSheet';
 import { GenerateTripSheet } from './GenerateTripSheet';
 import { GearFormSheet } from './GearFormSheet';
@@ -99,6 +100,10 @@ export struct SheetOverlay {
   onGenerateTrip: () => void = (): void => {};
   // Move group callback
   onSelectMoveGroup: (group: string) => void = (group: string): void => {};
+  // Swipe-to-dismiss gesture
+  @State private sheetDragOffset: number = 0;
+  @State private cardHeight: number = 600; // 默认值，onAreaChange 实时更新
+
   // Category editing callbacks
   onCategoryRename: (oldName: string, newName: string) => void = () => {};
   onCategoryDelete: (category: string) => void = () => {};
@@ -258,7 +263,36 @@ export struct SheetOverlay {
       .padding({ left: 16, right: 16, top: 16, bottom: 20 })
       .backgroundColor(CARD_BG)
       .borderRadius({ topLeft: 24, topRight: 24 })
-      .translate({ y: this.sheetTranslateY })
+      .translate({ y: this.sheetTranslateY + this.sheetDragOffset })
+      .onAreaChange((_old: Area, newArea: Area) => {
+        this.cardHeight = newArea.height as number;
+      })
+      .gesture(
+        PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 5 })
+          .onActionUpdate((event: GestureEvent) => {
+            if (event.offsetY > 0) {
+              // 边缘阻尼：位移 × 0.3，卡片"变重"
+              this.sheetDragOffset = event.offsetY * 0.3;
+            }
+          })
+          .onActionEnd((_event: GestureEvent) => {
+            if (this.sheetDragOffset > this.cardHeight * 0.25) {
+              // 超过 25% 阈值 → 关闭
+              this.sheetDragOffset = 0;
+              this.onClose();
+            } else {
+              // 未达阈值 → Spring 回弹
+              this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+                this.sheetDragOffset = 0;
+              });
+            }
+          })
+          .onActionCancel(() => {
+            this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+              this.sheetDragOffset = 0;
+            });
+          })
+      )
     }
     .width('100%')
     .height('100%')

@@ -1673,7 +1673,8 @@ struct Index {
     }, () => {
       this.sheetTranslateY = 0;
       this.sheetOverlayOpacity = 1;
-      this.contentScale = 0.97;
+      this.contentScale = 0.94;
+      this.contentBlur = 12;
     });
   }
 
@@ -1691,6 +1692,7 @@ struct Index {
       this.sheetTranslateY = 800;
       this.sheetOverlayOpacity = 0;
       this.contentScale = 1.0;
+      this.contentBlur = 0;
     });
   }
 
