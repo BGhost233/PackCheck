@@ -10,6 +10,7 @@ import {
   SHEET_GEAR_SORT,
   SHEET_GENERATE_TRIP,
   SHEET_IMPORT,
+  SHEET_MOVE_GROUP,
   SHEET_TEMP_ITEM,
   SHEET_TRIP,
   TEXT_MAIN,
@@ -26,6 +27,7 @@ import { TripFormSheet } from './TripFormSheet';
 import { TempItemSheet } from './TempItemSheet';
 import { ImportSheet } from './ImportSheet';
 import { ProfileEditSheet } from './ProfileEditSheet';
+import { MoveGroupSheet } from './MoveGroupSheet';
 
 @Component
 export struct SheetOverlay {
@@ -95,6 +97,8 @@ export struct SheetOverlay {
   // Generate trip callbacks
   onGenerateTripTitleChange: (value: string) => void = (value: string): void => {};
   onGenerateTrip: () => void = (): void => {};
+  // Move group callback
+  onSelectMoveGroup: (group: string) => void = (group: string): void => {};
   // Category editing callbacks
   onCategoryRename: (oldName: string, newName: string) => void = () => {};
   onCategoryDelete: (category: string) => void = () => {};
@@ -239,6 +243,14 @@ export struct SheetOverlay {
             onTitleChange: this.onGenerateTripTitleChange,
             onConfirm: this.onGenerateTrip
           })
+        } else if (this.sheetMode === SHEET_MOVE_GROUP) {
+          MoveGroupSheet({
+            categories: this.categories,
+            selectedCount: this.selectedMultiGearCount,
+            onSelectGroup: (group: string) => {
+              this.onSelectMoveGroup(group);
+            }
+          })
         }
       }
       .width('100%')
@@ -282,6 +294,9 @@ export struct SheetOverlay {
     }
     if (this.sheetMode === SHEET_GENERATE_TRIP) {
       return '生成行程';
+    }
+    if (this.sheetMode === SHEET_MOVE_GROUP) {
+      return '移动到分组';
     }
     return '';
   }
