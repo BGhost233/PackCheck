@@ -12,6 +12,7 @@ import {
   INPUT_BG,
   PAGE_BG,
   OVERLAY_DIM,
+  TRANSPARENT,
   ZONE_HEAD_COLOR,
   ZONE_UPPER_COLOR,
   ZONE_LOWER_COLOR,
@@ -39,6 +40,8 @@ export struct GearPickerSheet {
   @Prop gears: GearItem[] = [];
   @Prop categories: string[] = [];
   @Prop selectedItemIds: string[] = []; // 已在行程中的装备 fromGearId 列表
+  // 从空格子进入时的预选 Zone（空串 = 无预选，向后兼容）：列表排序高亮 + 临时新建默认分区，review I4
+  @Prop preselectZone: string = '';
 
   // 回调
   onToggleGear: (gear: GearItem) => void = () => {};
@@ -55,6 +58,13 @@ export struct GearPickerSheet {
   @State private overlayScale: number = PANEL_SCALE_START;
   @State private overlayOpacity: number = 0;
   @State private tempRowScale: number = 1.0;
+
+  aboutToAppear(): void {
+    // 从空格子进入时，临时新建装备默认落到该 Zone（review I4）
+    if (this.preselectZone.length > 0) {
+      this.tempZone = this.preselectZone;
+    }
+  }
 
   build() {
     Stack() {
@@ -313,6 +323,10 @@ export struct GearPickerSheet {
       .padding({ left: 8, right: 8, top: 4, bottom: 4 })
       .borderRadius(12)
       .backgroundColor(this.isSelected(gear.id) ? PRIMARY_COLOR : this.getZoneTintColor(assignSlot(gear).zone))
+      // 预选 Zone 装备：未选中时描一圈主题色边框做轻量提示（review I4）
+      .border(this.isPreselectZone(gear) && !this.isSelected(gear.id)
+        ? { width: 1, color: PRIMARY_COLOR }
+        : { width: 0, color: TRANSPARENT })
       .animation({ curve: SPRING_PRESS() })
     }
     .width('100%')
@@ -397,7 +411,18 @@ export struct GearPickerSheet {
         return nameMatch || brandMatch;
       });
     }
+    // 预选 Zone 置顶：该 Zone 的装备稳定排到最前，方便从空格子进入后快速定位（review I4）
+    if (this.preselectZone.length > 0) {
+      const zoneFirst = result.filter((g) => assignSlot(g).zone === this.preselectZone);
+      const others = result.filter((g) => assignSlot(g).zone !== this.preselectZone);
+      result = zoneFirst.concat(others);
+    }
     return result;
+  }
+
+  // 是否为预选 Zone 的装备（用于列表轻量高亮提示）
+  private isPreselectZone(gear: GearItem): boolean {
+    return this.preselectZone.length > 0 && assignSlot(gear).zone === this.preselectZone;
   }
 
   private isSelected(gearId: string): boolean {

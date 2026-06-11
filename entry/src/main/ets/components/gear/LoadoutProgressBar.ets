@@ -3,11 +3,10 @@
 
 import {
   PRIMARY_COLOR,
-  LIGHT_PRIMARY_COLOR,
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
-  PROGRESS_INACTIVE
+  DIVIDER_COLOR
 } from '../../constants/Colors';
 import { SPRING_GENERAL, SPRING_PRESS, DURATION_COUNTER } from '../../constants/AnimationTokens';
 
@@ -62,19 +61,19 @@ export struct LoadoutProgressBar {
 
       // 进度条
       Stack({ alignContent: Alignment.Start }) {
-        // 底层（灰色轨道）
+        // 底层（中性灰轨道）
         Row()
           .width('100%')
           .height(4)
           .borderRadius(2)
-          .backgroundColor(LIGHT_PRIMARY_COLOR)
+          .backgroundColor(DIVIDER_COLOR)
 
-        // 前景（进度）
+        // 前景（进度）：无论完成与否统一品牌绿，进行中/完成由文案与百分比区分
         Row()
           .width(this.progressBarWidth())
           .height(4)
           .borderRadius(2)
-          .backgroundColor(this.isComplete() ? PRIMARY_COLOR : PROGRESS_INACTIVE)
+          .backgroundColor(PRIMARY_COLOR)
           .animation({ curve: SPRING_GENERAL() })
       }
       .width('100%')

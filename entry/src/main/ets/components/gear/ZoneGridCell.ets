@@ -18,7 +18,7 @@ import {
   FONT_WEIGHT_MEDIUM
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
-import { SPRING_PRESS, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
+import { SPRING_PRESS, PRESS_SCALE_DOWN, SPRING_GENERAL } from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { zoneDisplayName, zoneIconName } from '../../services/LoadoutService';
@@ -43,11 +43,15 @@ export struct ZoneGridCell {
   @State private titlePressed: boolean = false;
 
   build() {
-    if (this.items.length === 0) {
-      this.buildEmptyCell()
-    } else {
+    // 空态与有内容态双层常驻，用 opacity 互斥做 crossfade，避免 if/else 硬切（review V3）。
+    // opacity / hitTestBehavior / animation 加在各 @Builder 内部根节点（ArkUI 不允许在 @Builder 调用处外部追加属性）。
+    // 依赖隐式动画驱动：items 数量变化时 opacity 自动 Spring 过渡，不依赖父层 animateTo。
+    Stack() {
       this.buildContentCell()
+      this.buildEmptyCell()
     }
+    .width('100%')
+    .height(this.cellHeight)
   }
 
   // ---- 有内容态：标题行 + 白卡列表 ----
@@ -91,8 +95,11 @@ export struct ZoneGridCell {
       .justifyContent(FlexAlign.Start)
     }
     .width('100%')
-    .height(this.cellHeight)
+    .height('100%')
     .alignItems(HorizontalAlign.Start)
+    .opacity(this.items.length > 0 ? 1 : 0)
+    .hitTestBehavior(this.items.length > 0 ? HitTestMode.Default : HitTestMode.None)
+    .animation({ curve: SPRING_GENERAL() })
   }
 
   // ---- 空态：标题行 + 虚线占位区 ----
@@ -132,8 +139,11 @@ export struct ZoneGridCell {
       })
     }
     .width('100%')
-    .height(this.cellHeight)
+    .height('100%')
     .alignItems(HorizontalAlign.Start)
+    .opacity(this.items.length === 0 ? 1 : 0)
+    .hitTestBehavior(this.items.length === 0 ? HitTestMode.Default : HitTestMode.None)
+    .animation({ curve: SPRING_GENERAL() })
   }
 
   // ---- 标题行：色条 + 图标 + 名称 + 数量 ----

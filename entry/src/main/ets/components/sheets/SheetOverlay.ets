@@ -116,6 +116,8 @@ export struct SheetOverlay {
 
   // GearPicker callbacks
   @Prop pickerSelectedIds: string[] = [];
+  // 从空格子进入时的预选 Zone（空串 = 无预选，向后兼容），review I4
+  @Prop pickerPreselectZone: string = '';
   onPickerToggleGear: (gear: GearItem) => void = () => {};
   onPickerTempAdd: (name: string, zone: string, weight: number | undefined) => void = () => {};
   // GearItemAction callbacks
@@ -275,6 +277,7 @@ export struct SheetOverlay {
             gears: this.gears,
             categories: this.categories,
             selectedItemIds: this.pickerSelectedIds,
+            preselectZone: this.pickerPreselectZone,
             onToggleGear: this.onPickerToggleGear,
             onTempAdd: this.onPickerTempAdd,
             onClose: this.onClose

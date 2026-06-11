@@ -184,6 +184,8 @@ struct Index {
   @State private importGearIds: string[] = [];
   @State private importGearCategory: string = CATEGORY_ALL;
   @State private actionSheetItem: ChecklistItem = { id: '', name: '', group: '', checked: false };
+  // 从空格子进入 GearPicker 时的预选 Zone（空串 = 无预选，向后兼容），review I4
+  @State private pickerPreselectZone: string = '';
   @State private collapsedGroups: string[] = [];
   @State private returnToImportAfterGear: boolean = false;
   @State private errorText: string = '';
@@ -1438,7 +1440,9 @@ struct Index {
     this.openSheetAnimated();
   }
 
-  private openGearPickerSheet(): void {
+  private openGearPickerSheet(zone?: string): void {
+    // zone 非空时记录预选分区，picker 据此排序高亮 + 预选临时新建分区（review I4）
+    this.pickerPreselectZone = (zone !== undefined && zone.length > 0) ? zone : '';
     this.sheetMode = SHEET_GEAR_PICKER;
     this.openSheetAnimated();
   }
@@ -1863,18 +1867,14 @@ struct Index {
           onDeleteChecklistItem: (itemId: string) => {
             this.deleteChecklistItem(itemId);
           },
-          onOpenGearPicker: () => {
-            this.openGearPickerSheet();
+          onOpenGearPicker: (zone?: string) => {
+            this.openGearPickerSheet(zone);
           },
           onLongPressItem: (item: ChecklistItem) => {
             this.openGearItemActionSheet(item);
           },
           onLayerChange: (itemId: string, layer: string) => {
             // 一期取消「层级」概念，spec D-1：保留 callback 签名占位，无逻辑
-          },
-          onTapZoneTitle: (zone: string) => {
-            // Phase 1：点击格子标题先打开装备选择器占位；Phase 3 改为全屏聚焦态
-            this.openGearPickerSheet();
           },
           onDeleteTrip: () => {
             const checklist = this.checklists.find(c => c.id === this.selectedChecklistId);
@@ -2358,6 +2358,7 @@ struct Index {
           onCategoryReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
           onCategoryAdd: (_name: string) => { this.showCategoryInputPrompt('', true); },
           pickerSelectedIds: this.currentTripGearIds(),
+          pickerPreselectZone: this.pickerPreselectZone,
           onPickerToggleGear: (gear: GearItem) => { this.toggleGearInTrip(gear); },
           onPickerTempAdd: (name: string, zone: string, weight: number | undefined) => { this.addTempGearToTrip(name, zone, weight); },
           actionItem: this.actionSheetItem,

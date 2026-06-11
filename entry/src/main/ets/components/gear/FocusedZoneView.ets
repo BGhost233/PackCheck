@@ -22,11 +22,22 @@ import {
   FONT_WEIGHT_BOLD
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
-import { SPRING_PRESS, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
+import {
+  SPRING_PRESS,
+  PRESS_SCALE_DOWN,
+  SPRING_GENERAL,
+  STAGGER_OFFSET_Y,
+  staggerDelay
+} from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { zoneDisplayName, zoneIconName, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
+
+// 「逐项核查本区」入口（D-2）依赖携 Zone 进入 Review 的 onReviewZone 链路，
+// 该链路在 Phase 4 接入后才有真实响应；在此之前隐藏按钮，避免上线即摆设。
+// TODO Phase 4: onReviewZone callback 贯通到 Index 后置为 true 恢复
+const REVIEW_ZONE_ENTRY_ENABLED: boolean = false;
 
 @Component
 export struct FocusedZoneView {
@@ -34,11 +45,30 @@ export struct FocusedZoneView {
   @Prop items: ChecklistItem[] = [];
   @Prop zoneColor: string = TEXT_SECONDARY;
 
+  // 是否处于激活（聚焦）态：由父传入 focusedZone != null。
+  // false→true 时触发列表错落入场（review V2；FocusedZoneView 常驻树，不能用 aboutToAppear）
+  @Prop @Watch('onActiveChange') active: boolean = false;
+
   // callbacks
   onClose: () => void = () => {};
   onTapEmpty: (zone: string) => void = () => {};
   onToggleCheck: (itemId: string) => void = () => {};
   onReviewZone: (zone: string) => void = () => {};
+
+  // 列表错落入场控制（0 = 未入场，1 = 已就位）
+  @State private listAppeared: boolean = false;
+
+  // active false→true：重置后下一帧验入场；true→false：重置供下次重放
+  onActiveChange(): void {
+    if (this.active) {
+      this.listAppeared = false;
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+        this.listAppeared = true;
+      });
+    } else {
+      this.listAppeared = false;
+    }
+  }
 
   // 顶部关闭键按压
   @State private closePressed: boolean = false;
@@ -54,7 +84,7 @@ export struct FocusedZoneView {
 
       // ---- 全量装备列表 ----
       List({ space: 0 }) {
-        ForEach(this.items, (item: ChecklistItem) => {
+        ForEach(this.items, (item: ChecklistItem, index: number) => {
           ListItem() {
             ChecklistRow({
               item: item,
@@ -64,6 +94,10 @@ export struct FocusedZoneView {
               onToggleCheck: this.onToggleCheck
             })
           }
+          // 错落入场：淡入 + translateY，按 index 递延（review V2）
+          .opacity(this.listAppeared ? 1 : 0)
+          .translate({ y: this.listAppeared ? 0 : STAGGER_OFFSET_Y })
+          .animation({ curve: SPRING_GENERAL(), delay: staggerDelay(index) })
         }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
 
         // 底部虚线「+ 添加到{Zone}」行
@@ -141,8 +175,8 @@ export struct FocusedZoneView {
       .height(56)
       .alignItems(VerticalAlign.Center)
 
-      // 逐项核查本区入口（D-2），仅有内容时展示
-      if (this.items.length > 0) {
+      // 逐项核查本区入口（D-2），仅有内容时展示（Phase 4 接入前隐藏，见 REVIEW_ZONE_ENTRY_ENABLED）
+      if (REVIEW_ZONE_ENTRY_ENABLED && this.items.length > 0) {
         Row({ space: 6 }) {
           SymbolGlyph($r('sys.symbol.checkmark'))
             .fontSize(16)

@@ -48,11 +48,10 @@ export struct TripDetailPage {
   onDeleteChecklistItem: (itemId: string) => void = () => {};
 
   // UnifiedChecklistView callbacks
-  onOpenGearPicker: () => void = () => {};
+  // zone 可选：从空格子进入时透传 Zone，picker 据此排序高亮 + 预选临时新建分区（review I4）
+  onOpenGearPicker: (zone?: string) => void = () => {};
   onLongPressItem: (item: ChecklistItem) => void = () => {};
   onLayerChange: (itemId: string, layer: string) => void = () => {};
-  // 点击格子标题进全屏聚焦（Phase 3 接入；Phase 1 暂打开 picker 占位）
-  onTapZoneTitle: (zone: string) => void = () => {};
 
   private currentChecklist(): TripChecklist | undefined {
     for (let i = 0; i < this.checklists.length; i++) {
@@ -61,6 +60,24 @@ export struct TripDetailPage {
       }
     }
     return undefined;
+  }
+
+  // 顶部已占高度（NavBar + SharedInfo + ProgressBar），用于 UnifiedChecklistView 首屏 cell 高度反算。
+  // 各段与各自渲染条件一致：NavBar 恒在；SharedInfo 仅 currentChecklist 有摘要文案时渲染；
+  // ProgressBar 仅 items>0 时渲染。避免用硬编码默认值导致反算偏差（review B3）。
+  private reservedTop(): number {
+    const NAV_BAR: number = 56;
+    const SHARED_INFO: number = 28;   // 12 字号文案 + 8 bottom padding
+    const PROGRESS_BAR: number = 48;  // 文案行 + 进度条 + 上下 padding
+    const trip = this.currentChecklist();
+    let h: number = NAV_BAR;
+    if (trip !== undefined && this.buildInfoText().length > 0) {
+      h += SHARED_INFO;
+    }
+    if (trip !== undefined && trip.items.length > 0) {
+      h += PROGRESS_BAR;
+    }
+    return h;
   }
 
   build() {
@@ -75,8 +92,8 @@ export struct TripDetailPage {
       UnifiedChecklistView({
         trip: this.currentChecklist() ?? { id: '', title: '', items: [], createdAt: 0 },
         gears: this.gears,
-        onOpenPicker: this.onOpenGearPicker,
-        onTapZoneTitle: this.onTapZoneTitle,
+        reservedTopHeight: this.reservedTop(),
+        onOpenPicker: (zone?: string) => { this.onOpenGearPicker(zone); },
         onToggleCheck: this.onToggleChecklistItem
       })
         .layoutWeight(1)

@@ -65,8 +65,8 @@ export struct UnifiedChecklistView {
   @Prop reservedTopHeight: number = 180;
 
   // callbacks
-  onOpenPicker: () => void = () => {};
-  onTapZoneTitle: (zone: string) => void = () => {};
+  // zone 可选：从空格子进入时透传对应 Zone，picker 据此排序高亮并预选临时新建分区（review I4）
+  onOpenPicker: (zone?: string) => void = () => {};
   onToggleCheck: (itemId: string) => void = () => {};
 
   // FAB 按压状态
@@ -80,7 +80,9 @@ export struct UnifiedChecklistView {
   // 当前/上次聚焦渲染的 Zone（F-3：FocusedZoneView 常驻树用 visibility 切换，退场时仍需有 zone 可渲染）
   @State private focusedZoneRender: string = BodyZone.Misc;
 
-  // 分组缓存（每次 trip 变化刷新）
+  // 分组缓存：仅在 @Watch('trip') 时刷新。
+  // 隐含前提（review C2）：Zone 分组只依赖 trip.items 自身字段，不依赖 gears。
+  // 因此「gears 数据变化但 trip 引用不变」（如装备库重命名 gear）不会、也无需刷新本缓存。
   private zoneMapCache: Map<string, ChecklistItem[]> = new Map();
 
   aboutToAppear() {
@@ -137,8 +139,9 @@ export struct UnifiedChecklistView {
       zone: this.focusedZoneRender,
       items: this.itemsForZone(this.focusedZoneRender),
       zoneColor: this.zoneColor(this.focusedZoneRender),
+      active: this.focusedZone != null,
       onClose: () => { this.closeFocus(); },
-      onTapEmpty: (z: string) => { this.onOpenPicker(); },
+      onTapEmpty: (z: string) => { this.onOpenPicker(z); },
       onToggleCheck: this.onToggleCheck,
       // D-2「逐项核查本区」携带 Zone 进入 Review，后续 Phase 接入；此处先占位不误触
       onReviewZone: (z: string) => {}
@@ -253,7 +256,7 @@ export struct UnifiedChecklistView {
             zoneColor: this.zoneColor(zone),
             cellHeight: this.cellHeight,
             onTapTitle: (z: string) => { this.openFocus(z); },
-            onTapEmpty: (z: string) => { this.onOpenPicker(); },
+            onTapEmpty: (z: string) => { this.onOpenPicker(z); },
             onToggleCheck: this.onToggleCheck
           })
         }
@@ -275,7 +278,7 @@ export struct UnifiedChecklistView {
           zoneColor: this.zoneColor(BodyZone.Misc),
           cellHeight: this.cellHeight,
           onTapTitle: (z: string) => { this.openFocus(z); },
-          onTapEmpty: (z: string) => { this.onOpenPicker(); },
+          onTapEmpty: (z: string) => { this.onOpenPicker(z); },
           onToggleCheck: this.onToggleCheck
         })
       }

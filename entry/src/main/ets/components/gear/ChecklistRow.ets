@@ -34,13 +34,22 @@ export struct ChecklistRow {
   @State private checkScale: number = 0;
   // 整行按压
   @State private pressed: boolean = false;
+  // 上一次的 checked 值：@Watch('item') 会被 item 任意字段变化触发，
+  // 用此守卫只在 checked 真正变化时才走动画逻辑（review C1）
+  private lastChecked: boolean = false;
 
   aboutToAppear(): void {
     this.checkScale = this.item.checked ? 1.0 : 0;
+    this.lastChecked = this.item.checked;
   }
 
   // checked 变化时弹跳：0→1（勾上）或 1→0（取消）
   onCheckedChange(): void {
+    // item 其他字段变动不应重复调用动画；checkScale 守卫之前先用 lastChecked 早返回
+    if (this.lastChecked === this.item.checked) {
+      return;
+    }
+    this.lastChecked = this.item.checked;
     const target: number = this.item.checked ? 1.0 : 0;
     if (this.checkScale !== target) {
       this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
