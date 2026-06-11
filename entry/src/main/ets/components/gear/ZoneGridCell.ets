@@ -10,6 +10,7 @@ import {
   TEXT_MAIN,
   TEXT_TERTIARY,
   DIVIDER_COLOR,
+  PLACEHOLDER_COLOR,
   SHADOW_LIGHT,
   PRIMARY_COLOR,
   ZONE_MISC_COLOR,
@@ -187,23 +188,35 @@ export struct ZoneGridCell {
     Column({ space: 6 }) {
       this.buildTitleRow(false)
 
-      // 虚线占位区，撑满整格高度，「+」居中
+      // B-3：虚线框高度封顶 132vp，多出空间在框外居中留白（保持同行对齐），
+      // 虚线淡化（宽 1）+「+」降权 + 部位名提示，使空格子视觉重量低于满格子。
       Column() {
-        SymbolGlyph($r('sys.symbol.plus'))
-          .fontSize(20)
-          .fontColor([TEXT_TERTIARY])
+        Column({ space: 4 }) {
+          SymbolGlyph($r('sys.symbol.plus'))
+            .fontSize(18)
+            .fontColor([PLACEHOLDER_COLOR])
+
+          Text(zoneDisplayName(this.zone))
+            .fontSize(FONT_SIZE_CAPTION)
+            .fontColor(PLACEHOLDER_COLOR)
+        }
+        .width('100%')
+        .height('100%')
+        .constraintSize({ maxHeight: 132 })
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .borderRadius(CARD_RADIUS)
+        .border({
+          width: 1,
+          color: DIVIDER_COLOR,
+          style: BorderStyle.Dashed,
+          radius: CARD_RADIUS
+        })
       }
       .width('100%')
       .layoutWeight(1)
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      .borderRadius(CARD_RADIUS)
-      .border({
-        width: 1.5,
-        color: DIVIDER_COLOR,
-        style: BorderStyle.Dashed,
-        radius: CARD_RADIUS
-      })
       .scale({ x: this.titlePressed ? PRESS_SCALE_DOWN : 1.0, y: this.titlePressed ? PRESS_SCALE_DOWN : 1.0 })
       .animation({ curve: SPRING_PRESS() })
       .onTouch((e: TouchEvent) => {
