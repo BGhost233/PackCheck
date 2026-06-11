@@ -8,7 +8,7 @@ import {
   TEXT_TERTIARY,
   DIVIDER_COLOR
 } from '../../constants/Colors';
-import { SPRING_GENERAL, SPRING_PRESS, DURATION_COUNTER } from '../../constants/AnimationTokens';
+import { SPRING_COUNTER, SPRING_PRESS, DURATION_COUNTER } from '../../constants/AnimationTokens';
 
 @Component
 export struct LoadoutProgressBar {
@@ -74,7 +74,8 @@ export struct LoadoutProgressBar {
           .height(4)
           .borderRadius(2)
           .backgroundColor(PRIMARY_COLOR)
-          .animation({ curve: SPRING_GENERAL() })
+          // E-2：填充曲线换 SPRING_COUNTER，与数字 counter 滚动同语义、同节奏（更利落，克制微调）
+          .animation({ curve: SPRING_COUNTER() })
       }
       .width('100%')
       .height(4)
