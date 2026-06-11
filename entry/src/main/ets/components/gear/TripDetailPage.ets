@@ -76,7 +76,8 @@ export struct TripDetailPage {
         trip: this.currentChecklist() ?? { id: '', title: '', items: [], createdAt: 0 },
         gears: this.gears,
         onOpenPicker: this.onOpenGearPicker,
-        onTapZoneTitle: this.onTapZoneTitle
+        onTapZoneTitle: this.onTapZoneTitle,
+        onToggleCheck: this.onToggleChecklistItem
       })
         .layoutWeight(1)
     }

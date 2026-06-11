@@ -6,7 +6,6 @@
 
 import {
   CARD_BG,
-  TEXT_MAIN,
   TEXT_TERTIARY,
   DIVIDER_COLOR,
   SHADOW_SUBTLE,
@@ -23,6 +22,7 @@ import { SPRING_PRESS, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens'
 import { ChecklistItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { zoneDisplayName, zoneIconName } from '../../services/LoadoutService';
+import { ChecklistRow } from './ChecklistRow';
 
 // 网格态单格内最多预览的 item 数（超出折叠为「+N 件」提示）。spec §2.1.3
 const MAX_PREVIEW_ITEMS: number = 3;
@@ -37,6 +37,7 @@ export struct ZoneGridCell {
   // 回调（Phase 2/3 接入）
   onTapTitle: (zone: string) => void = () => {};
   onTapEmpty: (zone: string) => void = () => {};
+  onToggleCheck: (itemId: string) => void = () => {};
 
   // 标题行按压
   @State private titlePressed: boolean = false;
@@ -56,22 +57,16 @@ export struct ZoneGridCell {
       // 标题行（可点击进全屏聚焦）
       this.buildTitleRow(true)
 
-      // 内容白卡：前 N 条 item 名称占位 + 折叠提示
+      // 内容白卡：前 N 条 item 核查行 + 折叠提示
       Column({ space: 0 }) {
         ForEach(this.previewItems(), (item: ChecklistItem) => {
-          Row() {
-            Text(item.name)
-              .fontSize(FONT_SIZE_BODY_MEDIUM)
-              .fontColor(TEXT_MAIN)
-              .layoutWeight(1)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-          }
-          .width('100%')
-          .height(40)
-          .alignItems(VerticalAlign.Center)
-          .padding({ left: 12, right: 12 })
-        }, (item: ChecklistItem) => item.id)
+          ChecklistRow({
+            item: item,
+            rowHeight: 40,
+            checkSize: 22,
+            onToggleCheck: this.onToggleCheck
+          })
+        }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
 
         // 超过 N 件：折叠提示行
         if (this.items.length > MAX_PREVIEW_ITEMS) {

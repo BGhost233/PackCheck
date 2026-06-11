@@ -33,8 +33,9 @@ import {
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
-import { groupByZoneAll } from '../../services/LoadoutService';
+import { groupByZoneAll, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
 import { ZoneGridCell } from './ZoneGridCell';
+import { LoadoutProgressBar } from './LoadoutProgressBar';
 
 // 双列网格中走常规单列的 zone（杂项单独跨列渲染在末尾）。spec §2.1.2 F-5
 const GRID_SINGLE_ZONES: string[] = [
@@ -63,6 +64,7 @@ export struct UnifiedChecklistView {
   // callbacks
   onOpenPicker: () => void = () => {};
   onTapZoneTitle: (zone: string) => void = () => {};
+  onToggleCheck: (itemId: string) => void = () => {};
 
   // FAB 按压状态
   @State private fabScale: number = 1.0;
@@ -91,19 +93,35 @@ export struct UnifiedChecklistView {
   }
 
   build() {
-    Stack() {
-      if (this.trip.items.length === 0) {
-        this.buildEmptyState()
-      } else {
-        this.buildGridState()
+    Column() {
+      // 顶部全局进度条（sticky 吸顶，仅有内容时显示）。spec §2.1 / §3.3
+      if (this.trip.items.length > 0) {
+        LoadoutProgressBar({
+          checked: this.progress().checked,
+          total: this.progress().total
+        })
       }
 
-      if (this.trip.items.length > 0) {
-        this.buildFAB()
+      Stack() {
+        if (this.trip.items.length === 0) {
+          this.buildEmptyState()
+        } else {
+          this.buildGridState()
+        }
+
+        if (this.trip.items.length > 0) {
+          this.buildFAB()
+        }
       }
+      .layoutWeight(1)
+      .width('100%')
     }
     .width('100%')
     .height('100%')
+  }
+
+  private progress(): LoadoutProgress {
+    return calcProgress(this.trip.items);
   }
 
   private refreshCache(): void {
@@ -190,7 +208,8 @@ export struct UnifiedChecklistView {
             zoneColor: this.zoneColor(zone),
             cellHeight: this.cellHeight,
             onTapTitle: this.onTapZoneTitle,
-            onTapEmpty: (z: string) => { this.onOpenPicker(); }
+            onTapEmpty: (z: string) => { this.onOpenPicker(); },
+            onToggleCheck: this.onToggleCheck
           })
         }
         .opacity(this.appeared ? 1 : 0)
@@ -209,7 +228,8 @@ export struct UnifiedChecklistView {
           zoneColor: this.zoneColor(BodyZone.Misc),
           cellHeight: this.cellHeight,
           onTapTitle: this.onTapZoneTitle,
-          onTapEmpty: (z: string) => { this.onOpenPicker(); }
+          onTapEmpty: (z: string) => { this.onOpenPicker(); },
+          onToggleCheck: this.onToggleCheck
         })
       }
       .columnStart(0)
