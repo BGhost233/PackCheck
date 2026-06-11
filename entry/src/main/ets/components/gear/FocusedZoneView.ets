@@ -3,7 +3,10 @@
 // 顶栏（× 关闭 + Zone 名 + 该区进度 + 逐项核查入口）+ 全量装备列表（ChecklistRow 52vp）+ 底部虚线添加行
 // 与网格态格子共用 geometryTransition('zone_' + zone) id 完成共享元素转场（F-3：两端节点全程存在）
 // spec §2.2 / §4.5.6
-// Phase 3：聚焦布局 + 共享元素转场 + 核查复用；长按菜单（仅菜单模式）留 Phase 4
+// Phase 3：聚焦布局 + 共享元素转场 + 核查复用
+// 问题4b：点空白处 / 左右划收起聚焦回网格（无返回按钮）
+// 问题4c：单击装备名手风琴原地展开详情（品类/重量/品牌/备注，经 fromGearId 反查）
+// 长按菜单 + 长按转拖拽跨 Zone（问题4d）留 Phase 4，回调已预埋透传到位
 
 import {
   PRIMARY_COLOR,
@@ -57,10 +60,13 @@ export struct FocusedZoneView {
   onTapEmpty: (zone: string) => void = () => {};
   onToggleCheck: (itemId: string) => void = () => {};
   onReviewZone: (zone: string) => void = () => {};
-  // 问题4d：长按菜单「编辑」「从本次行程移除」
+  // 问题4d（phase4 预埋）：以下三个回调三层透传链已贯通到本组件，
+  //   但「长按弹菜单 + 长按转拖拽跨 Zone」的手势消费方留待 phase4 实现，
+  //   届时只需在 build 内挂载手势调用这些回调，无需再改透传链。当前未引用属预期。
+  // 长按菜单：编辑 / 从本次行程移除
   onEditItem: (item: ChecklistItem) => void = () => {};
   onRemoveItem: (itemId: string) => void = () => {};
-  // 问题4d：长按转拖拽落点移动装备到目标 Zone
+  // 长按转拖拽落点：移动装备到目标 Zone（改 group）
   onMoveItemToZone: (itemId: string, zone: string) => void = () => {};
 
   // 列表错落入场控制（0 = 未入场，1 = 已就位）
