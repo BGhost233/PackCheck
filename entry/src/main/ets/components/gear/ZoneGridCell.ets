@@ -59,6 +59,9 @@ export struct ZoneGridCell {
   // 拖拽悬停高亮：拖拽胶囊进入本格子时父层设为 true，格子边框 glow 绿光
   @Prop isDropTarget: boolean = false;
 
+  // C-1：当前被拖拽 item 的 id（空串表示无拖拽）。命中行在源位置渲染虚线空槽，明确"从哪拿的"
+  @Prop draggingItemId: string = '';
+
   // 标题行按压
   @State private titlePressed: boolean = false;
   // P2：白卡主体（装备名/空白）按压——点这里整卡进全屏聚焦，与标题行同语义
@@ -108,36 +111,46 @@ export struct ZoneGridCell {
       // long press + pan 由 wrapper 的 GestureGroup 处理，两者不互斥。
       Column({ space: 0 }) {
         ForEach(this.previewItems(), (item: ChecklistItem) => {
-          Column() {
-            ChecklistRow({
-              item: item,
-              rowHeight: GRID_ROW_HEIGHT,
-              checkSize: GRID_CHECK_SIZE,
-              checkOnlyHotzone: true,
-              onToggleCheck: this.onToggleCheck,
-              onTapRow: () => { this.onTapTitle(this.zone); }
-            })
-          }
-          .width('100%')
-          .height(GRID_ROW_HEIGHT)
-          .gesture(
-            GestureGroup(
-              GestureMode.Sequence,
-              LongPressGesture({ repeat: false, duration: 400 })
-                .onAction((event: GestureEvent) => {
-                  this.triggerHaptic();
-                  const finger = event.fingerList[0];
-                  this.onLongPressItem(item, finger.globalX, finger.globalY);
-                }),
-              PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
-                .onActionUpdate((event: GestureEvent) => {
-                  this.onPanUpdate(event.offsetX, event.offsetY);
-                })
-                .onActionEnd((event: GestureEvent) => {
-                  this.onPanFinish(event.offsetX, event.offsetY);
-                })
+          if (this.draggingItemId.length > 0 && item.id === this.draggingItemId) {
+            // C-1：被拖拽项在源位置留虚线空槽，同高不塌陷，不绑手势
+            Row()
+              .width('100%')
+              .height(GRID_ROW_HEIGHT - 4)
+              .margin({ top: 2, bottom: 2 })
+              .borderRadius(6)
+              .border({ width: 1, color: DIVIDER_COLOR, style: BorderStyle.Dashed })
+          } else {
+            Column() {
+              ChecklistRow({
+                item: item,
+                rowHeight: GRID_ROW_HEIGHT,
+                checkSize: GRID_CHECK_SIZE,
+                checkOnlyHotzone: true,
+                onToggleCheck: this.onToggleCheck,
+                onTapRow: () => { this.onTapTitle(this.zone); }
+              })
+            }
+            .width('100%')
+            .height(GRID_ROW_HEIGHT)
+            .gesture(
+              GestureGroup(
+                GestureMode.Sequence,
+                LongPressGesture({ repeat: false, duration: 400 })
+                  .onAction((event: GestureEvent) => {
+                    this.triggerHaptic();
+                    const finger = event.fingerList[0];
+                    this.onLongPressItem(item, finger.globalX, finger.globalY);
+                  }),
+                PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
+                  .onActionUpdate((event: GestureEvent) => {
+                    this.onPanUpdate(event.offsetX, event.offsetY);
+                  })
+                  .onActionEnd((event: GestureEvent) => {
+                    this.onPanFinish(event.offsetX, event.offsetY);
+                  })
+              )
             )
-          )
+          }
         }, (item: ChecklistItem) => item.id)
 
         // 超过 N 件：折叠提示行
