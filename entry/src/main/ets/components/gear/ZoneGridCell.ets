@@ -6,7 +6,6 @@
 // spec §2.1.3 / §2.1.2
 
 import {
-  TEXT_MAIN,
   TEXT_TERTIARY,
   DIVIDER_COLOR,
   PLACEHOLDER_COLOR,
@@ -17,15 +16,13 @@ import {
   ZONE_MISC_TINT
 } from '../../constants/Colors';
 import {
-  FONT_SIZE_BODY_MEDIUM,
-  FONT_SIZE_CAPTION,
-  FONT_WEIGHT_MEDIUM
+  FONT_SIZE_CAPTION
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
 import { SPRING_PRESS, PRESS_SCALE_DOWN, SPRING_GENERAL } from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
-import { zoneDisplayName, zoneIconName } from '../../services/LoadoutService';
+import { zoneDisplayName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
 import { ZoneShell } from './ZoneShell';
 import { vibrator } from '@kit.SensorServiceKit';
@@ -200,103 +197,59 @@ export struct ZoneGridCell {
     .justifyContent(FlexAlign.Start)
   }
 
-  // ---- 空态：标题行 + 虚线占位区 ----
+  // ---- 空态：走 ZoneShell 复用统一标题行（P1/P2），内容区 contentDashed 降级 ----
+  // P1/P2：标题行 100% 由 ZoneShell 渲染（浅染底 + 圆角，与满格子并排不割裂），消除 buildTitleRow 平行实现。
+  //   contentDashed=true 让 ZoneShell 内容容器透明无装饰，虚线降权框完全由 buildEmptyContent 自绘——
+  //   守住 B-3「空轻满重」分层（空态不套实白卡、不进 geometryTransition）。
+  //   空态标题行不可点（titleClickable:false），整格点击交给内容虚线框 → onTapEmpty 打开 picker。
   @Builder
   private buildEmptyCell() {
-    Column({ space: 6 }) {
-      this.buildTitleRow(false)
+    ZoneShell({
+      zone: this.zone,
+      zoneColor: this.zoneColor,
+      zoneStroke: this.zoneStroke,
+      zoneTint: this.zoneTint,
+      contentDashed: true,
+      titleClickable: false,
+      contentClickable: false,
+      content: () => { this.buildEmptyContent() }
+    })
+  }
 
-      // B-3：虚线框高度封顶 132vp，多出空间在框外居中留白（保持同行对齐），
-      // 虚线淡化（宽 1）+「+」降权 + 部位名提示，使空格子视觉重量低于满格子。
-      Column() {
-        Column({ space: 4 }) {
-          SymbolGlyph($r('sys.symbol.plus'))
-            .fontSize(18)
-            .fontColor([PLACEHOLDER_COLOR])
+  // 空态内容：虚线占位框（B-3 降权）。高度封顶 132vp，多出空间框外居中留白（保持同行对齐），
+  //   虚线淡化（宽 1）+「+」降权 + 部位名提示，使空格子视觉重量低于满格子。
+  @Builder
+  private buildEmptyContent() {
+    Column() {
+      Column({ space: 4 }) {
+        SymbolGlyph($r('sys.symbol.plus'))
+          .fontSize(18)
+          .fontColor([PLACEHOLDER_COLOR])
 
-          Text(zoneDisplayName(this.zone))
-            .fontSize(FONT_SIZE_CAPTION)
-            .fontColor(PLACEHOLDER_COLOR)
-        }
-        .width('100%')
-        .height('100%')
-        .constraintSize({ maxHeight: 132 })
-        .justifyContent(FlexAlign.Center)
-        .alignItems(HorizontalAlign.Center)
-        .borderRadius(CARD_RADIUS)
-        .border({
-          width: 1,
-          color: DIVIDER_COLOR,
-          style: BorderStyle.Dashed,
-          radius: CARD_RADIUS
-        })
+        Text(zoneDisplayName(this.zone))
+          .fontSize(FONT_SIZE_CAPTION)
+          .fontColor(PLACEHOLDER_COLOR)
       }
       .width('100%')
-      .layoutWeight(1)
+      .height('100%')
+      .constraintSize({ maxHeight: 132 })
       .justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Center)
-      .scale({ x: this.titlePressed ? PRESS_SCALE_DOWN : 1.0, y: this.titlePressed ? PRESS_SCALE_DOWN : 1.0 })
-      .animation({ curve: SPRING_PRESS() })
-      .onTouch((e: TouchEvent) => {
-        if (e.type === TouchType.Down) {
-          this.titlePressed = true;
-        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-          this.titlePressed = false;
-        }
-      })
-      .onClick(() => {
-        this.onTapEmpty(this.zone);
+      .borderRadius(CARD_RADIUS)
+      .border({
+        width: 1,
+        color: DIVIDER_COLOR,
+        style: BorderStyle.Dashed,
+        radius: CARD_RADIUS
       })
     }
     .width('100%')
     .height('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  // ---- 标题行：色条 + 图标 + 名称 + 数量 ----
-  @Builder
-  private buildTitleRow(clickable: boolean) {
-    Row({ space: 6 }) {
-      // Zone 主题色条 4×16
-      Row()
-        .width(4)
-        .height(16)
-        .borderRadius(2)
-        .backgroundColor(this.zoneColor)
-
-      SymbolGlyph($r(zoneIconName(this.zone)))
-        .fontSize(15)
-        .fontColor([TEXT_MAIN])
-
-      Text(zoneDisplayName(this.zone))
-        .fontSize(FONT_SIZE_BODY_MEDIUM)
-        .fontWeight(FONT_WEIGHT_MEDIUM)
-        .fontColor(TEXT_MAIN)
-
-      Blank()
-
-      if (this.items.length > 0) {
-        Text(this.items.length.toString())
-          .fontSize(FONT_SIZE_CAPTION)
-          .fontColor(TEXT_TERTIARY)
-      }
-    }
-    .width('100%')
-    .height(28)
-    // B-2：标题行浅彩底 + 圆角，色条保留部位色作色彩锚点，图标/文字改深色
-    .backgroundColor(this.zoneTint)
-    .borderRadius(8)
-    .padding({ left: 8, right: 8 })
-    .alignItems(VerticalAlign.Center)
-    .scale({
-      x: clickable && this.titlePressed ? PRESS_SCALE_DOWN : 1.0,
-      y: clickable && this.titlePressed ? PRESS_SCALE_DOWN : 1.0
-    })
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    .scale({ x: this.titlePressed ? PRESS_SCALE_DOWN : 1.0, y: this.titlePressed ? PRESS_SCALE_DOWN : 1.0 })
     .animation({ curve: SPRING_PRESS() })
     .onTouch((e: TouchEvent) => {
-      if (!clickable) {
-        return;
-      }
       if (e.type === TouchType.Down) {
         this.titlePressed = true;
       } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
@@ -304,9 +257,7 @@ export struct ZoneGridCell {
       }
     })
     .onClick(() => {
-      if (clickable) {
-        this.onTapTitle(this.zone);
-      }
+      this.onTapEmpty(this.zone);
     })
   }
 

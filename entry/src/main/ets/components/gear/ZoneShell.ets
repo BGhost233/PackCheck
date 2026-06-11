@@ -43,6 +43,10 @@ export struct ZoneShell {
   @Prop contentTinted: boolean = false;
   // 内容白卡描边是否显示（聚焦态卡片可能不需要内层描边，留开关）
   @Prop showContentBorder: boolean = true;
+  // P1/P2：空态降级——内容容器退化为透明无装饰布局占位（无实白底/无描边/无阴影/不clip/不响应点击），
+  //   虚线框降权视觉完全交由 content 插槽自绘（守住 B-3「空轻满重」分层，空态不进 geometryTransition）。
+  //   true 时仅复用 ZoneShell 的统一标题行（解决 P1 浅染底不一致 + P2 平行实现），内容区不套实白卡。
+  @Prop contentDashed: boolean = false;
   // 内容白卡是否响应点击/按压（网格态点白卡进聚焦；聚焦态卡内自有交互，关闭）
   @Prop contentClickable: boolean = false;
   // 内容白卡按压态（宿主透传 @State）
@@ -80,16 +84,20 @@ export struct ZoneShell {
       }
       .width('100%')
       .layoutWeight(1)
+      // P1/P2：空态降级时透明底（虚线框交给 content 插槽），否则白卡/拖拽淡绿底
       // C-2：拖拽目标格淡绿底（仅 backgroundColor 走 SPRING_GENERAL，与原 ZoneGridCell 一致）
-      .backgroundColor(this.contentTinted ? LIGHT_PRIMARY_COLOR : CARD_BG)
+      .backgroundColor(this.contentDashed
+        ? Color.Transparent
+        : (this.contentTinted ? LIGHT_PRIMARY_COLOR : CARD_BG))
       .animation({ curve: SPRING_GENERAL() })
       // B-2：阴影升档 + 极淡部位色描边，形成盒子感（静态属性，由下方 SPRING_PRESS 段兜住）
-      .borderRadius(CARD_RADIUS)
-      .border(this.showContentBorder
-        ? { width: 0.5, color: this.zoneStroke, style: BorderStyle.Solid }
-        : undefined)
-      .shadow({ radius: 12, color: SHADOW_LIGHT, offsetY: 4 })
-      .clip(true)
+      // 空态降级：无圆角填充/无描边/无阴影/不clip，纯透明布局占位
+      .borderRadius(this.contentDashed ? 0 : CARD_RADIUS)
+      .border(this.contentDashed || !this.showContentBorder
+        ? undefined
+        : { width: 0.5, color: this.zoneStroke, style: BorderStyle.Solid })
+      .shadow(this.contentDashed ? undefined : { radius: 12, color: SHADOW_LIGHT, offsetY: 4 })
+      .clip(!this.contentDashed)
       .alignItems(HorizontalAlign.Start)
       .justifyContent(FlexAlign.Start)
       .scale({

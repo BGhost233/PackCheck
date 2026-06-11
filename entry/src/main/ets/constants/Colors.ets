@@ -55,6 +55,9 @@ export const BORDER_COLOR: string = '#ECEFF1';
 export const DIVIDER_COLOR: string = '#F0F0F0';
 export const CHIP_BORDER: string = '#E0E0E0';
 export const CARD_BORDER_BOTTOM_COLOR: string = '#E8E8E8';
+// 元信息段间分隔点（介于 plain 文字 #999 与极淡 #F0F0F0 之间）：
+//   明确弱于 plain 文字、强于纯背景线，给并列信息段清晰可见的轻量切分。
+export const META_SEPARATOR: string = '#C2C2C2';
 
 // ============ 功能色/状态色 ============
 export const ARROW_COLOR: string = '#CCCCCC';

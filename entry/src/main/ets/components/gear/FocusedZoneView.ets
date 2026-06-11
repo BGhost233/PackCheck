@@ -150,22 +150,10 @@ export struct FocusedZoneView {
       ForEach(this.items, (item: ChecklistItem, index: number) => {
         ListItem() {
           Column({ space: 0 }) {
-            // Phase 4：Stack 手势层（底层）+ 内容行（顶层）
-            // 手势层在下接收长按，内容行在上保证 CheckMark onClick 不被拦截
-            Stack() {
-              // ① 透明手势层（底层，接收长按手势）
-              Image('')
-                .width('100%')
-                .height(52)
-                .hitTestBehavior(HitTestMode.Block)
-                .gesture(
-                  LongPressGesture({ repeat: false, duration: 400 })
-                    .onAction(() => {
-                      this.handleLongPress(item);
-                    })
-                )
-
-              // ② 内容行（顶层，CheckMark 点击正常触发）
+            // O3：与网格态统一为 Column wrapper 直绑手势方案（替换原 Stack(透明Image+Row) 双层）。
+            //   wrapper 只有 gesture 无 onClick：tap（勾选/展开详情）由 ChecklistRow 内部 onClick 处理，
+            //   long press 由 wrapper 承接，两者不互斥——消除「ChecklistRow.onClick 独占触摸序列」隐患。
+            Column() {
               ChecklistRow({
                 item: item,
                 rowHeight: 52,
@@ -178,6 +166,12 @@ export struct FocusedZoneView {
             }
             .width('100%')
             .height(52)
+            .gesture(
+              LongPressGesture({ repeat: false, duration: 400 })
+                .onAction(() => {
+                  this.handleLongPress(item);
+                })
+            )
 
             // 问题4c：手风琴详情区（重量/品类/备注/品牌），Spring 高度 + 透明度
             if (this.expandedItemId === item.id) {

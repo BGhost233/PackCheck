@@ -8,7 +8,7 @@ import {
   TEXT_TERTIARY,
   PAGE_BG,
   AMBER_ACCENT,
-  DIVIDER_COLOR
+  META_SEPARATOR
 } from '../../constants/Colors';
 import { PAGE_PADDING, FONT_FEATURE_TNUM } from '../../constants/Layout';
 import { SPRING_GENERAL, SPRING_PRESS, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
@@ -221,11 +221,11 @@ export struct TripDetailPage {
     if (this.metaSegments().length > 0) {
       Row() {
         ForEach(this.metaSegments(), (seg: MetaSegment, index: number) => {
-          // 段间分隔点（仅非首段前插入），用更弱的色
+          // 段间分隔点（仅非首段前插入）：META_SEPARATOR 明确弱于 plain 文字、又清晰可见，给并列段轻量切分
           if (index > 0) {
             Text(' · ')
               .fontSize(12)
-              .fontColor(DIVIDER_COLOR)
+              .fontColor(META_SEPARATOR)
           }
           // 海拔段三角点睛
           if (seg.showPeak) {
