@@ -1,5 +1,7 @@
 // 配装系统 - 装备选择 Sheet
-// 职责：展示装备库列表，按品类筛选，连续多选，内联临时添加覆盖层
+// 职责：展示装备库列表，按品类分组可折叠展开，连续多选，内联临时添加覆盖层
+// P5：去顶部品类 tab，改为装备按品类分组按行展示；默认全折叠，
+//   预选 Zone 命中的品类 / 搜索命中的品类自动展开
 
 import { LengthMetrics } from '@kit.ArkUI';
 import {
@@ -29,10 +31,15 @@ import {
   ZONE_MISC_TINT
 } from '../../constants/Colors';
 import { BodyZone } from '../../constants/GearLoadout';
-import { SPRING_PRESS, SPRING_GENERAL, PANEL_SCALE_START } from '../../constants/AnimationTokens';
-import { GearItem, ChecklistItem, CATEGORY_ALL } from '../../models/PackModels';
+import { SPRING_PRESS, SPRING_GENERAL, SPRING_CHEVRON, PANEL_SCALE_START } from '../../constants/AnimationTokens';
+import { GearItem, CATEGORY_FALLBACK, DEFAULT_CATEGORIES } from '../../models/PackModels';
 import { assignSlot, zoneDisplayName, allZones } from '../../services/LoadoutService';
-import { CategoryTagGroup } from '../CategoryTagGroup';
+
+// P5：品类分组结果（仅含有装备的品类）
+interface CategoryGroup {
+  category: string;
+  gears: GearItem[];
+}
 
 @Component
 export struct GearPickerSheet {
@@ -50,7 +57,8 @@ export struct GearPickerSheet {
 
   // 内部状态
   @State private searchText: string = '';
-  @State private filterCategory: string = CATEGORY_ALL;
+  // P5：手动展开的品类集合（用数组而非 Set，便于 @State 变更检测；toggle 时整体新数组赋值）
+  @State private expandedCategories: string[] = [];
   @State private showTempOverlay: boolean = false;
   @State private tempName: string = '';
   @State private tempZone: string = BodyZone.Misc;
@@ -86,19 +94,6 @@ export struct GearPickerSheet {
         .width('100%')
         .padding({ left: 16, right: 16, top: 4, bottom: 8 })
 
-        // 品类 tab（sticky - 不随列表滚动）
-        CategoryTagGroup({
-          categories: this.categories,
-          selectedCategory: this.filterCategory,
-          mode: 'single',
-          showAllOption: true,
-          editable: false,
-          onSelect: (category: string) => {
-            this.filterCategory = category;
-          }
-        })
-        .padding({ left: 16, right: 16, bottom: 8 })
-
         // 已选汇总栏
         if (this.selectedItemIds.length > 0) {
           Row({ space: 4 }) {
@@ -114,22 +109,19 @@ export struct GearPickerSheet {
           .padding({ left: 16, right: 16, bottom: 8 })
         }
 
-        // 装备列表（可滚动）
+        // 装备列表（可滚动）：P5 按品类分组折叠展开
         if (this.filteredGears().length === 0 && this.gears.length === 0) {
           // 装备库为空态
           this.buildEmptyState()
         } else if (this.filteredGears().length === 0 && this.searchText.length > 0) {
           // 搜索无结果
           this.buildSearchEmpty()
-        } else if (this.filteredGears().length === 0) {
-          // 品类筛选无结果
-          this.buildCategoryEmpty()
         } else {
           Scroll() {
             Column({ space: 0 }) {
-              ForEach(this.filteredGears(), (gear: GearItem) => {
-                this.buildGearRow(gear)
-              }, (gear: GearItem) => gear.id)
+              ForEach(this.groupedGears(), (group: CategoryGroup) => {
+                this.buildCategorySection(group)
+              }, (group: CategoryGroup) => group.category + '_' + group.gears.length.toString())
 
               // 底部临时添加入口
               Row({ space: 6 }) {
@@ -290,6 +282,43 @@ export struct GearPickerSheet {
     .alignContent(Alignment.Center)
   }
 
+  // P5：单个品类分组——折叠头（品类名 + 计数 + chevron）+ 展开时的装备行列表
+  @Builder
+  private buildCategorySection(group: CategoryGroup) {
+    Column({ space: 0 }) {
+      // 分组头（可点击折叠/展开）
+      Row({ space: 8 }) {
+        Text(group.category)
+          .fontSize(13)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(TEXT_MAIN)
+        Text(group.gears.length.toString())
+          .fontSize(12)
+          .fontColor(TEXT_TERTIARY)
+        Blank()
+        SymbolGlyph($r('sys.symbol.chevron_right'))
+          .fontSize(13)
+          .fontColor([TEXT_TERTIARY])
+          // 展开时箭头旋转 90° 朝下；SPRING_CHEVRON 弹性
+          .rotate({ angle: this.isCategoryExpanded(group.category) ? 90 : 0 })
+          .animation({ curve: SPRING_CHEVRON() })
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+      .onClick(() => {
+        this.toggleCategory(group.category);
+      })
+
+      // 展开态：该品类下装备行
+      if (this.isCategoryExpanded(group.category)) {
+        ForEach(group.gears, (gear: GearItem) => {
+          this.buildGearRow(gear)
+        }, (gear: GearItem) => gear.id)
+      }
+    }
+    .width('100%')
+  }
+
   @Builder
   private buildGearRow(gear: GearItem) {
     Row({ space: 8 }) {
@@ -379,30 +408,11 @@ export struct GearPickerSheet {
     .justifyContent(FlexAlign.Center)
   }
 
-  @Builder
-  private buildCategoryEmpty() {
-    Column({ space: 8 }) {
-      Text('该品类下没有装备')
-        .fontSize(14)
-        .fontColor(TEXT_SECONDARY)
-      Text('切换品类或临时添加一件')
-        .fontSize(12)
-        .fontColor(TEXT_TERTIARY)
-    }
-    .width('100%')
-    .layoutWeight(1)
-    .justifyContent(FlexAlign.Center)
-  }
-
   // ===== 辅助方法 =====
 
+  // 搜索过滤后的装备（品类分组前的全量集合）。P5：去掉品类筛选，仅按搜索关键词过滤。
   private filteredGears(): GearItem[] {
     let result = this.gears;
-    // 品类筛选
-    if (this.filterCategory !== CATEGORY_ALL) {
-      result = result.filter((g) => g.category === this.filterCategory);
-    }
-    // 搜索过滤
     if (this.searchText.trim().length > 0) {
       const keyword = this.searchText.trim().toLowerCase();
       result = result.filter((g) => {
@@ -411,13 +421,73 @@ export struct GearPickerSheet {
         return nameMatch || brandMatch;
       });
     }
-    // 预选 Zone 置顶：该 Zone 的装备稳定排到最前，方便从空格子进入后快速定位（review I4）
-    if (this.preselectZone.length > 0) {
-      const zoneFirst = result.filter((g) => assignSlot(g).zone === this.preselectZone);
-      const others = result.filter((g) => assignSlot(g).zone !== this.preselectZone);
-      result = zoneFirst.concat(others);
+    return result;
+  }
+
+  // P5：把 filteredGears 按 category 聚合成分组（仅含有装备的品类）。
+  // 顺序：先按 DEFAULT_CATEGORIES 预设顺序，自定义品类按首次出现顺序追加在后。
+  private groupedGears(): CategoryGroup[] {
+    const buckets = new Map<string, GearItem[]>();
+    const customOrder: string[] = [];
+    for (const g of this.filteredGears()) {
+      const cat = (g.category !== undefined && g.category.length > 0) ? g.category : CATEGORY_FALLBACK;
+      if (!buckets.has(cat)) {
+        buckets.set(cat, []);
+        if (DEFAULT_CATEGORIES.indexOf(cat) < 0) {
+          customOrder.push(cat);
+        }
+      }
+      buckets.get(cat)!.push(g);
+    }
+    const ordered: string[] = DEFAULT_CATEGORIES.concat(customOrder);
+    const result: CategoryGroup[] = [];
+    for (const cat of ordered) {
+      const list = buckets.get(cat);
+      if (list !== undefined && list.length > 0) {
+        result.push({ category: cat, gears: list });
+      }
     }
     return result;
+  }
+
+  // P5：预选 Zone 对应的品类集合（数据驱动反查：遍历装备收集该 Zone 的 category，无硬编码映射）
+  private preselectCategories(): string[] {
+    if (this.preselectZone.length === 0) {
+      return [];
+    }
+    const cats: string[] = [];
+    for (const g of this.gears) {
+      if (assignSlot(g).zone === this.preselectZone) {
+        const cat = (g.category !== undefined && g.category.length > 0) ? g.category : CATEGORY_FALLBACK;
+        if (cats.indexOf(cat) < 0) {
+          cats.push(cat);
+        }
+      }
+    }
+    return cats;
+  }
+
+  // P5：品类是否展开 = 手动展开 OR 搜索命中（搜索态全展开方便看到结果）OR 预选 Zone 命中该品类
+  private isCategoryExpanded(category: string): boolean {
+    if (this.searchText.trim().length > 0) {
+      return true;
+    }
+    if (this.expandedCategories.indexOf(category) >= 0) {
+      return true;
+    }
+    return this.preselectCategories().indexOf(category) >= 0;
+  }
+
+  // P5：手动切换品类折叠态（整体新数组赋值触发 @State 刷新）
+  private toggleCategory(category: string): void {
+    const idx = this.expandedCategories.indexOf(category);
+    if (idx >= 0) {
+      const next = this.expandedCategories.slice();
+      next.splice(idx, 1);
+      this.expandedCategories = next;
+    } else {
+      this.expandedCategories = this.expandedCategories.concat([category]);
+    }
   }
 
   // 是否为预选 Zone 的装备（用于列表轻量高亮提示）
