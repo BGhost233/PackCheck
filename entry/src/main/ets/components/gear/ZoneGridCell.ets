@@ -10,7 +10,6 @@ import {
   TEXT_TERTIARY,
   DIVIDER_COLOR,
   SHADOW_SUBTLE,
-  TRANSPARENT,
   ZONE_MISC_COLOR
 } from '../../constants/Colors';
 import {
@@ -19,7 +18,7 @@ import {
   FONT_WEIGHT_MEDIUM
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
-import { SPRING_PRESS, PRESS_SCALE_DOWN, SPRING_GENERAL } from '../../constants/AnimationTokens';
+import { SPRING_PRESS, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { zoneDisplayName, zoneIconName } from '../../services/LoadoutService';
@@ -55,15 +54,16 @@ export struct ZoneGridCell {
   @State private contentPressed: boolean = false;
 
   build() {
-    // 空态与有内容态双层常驻，用 opacity 互斥做 crossfade，避免 if/else 硬切（review V3）。
-    // opacity / hitTestBehavior / animation 加在各 @Builder 内部根节点（ArkUI 不允许在 @Builder 调用处外部追加属性）。
-    // 依赖隐式动画驱动：items 数量变化时 opacity 自动 Spring 过渡，不依赖父层 animateTo。
-    Stack() {
-      this.buildContentCell()
+    // 使用 if/else 而非 Stack 双层常驻 + HitTestMode.None：
+    // ArkUI 中 HitTestMode.None 不会可靠阻止子元素 .onClick() 拦截事件——
+    // 空态虚线占位区覆盖在有内容层之上，即使父层 opacity=0 / hitTestMode=None，
+    // 子元素仍可能接收触摸并路由到 onTapEmpty→GearPicker，导致聚焦/勾选/长按全部失效。
+    // 以功能性正确为最高优先级，Crossfade 留后续实现。
+    if (this.items.length === 0) {
       this.buildEmptyCell()
+    } else {
+      this.buildContentCell()
     }
-    .width('100%')
-    .height(this.cellHeight)
   }
 
   // ---- 有内容态：标题行 + 白卡列表 ----
@@ -158,9 +158,6 @@ export struct ZoneGridCell {
     .width('100%')
     .height('100%')
     .alignItems(HorizontalAlign.Start)
-    .opacity(this.items.length > 0 ? 1 : 0)
-    .hitTestBehavior(this.items.length > 0 ? HitTestMode.Default : HitTestMode.None)
-    .animation({ curve: SPRING_GENERAL() })
   }
 
   // ---- 空态：标题行 + 虚线占位区 ----
@@ -202,9 +199,6 @@ export struct ZoneGridCell {
     .width('100%')
     .height('100%')
     .alignItems(HorizontalAlign.Start)
-    .opacity(this.items.length === 0 ? 1 : 0)
-    .hitTestBehavior(this.items.length === 0 ? HitTestMode.Default : HitTestMode.None)
-    .animation({ curve: SPRING_GENERAL() })
   }
 
   // ---- 标题行：色条 + 图标 + 名称 + 数量 ----
