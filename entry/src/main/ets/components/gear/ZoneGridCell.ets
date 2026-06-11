@@ -54,16 +54,19 @@ export struct ZoneGridCell {
   @State private contentPressed: boolean = false;
 
   build() {
-    // 使用 if/else 而非 Stack 双层常驻 + HitTestMode.None：
-    // ArkUI 中 HitTestMode.None 不会可靠阻止子元素 .onClick() 拦截事件——
-    // 空态虚线占位区覆盖在有内容层之上，即使父层 opacity=0 / hitTestMode=None，
-    // 子元素仍可能接收触摸并路由到 onTapEmpty→GearPicker，导致聚焦/勾选/长按全部失效。
-    // 以功能性正确为最高优先级，Crossfade 留后续实现。
-    if (this.items.length === 0) {
-      this.buildEmptyCell()
-    } else {
-      this.buildContentCell()
+    // if/else 而非 Stack 双层常驻：空态和有内容态不可同时存在于视图树，
+    // 消除 HitTestMode.None 在 ArkUI 中不阻止子元素 onClick 的不可靠性。
+    // 外层 Column 承载 cellHeight 约束（v3 中由 Stack 提供）。
+    Column() {
+      if (this.items.length === 0) {
+        this.buildEmptyCell()
+      } else {
+        this.buildContentCell()
+      }
     }
+    .width('100%')
+    .height(this.cellHeight)
+    .clip(true)
   }
 
   // ---- 有内容态：标题行 + 白卡列表 ----
@@ -77,36 +80,14 @@ export struct ZoneGridCell {
       // P2/问题1：ChecklistRow 走双热区（checkOnlyHotzone），点 check 圆圈仅勾选；
       //   点装备名/行空白由 ChecklistRow 直接调 onTapRow→onTapTitle 进聚焦（ArkUI onClick 消费事件不冒泡，
       //   不能靠白卡 onClick 接装备行点击，故由本行直接回调）。白卡 onClick 仅兜底空白/折叠提示区。
-      // Phase 4：每行外包 Stack + 透明手势层，支持 LongPress→Pan 两阶段拖拽
+      // Phase 4：每行用 Column wrapper 承载 GestureGroup(Sequence, LongPress+Pan)。
+      // 关键：手势必须绑在「有点击响应」的元素所在的同层或上层，而非下层 Image 层——
+      // ArkUI 中子元素 onClick 会独占触摸序列，下层 Image 的 LongPressGesture 永远等不到 400ms。
+      // 此处 wrapper 只有 gesture、没有 onClick——tap 由 ChecklistRow 内部 onClick 处理，
+      // long press + pan 由 wrapper 的 GestureGroup 处理，两者不互斥。
       Column({ space: 0 }) {
         ForEach(this.previewItems(), (item: ChecklistItem) => {
-          Stack() {
-            // ① 透明手势层（底层）— LongPress+Pan Sequence
-            Image('')
-              .width('100%')
-              .height('100%')
-              .hitTestBehavior(HitTestMode.Block)
-              .gesture(
-                GestureGroup(
-                  GestureMode.Sequence,
-                  LongPressGesture({ repeat: false, duration: 400 })
-                    .onAction((event: GestureEvent) => {
-                      this.triggerHaptic();
-                      // 获取手指全局坐标（ArkUI：fingerList[0].globalX/globalY）
-                      const finger = event.fingerList[0];
-                      this.onLongPressItem(item, finger.globalX, finger.globalY);
-                    }),
-                  PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
-                    .onActionUpdate((event: GestureEvent) => {
-                      this.onPanUpdate(event.offsetX, event.offsetY);
-                    })
-                    .onActionEnd((event: GestureEvent) => {
-                      this.onPanFinish(event.offsetX, event.offsetY);
-                    })
-                )
-              )
-
-            // ② 内容行（顶层）— CheckMark onClick 不被拦截
+          Column() {
             ChecklistRow({
               item: item,
               rowHeight: GRID_ROW_HEIGHT,
@@ -118,6 +99,24 @@ export struct ZoneGridCell {
           }
           .width('100%')
           .height(GRID_ROW_HEIGHT)
+          .gesture(
+            GestureGroup(
+              GestureMode.Sequence,
+              LongPressGesture({ repeat: false, duration: 400 })
+                .onAction((event: GestureEvent) => {
+                  this.triggerHaptic();
+                  const finger = event.fingerList[0];
+                  this.onLongPressItem(item, finger.globalX, finger.globalY);
+                }),
+              PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
+                .onActionUpdate((event: GestureEvent) => {
+                  this.onPanUpdate(event.offsetX, event.offsetY);
+                })
+                .onActionEnd((event: GestureEvent) => {
+                  this.onPanFinish(event.offsetX, event.offsetY);
+                })
+            )
+          )
         }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
 
         // 超过 N 件：折叠提示行

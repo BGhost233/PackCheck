@@ -10,7 +10,6 @@ import {
   TEXT_SECONDARY,
   CARD_BG,
   PAGE_BG,
-  TRANSPARENT,
   OVERLAY_DIM,
   ZONE_HEAD_COLOR,
   ZONE_UPPER_COLOR,
@@ -550,7 +549,10 @@ this.computeCellHeight();
       .height(BOTTOM_FADE_HEIGHT)
       .linearGradient({
         angle: 180,
-        colors: [[TRANSPARENT, 0.0], [PAGE_BG, 1.0]]
+        // 渐变起始必须用 PAGE_BG 的 0-alpha 版本而非 TRANSPARENT(#00000000)：
+        // 透明黑 → 羽白的中段会混合出灰色，表现为页面底部一块灰色矩形。
+        // 用透明羽白 → 羽白保证渐变全程都在 PAGE_BG 色系内，纯净无杂色。
+        colors: [['#00F8F9FA', 0.0], [PAGE_BG, 1.0]]
       })
       .position({ left: 0, bottom: 0 })
       .hitTestBehavior(HitTestMode.None)
