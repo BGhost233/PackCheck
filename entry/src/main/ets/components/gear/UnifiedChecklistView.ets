@@ -235,7 +235,8 @@ this.computeCellHeight();
         .width('100%')
         .constraintSize({ maxHeight: '80%' })
     }
-    .geometryTransition('zone_' + this.focusedZoneRender)
+    // D-3：follow:true 让转场期间节点跟随布局插值，从原格几何中心连续长大到聚焦落点（就地放大）
+    .geometryTransition('zone_' + this.focusedZoneRender, { follow: true })
     .width('100%')
     .height('100%')
     .padding({ left: 20, right: 20 })
@@ -513,7 +514,8 @@ this.computeCellHeight();
         }
         // B-4：显式等高，强制同行基线齐平，消除两列参差
         .height(this.cellHeight)
-        .geometryTransition('zone_' + zone)
+        // D-3：与聚焦端 options 一致（follow:true），保证就地放大锚定原格
+        .geometryTransition('zone_' + zone, { follow: true })
         .opacity(this.focusedZone == zone ? 0 : (this.appeared ? 1 : 0))
         .hitTestBehavior(this.focusedZone == zone ? HitTestMode.None : HitTestMode.Default)
         .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
@@ -552,7 +554,8 @@ this.computeCellHeight();
       .columnEnd(1)
       // B-4：显式等高（杂项跨列）
       .height(this.cellHeight)
-      .geometryTransition('zone_' + BodyZone.Misc)
+      // D-3：与聚焦端 options 一致（follow:true）
+      .geometryTransition('zone_' + BodyZone.Misc, { follow: true })
       .opacity(this.focusedZone == BodyZone.Misc ? 0 : (this.appeared ? 1 : 0))
       .hitTestBehavior(this.focusedZone == BodyZone.Misc ? HitTestMode.None : HitTestMode.Default)
       .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
