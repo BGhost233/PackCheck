@@ -1,14 +1,12 @@
 // 统一清单视图 - 主视图（网格态）
 // 职责：2 列网格展示全部 7 个 Zone 格子（有内容态 / 空态），首屏精确 2×2.5 密度
 // 替代旧的 LoadoutView + ChecklistDetail 双 Tab。spec §2.1 / §4
-// Phase 1：网格骨架 + stagger 入场 + FAB + 空态引导；进度条/核查 留 Phase 2；全屏聚焦 留 Phase 3
+// P1：空态不再切引导页，统一走网格态——0 件时所有 Zone 走虚线空格子，点对应部位空格子加装备
 
 import { display } from '@kit.ArkUI';
 import {
   PRIMARY_COLOR,
-  TEXT_MAIN,
   TEXT_SECONDARY,
-  TEXT_TERTIARY,
   CARD_BG,
   OVERLAY_DIM,
   ZONE_HEAD_COLOR,
@@ -19,12 +17,6 @@ import {
   ZONE_SLEEP_COLOR,
   ZONE_MISC_COLOR
 } from '../../constants/Colors';
-import {
-  FONT_SIZE_TITLE_MEDIUM,
-  FONT_SIZE_BODY_LARGE,
-  FONT_SIZE_BODY_MEDIUM,
-  FONT_WEIGHT_MEDIUM
-} from '../../constants/Typography';
 import {
   SPRING_GENERAL,
   SPRING_PRESS,
@@ -117,15 +109,12 @@ this.computeCellHeight();
       }
 
       Stack() {
-        if (this.trip.items.length === 0) {
-          this.buildEmptyState()
-        } else {
-          this.buildGridState()
-        }
+        // P1：空态不再切引导页，统一走网格态——0 件时所有 Zone 走虚线空格子，
+        // 用户直接点对应部位空格子加装备（「带格子的核查清单」纲领）。
+        this.buildGridState()
 
-        if (this.trip.items.length > 0) {
-          this.buildFAB()
-        }
+        // FAB 始终显示（空态也可从右下角全局新增）。
+        this.buildFAB()
 
         // 全屏聚焦态（F-3：常驻树，用 visibility 切换，position 叠加在网格之上）
         this.buildFocusedLayer()
@@ -198,55 +187,6 @@ this.computeCellHeight();
       // 取屏失败 → 用兜底高度
       this.cellHeight = CELL_HEIGHT_FALLBACK;
     }
-  }
-
-  @Builder
-  private buildEmptyState() {
-    Column() {
-      Blank().layoutWeight(1)
-      Column({ space: 16 }) {
-        SymbolGlyph($r('sys.symbol.bag'))
-          .fontSize(64)
-          .fontColor([TEXT_TERTIARY])
-          .opacity(this.appeared ? 1 : 0)
-          .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
-          .animation({ curve: SPRING_GENERAL() })
-
-        Text('还没有装备')
-          .fontSize(FONT_SIZE_TITLE_MEDIUM)
-          .fontWeight(FONT_WEIGHT_MEDIUM)
-          .fontColor(TEXT_MAIN)
-          .opacity(this.appeared ? 1 : 0)
-          .animation({ curve: SPRING_GENERAL(), delay: 60 })
-
-        Text('点击下方按钮，从装备库中选择出行装备')
-          .fontSize(FONT_SIZE_BODY_MEDIUM)
-          .fontColor(TEXT_SECONDARY)
-          .opacity(this.appeared ? 1 : 0)
-          .animation({ curve: SPRING_GENERAL(), delay: 120 })
-
-        Button('选择装备')
-          .type(ButtonType.Capsule)
-          .fontSize(FONT_SIZE_BODY_LARGE)
-          .fontWeight(FONT_WEIGHT_MEDIUM)
-          .fontColor(CARD_BG)
-          .backgroundColor(PRIMARY_COLOR)
-          .height(48)
-          .padding({ left: 32, right: 32 })
-          .margin({ top: 8 })
-          .opacity(this.appeared ? 1 : 0)
-          .scale({ x: this.appeared ? 1 : 0.9, y: this.appeared ? 1 : 0.9 })
-          .animation({ curve: SPRING_GENERAL(), delay: 180 })
-          .onClick(() => {
-            this.onOpenPicker();
-          })
-      }
-      .alignItems(HorizontalAlign.Center)
-
-      Blank().layoutWeight(1)
-    }
-    .width('100%')
-    .height('100%')
   }
 
   @Builder
