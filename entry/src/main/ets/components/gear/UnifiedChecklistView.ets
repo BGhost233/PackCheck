@@ -6,11 +6,13 @@
 import { display } from '@kit.ArkUI';
 import {
   PRIMARY_COLOR,
+  TEXT_MAIN,
   TEXT_SECONDARY,
   CARD_BG,
   PAGE_BG,
   TRANSPARENT,
   OVERLAY_DIM,
+  DANGER_COLOR,
   ZONE_HEAD_COLOR,
   ZONE_UPPER_COLOR,
   ZONE_LOWER_COLOR,
@@ -25,7 +27,11 @@ import {
   SPRING_HERO_EXPAND,
   SPRING_HERO_COLLAPSE,
   STAGGER_OFFSET_Y,
-  staggerDelay
+  staggerDelay,
+  SHARP_SNAP,
+  EASE_FADE,
+  DURATION_OVERLAY_ENTER,
+  DURATION_OVERLAY_DISMISS
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
@@ -33,6 +39,7 @@ import { groupByZoneAll, calcProgress, LoadoutProgress } from '../../services/Lo
 import { ZoneGridCell } from './ZoneGridCell';
 import { FocusedZoneView } from './FocusedZoneView';
 import { LoadoutProgressBar } from './LoadoutProgressBar';
+import { GearItemContextMenu, ContextMenuItem } from './GearItemContextMenu';
 
 // 双列网格中走常规单列的 zone（杂项单独跨列渲染在末尾）。spec §2.1.2 F-5
 const GRID_SINGLE_ZONES: string[] = [
@@ -73,6 +80,8 @@ export struct UnifiedChecklistView {
   onEditItem: (item: ChecklistItem) => void = () => {};
   // 问题4：聚焦态长按菜单「从本次行程移除」，透传到 Index
   onRemoveItem: (itemId: string) => void = () => {};
+  // Phase 4：长按菜单「移动到…」→ 由 Index 弹出 zone 选择面板
+  onRequestMoveSheet: (item: ChecklistItem) => void = () => {};
 
   // FAB 按压状态
   @State private fabScale: number = 1.0;
@@ -80,6 +89,10 @@ export struct UnifiedChecklistView {
   @State private appeared: boolean = false;
   // 反算得到的单格高度
   @State private cellHeight: number = CELL_HEIGHT_FALLBACK;
+
+  // Phase 4：长按浮层状态
+  @State private overlayItem: ChecklistItem | null = null;
+  @State private overlayVisible: boolean = false;
   // 全屏聚焦的 Zone（null = 网格态）。spec §2.2 / §4.5.6
   // 问题4a：改 @Link 由 Index 持有 @State 源，使 onBackPressed 能读判断「是否聚焦」做分层拦截。
   //   注意：Index 不直接改此值（会丢收起动画），而是递增 closeFocusSignal 让本组件走带动画的 closeFocus()。
@@ -137,6 +150,11 @@ this.computeCellHeight();
 
         // 全屏聚焦态（F-3：常驻树，用 visibility 切换，position 叠加在网格之上）
         this.buildFocusedLayer()
+
+        // Phase 4：长按自绘浮层（蓙层 + 详情卡 + 菜单），条件渲染
+        if (this.overlayItem !== null) {
+          this.buildLongPressOverlay()
+        }
       }
       .layoutWeight(1)
       .width('100%')
@@ -160,6 +178,7 @@ this.computeCellHeight();
       onEditItem: this.onEditItem,
       onRemoveItem: this.onRemoveItem,
       onMoveItemToZone: this.onMoveItemToZone,
+      onLongPressItem: (item: ChecklistItem) => { this.showOverlay(item); },
       // D-2「逐项核查本区」携带 Zone 进入 Review，后续 Phase 接入；此处先占位不误触
       onReviewZone: (z: string) => {}
     })
@@ -196,6 +215,64 @@ this.computeCellHeight();
     this.getUIContext().animateTo({ curve: SPRING_HERO_COLLAPSE() }, () => {
       this.focusedZone = null;
     });
+  }
+
+  // ---- Phase 4：长按浮层控制 ----
+  private showOverlay(item: ChecklistItem): void {
+    this.overlayItem = item;
+    // 延迟一帧触发入场动画（确保条件渲染挂载后再 animate）
+    setTimeout(() => {
+      this.getUIContext().animateTo({
+        curve: SHARP_SNAP,
+        duration: DURATION_OVERLAY_ENTER
+      }, () => {
+        this.overlayVisible = true;
+      });
+    }, 16);
+  }
+
+  private dismissOverlay(): void {
+    this.getUIContext().animateTo({
+      curve: EASE_FADE,
+      duration: DURATION_OVERLAY_DISMISS,
+      onFinish: () => {
+        this.overlayItem = null;
+        this.overlayVisible = false;
+      }
+    }, () => {
+      this.overlayVisible = false;
+    });
+  }
+
+  private buildOverlayMenuItems(): ContextMenuItem[] {
+    const item = this.overlayItem!;
+    return [
+      {
+        icon: $r('sys.symbol.square_and_pencil'),
+        label: '编辑',
+        action: () => {
+          this.dismissOverlay();
+          this.onEditItem(item);
+        }
+      },
+      {
+        icon: $r('sys.symbol.arrow_up_and_down_square_portrait'),
+        label: '移动到…',
+        action: () => {
+          this.dismissOverlay();
+          this.onRequestMoveSheet(item);
+        }
+      },
+      {
+        icon: $r('sys.symbol.trash'),
+        label: '移除',
+        destructive: true,
+        action: () => {
+          this.dismissOverlay();
+          this.onRemoveItem(item.id);
+        }
+      }
+    ] as ContextMenuItem[];
   }
 
   private progress(): LoadoutProgress {
@@ -343,6 +420,46 @@ this.computeCellHeight();
       .visibility(this.focusedZone == null ? Visibility.Visible : Visibility.Hidden)
       .opacity(this.appeared ? 1 : 0)
       .animation({ curve: SPRING_GENERAL(), delay: 150 })
+  }
+
+  // ---- Phase 4：自绘浮层 Builder ----
+  @Builder
+  private buildLongPressOverlay() {
+    // 全屏蒙层 + 居中详情卡&菜单
+    Stack() {
+      // 蒙层（点击蒙层关闭）
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor('#33000000')
+        .opacity(this.overlayVisible ? 1 : 0)
+        .onClick(() => { this.dismissOverlay(); })
+
+      // 详情卡 + 菜单（居中偏上）
+      Column() {
+        GearItemContextMenu({
+          item: this.overlayItem!,
+          gear: this.findGearForItem(this.overlayItem!),
+          menuItems: this.buildOverlayMenuItems()
+        })
+      }
+      .width('80%')
+      .constraintSize({ maxWidth: 320 })
+      .opacity(this.overlayVisible ? 1 : 0)
+      .scale({ x: this.overlayVisible ? 1 : 0.9, y: this.overlayVisible ? 1 : 0.9 })
+      .offset({ y: -40 })
+    }
+    .width('100%')
+    .height('100%')
+    .hitTestBehavior(HitTestMode.Default)
+  }
+
+  // 通过 ChecklistItem 的 fromGearId 反查 GearItem
+  private findGearForItem(item: ChecklistItem): GearItem | undefined {
+    if (!item.fromGearId) {
+      return undefined;
+    }
+    return this.gears.find((g: GearItem) => g.id === item.fromGearId);
   }
 
   // ---- Helpers ----

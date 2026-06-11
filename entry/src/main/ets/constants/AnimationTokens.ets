@@ -49,6 +49,17 @@ export const CURVE_DECELERATE: Curve = Curve.EaseOut;
 export const CURVE_STANDARD: ICurve = curves.cubicBezierCurve(0.4, 0.0, 0.2, 1.0);
 export const CURVE_LINEAR: Curve = Curve.Linear;
 
+// 长按浮层/菜单专用（spec D-3：浮层弹出/菜单快速出现，无弹性诉求）
+export const SHARP_SNAP: Curve = Curve.Sharp;
+// 浮层/菜单淡出收场（spec D-3：纯透明度动画，无位移/弹性）
+export const EASE_FADE: Curve = Curve.EaseOut;
+// 浮层弹出时长
+export const DURATION_OVERLAY_ENTER: number = 180;
+// 菜单/详情卡淡出时长
+export const DURATION_OVERLAY_FADE: number = 120;
+// 浮层消失时长
+export const DURATION_OVERLAY_DISMISS: number = 150;
+
 // ============================================================
 // 时长 (ms)
 // ============================================================

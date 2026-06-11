@@ -58,6 +58,8 @@ export struct TripDetailPage {
   onLayerChange: (itemId: string, layer: string) => void = () => {};
   // 问题4：聚焦态长按转拖拽移动装备到目标 Zone（改 group），透传到 Index 持久化
   onMoveItemToZone: (itemId: string, zone: string) => void = () => {};
+  // Phase 4：长按菜单「移动到…」→ 由 Index 弹出 zone 选择面板
+  onRequestMoveSheet: (item: ChecklistItem) => void = () => {};
 
   private currentChecklist(): TripChecklist | undefined {
     for (let i = 0; i < this.checklists.length; i++) {
@@ -105,7 +107,8 @@ export struct TripDetailPage {
         onToggleCheck: this.onToggleChecklistItem,
         onMoveItemToZone: this.onMoveItemToZone,
         onEditItem: this.onOpenEditItem,
-        onRemoveItem: this.onDeleteChecklistItem
+        onRemoveItem: this.onDeleteChecklistItem,
+        onRequestMoveSheet: this.onRequestMoveSheet
       })
         .layoutWeight(1)
     }

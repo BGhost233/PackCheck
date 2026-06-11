@@ -35,6 +35,7 @@ import {
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
+import { vibrator } from '@kit.SensorServiceKit';
 import { zoneDisplayName, zoneIconName, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
 
@@ -60,14 +61,13 @@ export struct FocusedZoneView {
   onTapEmpty: (zone: string) => void = () => {};
   onToggleCheck: (itemId: string) => void = () => {};
   onReviewZone: (zone: string) => void = () => {};
-  // 问题4d（phase4 预埋）：以下三个回调三层透传链已贯通到本组件，
-  //   但「长按弹菜单 + 长按转拖拽跨 Zone」的手势消费方留待 phase4 实现，
-  //   届时只需在 build 内挂载手势调用这些回调，无需再改透传链。当前未引用属预期。
-  // 长按菜单：编辑 / 从本次行程移除
+  // Phase 4：长按菜单回调
   onEditItem: (item: ChecklistItem) => void = () => {};
   onRemoveItem: (itemId: string) => void = () => {};
   // 长按转拖拽落点：移动装备到目标 Zone（改 group）
   onMoveItemToZone: (itemId: string, zone: string) => void = () => {};
+  // Phase 4：长按 item 触发浮层（通知父层弹自绘浮层）
+  onLongPressItem: (item: ChecklistItem) => void = () => {};
 
   // 列表错落入场控制（0 = 未入场，1 = 已就位）
   @State private listAppeared: boolean = false;
@@ -121,16 +121,34 @@ export struct FocusedZoneView {
         ForEach(this.items, (item: ChecklistItem, index: number) => {
           ListItem() {
             Column({ space: 0 }) {
-              // 问题4c：双热区——点 check 圆圈勾选，点装备名/行其余区 toggle 详情展开
-              ChecklistRow({
-                item: item,
-                rowHeight: 52,
-                checkSize: 28,
-                fontSize: FONT_SIZE_BODY_LARGE,
-                checkOnlyHotzone: true,
-                onToggleCheck: this.onToggleCheck,
-                onTapRow: () => { this.toggleExpand(item.id); }
-              })
+              // Phase 4：Stack 手势层（底层）+ 内容行（顶层）
+              // 手势层在下接收长按，内容行在上保证 CheckMark onClick 不被拦截
+              Stack() {
+                // ① 透明手势层（底层，接收长按手势）
+                Image('')
+                  .width('100%')
+                  .height(52)
+                  .hitTestBehavior(HitTestMode.Block)
+                  .gesture(
+                    LongPressGesture({ repeat: false, duration: 400 })
+                      .onAction(() => {
+                        this.handleLongPress(item);
+                      })
+                  )
+
+                // ② 内容行（顶层，CheckMark 点击正常触发）
+                ChecklistRow({
+                  item: item,
+                  rowHeight: 52,
+                  checkSize: 28,
+                  fontSize: FONT_SIZE_BODY_LARGE,
+                  checkOnlyHotzone: true,
+                  onToggleCheck: this.onToggleCheck,
+                  onTapRow: () => { this.toggleExpand(item.id); }
+                })
+              }
+              .width('100%')
+              .height(52)
 
               // 问题4c：手风琴详情区（重量/品类/备注/品牌），Spring 高度 + 透明度
               if (this.expandedItemId === item.id) {
@@ -405,6 +423,21 @@ export struct FocusedZoneView {
     .onClick(() => {
       this.onTapEmpty(this.zone);
     })
+  }
+
+  // Phase 4：长按触发 —— 触觉反馈 + 通知父层弹浮层
+  private handleLongPress(item: ChecklistItem): void {
+    // 触觉反馈（轻档）
+    try {
+      vibrator.startVibration(
+        { type: 'preset', effectId: 'haptic.effect.soft', count: 1 },
+        { usage: 'touch' }
+      );
+    } catch (e) {
+      // 振动不可用时静默降级
+    }
+    // 通知父层弹出自绘浮层
+    this.onLongPressItem(item);
   }
 
   private progress(): LoadoutProgress {

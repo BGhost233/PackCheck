@@ -66,7 +66,6 @@ import {
   filteredGearGroups,
   filteredGearsByGroup,
   gearSortLabel,
-  gearTripCount,
   gearStatsText,
   totalGearWeight,
   totalGearPrice,
@@ -114,7 +113,6 @@ import {
   checklistItemPrice,
   numberInputText,
   latestChecklistHomeSubtitle,
-  countableGearIds,
   isChecklistItemInGear,
   hasGearMarker,
   matchingGearForChecklistItem,
@@ -951,38 +949,6 @@ struct Index {
   }
 
 
-  private async incrementGearTripCounts(gearIds: string[]): Promise<void> {
-    const dedupedIds = uniqueGearIds(gearIds);
-    if (dedupedIds.length === 0) {
-      return;
-    }
-    // O(1) 成员判断：在循环外构建一次 Set，避免对每个 gear 做 O(n) 的 indexOf
-    const idSet = new Set<string>(dedupedIds);
-    const nextGears: GearItem[] = [];
-    for (let index = 0; index < this.gears.length; index++) {
-      const gear = this.gears[index];
-      if (idSet.has(gear.id)) {
-        const updated: GearItem = {
-          id: gear.id,
-          name: gear.name,
-          category: gear.category,
-          weight: gear.weight,
-          price: gear.price,
-          note: gear.note,
-          createdAt: gear.createdAt,
-          tripCount: gearTripCount(gear) + 1,
-          brand: gear.brand,
-          acquiredAt: gear.acquiredAt
-        };
-        nextGears.push(updated);
-      } else {
-        nextGears.push(gear);
-      }
-    }
-    await this.store.saveGears(nextGears);
-    this.gears = nextGears;
-  }
-
   private isChecklistItemInGear(item: ChecklistItem): boolean {
     return isChecklistItemInGear(item);
   }
@@ -1619,11 +1585,9 @@ struct Index {
       return;
     }
     const items = buildItemsFromGears(this.gears, this.importGearIds);
-    const countGearIds = countableGearIds(checklist, this.importGearIds);
     const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, items);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
-    await this.incrementGearTripCounts(countGearIds);
     this.closeSheet();
   }
 
@@ -1644,7 +1608,6 @@ struct Index {
     const nextChecklists = prependChecklist(this.checklists, created);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
-    await this.incrementGearTripCounts(uniqueIds);
     this.selectedChecklistId = created.id;
     this.cancelGearMultiSelect();
     this.closeSheet();
@@ -1659,7 +1622,6 @@ struct Index {
     const updatedChecklists = addItemsToChecklist(this.checklists, tripId, items);
     this.applyChecklistState(updatedChecklists);
     await this.store.saveChecklists(updatedChecklists);
-    await this.incrementGearTripCounts(uniqueIds);
     this.cancelGearMultiSelect();
     const targetTrip = updatedChecklists.find((c: TripChecklist) => c.id === tripId);
     const tripName = targetTrip !== undefined ? targetTrip.title : '行程';
@@ -1916,6 +1878,9 @@ struct Index {
           },
           onLayerChange: (itemId: string, layer: string) => {
             // 一期取消「层级」概念，spec D-1：保留 callback 签名占位，无逻辑
+          },
+          onRequestMoveSheet: (item: ChecklistItem) => {
+            this.openGearItemActionSheet(item);
           },
           onDeleteTrip: () => {
             const checklist = this.checklists.find(c => c.id === this.selectedChecklistId);
