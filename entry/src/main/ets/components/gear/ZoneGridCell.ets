@@ -10,6 +10,7 @@ import {
   TEXT_TERTIARY,
   DIVIDER_COLOR,
   SHADOW_SUBTLE,
+  PRIMARY_COLOR,
   ZONE_MISC_COLOR
 } from '../../constants/Colors';
 import {
@@ -18,7 +19,7 @@ import {
   FONT_WEIGHT_MEDIUM
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
-import { SPRING_PRESS, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
+import { SPRING_PRESS, PRESS_SCALE_DOWN, SPRING_GENERAL } from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { zoneDisplayName, zoneIconName } from '../../services/LoadoutService';
@@ -48,6 +49,9 @@ export struct ZoneGridCell {
   onPanUpdate: (offsetX: number, offsetY: number) => void = () => {};
   onPanFinish: (offsetX: number, offsetY: number) => void = () => {};
 
+  // 拖拽悬停高亮：拖拽胶囊进入本格子时父层设为 true，格子边框 glow 绿光
+  @Prop isDropTarget: boolean = false;
+
   // 标题行按压
   @State private titlePressed: boolean = false;
   // P2：白卡主体（装备名/空白）按压——点这里整卡进全屏聚焦，与标题行同语义
@@ -66,6 +70,16 @@ export struct ZoneGridCell {
     }
     .width('100%')
     .height(this.cellHeight)
+    .borderRadius(CARD_RADIUS)
+    .border({
+      width: this.isDropTarget ? 2.5 : 0,
+      color: this.isDropTarget ? PRIMARY_COLOR : 'transparent',
+      style: BorderStyle.Solid
+    })
+    .shadow(this.isDropTarget
+      ? { radius: 16, color: '#402D7D46', offsetY: 0 }
+      : undefined)
+    .animation({ curve: SPRING_GENERAL() })
     .clip(true)
   }
 

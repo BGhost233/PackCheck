@@ -32,9 +32,9 @@ import {
   DURATION_OVERLAY_FADE,
   DURATION_OVERLAY_DISMISS
 } from '../../constants/AnimationTokens';
-import { CARD_RADIUS } from '../../constants/Layout';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
+import { vibrator } from '@kit.SensorServiceKit';
 import { groupByZoneAll, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
 import { ZoneGridCell } from './ZoneGridCell';
 import { FocusedZoneView } from './FocusedZoneView';
@@ -96,9 +96,12 @@ export struct UnifiedChecklistView {
   @State private overlayPhase: string = 'idle'; // 'idle' | 'menu' | 'dragging'
   @State private dragOffsetX: number = 0;
   @State private dragOffsetY: number = 0;
-  // 拖拽起始点（浮层 Stack 局部坐标），用于浮层绝对定位
-  private dragAnchorX: number = 0;
-  private dragAnchorY: number = 0;
+  // 胶囊当前位置（浮层 Stack 局部坐标），position() 直接消费
+  @State private dragCurrentX: number = 0;
+  @State private dragCurrentY: number = 0;
+  // 长按时手指全局坐标（Pan offset 累加到此处得到实时全局坐标，再转局部）
+  private longPressGlobalX: number = 0;
+  private longPressGlobalY: number = 0;
   // 浮层 Stack 的全局原点（onAreaChange 收集），用于全局→局部坐标转换
   @State private overlayOriginX: number = 0;
   @State private overlayOriginY: number = 0;
@@ -176,10 +179,12 @@ this.computeCellHeight();
       .layoutWeight(1)
       .width('100%')
       .onAreaChange((_o: Area, n: Area) => {
-        // 记录浮层容器的全局原点，用于拖拽胶囊/高亮框的全局→局部坐标转换
-        const pos = n.globalPosition as Record<string, number>;
-        this.overlayOriginX = pos.x ?? 0;
-        this.overlayOriginY = pos.y ?? 0;
+        // 记录浮层容器的全局原点，用于拖拽胶囊/高亮框的全局→局部坐标转换。
+        // globalPosition 可能为 undefined（首次布局或特定 ArkUI 版本），加空守卫防止坐标归零。
+        if (n.globalPosition !== undefined) {
+          this.overlayOriginX = n.globalPosition.x as number;
+          this.overlayOriginY = n.globalPosition.y as number;
+        }
       })
     }
     .width('100%')
@@ -310,9 +315,12 @@ this.computeCellHeight();
   private handleGridLongPress(item: ChecklistItem, globalX: number, globalY: number): void {
     this.overlayItem = item;
     this.overlayPhase = 'menu';
-    // 全局坐标→浮层 Stack 局部坐标：position() 是相对于父容器的，必须用局部坐标
-    this.dragAnchorX = globalX - this.overlayOriginX;
-    this.dragAnchorY = globalY - this.overlayOriginY;
+    // 保存全局坐标，供 handleDragUpdate 用 Pan offset 累加推出手指实时全局坐标
+    this.longPressGlobalX = globalX;
+    this.longPressGlobalY = globalY;
+    // 初始胶囊位置 = 手指局部坐标（用于菜单阶段的居中展示）
+    this.dragCurrentX = globalX - this.overlayOriginX;
+    this.dragCurrentY = globalY - this.overlayOriginY;
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
     this.dropTargetZone = null;
@@ -328,22 +336,29 @@ this.computeCellHeight();
     }, 16);
   }
 
-  // Pan 更新
+  // Pan 更新：offsetX/Y 是 PanGesture 相对起点的累积位移(vp)
+  // 手指实时全局坐标 = longPressGlobal + offset，转局部后更新胶囊位置。
   private handleDragUpdate(offsetX: number, offsetY: number): void {
     if (this.overlayItem === null) {
       return;
     }
-    // 首次移动：从 menu 切换到 dragging（opacity 过渡由 .animation 驱动，不需要 animateTo）
     if (this.overlayPhase === 'menu') {
       this.overlayPhase = 'dragging';
     }
     this.dragOffsetX = offsetX;
     this.dragOffsetY = offsetY;
-    // 命中判定目标 zone
-    this.dropTargetZone = this.hitTestZone(
-      this.dragAnchorX + offsetX,
-      this.dragAnchorY + offsetY
-    );
+    const fingerGlobalX = this.longPressGlobalX + offsetX;
+    const fingerGlobalY = this.longPressGlobalY + offsetY;
+    // 胶囊跟手：position() 消费局部坐标
+    this.dragCurrentX = fingerGlobalX - this.overlayOriginX;
+    this.dragCurrentY = fingerGlobalY - this.overlayOriginY;
+    // 命中判定
+    const prevTarget = this.dropTargetZone;
+    this.dropTargetZone = this.hitTestZone(fingerGlobalX, fingerGlobalY);
+    // 进入新 Zone 时触觉反馈
+    if (this.dropTargetZone !== null && this.dropTargetZone !== prevTarget) {
+      this.triggerDropHaptic();
+    }
   }
 
   // Pan 结束（松手）
@@ -351,15 +366,12 @@ this.computeCellHeight();
     if (this.overlayItem === null) {
       return;
     }
-    const target = this.hitTestZone(
-      this.dragAnchorX + offsetX,
-      this.dragAnchorY + offsetY
-    );
-    // 落入有效目标 zone 且不是原 zone → 移动
+    const fingerGlobalX = this.longPressGlobalX + offsetX;
+    const fingerGlobalY = this.longPressGlobalY + offsetY;
+    const target = this.hitTestZone(fingerGlobalX, fingerGlobalY);
     if (target !== null && target !== this.overlayItem!.group) {
       this.onMoveItemToZone(this.overlayItem!.id, target);
     }
-    // 回弹/消失动画（translate 归零走 Spring，opacity 归零走隐式 animation）
     this.getUIContext().animateTo({
       curve: SPRING_GENERAL(),
       onFinish: () => {
@@ -380,7 +392,20 @@ this.computeCellHeight();
     this.overlayVisible = false;
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
+    this.dragCurrentX = 0;
+    this.dragCurrentY = 0;
     this.dropTargetZone = null;
+  }
+
+  private triggerDropHaptic(): void {
+    try {
+      vibrator.startVibration(
+        { type: 'preset', effectId: 'haptic.effect.tick', count: 1 },
+        { usage: 'touch' }
+      );
+    } catch (_e) {
+      // 静默降级
+    }
   }
 
   // 坐标命中判定：当前全局坐标落在哪个 zone 格子内
@@ -445,6 +470,7 @@ this.computeCellHeight();
             items: this.itemsForZone(zone),
             zoneColor: this.zoneColor(zone),
             cellHeight: this.cellHeight,
+            isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === zone,
             onTapTitle: (z: string) => { this.openFocus(z); },
             onTapEmpty: (z: string) => { this.onOpenPicker(z); },
             onToggleCheck: this.onToggleCheck,
@@ -456,8 +482,8 @@ this.computeCellHeight();
           })
         }
         .geometryTransition('zone_' + zone)
-        .visibility(this.focusedZone == zone ? Visibility.Hidden : Visibility.Visible)
-        .opacity(this.appeared ? 1 : 0)
+        .opacity(this.focusedZone == zone ? 0 : (this.appeared ? 1 : 0))
+        .hitTestBehavior(this.focusedZone == zone ? HitTestMode.None : HitTestMode.Default)
         .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
         .animation({
           curve: SPRING_GENERAL(),
@@ -476,6 +502,7 @@ this.computeCellHeight();
           items: this.itemsForZone(BodyZone.Misc),
           zoneColor: this.zoneColor(BodyZone.Misc),
           cellHeight: this.cellHeight,
+          isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === BodyZone.Misc,
           onTapTitle: (z: string) => { this.openFocus(z); },
           onTapEmpty: (z: string) => { this.onOpenPicker(z); },
           onToggleCheck: this.onToggleCheck,
@@ -489,8 +516,8 @@ this.computeCellHeight();
       .columnStart(0)
       .columnEnd(1)
       .geometryTransition('zone_' + BodyZone.Misc)
-      .visibility(this.focusedZone == BodyZone.Misc ? Visibility.Hidden : Visibility.Visible)
-      .opacity(this.appeared ? 1 : 0)
+      .opacity(this.focusedZone == BodyZone.Misc ? 0 : (this.appeared ? 1 : 0))
+      .hitTestBehavior(this.focusedZone == BodyZone.Misc ? HitTestMode.None : HitTestMode.Default)
       .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
       .animation({
         curve: SPRING_GENERAL(),
@@ -614,7 +641,8 @@ this.computeCellHeight();
       .hitTestBehavior(this.overlayPhase === 'menu' ? HitTestMode.Default : HitTestMode.None)
 
       // 阶段2：拖拽跟手胶囊——常驻渲染，opacity 控制可见性
-      // V1+V3 修正：position 锚定手指起始点（不做动画），translate 驱动跟手偏移（Spring 可平滑归零）
+      // position(x,y) 消费局部坐标 dragCurrentX/Y（已在 handleDragUpdate 中由全局→局部转换），
+      // -60/-40 偏移让胶囊居中于手指上方。不再使用 translate()+anchor 双坐标系组合。
       Row({ space: 8 }) {
         Text(this.overlayItem!.name)
           .fontSize(14)
@@ -628,47 +656,16 @@ this.computeCellHeight();
       .backgroundColor(CARD_BG)
       .borderRadius(20)
       .shadow({ radius: 16, color: OVERLAY_DIM, offsetY: 6 })
-      .position({ x: this.dragAnchorX, y: this.dragAnchorY })
-      .translate({ x: this.dragOffsetX, y: this.dragOffsetY - 40 })
+      .position({ x: this.dragCurrentX - 60, y: this.dragCurrentY - 40 })
       .opacity(this.overlayPhase === 'dragging' ? 1 : 0)
       .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
       .hitTestBehavior(HitTestMode.None)
 
-      // 目标 zone 高亮指示器（叠加在网格上方，只在拖拽态显示）
-      if (this.dropTargetZone !== null && this.overlayPhase === 'dragging') {
-        this.buildDropHighlight()
-      }
     }
     .width('100%')
     .height('100%')
     .hitTestBehavior(this.overlayPhase === 'dragging' ? HitTestMode.None : HitTestMode.Default)
   }
-
-  // 目标 zone 高亮边框
-  @Builder
-  private buildDropHighlight() {
-    // 从 zoneRects 取目标 zone 的位置
-    Column()
-      .width(this.getDropHighlightWidth())
-      .height(this.getDropHighlightHeight())
-      .position({ x: this.getDropHighlightX(), y: this.getDropHighlightY() })
-      .borderRadius(CARD_RADIUS)
-      .border({ width: 2.5, color: PRIMARY_COLOR, style: BorderStyle.Solid })
-      .backgroundColor('#0D2D7D46')  // PRIMARY_COLOR 5% opacity
-      .hitTestBehavior(HitTestMode.None)
-  }
-
-  private getDropHighlightRect(): number[] {
-    if (this.dropTargetZone === null) {
-      return [0, 0, 0, 0];
-    }
-    return this.zoneRects.get(this.dropTargetZone) ?? [0, 0, 0, 0];
-  }
-
-  private getDropHighlightX(): number { return this.getDropHighlightRect()[0] - this.overlayOriginX; }
-  private getDropHighlightY(): number { return this.getDropHighlightRect()[1] - this.overlayOriginY; }
-  private getDropHighlightWidth(): number { return this.getDropHighlightRect()[2]; }
-  private getDropHighlightHeight(): number { return this.getDropHighlightRect()[3]; }
 
   // 通过 ChecklistItem 的 fromGearId 反查 GearItem
   private findGearForItem(item: ChecklistItem): GearItem | undefined {
