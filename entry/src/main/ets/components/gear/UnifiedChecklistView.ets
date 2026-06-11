@@ -498,6 +498,8 @@ this.computeCellHeight();
             onPanFinish: (ox: number, oy: number) => { this.handleDragEnd(ox, oy); }
           })
         }
+        // B-4：显式等高，强制同行基线齐平，消除两列参差
+        .height(this.cellHeight)
         .geometryTransition('zone_' + zone)
         .opacity(this.focusedZone == zone ? 0 : (this.appeared ? 1 : 0))
         .hitTestBehavior(this.focusedZone == zone ? HitTestMode.None : HitTestMode.Default)
@@ -534,6 +536,8 @@ this.computeCellHeight();
       }
       .columnStart(0)
       .columnEnd(1)
+      // B-4：显式等高（杂项跨列）
+      .height(this.cellHeight)
       .geometryTransition('zone_' + BodyZone.Misc)
       .opacity(this.focusedZone == BodyZone.Misc ? 0 : (this.appeared ? 1 : 0))
       .hitTestBehavior(this.focusedZone == BodyZone.Misc ? HitTestMode.None : HitTestMode.Default)
