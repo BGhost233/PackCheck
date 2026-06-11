@@ -11,6 +11,7 @@ import {
   CARD_BG,
   PAGE_BG,
   OVERLAY_DIM,
+  SHADOW_MEDIUM,
   ZONE_HEAD_COLOR,
   ZONE_UPPER_COLOR,
   ZONE_LOWER_COLOR,
@@ -657,8 +658,16 @@ this.computeCellHeight();
       .padding({ left: 16, right: 16 })
       .backgroundColor(CARD_BG)
       .borderRadius(20)
-      .shadow({ radius: 16, color: OVERLAY_DIM, offsetY: 6 })
+      .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetY: 8 })
       .position({ x: this.dragCurrentX - 60, y: this.dragCurrentY - 40 })
+      // A-2：进入 dragging 时浮起放大 + 微倾斜，弹性曲线属性级承接（不与 opacity 的 EASE 共用 .animation）
+      .scale({
+        x: this.overlayPhase === 'dragging' ? 1.05 : 0.9,
+        y: this.overlayPhase === 'dragging' ? 1.05 : 0.9
+      })
+      .animation({ curve: SPRING_PRESS() })
+      .rotate({ angle: this.overlayPhase === 'dragging' ? 2.5 : 0 })
+      .animation({ curve: SPRING_PRESS() })
       .opacity(this.overlayPhase === 'dragging' ? 1 : 0)
       .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
       .hitTestBehavior(HitTestMode.None)
