@@ -608,12 +608,14 @@ this.computeCellHeight();
   @Builder
   private buildLongPressOverlay() {
     Stack() {
-      // 蒙层（menu 阶段可点击关闭；dragging 阶段半透明不拦截）
+      // 蒙层（menu 阶段压暗可点击关闭；dragging 阶段淡出，消除全页压灰中间态）
+      // A-1：仅在 menu 阶段显示灰底，进入 dragging 后随胶囊淡入同步淡出
       Column()
         .width('100%')
         .height('100%')
         .backgroundColor('#33000000')
-        .opacity(this.overlayVisible ? 1 : 0)
+        .opacity(this.overlayPhase === 'menu' && this.overlayVisible ? 1 : 0)
+        .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
         .onClick(() => {
           if (this.overlayPhase !== 'dragging') {
             this.dismissOverlay();
