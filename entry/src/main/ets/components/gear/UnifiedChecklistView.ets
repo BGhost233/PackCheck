@@ -61,8 +61,9 @@ const CELL_HEIGHT_FALLBACK: number = 160;
 export struct UnifiedChecklistView {
   @Prop @Watch('onTripChange') trip: TripChecklist = { id: '', title: '', items: [], createdAt: 0 };
   @Prop gears: GearItem[] = [];
-  // 顶部已占高度（NavBar + SharedInfo + ProgressBar），用于首屏 cell 高度反算
-  @Prop reservedTopHeight: number = 180;
+// 顶部已占高度（NavBar + SharedInfo + ProgressBar），用于首屏 cell 高度反算
+// @Watch：aboutToAppear 时父层 build 可能尚未传入实算值，prop 后续更新需重算 cell 高度（review B3）
+@Prop @Watch('onReservedTopChange') reservedTopHeight: number = 180;
 
   // callbacks
   // zone 可选：从空格子进入时透传对应 Zone，picker 据此排序高亮并预选临时新建分区（review I4）
@@ -97,9 +98,13 @@ export struct UnifiedChecklistView {
     this.appeared = false;
   }
 
-  onTripChange(): void {
-    this.refreshCache();
-  }
+onTripChange(): void {
+this.refreshCache();
+}
+
+onReservedTopChange(): void {
+this.computeCellHeight();
+}
 
   build() {
     Column() {
