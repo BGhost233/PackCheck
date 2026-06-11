@@ -10,6 +10,7 @@ import {
   TEXT_SECONDARY,
   CARD_BG,
   PAGE_BG,
+  PAGE_BG_TRANSPARENT,
   OVERLAY_DIM,
   SHADOW_MEDIUM,
   ZONE_HEAD_COLOR,
@@ -665,7 +666,7 @@ this.computeCellHeight();
         // 渐变起始必须用 PAGE_BG 的 0-alpha 版本而非 TRANSPARENT(#00000000)：
         // 透明黑 → 羽白的中段会混合出灰色，表现为页面底部一块灰色矩形。
         // 用透明羽白 → 羽白保证渐变全程都在 PAGE_BG 色系内，纯净无杂色。
-        colors: [['#00F8F9FA', 0.0], [PAGE_BG, 1.0]]
+        colors: [[PAGE_BG_TRANSPARENT, 0.0], [PAGE_BG, 1.0]]
       })
       .position({ left: 0, bottom: 0 })
       .hitTestBehavior(HitTestMode.None)
@@ -683,7 +684,7 @@ this.computeCellHeight();
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('#33000000')
+        .backgroundColor(OVERLAY_DIM)
         .opacity(this.overlayPhase === 'menu' && this.overlayVisible ? 1 : 0)
         .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
         .onClick(() => {

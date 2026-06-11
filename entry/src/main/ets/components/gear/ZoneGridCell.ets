@@ -11,6 +11,7 @@ import {
   DIVIDER_COLOR,
   PLACEHOLDER_COLOR,
   PRIMARY_COLOR,
+  PRIMARY_SHADOW_GLOW,
   ZONE_MISC_COLOR,
   ZONE_MISC_STROKE,
   ZONE_MISC_TINT
@@ -86,7 +87,7 @@ export struct ZoneGridCell {
       style: BorderStyle.Solid
     })
     .shadow(this.isDropTarget
-      ? { radius: 16, color: '#402D7D46', offsetY: 0 }
+      ? { radius: 16, color: PRIMARY_SHADOW_GLOW, offsetY: 0 }
       : undefined)
     .animation({ curve: SPRING_GENERAL() })
     .clip(true)

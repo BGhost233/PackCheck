@@ -10,7 +10,9 @@ import {
   TEXT_TERTIARY,
   DANGER_COLOR,
   DIVIDER_COLOR,
-  INPUT_BG
+  INPUT_BG,
+  SHADOW_DEFAULT,
+  SHADOW_LIGHT
 } from '../../constants/Colors';
 import {
   FONT_SIZE_BODY_MEDIUM,
@@ -97,7 +99,7 @@ export struct GearItemContextMenu {
     .padding(16)
     .backgroundColor(CARD_BG)
     .borderRadius(16)
-    .shadow({ radius: 24, color: '#1A000000', offsetY: 8 })
+    .shadow({ radius: 24, color: SHADOW_DEFAULT, offsetY: 8 })
   }
 
   // 浮动菜单（复用 GearPage 菜单视觉：圆角白卡 + 分割线 + 图标/文字/红色删除）
@@ -156,7 +158,7 @@ export struct GearItemContextMenu {
     .width(200)
     .backgroundColor(CARD_BG)
     .borderRadius(14)
-    .shadow({ radius: 16, color: '#14000000', offsetY: 4 })
+    .shadow({ radius: 16, color: SHADOW_LIGHT, offsetY: 4 })
     .clip(true)
   }
 

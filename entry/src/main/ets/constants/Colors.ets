@@ -22,10 +22,14 @@ export const PRIMARY_HALF: string = '#802D7D46';
 export const PRIMARY_FILL_SUBTLE: string = '#602D7D46';
 export const PRIMARY_GRADIENT_START: string = '#1F2D7D46';
 export const PRIMARY_GRADIENT_END: string = '#4D2D7D46';
+// 拖拽目标格 glow 绿光阴影（alpha #40 ≈ 25%）
+export const PRIMARY_SHADOW_GLOW: string = '#402D7D46';
 
 // ============ 页面/卡片背景 ============
 export const PAGE_BG: string = '#F8F9FA';
 export const PAGE_BG_TRANSLUCENT: string = '#66F8F9FA';
+// 贴底渐隐渐变起始端：PAGE_BG 的 0-alpha 版本（不能用 TRANSPARENT #00000000，否则偏黑）
+export const PAGE_BG_TRANSPARENT: string = '#00F8F9FA';
 export const CARD_BG: string = '#FFFFFF';
 export const GROUP_HEADER_BG: string = '#F5F5F5';
 export const INPUT_BG: string = '#F7F8F7';
