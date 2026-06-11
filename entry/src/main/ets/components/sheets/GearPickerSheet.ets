@@ -31,7 +31,7 @@ import {
   ZONE_MISC_TINT
 } from '../../constants/Colors';
 import { BodyZone } from '../../constants/GearLoadout';
-import { SPRING_PRESS, SPRING_GENERAL, SPRING_CHEVRON, PANEL_SCALE_START } from '../../constants/AnimationTokens';
+import { SPRING_PRESS, SPRING_GENERAL, SPRING_CHEVRON, PANEL_SCALE_START, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
 import { GearItem, CATEGORY_FALLBACK, DEFAULT_CATEGORIES } from '../../models/PackModels';
 import { assignSlot, zoneDisplayName, allZones } from '../../services/LoadoutService';
 
@@ -52,7 +52,9 @@ export struct GearPickerSheet {
 
   // 回调
   onToggleGear: (gear: GearItem) => void = () => {};
-  onTempAdd: (name: string, zone: string, weight: number | undefined) => void = () => {};
+  // P3：新建装备统一回调——saveToLibrary 决定「存入装备库」还是「本次行程临时」；
+  //   入库时 category 为用户显式选择的品类（临时模式忽略 category）。
+  onAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => void = () => {};
   onClose: () => void = () => {};
 
   // 内部状态
@@ -63,12 +65,15 @@ export struct GearPickerSheet {
   @State private tempName: string = '';
   @State private tempZone: string = BodyZone.Misc;
   @State private tempWeight: string = '';
+  // P3：新建覆盖层——是否存入装备库（false = 本次行程临时）+ 入库时选择的品类
+  @State private tempSaveToLibrary: boolean = false;
+  @State private tempCategory: string = CATEGORY_FALLBACK;
   @State private overlayScale: number = PANEL_SCALE_START;
   @State private overlayOpacity: number = 0;
-  @State private tempRowScale: number = 1.0;
+  @State private newEntryScale: number = 1.0;
 
   aboutToAppear(): void {
-    // 从空格子进入时，临时新建装备默认落到该 Zone（review I4）
+    // 从空格子进入时，新建装备默认落到该 Zone（review I4）
     if (this.preselectZone.length > 0) {
       this.tempZone = this.preselectZone;
     }
@@ -79,17 +84,44 @@ export struct GearPickerSheet {
       // 底层：正常 Sheet 内容
       Column({ space: 0 }) {
         // 搜索栏
-        Row() {
+        Row({ space: 8 }) {
           TextInput({ placeholder: '搜索装备...', text: this.searchText })
             .onChange((value: string) => {
               this.searchText = value;
             })
-            .width('100%')
+            .layoutWeight(1)
             .height(36)
             .fontSize(14)
             .backgroundColor(INPUT_BG)
             .borderRadius(10)
             .padding({ left: 12, right: 12 })
+
+          // P3：顶部常驻「+ 新建装备」入口
+          Row({ space: 4 }) {
+            SymbolGlyph($r('sys.symbol.plus'))
+              .fontSize(14)
+              .fontColor([CARD_BG])
+            Text('新建')
+              .fontSize(13)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(CARD_BG)
+          }
+          .height(36)
+          .padding({ left: 12, right: 12 })
+          .backgroundColor(PRIMARY_COLOR)
+          .borderRadius(10)
+          .scale({ x: this.newEntryScale, y: this.newEntryScale })
+          .animation({ curve: SPRING_PRESS() })
+          .onTouch((e: TouchEvent) => {
+            if (e.type === TouchType.Down) {
+              this.newEntryScale = PRESS_SCALE_DOWN;
+            } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+              this.newEntryScale = 1.0;
+            }
+          })
+          .onClick(() => {
+            this.openNewGearOverlay('');
+          })
         }
         .width('100%')
         .padding({ left: 16, right: 16, top: 4, bottom: 8 })
@@ -122,30 +154,6 @@ export struct GearPickerSheet {
               ForEach(this.groupedGears(), (group: CategoryGroup) => {
                 this.buildCategorySection(group)
               }, (group: CategoryGroup) => group.category + '_' + group.gears.length.toString())
-
-              // 底部临时添加入口
-              Row({ space: 6 }) {
-                Text('+')
-                  .fontSize(16)
-                  .fontColor(TEXT_SECONDARY)
-                Text('临时添加（不入装备库）')
-                  .fontSize(13)
-                  .fontColor(TEXT_SECONDARY)
-              }
-              .width('100%')
-              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-              .scale({ x: this.tempRowScale, y: this.tempRowScale })
-              .animation({ curve: SPRING_PRESS() })
-              .onTouch((e: TouchEvent) => {
-                if (e.type === TouchType.Down) {
-                  this.tempRowScale = 0.97;
-                } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-                  this.tempRowScale = 1.0;
-                }
-              })
-              .onClick(() => {
-                this.openTempOverlay();
-              })
             }
           }
           .layoutWeight(1)
@@ -169,10 +177,20 @@ export struct GearPickerSheet {
 
         // 居中卡片
         Column({ space: 14 }) {
-          Text('临时添加装备')
+          Text('新建装备')
             .fontSize(16)
             .fontWeight(FontWeight.Medium)
             .fontColor(TEXT_MAIN)
+
+          // P3：「本次行程临时 / 存入装备库」二选一 segment
+          Row({ space: 0 }) {
+            this.buildModeSegment('本次行程临时', false)
+            this.buildModeSegment('存入装备库', true)
+          }
+          .width('100%')
+          .padding(3)
+          .backgroundColor(INPUT_BG)
+          .borderRadius(10)
 
           // 名称
           Column({ space: 4 }) {
@@ -191,6 +209,30 @@ export struct GearPickerSheet {
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
+
+          // P3：入库时显式选择品类（临时模式隐藏）
+          if (this.tempSaveToLibrary) {
+            Column({ space: 6 }) {
+              Text('品类')
+                .fontSize(12)
+                .fontColor(TEXT_SECONDARY)
+              Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
+                ForEach(this.categoryOptions(), (cat: string) => {
+                  Text(cat)
+                    .fontSize(12)
+                    .fontColor(this.tempCategory === cat ? CARD_BG : TEXT_MAIN)
+                    .backgroundColor(this.tempCategory === cat ? PRIMARY_COLOR : INPUT_BG)
+                    .borderRadius(14)
+                    .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+                    .onClick(() => {
+                      this.tempCategory = cat;
+                    })
+                }, (cat: string) => cat)
+              }
+            }
+            .width('100%')
+            .alignItems(HorizontalAlign.Start)
+          }
 
           // 归属区域
           Column({ space: 6 }) {
@@ -251,7 +293,7 @@ export struct GearPickerSheet {
               .onClick(() => {
                 this.closeTempOverlay();
               })
-            Button('添加')
+            Button(this.tempSaveToLibrary ? '入库并添加' : '添加')
               .fontSize(14)
               .fontColor(CARD_BG)
               .backgroundColor(PRIMARY_COLOR)
@@ -263,7 +305,7 @@ export struct GearPickerSheet {
               .onClick(() => {
                 const parsed = Number(this.tempWeight);
                 const weight = (this.tempWeight.trim().length > 0 && !Number.isNaN(parsed)) ? parsed : undefined;
-                this.onTempAdd(this.tempName.trim(), this.tempZone, weight);
+                this.onAddGear(this.tempName.trim(), this.tempZone, weight, this.tempCategory, this.tempSaveToLibrary);
                 this.closeTempOverlay();
               })
           }
@@ -374,10 +416,10 @@ export struct GearPickerSheet {
       Text('装备库还是空的')
         .fontSize(15)
         .fontColor(TEXT_SECONDARY)
-      Text('先临时添加一件试试吧')
+      Text('新建一件装备开始吧')
         .fontSize(13)
         .fontColor(TEXT_TERTIARY)
-      Button('+ 临时添加一件')
+      Button('+ 新建装备')
         .fontSize(14)
         .fontColor(CARD_BG)
         .backgroundColor(PRIMARY_COLOR)
@@ -385,7 +427,7 @@ export struct GearPickerSheet {
         .height(40)
         .margin({ top: 8 })
         .onClick(() => {
-          this.openTempOverlay();
+          this.openNewGearOverlay('');
         })
     }
     .width('100%')
@@ -395,17 +437,43 @@ export struct GearPickerSheet {
 
   @Builder
   private buildSearchEmpty() {
-    Column({ space: 8 }) {
+    Column({ space: 12 }) {
       Text('没有找到匹配的装备')
         .fontSize(14)
         .fontColor(TEXT_SECONDARY)
-      Text('试试换个关键词，或临时添加一件')
-        .fontSize(12)
-        .fontColor(TEXT_TERTIARY)
+      // P3：搜不到就建——直接用当前关键词预填新建覆盖层
+      Button('+ 创建「' + this.searchText.trim() + '」')
+        .fontSize(14)
+        .fontColor(CARD_BG)
+        .backgroundColor(PRIMARY_COLOR)
+        .borderRadius(8)
+        .height(40)
+        .padding({ left: 16, right: 16 })
+        .onClick(() => {
+          this.openNewGearOverlay(this.searchText.trim());
+        })
     }
     .width('100%')
     .layoutWeight(1)
     .justifyContent(FlexAlign.Center)
+  }
+
+  // P3：新建覆盖层的「临时 / 入库」segment 按钮
+  @Builder
+  private buildModeSegment(label: string, saveToLibrary: boolean) {
+    Text(label)
+      .fontSize(13)
+      .fontWeight(this.tempSaveToLibrary === saveToLibrary ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(this.tempSaveToLibrary === saveToLibrary ? TEXT_MAIN : TEXT_SECONDARY)
+      .textAlign(TextAlign.Center)
+      .layoutWeight(1)
+      .height(32)
+      .borderRadius(8)
+      .backgroundColor(this.tempSaveToLibrary === saveToLibrary ? CARD_BG : TRANSPARENT)
+      .animation({ curve: SPRING_PRESS() })
+      .onClick(() => {
+        this.tempSaveToLibrary = saveToLibrary;
+      })
   }
 
   // ===== 辅助方法 =====
@@ -537,10 +605,26 @@ export struct GearPickerSheet {
     return ZONE_MISC_TINT;
   }
 
-  private openTempOverlay(): void {
-    this.tempName = '';
-    this.tempZone = BodyZone.Misc;
+  // P3：品类选项（预设 13 品类 + 装备库中出现过的自定义品类追加）
+  private categoryOptions(): string[] {
+    const result: string[] = DEFAULT_CATEGORIES.slice();
+    for (const g of this.gears) {
+      const cat = (g.category !== undefined && g.category.length > 0) ? g.category : '';
+      if (cat.length > 0 && result.indexOf(cat) < 0) {
+        result.push(cat);
+      }
+    }
+    return result;
+  }
+
+  // P3：打开新建覆盖层。presetName 为预填名称（搜不到就建场景）。
+  //   修复隐 bug：不再强制重置 tempZone=Misc，尊重 preselectZone（从空格子进入时默认落该区）。
+  private openNewGearOverlay(presetName: string): void {
+    this.tempName = presetName;
+    this.tempZone = this.preselectZone.length > 0 ? this.preselectZone : BodyZone.Misc;
     this.tempWeight = '';
+    this.tempSaveToLibrary = false;
+    this.tempCategory = CATEGORY_FALLBACK;
     this.showTempOverlay = true;
     this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
       this.overlayScale = 1.0;

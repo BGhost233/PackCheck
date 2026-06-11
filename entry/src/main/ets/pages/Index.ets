@@ -57,7 +57,7 @@ import {
   CURVE_DECELERATE,
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
-import { CATEGORY_ALL, ChecklistItem, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
+import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import {
   filterGears,
@@ -1504,6 +1504,35 @@ struct Index {
     await this.store.saveChecklists(nextChecklists);
   }
 
+  // P3：新建装备并存入装备库，同时加入当前行程。
+  //   入库构造范式对齐 saveGear()，weight 已是规范化数值，category 为用户显式选择。
+  // 注：zone 由 buildItemsFromGears 内部按 gear 反推归属分区，故此处入参不直接使用（用 _zone 占位）
+  private async createGearAndAddToTrip(name: string, _zone: string, weight: number | undefined, category: string): Promise<void> {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    const safeCategory = category.trim().length === 0 ? CATEGORY_FALLBACK : category.trim();
+    const created: GearItem = {
+      id: makeId('gear'),
+      name: name,
+      category: safeCategory,
+      weight: weight,
+      tripCount: 0,
+      createdAt: Date.now()
+    };
+    // 入库
+    const nextGears: GearItem[] = [created].concat(this.gears);
+    await this.store.saveGears(nextGears);
+    this.gears = nextGears;
+    await this.ensureCategory(safeCategory);
+    // 挂入当前行程
+    const newItems = buildItemsFromGears(this.gears, [created.id]);
+    const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, newItems);
+    this.applyChecklistState(nextChecklists);
+    await this.store.saveChecklists(nextChecklists);
+  }
+
   private async moveItemToZone(itemId: string, zone: string): Promise<void> {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
@@ -2360,7 +2389,13 @@ struct Index {
           pickerSelectedIds: this.currentTripGearIds(),
           pickerPreselectZone: this.pickerPreselectZone,
           onPickerToggleGear: (gear: GearItem) => { this.toggleGearInTrip(gear); },
-          onPickerTempAdd: (name: string, zone: string, weight: number | undefined) => { this.addTempGearToTrip(name, zone, weight); },
+          onPickerAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => {
+            if (saveToLibrary) {
+              this.createGearAndAddToTrip(name, zone, weight, category);
+            } else {
+              this.addTempGearToTrip(name, zone, weight);
+            }
+          },
           actionItem: this.actionSheetItem,
           onActionMoveToZone: (itemId: string, zone: string) => { this.moveItemToZone(itemId, zone); },
           onActionViewDetail: (item: ChecklistItem) => {

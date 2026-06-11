@@ -118,8 +118,9 @@ export struct SheetOverlay {
   @Prop pickerSelectedIds: string[] = [];
   // 从空格子进入时的预选 Zone（空串 = 无预选，向后兼容），review I4
   @Prop pickerPreselectZone: string = '';
-  onPickerToggleGear: (gear: GearItem) => void = () => {};
-  onPickerTempAdd: (name: string, zone: string, weight: number | undefined) => void = () => {};
+onPickerToggleGear: (gear: GearItem) => void = () => {};
+// P3：新建装备统一回调（saveToLibrary 决定入库还是本次行程临时，入库时携带 category）
+onPickerAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => void = () => {};
   // GearItemAction callbacks
   @Prop actionItem: ChecklistItem = { id: '', name: '', group: '', checked: false };
   onActionMoveToZone: (itemId: string, zone: string) => void = () => {};
@@ -278,11 +279,11 @@ export struct SheetOverlay {
             categories: this.categories,
             selectedItemIds: this.pickerSelectedIds,
             preselectZone: this.pickerPreselectZone,
-            onToggleGear: this.onPickerToggleGear,
-            onTempAdd: this.onPickerTempAdd,
-            onClose: this.onClose
-          })
-        } else if (this.sheetMode === SHEET_GEAR_ITEM_ACTION) {
+onToggleGear: this.onPickerToggleGear,
+onAddGear: this.onPickerAddGear,
+onClose: this.onClose
+})
+} else if (this.sheetMode === SHEET_GEAR_ITEM_ACTION) {
           GearItemActionSheet({
             item: this.actionItem,
             onMoveToZone: this.onActionMoveToZone,
