@@ -11,7 +11,7 @@ import {
   PRIMARY_COLOR,
   CARD_BG,
   TEXT_MAIN,
-  PLACEHOLDER_COLOR,
+  TEXT_TERTIARY,
   DIVIDER_COLOR,
   TRANSPARENT
 } from '../../constants/Colors';
@@ -126,10 +126,11 @@ export struct ChecklistRow {
         }
       })
 
-      // 装备名（已勾变灰）
+      // 装备名（已勾弱化：E-1 改用 TEXT_TERTIARY #999，比 PLACEHOLDER #BBB 略深一点，
+      //   让「已完成但仍是清单一部分」的项弱而不隐，语义比「占位符」更准）
       Text(this.item.name)
         .fontSize(this.fontSize)
-        .fontColor(this.item.checked ? PLACEHOLDER_COLOR : TEXT_MAIN)
+        .fontColor(this.item.checked ? TEXT_TERTIARY : TEXT_MAIN)
         .decoration({ type: this.item.checked ? TextDecorationType.LineThrough : TextDecorationType.None })
         .layoutWeight(1)
         .maxLines(1)
