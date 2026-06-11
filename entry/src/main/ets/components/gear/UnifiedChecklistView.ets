@@ -28,6 +28,8 @@ import {
 import {
   SPRING_GENERAL,
   SPRING_PRESS,
+  SPRING_HERO_EXPAND,
+  SPRING_HERO_COLLAPSE,
   STAGGER_OFFSET_Y,
   staggerDelay
 } from '../../constants/AnimationTokens';
@@ -35,6 +37,7 @@ import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels'
 import { BodyZone } from '../../constants/GearLoadout';
 import { groupByZoneAll, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
 import { ZoneGridCell } from './ZoneGridCell';
+import { FocusedZoneView } from './FocusedZoneView';
 import { LoadoutProgressBar } from './LoadoutProgressBar';
 
 // 双列网格中走常规单列的 zone（杂项单独跨列渲染在末尾）。spec §2.1.2 F-5
@@ -72,6 +75,10 @@ export struct UnifiedChecklistView {
   @State private appeared: boolean = false;
   // 反算得到的单格高度
   @State private cellHeight: number = CELL_HEIGHT_FALLBACK;
+  // 全屏聚焦的 Zone（null = 网格态）。spec §2.2 / §4.5.6
+  @State private focusedZone: string | null = null;
+  // 当前/上次聚焦渲染的 Zone（F-3：FocusedZoneView 常驻树用 visibility 切换，退场时仍需有 zone 可渲染）
+  @State private focusedZoneRender: string = BodyZone.Misc;
 
   // 分组缓存（每次 trip 变化刷新）
   private zoneMapCache: Map<string, ChecklistItem[]> = new Map();
@@ -112,12 +119,50 @@ export struct UnifiedChecklistView {
         if (this.trip.items.length > 0) {
           this.buildFAB()
         }
+
+        // 全屏聚焦态（F-3：常驻树，用 visibility 切换，position 叠加在网格之上）
+        this.buildFocusedLayer()
       }
       .layoutWeight(1)
       .width('100%')
     }
     .width('100%')
     .height('100%')
+  }
+
+  // ---- 全屏聚焦层（常驻树，geometryTransition 共享元素配对端）----
+  @Builder
+  private buildFocusedLayer() {
+    FocusedZoneView({
+      zone: this.focusedZoneRender,
+      items: this.itemsForZone(this.focusedZoneRender),
+      zoneColor: this.zoneColor(this.focusedZoneRender),
+      onClose: () => { this.closeFocus(); },
+      onTapEmpty: (z: string) => { this.onOpenPicker(); },
+      onToggleCheck: this.onToggleCheck,
+      // D-2「逐项核查本区」携带 Zone 进入 Review，后续 Phase 接入；此处先占位不误触
+      onReviewZone: (z: string) => {}
+    })
+      .geometryTransition('zone_' + this.focusedZoneRender)
+      .width('100%')
+      .height('100%')
+      .visibility(this.focusedZone != null ? Visibility.Visible : Visibility.Hidden)
+      .hitTestBehavior(this.focusedZone != null ? HitTestMode.Default : HitTestMode.None)
+  }
+
+  // 进入聚焦：先设定渲染 zone，再 Spring 放大
+  private openFocus(zone: string): void {
+    this.focusedZoneRender = zone;
+    this.getUIContext().animateTo({ curve: SPRING_HERO_EXPAND() }, () => {
+      this.focusedZone = zone;
+    });
+  }
+
+  // 退出聚焦：Spring 缩回原格
+  private closeFocus(): void {
+    this.getUIContext().animateTo({ curve: SPRING_HERO_COLLAPSE() }, () => {
+      this.focusedZone = null;
+    });
   }
 
   private progress(): LoadoutProgress {
@@ -207,11 +252,13 @@ export struct UnifiedChecklistView {
             items: this.itemsForZone(zone),
             zoneColor: this.zoneColor(zone),
             cellHeight: this.cellHeight,
-            onTapTitle: this.onTapZoneTitle,
+            onTapTitle: (z: string) => { this.openFocus(z); },
             onTapEmpty: (z: string) => { this.onOpenPicker(); },
             onToggleCheck: this.onToggleCheck
           })
         }
+        .geometryTransition('zone_' + zone)
+        .visibility(this.focusedZone == zone ? Visibility.Hidden : Visibility.Visible)
         .opacity(this.appeared ? 1 : 0)
         .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
         .animation({
@@ -227,13 +274,15 @@ export struct UnifiedChecklistView {
           items: this.itemsForZone(BodyZone.Misc),
           zoneColor: this.zoneColor(BodyZone.Misc),
           cellHeight: this.cellHeight,
-          onTapTitle: this.onTapZoneTitle,
+          onTapTitle: (z: string) => { this.openFocus(z); },
           onTapEmpty: (z: string) => { this.onOpenPicker(); },
           onToggleCheck: this.onToggleCheck
         })
       }
       .columnStart(0)
       .columnEnd(1)
+      .geometryTransition('zone_' + BodyZone.Misc)
+      .visibility(this.focusedZone == BodyZone.Misc ? Visibility.Hidden : Visibility.Visible)
       .opacity(this.appeared ? 1 : 0)
       .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
       .animation({
