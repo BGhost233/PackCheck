@@ -9,21 +9,20 @@
 // 长按菜单 + 长按转拖拽跨 Zone（问题4d）留 Phase 4，回调已预埋透传到位
 
 import {
-  PRIMARY_COLOR,
   CARD_BG,
-  PAGE_BG,
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
   DIVIDER_COLOR,
-  INPUT_BG
+  INPUT_BG,
+  ZONE_MISC_STROKE,
+  ZONE_MISC_TINT
 } from '../../constants/Colors';
 import {
   FONT_SIZE_TITLE_MEDIUM,
   FONT_SIZE_BODY_LARGE,
   FONT_SIZE_BODY_MEDIUM,
-  FONT_WEIGHT_MEDIUM,
-  FONT_WEIGHT_BOLD
+  FONT_WEIGHT_MEDIUM
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
 import {
@@ -36,13 +35,9 @@ import {
 import { ChecklistItem, GearItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { vibrator } from '@kit.SensorServiceKit';
-import { zoneDisplayName, zoneIconName, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
+import { zoneDisplayName, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
-
-// 「逐项核查本区」入口（D-2）依赖携 Zone 进入 Review 的 onReviewZone 链路，
-// 该链路在 Phase 4 接入后才有真实响应；在此之前隐藏按钮，避免上线即摆设。
-// TODO Phase 4: onReviewZone callback 贯通到 Index 后置为 true 恢复
-const REVIEW_ZONE_ENTRY_ENABLED: boolean = false;
+import { ZoneShell } from './ZoneShell';
 
 @Component
 export struct FocusedZoneView {
@@ -51,6 +46,9 @@ export struct FocusedZoneView {
   // 问题4c：装备库全量，用于 fromGearId 反查品类/备注/品牌等详情
   @Prop gears: GearItem[] = [];
   @Prop zoneColor: string = TEXT_SECONDARY;
+  // D-2：ZoneShell 外壳需要的描边色 + 标题行浅染底，由父层透传（与网格态用同一 helper）
+  @Prop zoneStroke: string = ZONE_MISC_STROKE;
+  @Prop zoneTint: string = ZONE_MISC_TINT;
 
   // 是否处于激活（聚焦）态：由父传入 focusedZone != null。
   // false→true 时触发列表错落入场（review V2；FocusedZoneView 常驻树，不能用 aboutToAppear）
@@ -108,78 +106,30 @@ export struct FocusedZoneView {
   @State private closePressed: boolean = false;
   // 底部添加行按压
   @State private addPressed: boolean = false;
-  // 逐项核查入口按压
-  @State private reviewPressed: boolean = false;
 
   build() {
-    Column() {
-      // ---- 顶栏 ----
-      this.buildTopBar()
-
-      // ---- 全量装备列表 ----
-      List({ space: 0 }) {
-        ForEach(this.items, (item: ChecklistItem, index: number) => {
-          ListItem() {
-            Column({ space: 0 }) {
-              // Phase 4：Stack 手势层（底层）+ 内容行（顶层）
-              // 手势层在下接收长按，内容行在上保证 CheckMark onClick 不被拦截
-              Stack() {
-                // ① 透明手势层（底层，接收长按手势）
-                Image('')
-                  .width('100%')
-                  .height(52)
-                  .hitTestBehavior(HitTestMode.Block)
-                  .gesture(
-                    LongPressGesture({ repeat: false, duration: 400 })
-                      .onAction(() => {
-                        this.handleLongPress(item);
-                      })
-                  )
-
-                // ② 内容行（顶层，CheckMark 点击正常触发）
-                ChecklistRow({
-                  item: item,
-                  rowHeight: 52,
-                  checkSize: 28,
-                  fontSize: FONT_SIZE_BODY_LARGE,
-                  checkOnlyHotzone: true,
-                  onToggleCheck: this.onToggleCheck,
-                  onTapRow: () => { this.toggleExpand(item.id); }
-                })
-              }
-              .width('100%')
-              .height(52)
-
-              // 问题4c：手风琴详情区（重量/品类/备注/品牌），Spring 高度 + 透明度
-              if (this.expandedItemId === item.id) {
-                this.buildItemDetail(item)
-              }
-            }
-            .width('100%')
-          }
-          // 错落入场：淡入 + translateY，按 index 递延（review V2）
-          .opacity(this.listAppeared ? 1 : 0)
-          .translate({ y: this.listAppeared ? 0 : STAGGER_OFFSET_Y })
-          .animation({ curve: SPRING_GENERAL(), delay: staggerDelay(index) })
-        }, (item: ChecklistItem) => item.id + '_' + (this.expandedItemId === item.id ? 'e' : 'c'))
-
-        // 底部虚线「+ 添加到{Zone}」行
-        ListItem() {
-          this.buildAddRow()
-        }
-      }
-      .layoutWeight(1)
-      .width('100%')
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring)
-      .padding({ left: 16, right: 16, top: 8, bottom: 32 })
-    }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(PAGE_BG)
-    // 问题4b：点任意非装备行/非 check 的空白处收起聚焦。
-    //   ArkUI 事件机制：装备行 ChecklistRow、check 圆圈、底部添加行、顶栏关闭键各自绑 onClick 会消费事件不冒泡，
-    //   因此只有点到「行之间空隙 / 列表底部留白 / 顶栏空白」才会冒泡到此根 Column 触发收起。
+    // D-2：聚焦态 = 卡片浮层（不再铺满）。外壳用 ZoneShell（与网格态共用），
+    //   保证 geometryTransition 两端外壳结构 100% 一致，转场是「同一边框连续放大」。
+    //   宽度由父层 buildFocusedLayer 留边距约束，高度自适应封顶（卡内 List 滚动）。
+    ZoneShell({
+      zone: this.zone,
+      zoneColor: this.zoneColor,
+      zoneStroke: this.zoneStroke,
+      zoneTint: this.zoneTint,
+      // 聚焦态标题行宽松尺寸（区别于网格态紧凑）
+      titleBarHeight: 44,
+      iconSize: 18,
+      barHeight: 20,
+      titleFontSize: FONT_SIZE_TITLE_MEDIUM,
+      // 顶栏整条不响应点击（关闭键 / 内容各自处理）
+      titleClickable: false,
+      contentClickable: false,
+      titleTrailing: () => { this.buildTopTrailing() },
+      content: () => { this.buildContent() }
+    })
+    // 问题4b：点卡片空白处（非装备行/非 check）收起聚焦。
+    //   ChecklistRow / check / 添加行 / 关闭键各自 onClick 消费事件不冒泡，
+    //   只有点到行间隙 / 列表底部留白 / 顶栏空白才冒泡到此触发收起。
     .onClick(() => {
       this.onClose();
     })
@@ -193,100 +143,104 @@ export struct FocusedZoneView {
     )
   }
 
-  // ---- 顶栏：× 关闭 + Zone 名 + 进度 + 逐项核查入口 ----
+  // ---- 卡片内容：全量装备列表 + 底部添加行 ----
   @Builder
-  private buildTopBar() {
-    Column() {
-      Row({ space: 12 }) {
-        // 关闭键
-        Row() {
-          SymbolGlyph($r('sys.symbol.xmark'))
-            .fontSize(20)
-            .fontColor([TEXT_MAIN])
-        }
-        .width(36)
-        .height(36)
-        .borderRadius(18)
-        .justifyContent(FlexAlign.Center)
-        .backgroundColor(CARD_BG)
-        .scale({ x: this.closePressed ? PRESS_SCALE_DOWN : 1.0, y: this.closePressed ? PRESS_SCALE_DOWN : 1.0 })
-        .animation({ curve: SPRING_PRESS() })
-        .onTouch((e: TouchEvent) => {
-          if (e.type === TouchType.Down) {
-            this.closePressed = true;
-          } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-            this.closePressed = false;
+  private buildContent() {
+    List({ space: 0 }) {
+      ForEach(this.items, (item: ChecklistItem, index: number) => {
+        ListItem() {
+          Column({ space: 0 }) {
+            // Phase 4：Stack 手势层（底层）+ 内容行（顶层）
+            // 手势层在下接收长按，内容行在上保证 CheckMark onClick 不被拦截
+            Stack() {
+              // ① 透明手势层（底层，接收长按手势）
+              Image('')
+                .width('100%')
+                .height(52)
+                .hitTestBehavior(HitTestMode.Block)
+                .gesture(
+                  LongPressGesture({ repeat: false, duration: 400 })
+                    .onAction(() => {
+                      this.handleLongPress(item);
+                    })
+                )
+
+              // ② 内容行（顶层，CheckMark 点击正常触发）
+              ChecklistRow({
+                item: item,
+                rowHeight: 52,
+                checkSize: 28,
+                fontSize: FONT_SIZE_BODY_LARGE,
+                checkOnlyHotzone: true,
+                onToggleCheck: this.onToggleCheck,
+                onTapRow: () => { this.toggleExpand(item.id); }
+              })
+            }
+            .width('100%')
+            .height(52)
+
+            // 问题4c：手风琴详情区（重量/品类/备注/品牌），Spring 高度 + 透明度
+            if (this.expandedItemId === item.id) {
+              this.buildItemDetail(item)
+            }
           }
-        })
-        .onClick(() => {
-          this.onClose();
-        })
-
-        // Zone 色条 + 名称
-        Row({ space: 8 }) {
-          Row()
-            .width(4)
-            .height(20)
-            .borderRadius(2)
-            .backgroundColor(this.zoneColor)
-
-          SymbolGlyph($r(zoneIconName(this.zone)))
-            .fontSize(18)
-            .fontColor([this.zoneColor])
-
-          Text(zoneDisplayName(this.zone))
-            .fontSize(FONT_SIZE_TITLE_MEDIUM)
-            .fontWeight(FONT_WEIGHT_BOLD)
-            .fontColor(TEXT_MAIN)
+          .width('100%')
         }
-        .layoutWeight(1)
-        .alignItems(VerticalAlign.Center)
+        // 错落入场：淡入 + translateY，按 index 递延（review V2）
+        .opacity(this.listAppeared ? 1 : 0)
+        .translate({ y: this.listAppeared ? 0 : STAGGER_OFFSET_Y })
+        .animation({ curve: SPRING_GENERAL(), delay: staggerDelay(index) })
+      }, (item: ChecklistItem) => item.id + '_' + (this.expandedItemId === item.id ? 'e' : 'c'))
 
-        // 该区进度
-        Text(this.progress().checked.toString() + ' / ' + this.progress().total.toString())
-          .fontSize(FONT_SIZE_BODY_MEDIUM)
-          .fontWeight(FONT_WEIGHT_MEDIUM)
-          .fontColor(TEXT_SECONDARY)
-      }
-      .width('100%')
-      .height(56)
-      .alignItems(VerticalAlign.Center)
-
-      // 逐项核查本区入口（D-2），仅有内容时展示（Phase 4 接入前隐藏，见 REVIEW_ZONE_ENTRY_ENABLED）
-      if (REVIEW_ZONE_ENTRY_ENABLED && this.items.length > 0) {
-        Row({ space: 6 }) {
-          SymbolGlyph($r('sys.symbol.checkmark'))
-            .fontSize(16)
-            .fontColor([PRIMARY_COLOR])
-
-          Text('逐项核查本区')
-            .fontSize(FONT_SIZE_BODY_MEDIUM)
-            .fontWeight(FONT_WEIGHT_MEDIUM)
-            .fontColor(PRIMARY_COLOR)
-        }
-        .height(36)
-        .padding({ left: 14, right: 14 })
-        .borderRadius(18)
-        .backgroundColor(CARD_BG)
-        .alignItems(VerticalAlign.Center)
-        .scale({ x: this.reviewPressed ? PRESS_SCALE_DOWN : 1.0, y: this.reviewPressed ? PRESS_SCALE_DOWN : 1.0 })
-        .animation({ curve: SPRING_PRESS() })
-        .onTouch((e: TouchEvent) => {
-          if (e.type === TouchType.Down) {
-            this.reviewPressed = true;
-          } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-            this.reviewPressed = false;
-          }
-        })
-        .onClick(() => {
-          this.onReviewZone(this.zone);
-        })
-        .margin({ top: 4, bottom: 4 })
+      // 底部虚线「+ 添加到{Zone}」行
+      ListItem() {
+        this.buildAddRow()
       }
     }
     .width('100%')
-    .padding({ left: 16, right: 16, bottom: 8 })
-    .alignItems(HorizontalAlign.Start)
+    .height('100%')
+    .scrollBar(BarState.Off)
+    .edgeEffect(EdgeEffect.Spring)
+    .padding({ left: 16, right: 16, top: 8, bottom: 16 })
+  }
+
+  // ---- 标题行右侧 trailing：进度 + × 关闭键 ----
+  // D-2：聚焦态外壳 = ZoneShell，标题行左侧（色条+图标+名）由 ZoneShell 渲染，
+  //   关闭键与进度统一收进 trailing 插槽，与网格态「数量 trailing」结构对位，保证两端外壳一致。
+  @Builder
+  private buildTopTrailing() {
+    Row({ space: 10 }) {
+      // 该区进度
+      Text(this.progress().checked.toString() + ' / ' + this.progress().total.toString())
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
+        .fontWeight(FONT_WEIGHT_MEDIUM)
+        .fontColor(TEXT_SECONDARY)
+
+      // 关闭键
+      Row() {
+        SymbolGlyph($r('sys.symbol.xmark'))
+          .fontSize(16)
+          .fontColor([TEXT_SECONDARY])
+      }
+      .width(28)
+      .height(28)
+      .borderRadius(14)
+      .justifyContent(FlexAlign.Center)
+      .backgroundColor(CARD_BG)
+      .scale({ x: this.closePressed ? PRESS_SCALE_DOWN : 1.0, y: this.closePressed ? PRESS_SCALE_DOWN : 1.0 })
+      .animation({ curve: SPRING_PRESS() })
+      .onTouch((e: TouchEvent) => {
+        if (e.type === TouchType.Down) {
+          this.closePressed = true;
+        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+          this.closePressed = false;
+        }
+      })
+      .onClick(() => {
+        this.onClose();
+      })
+    }
+    .alignItems(VerticalAlign.Center)
   }
 
   // ---- 问题4c：装备详情手风琴展开区 ----

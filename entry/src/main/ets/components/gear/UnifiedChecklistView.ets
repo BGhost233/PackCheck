@@ -209,27 +209,39 @@ this.computeCellHeight();
   // ---- 全屏聚焦层（常驻树，geometryTransition 共享元素配对端）----
   @Builder
   private buildFocusedLayer() {
-    FocusedZoneView({
-      zone: this.focusedZoneRender,
-      items: this.itemsForZone(this.focusedZoneRender),
-      gears: this.gears,
-      zoneColor: this.zoneColor(this.focusedZoneRender),
-      active: this.focusedZone != null,
-      onClose: () => { this.closeFocus(); },
-      onTapEmpty: (z: string) => { this.onOpenPicker(z); },
-      onToggleCheck: this.onToggleCheck,
-      onEditItem: this.onEditItem,
-      onRemoveItem: this.onRemoveItem,
-      onMoveItemToZone: this.onMoveItemToZone,
-      onLongPressItem: (item: ChecklistItem) => { this.showOverlay(item); },
-      // D-2「逐项核查本区」携带 Zone 进入 Review，后续 Phase 接入；此处先占位不误触
-      onReviewZone: (z: string) => {}
-    })
-      .geometryTransition('zone_' + this.focusedZoneRender)
-      .width('100%')
-      .height('100%')
-      .visibility(this.focusedZone != null ? Visibility.Visible : Visibility.Hidden)
-      .hitTestBehavior(this.focusedZone != null ? HitTestMode.Default : HitTestMode.None)
+    // D-2：聚焦态 = 卡片浮层（不再铺满整屏）。
+    //   外层定位容器留边距（左右 20vp）+ 垂直居中，卡片宽度撑满边距内空间、
+    //   高度自适应并封顶（maxHeight 80%，卡内 List 滚动）。
+    //   geometryTransition 仍挂外层节点、id 不变 → 与网格态 ZoneGridCell 配对端连续放大。
+    Column() {
+      FocusedZoneView({
+        zone: this.focusedZoneRender,
+        items: this.itemsForZone(this.focusedZoneRender),
+        gears: this.gears,
+        zoneColor: this.zoneColor(this.focusedZoneRender),
+        zoneStroke: this.zoneStroke(this.focusedZoneRender),
+        zoneTint: this.zoneTint(this.focusedZoneRender),
+        active: this.focusedZone != null,
+        onClose: () => { this.closeFocus(); },
+        onTapEmpty: (z: string) => { this.onOpenPicker(z); },
+        onToggleCheck: this.onToggleCheck,
+        onEditItem: this.onEditItem,
+        onRemoveItem: this.onRemoveItem,
+        onMoveItemToZone: this.onMoveItemToZone,
+        onLongPressItem: (item: ChecklistItem) => { this.showOverlay(item); },
+        // D-2「逐项核查本区」携带 Zone 进入 Review，后续 Phase 接入；此处先占位不误触
+        onReviewZone: (z: string) => {}
+      })
+        .width('100%')
+        .constraintSize({ maxHeight: '80%' })
+    }
+    .geometryTransition('zone_' + this.focusedZoneRender)
+    .width('100%')
+    .height('100%')
+    .padding({ left: 20, right: 20 })
+    .justifyContent(FlexAlign.Center)
+    .visibility(this.focusedZone != null ? Visibility.Visible : Visibility.Hidden)
+    .hitTestBehavior(this.focusedZone != null ? HitTestMode.Default : HitTestMode.None)
   }
 
   // 问题4a：Index onBackPressed 命中聚焦态时递增 closeFocusSignal，此处响应走带动画的收起。
