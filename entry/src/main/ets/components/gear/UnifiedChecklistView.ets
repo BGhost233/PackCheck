@@ -51,8 +51,9 @@ const GRID_GUTTER: number = 12;    // 行/列间距
 const FIRST_SCREEN_ROWS: number = 2.8;
 // 反算兜底（无法取得屏高时）。P4：随密度提高同步下调
 const CELL_HEIGHT_FALLBACK: number = 148;
-// P4：底部渐隐高斯模糊遮罩高度，暗示下方还有格子可滑
-const BOTTOM_FADE_HEIGHT: number = 64;
+// P4：底部渐隐遮罩高度，暗示下方还有格子可滑
+// 问题2：去掉 backgroundBlurStyle（纯背景上的模糊会变脏灰矩形），改为纯渐变遮罩，高度提到 72 让底部格子自然沉入背景
+const BOTTOM_FADE_HEIGHT: number = 72;
 
 @Component
 export struct UnifiedChecklistView {
@@ -297,15 +298,15 @@ this.computeCellHeight();
     .animation({ curve: SPRING_GENERAL(), delay: 200 })
   }
 
-  // ---- 底部渐隐高斯模糊遮罩（P4）----
-  // 贴底渐隐：上透明 → 下 PAGE_BG，叠轻度模糊，暗示下方还有格子可滑。
+  // ---- 底部渐隐遮罩（P4 / 问题2）----
+  // 贴底渐隐：上透明 → 下 PAGE_BG，让底部格子自然 fade 进背景（Apple/Things 标准）。
+  // 问题2：原用 backgroundBlurStyle 在纯色背景上产生脏灰矩形，已移除，只留纯渐变。
   // hitTestBehavior(None)：不拦截滚动/点击，纯视觉层。聚焦态隐藏。
   @Builder
   private buildBottomFade() {
     Column()
       .width('100%')
       .height(BOTTOM_FADE_HEIGHT)
-      .backgroundBlurStyle(BlurStyle.Thin)
       .linearGradient({
         angle: 180,
         colors: [[TRANSPARENT, 0.0], [PAGE_BG, 1.0]]
