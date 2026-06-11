@@ -6,14 +6,11 @@
 // spec §2.1.3 / §2.1.2
 
 import {
-  CARD_BG,
   TEXT_MAIN,
   TEXT_TERTIARY,
   DIVIDER_COLOR,
   PLACEHOLDER_COLOR,
-  SHADOW_LIGHT,
   PRIMARY_COLOR,
-  LIGHT_PRIMARY_COLOR,
   ZONE_MISC_COLOR,
   ZONE_MISC_STROKE,
   ZONE_MISC_TINT
@@ -29,6 +26,7 @@ import { ChecklistItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { zoneDisplayName, zoneIconName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
+import { ZoneShell } from './ZoneShell';
 import { vibrator } from '@kit.SensorServiceKit';
 
 // 网格态单格内最多预览的 item 数（超出折叠为「+N 件」提示）。spec §2.1.3
@@ -94,108 +92,111 @@ export struct ZoneGridCell {
     .clip(true)
   }
 
-  // ---- 有内容态：标题行 + 白卡列表 ----
+  // ---- 有内容态：ZoneShell（标题行 + 白卡）包裹 ----
+  // D-1：外壳（标题行浅染 + 白卡描边阴影 + 按压缩放 + 点击进聚焦）全部下放到 ZoneShell，
+  //   两端共用同一外壳结构，是 geometryTransition 不闪烁的地基。
+  //   本组件只往插槽里塞「数量 Text（titleTrailing）」与「核查行 ForEach（content）」。
   @Builder
   private buildContentCell() {
-    Column({ space: 6 }) {
-      // 标题行（可点击进全屏聚焦）
-      this.buildTitleRow(true)
+    ZoneShell({
+      zone: this.zone,
+      zoneColor: this.zoneColor,
+      zoneStroke: this.zoneStroke,
+      zoneTint: this.zoneTint,
+      // C-2：拖拽目标格白卡叠淡绿底（与外层绿框+glow 三重反馈）
+      contentTinted: this.isDropTarget,
+      titleClickable: true,
+      titlePressed: this.titlePressed,
+      onTitleTouch: (pressed: boolean) => { this.titlePressed = pressed; },
+      onTapTitle: (zone: string) => { this.onTapTitle(zone); },
+      contentClickable: true,
+      contentPressed: this.contentPressed,
+      onContentTouch: (pressed: boolean) => { this.contentPressed = pressed; },
+      onTapContent: (zone: string) => { this.onTapTitle(zone); },
+      titleTrailing: () => { this.buildCountTrailing() },
+      content: () => { this.buildPreviewList() }
+    })
+  }
 
-      // 内容白卡：前 N 条 item 核查行 + 折叠提示
-      // P2/问题1：ChecklistRow 走双热区（checkOnlyHotzone），点 check 圆圈仅勾选；
-      //   点装备名/行空白由 ChecklistRow 直接调 onTapRow→onTapTitle 进聚焦（ArkUI onClick 消费事件不冒泡，
-      //   不能靠白卡 onClick 接装备行点击，故由本行直接回调）。白卡 onClick 仅兜底空白/折叠提示区。
-      // Phase 4：每行用 Column wrapper 承载 GestureGroup(Sequence, LongPress+Pan)。
-      // 关键：手势必须绑在「有点击响应」的元素所在的同层或上层，而非下层 Image 层——
-      // ArkUI 中子元素 onClick 会独占触摸序列，下层 Image 的 LongPressGesture 永远等不到 400ms。
-      // 此处 wrapper 只有 gesture、没有 onClick——tap 由 ChecklistRow 内部 onClick 处理，
-      // long press + pan 由 wrapper 的 GestureGroup 处理，两者不互斥。
-      Column({ space: 0 }) {
-        ForEach(this.previewItems(), (item: ChecklistItem) => {
-          if (this.draggingItemId.length > 0 && item.id === this.draggingItemId) {
-            // C-1：被拖拽项在源位置留虚线空槽，同高不塌陷，不绑手势
-            Row()
-              .width('100%')
-              .height(GRID_ROW_HEIGHT - 4)
-              .margin({ top: 2, bottom: 2 })
-              .borderRadius(6)
-              .border({ width: 1, color: DIVIDER_COLOR, style: BorderStyle.Dashed })
-          } else {
-            Column() {
-              ChecklistRow({
-                item: item,
-                rowHeight: GRID_ROW_HEIGHT,
-                checkSize: GRID_CHECK_SIZE,
-                checkOnlyHotzone: true,
-                onToggleCheck: this.onToggleCheck,
-                onTapRow: () => { this.onTapTitle(this.zone); }
-              })
-            }
+  // 标题行右侧：数量
+  @Builder
+  private buildCountTrailing() {
+    if (this.items.length > 0) {
+      Text(this.items.length.toString())
+        .fontSize(FONT_SIZE_CAPTION)
+        .fontColor(TEXT_TERTIARY)
+    }
+  }
+
+  // 内容白卡内容：前 N 条核查行 + 折叠提示
+  // P2/问题1：ChecklistRow 走双热区（checkOnlyHotzone），点 check 圆圈仅勾选；
+  //   点装备名/行空白由 ChecklistRow 直接调 onTapRow→onTapTitle 进聚焦（ArkUI onClick 消费事件不冒泡）。
+  // Phase 4：每行用 Column wrapper 承载 GestureGroup(Sequence, LongPress+Pan)。
+  //   手势必须绑在「有点击响应」元素的同层/上层；wrapper 只有 gesture 无 onClick，
+  //   tap 由 ChecklistRow 内部 onClick 处理，long press + pan 由 wrapper 处理，两者不互斥。
+  @Builder
+  private buildPreviewList() {
+    Column({ space: 0 }) {
+      ForEach(this.previewItems(), (item: ChecklistItem) => {
+        if (this.draggingItemId.length > 0 && item.id === this.draggingItemId) {
+          // C-1：被拖拽项在源位置留虚线空槽，同高不塌陷，不绑手势
+          Row()
             .width('100%')
-            .height(GRID_ROW_HEIGHT)
-            .gesture(
-              GestureGroup(
-                GestureMode.Sequence,
-                LongPressGesture({ repeat: false, duration: 400 })
-                  .onAction((event: GestureEvent) => {
-                    this.triggerHaptic();
-                    const finger = event.fingerList[0];
-                    this.onLongPressItem(item, finger.globalX, finger.globalY);
-                  }),
-                PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
-                  .onActionUpdate((event: GestureEvent) => {
-                    this.onPanUpdate(event.offsetX, event.offsetY);
-                  })
-                  .onActionEnd((event: GestureEvent) => {
-                    this.onPanFinish(event.offsetX, event.offsetY);
-                  })
-              )
-            )
-          }
-        }, (item: ChecklistItem) => item.id)
-
-        // 超过 N 件：折叠提示行
-        if (this.items.length > MAX_PREVIEW_ITEMS) {
-          Row() {
-            Text('+' + (this.items.length - MAX_PREVIEW_ITEMS).toString() + ' 件')
-              .fontSize(FONT_SIZE_CAPTION)
-              .fontColor(TEXT_TERTIARY)
+            .height(GRID_ROW_HEIGHT - 4)
+            .margin({ top: 2, bottom: 2 })
+            .borderRadius(6)
+            .border({ width: 1, color: DIVIDER_COLOR, style: BorderStyle.Dashed })
+        } else {
+          Column() {
+            ChecklistRow({
+              item: item,
+              rowHeight: GRID_ROW_HEIGHT,
+              checkSize: GRID_CHECK_SIZE,
+              checkOnlyHotzone: true,
+              onToggleCheck: this.onToggleCheck,
+              onTapRow: () => { this.onTapTitle(this.zone); }
+            })
           }
           .width('100%')
-          .height(28)
-          .alignItems(VerticalAlign.Center)
-          .padding({ left: 12, right: 12 })
+          .height(GRID_ROW_HEIGHT)
+          .gesture(
+            GestureGroup(
+              GestureMode.Sequence,
+              LongPressGesture({ repeat: false, duration: 400 })
+                .onAction((event: GestureEvent) => {
+                  this.triggerHaptic();
+                  const finger = event.fingerList[0];
+                  this.onLongPressItem(item, finger.globalX, finger.globalY);
+                }),
+              PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
+                .onActionUpdate((event: GestureEvent) => {
+                  this.onPanUpdate(event.offsetX, event.offsetY);
+                })
+                .onActionEnd((event: GestureEvent) => {
+                  this.onPanFinish(event.offsetX, event.offsetY);
+                })
+            )
+          )
         }
+      }, (item: ChecklistItem) => item.id)
+
+      // 超过 N 件：折叠提示行
+      if (this.items.length > MAX_PREVIEW_ITEMS) {
+        Row() {
+          Text('+' + (this.items.length - MAX_PREVIEW_ITEMS).toString() + ' 件')
+            .fontSize(FONT_SIZE_CAPTION)
+            .fontColor(TEXT_TERTIARY)
+        }
+        .width('100%')
+        .height(28)
+        .alignItems(VerticalAlign.Center)
+        .padding({ left: 12, right: 12 })
       }
-      .width('100%')
-      .layoutWeight(1)
-      // C-2：拖拽目标格叠淡绿底（与外层绿框+glow 三重反馈），离开恢复白底
-      .backgroundColor(this.isDropTarget ? LIGHT_PRIMARY_COLOR : CARD_BG)
-      .animation({ curve: SPRING_GENERAL() })
-      .borderRadius(CARD_RADIUS)
-      // B-2：阴影升档 + 极淡部位色描边，形成「盒子感」
-      .border({ width: 0.5, color: this.zoneStroke, style: BorderStyle.Solid })
-      .shadow({ radius: 12, color: SHADOW_LIGHT, offsetY: 4 })
-      .clip(true)
-      .alignItems(HorizontalAlign.Start)
-      .justifyContent(FlexAlign.Start)
-      .scale({ x: this.contentPressed ? PRESS_SCALE_DOWN : 1.0, y: this.contentPressed ? PRESS_SCALE_DOWN : 1.0 })
-      .animation({ curve: SPRING_PRESS() })
-      .onTouch((e: TouchEvent) => {
-        if (e.type === TouchType.Down) {
-          this.contentPressed = true;
-        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-          this.contentPressed = false;
-        }
-      })
-      .onClick(() => {
-        // 点装备名/空白/折叠提示均进全屏聚焦（check 圆圈已拦截不冒泡到此）
-        this.onTapTitle(this.zone);
-      })
     }
     .width('100%')
     .height('100%')
     .alignItems(HorizontalAlign.Start)
+    .justifyContent(FlexAlign.Start)
   }
 
   // ---- 空态：标题行 + 虚线占位区 ----
