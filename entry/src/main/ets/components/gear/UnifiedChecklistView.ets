@@ -40,6 +40,8 @@ import {
   SPRING_HERO_EXPAND,
   SPRING_HERO_COLLAPSE,
   STAGGER_OFFSET_Y,
+  GRID_FOCUS_BLUR,
+  GRID_FOCUS_SINK_Y,
   staggerDelay,
   SHARP_SNAP,
   EASE_FADE,
@@ -183,6 +185,9 @@ this.computeCellHeight();
         // FAB 始终显示（空态也可从右下角全局新增）。
         this.buildFAB()
 
+        // D-4：全屏压暗蒙层。层级在网格/FAB 之上、聚焦卡片之下，点蒙层收起聚焦。
+        this.buildFocusedScrim()
+
         // 全屏聚焦态（F-3：常驻树，用 visibility 切换，position 叠加在网格之上）
         this.buildFocusedLayer()
 
@@ -204,6 +209,26 @@ this.computeCellHeight();
     }
     .width('100%')
     .height('100%')
+  }
+
+  // ---- D-4：全屏压暗蒙层（常驻树，opacity 切换，焦点驱动）----
+  //   #33000000（OVERLAY_DIM）；与 SPRING_HERO 同帧淡入淡出；
+  //   层级在网格/FAB 之上、聚焦卡片之下；点蒙层 → 收起聚焦。
+  @Builder
+  private buildFocusedScrim() {
+    Column()
+      .width('100%')
+      .height('100%')
+      .backgroundColor(OVERLAY_DIM)
+      .opacity(this.focusedZone != null ? 1 : 0)
+      .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
+      // 非聚焦时彻底不拦截点击，避免遮住网格交互
+      .hitTestBehavior(this.focusedZone != null ? HitTestMode.Default : HitTestMode.None)
+      .onClick(() => {
+        if (this.focusedZone != null) {
+          this.closeFocus();
+        }
+      })
   }
 
   // ---- 全屏聚焦层（常驻树，geometryTransition 共享元素配对端）----
@@ -578,6 +603,11 @@ this.computeCellHeight();
     .edgeEffect(EdgeEffect.Spring)
     // B2：拖拽期间锁定 Grid 滚动，防止边拖边滚导致落点偏移
     .enableScrollInteraction(this.overlayPhase !== 'dragging')
+    // D-4：聚焦时网格虚化 + 极小下沉，制造「退到背后」纵深感（不缩放——网格可滚动，
+    //   下行展开时前几行可能已滚出视口，缩放会出现锚点漂移）。随 SPRING_HERO 同帧联动。
+    .blur(this.focusedZone != null ? GRID_FOCUS_BLUR : 0)
+    .translate({ y: this.focusedZone != null ? GRID_FOCUS_SINK_Y : 0 })
+    .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
   }
 
   @Builder

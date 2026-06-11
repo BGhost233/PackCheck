@@ -109,3 +109,8 @@ export const PANEL_SCALE_START: number = 0.9;
 
 // 错落入场偏移 (vp)
 export const STAGGER_OFFSET_Y: number = 12;
+
+// D-4：聚焦态背景联动——网格虚化量 (px) + 下沉位移 (vp)。
+//   下沉用极小位移制造纵深「退到背后」感；不缩放（网格可滚动，下行展开时前几行可能已滚出视口）。
+export const GRID_FOCUS_BLUR: number = 8;
+export const GRID_FOCUS_SINK_Y: number = 6;
