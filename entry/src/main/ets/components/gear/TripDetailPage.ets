@@ -6,12 +6,23 @@
 import {
   TEXT_MAIN,
   TEXT_TERTIARY,
-  PAGE_BG
+  PAGE_BG,
+  AMBER_ACCENT,
+  DIVIDER_COLOR
 } from '../../constants/Colors';
-import { PAGE_PADDING } from '../../constants/Layout';
+import { PAGE_PADDING, FONT_FEATURE_TNUM } from '../../constants/Layout';
 import { SPRING_GENERAL, SPRING_PRESS, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { UnifiedChecklistView } from './UnifiedChecklistView';
+
+// E-3：顶部元信息区结构化段。kind 决定着色：
+//   'plain' 日期/地点 → TEXT_TERTIARY 纯文字；'data' 里程/海拔/时长 → AMBER_ACCENT + tnum 等宽点睛。
+//   showPeak 仅海拔段为 true，前缀三角 ▲ 点睛（呼应纲领「人生足迹/高度」）。
+interface MetaSegment {
+  text: string;
+  kind: 'plain' | 'data';
+  showPeak: boolean;
+}
 
 @Component
 export struct TripDetailPage {
@@ -79,7 +90,7 @@ export struct TripDetailPage {
     const PROGRESS_BAR: number = 48;  // 文案行 + 进度条 + 上下 padding
     const trip = this.currentChecklist();
     let h: number = NAV_BAR;
-    if (trip !== undefined && this.buildInfoText().length > 0) {
+    if (trip !== undefined && this.metaSegments().length > 0) {
       h += SHARED_INFO;
     }
     if (trip !== undefined && trip.items.length > 0) {
@@ -202,15 +213,34 @@ export struct TripDetailPage {
     .alignItems(VerticalAlign.Center)
   }
 
+  // E-3：顶部元信息区 = 行程档案标识。轻结构化单行——日期/地点纯文字弱化，
+  //   数据（里程/海拔/时长）用 amber + tnum 等宽点睛，海拔前加 ▲ 三角呼应「高度/人生足迹」。
+  //   整体克制：不喧宾夺主，但让「这是一份档案」的质感成立。
   @Builder
   private buildSharedInfo() {
-    if (this.currentChecklist() !== undefined) {
+    if (this.metaSegments().length > 0) {
       Row() {
-        Text(this.buildInfoText())
-          .fontSize(12)
-          .fontColor(TEXT_TERTIARY)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        ForEach(this.metaSegments(), (seg: MetaSegment, index: number) => {
+          // 段间分隔点（仅非首段前插入），用更弱的色
+          if (index > 0) {
+            Text(' · ')
+              .fontSize(12)
+              .fontColor(DIVIDER_COLOR)
+          }
+          // 海拔段三角点睛
+          if (seg.showPeak) {
+            Text('▲ ')
+              .fontSize(11)
+              .fontColor(AMBER_ACCENT)
+          }
+          Text(seg.text)
+            .fontSize(12)
+            .fontColor(seg.kind === 'data' ? AMBER_ACCENT : TEXT_TERTIARY)
+            .fontWeight(seg.kind === 'data' ? FontWeight.Medium : FontWeight.Normal)
+            .fontFeature(FONT_FEATURE_TNUM)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }, (seg: MetaSegment, index: number) => seg.text + '_' + index.toString())
       }
       .width('100%')
       .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
@@ -230,27 +260,28 @@ export struct TripDetailPage {
     }
   }
 
-  private buildInfoText(): string {
+  // E-3：把行程参数拆成结构化段，供 buildSharedInfo 分段着色 + reservedTop 判断高度。
+  private metaSegments(): MetaSegment[] {
     const trip = this.currentChecklist();
+    const segs: MetaSegment[] = [];
     if (trip === undefined) {
-      return '';
+      return segs;
     }
-    const parts: string[] = [];
     if (trip.date !== undefined && trip.date.length > 0) {
-      parts.push(trip.date);
+      segs.push({ text: trip.date, kind: 'plain', showPeak: false });
     }
     if (trip.destination !== undefined && trip.destination.length > 0) {
-      parts.push(trip.destination);
+      segs.push({ text: trip.destination, kind: 'plain', showPeak: false });
     }
     if (trip.distanceKm !== undefined && trip.distanceKm > 0) {
-      parts.push(trip.distanceKm.toString() + 'km');
+      segs.push({ text: trip.distanceKm.toString() + 'km', kind: 'data', showPeak: false });
     }
     if (trip.maxAltitude !== undefined && trip.maxAltitude > 0) {
-      parts.push('海拔' + trip.maxAltitude.toString() + 'm');
+      segs.push({ text: trip.maxAltitude.toString() + 'm', kind: 'data', showPeak: true });
     }
     if (trip.durationHours !== undefined && trip.durationHours > 0) {
-      parts.push(trip.durationHours.toString() + 'h');
+      segs.push({ text: trip.durationHours.toString() + 'h', kind: 'data', showPeak: false });
     }
-    return parts.join(' · ');
+    return segs;
   }
 }
