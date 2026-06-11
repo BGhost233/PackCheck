@@ -161,7 +161,7 @@ export struct FocusedZoneView {
           .opacity(this.listAppeared ? 1 : 0)
           .translate({ y: this.listAppeared ? 0 : STAGGER_OFFSET_Y })
           .animation({ curve: SPRING_GENERAL(), delay: staggerDelay(index) })
-        }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0') + '_' + (this.expandedItemId === item.id ? 'e' : 'c'))
+        }, (item: ChecklistItem) => item.id + '_' + (this.expandedItemId === item.id ? 'e' : 'c'))
 
         // 底部虚线「+ 添加到{Zone}」行
         ListItem() {

@@ -96,9 +96,12 @@ export struct UnifiedChecklistView {
   @State private overlayPhase: string = 'idle'; // 'idle' | 'menu' | 'dragging'
   @State private dragOffsetX: number = 0;
   @State private dragOffsetY: number = 0;
-  // 拖拽起始点（手指全局坐标），用于计算浮层绝对位置
+  // 拖拽起始点（浮层 Stack 局部坐标），用于浮层绝对定位
   private dragAnchorX: number = 0;
   private dragAnchorY: number = 0;
+  // 浮层 Stack 的全局原点（onAreaChange 收集），用于全局→局部坐标转换
+  @State private overlayOriginX: number = 0;
+  @State private overlayOriginY: number = 0;
   // 目标 zone 高亮
   @State private dropTargetZone: string | null = null;
   // 各 zone 格子的全局 Rect（由 onAreaChange 收集）
@@ -172,6 +175,12 @@ this.computeCellHeight();
       }
       .layoutWeight(1)
       .width('100%')
+      .onAreaChange((_o: Area, n: Area) => {
+        // 记录浮层容器的全局原点，用于拖拽胶囊/高亮框的全局→局部坐标转换
+        const pos = n.globalPosition as Record<string, number>;
+        this.overlayOriginX = pos.x ?? 0;
+        this.overlayOriginY = pos.y ?? 0;
+      })
     }
     .width('100%')
     .height('100%')
@@ -216,10 +225,12 @@ this.computeCellHeight();
     }
   }
 
-  // 进入聚焦：先设定渲染 zone，再 Spring 放大
+  // 进入聚焦：zone 赋值与 visible 切换必须在同一个 animateTo 帧内，
+  // 让 geometryTransition 在同一帧同时拿到「id 匹配 + 源 Hidden / 目标 Visible」完成共享元素转场。
+  // focusedZoneRender 提前设会导致 id 先变、转场系统丢失配对端，退化为普通淡入淡出。
   private openFocus(zone: string): void {
-    this.focusedZoneRender = zone;
     this.getUIContext().animateTo({ curve: SPRING_HERO_EXPAND() }, () => {
+      this.focusedZoneRender = zone;
       this.focusedZone = zone;
     });
   }
@@ -299,8 +310,9 @@ this.computeCellHeight();
   private handleGridLongPress(item: ChecklistItem, globalX: number, globalY: number): void {
     this.overlayItem = item;
     this.overlayPhase = 'menu';
-    this.dragAnchorX = globalX;
-    this.dragAnchorY = globalY;
+    // 全局坐标→浮层 Stack 局部坐标：position() 是相对于父容器的，必须用局部坐标
+    this.dragAnchorX = globalX - this.overlayOriginX;
+    this.dragAnchorY = globalY - this.overlayOriginY;
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
     this.dropTargetZone = null;
@@ -372,7 +384,10 @@ this.computeCellHeight();
   }
 
   // 坐标命中判定：当前全局坐标落在哪个 zone 格子内
+  // zoneRects 存全局坐标，需转局部后与手指局部坐标比较
   private hitTestZone(globalX: number, globalY: number): string | null {
+    const localX = globalX - this.overlayOriginX;
+    const localY = globalY - this.overlayOriginY;
     const allZones: string[] = [...GRID_SINGLE_ZONES, BodyZone.Misc];
     for (let i = 0; i < allZones.length; i++) {
       const zone = allZones[i];
@@ -380,11 +395,12 @@ this.computeCellHeight();
       if (rect === undefined) {
         continue;
       }
-      const rx = rect[0];
-      const ry = rect[1];
+      // zoneRects 存全局坐标，转为局部与手指比较
+      const rx = rect[0] - this.overlayOriginX;
+      const ry = rect[1] - this.overlayOriginY;
       const rw = rect[2];
       const rh = rect[3];
-      if (globalX >= rx && globalX <= rx + rw && globalY >= ry && globalY <= ry + rh) {
+      if (localX >= rx && localX <= rx + rw && localY >= ry && localY <= ry + rh) {
         return zone;
       }
     }
@@ -649,8 +665,8 @@ this.computeCellHeight();
     return this.zoneRects.get(this.dropTargetZone) ?? [0, 0, 0, 0];
   }
 
-  private getDropHighlightX(): number { return this.getDropHighlightRect()[0]; }
-  private getDropHighlightY(): number { return this.getDropHighlightRect()[1]; }
+  private getDropHighlightX(): number { return this.getDropHighlightRect()[0] - this.overlayOriginX; }
+  private getDropHighlightY(): number { return this.getDropHighlightRect()[1] - this.overlayOriginY; }
   private getDropHighlightWidth(): number { return this.getDropHighlightRect()[2]; }
   private getDropHighlightHeight(): number { return this.getDropHighlightRect()[3]; }
 

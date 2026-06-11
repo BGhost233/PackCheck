@@ -117,7 +117,7 @@ export struct ZoneGridCell {
                 })
             )
           )
-        }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
+        }, (item: ChecklistItem) => item.id)
 
         // 超过 N 件：折叠提示行
         if (this.items.length > MAX_PREVIEW_ITEMS) {
