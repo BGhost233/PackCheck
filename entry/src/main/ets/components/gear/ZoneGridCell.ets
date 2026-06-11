@@ -13,7 +13,7 @@ import {
   PRIMARY_SHADOW_GLOW,
   ZONE_MISC_COLOR,
   ZONE_MISC_STROKE,
-  ZONE_MISC_TINT
+  ZONE_MISC_FILL
 } from '../../constants/Colors';
 import {
   FONT_SIZE_CAPTION
@@ -39,9 +39,9 @@ export struct ZoneGridCell {
   @Prop zone: string = BodyZone.Misc;
   @Prop items: ChecklistItem[] = [];
   @Prop zoneColor: string = ZONE_MISC_COLOR;
-  // B-2：容器描边色 + 标题行浅染底（由父层 zoneStroke/zoneTint helper 传入）
+  // 容器描边色 + 整块淡色填充底（由父层 zoneStroke/zoneFill helper 传入）
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
-  @Prop zoneTint: string = ZONE_MISC_TINT;
+  @Prop zoneFill: string = ZONE_MISC_FILL;
   @Prop cellHeight: number = 160;
 
   // 回调（Phase 2/3 接入）
@@ -100,13 +100,10 @@ export struct ZoneGridCell {
       zone: this.zone,
       zoneColor: this.zoneColor,
       zoneStroke: this.zoneStroke,
-      zoneTint: this.zoneTint,
-      // C-2：拖拽目标格白卡叠淡绿底（与外层绿框+glow 三重反馈）
+      zoneFill: this.zoneFill,
+      // C-2：拖拽目标格整块叠淡绿底（与外层绿框+glow 三重反馈）
       contentTinted: this.isDropTarget,
-      titleClickable: true,
-      titlePressed: this.titlePressed,
-      onTitleTouch: (pressed: boolean) => { this.titlePressed = pressed; },
-      onTapTitle: (zone: string) => { this.onTapTitle(zone); },
+      // 便单式：整块容器统一承接点击进聚焦（标题不再单独可点）
       contentClickable: true,
       contentPressed: this.contentPressed,
       onContentTouch: (pressed: boolean) => { this.contentPressed = pressed; },
@@ -208,7 +205,7 @@ export struct ZoneGridCell {
       zone: this.zone,
       zoneColor: this.zoneColor,
       zoneStroke: this.zoneStroke,
-      zoneTint: this.zoneTint,
+      zoneFill: this.zoneFill,
       contentDashed: true,
       titleClickable: false,
       contentClickable: false,

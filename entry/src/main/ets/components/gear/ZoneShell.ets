@@ -1,180 +1,148 @@
-// 统一清单视图 - Zone 统一外壳组件（D-1）
+// 统一清单视图 - Zone 统一外壳组件（D-1 / 便单式淡色块容器重构）
 // 职责：定义「网格态格子」与「聚焦态卡片」共用的外壳结构，
 //   从根上保证 geometryTransition 两端外壳 100% 一致——这是转场不闪烁的地基。
-// 外壳 = 浅染标题行（色条彩 / 图标·名称 TEXT_MAIN 深色 + trailing 插槽）
-//        + 内容白卡（CARD_BG + ZONE_*_STROKE 描边 + 柔和阴影 + content 插槽）。
-// 两段式（标题行块 + 内容白卡块）而非单张大白卡——与 Phase B 已落地的网格态视觉对齐，零回退。
+// 外壳 = 一整块淡色填充容器（ZONE_*_FILL 底 + ZONE_*_STROKE 描边 + 圆角 + clip），
+//        顶部坐「居中彩色标题」（zoneColor 文字，无色条/无独立染色块），
+//        标题下方直接排内容（content 插槽），无白卡内层、顶部对齐、空白由淡色背景自然消化。
+// 设计参考：便单四象限色块（满色填充容器 + 居中彩标题 + 顶部对齐 + 留白同色不显脏）。
 // 交互（按压缩放 / 点击进聚焦 / 拖拽高亮）由各自宿主（ZoneGridCell / FocusedZoneView）通过参数注入，
 //   ZoneShell 只负责外壳视觉与结构。spec §2.2 / 路线图 D-1
+//
+// 空轻满重（B-3）：空态（contentDashed=true）整块底色降级为更淡的中性，描边更细，
+//   标题降灰——在淡彩网格中明显「轻一档」，不抢满格子视觉权重。
 
 import {
-  CARD_BG,
-  TEXT_MAIN,
-  SHADOW_LIGHT,
+  TEXT_TERTIARY,
+  DIVIDER_COLOR,
   LIGHT_PRIMARY_COLOR,
   ZONE_MISC_COLOR,
   ZONE_MISC_STROKE,
-  ZONE_MISC_TINT
+  ZONE_MISC_FILL
 } from '../../constants/Colors';
 import {
   FONT_SIZE_BODY_MEDIUM,
-  FONT_WEIGHT_MEDIUM
+  FONT_WEIGHT_BOLD
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
 import { SPRING_PRESS, PRESS_SCALE_DOWN, SPRING_GENERAL } from '../../constants/AnimationTokens';
 import { BodyZone } from '../../constants/GearLoadout';
-import { zoneDisplayName, zoneIconName } from '../../services/LoadoutService';
+import { zoneDisplayName } from '../../services/LoadoutService';
 
 @Component
 export struct ZoneShell {
   @Prop zone: string = BodyZone.Misc;
+  // 标题彩色文字色（= 该 Zone 主题色）
   @Prop zoneColor: string = ZONE_MISC_COLOR;
+  // 整块容器描边色
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
-  @Prop zoneTint: string = ZONE_MISC_TINT;
+  // 整块容器淡色填充底（便单式色块）
+  @Prop zoneFill: string = ZONE_MISC_FILL;
 
-  // 标题行尺寸（网格态紧凑 28 / 聚焦态宽松，由宿主传入）
+  // 标题区高度（网格态紧凑 / 聚焦态宽松，由宿主传入）
   @Prop titleBarHeight: number = 28;
-  @Prop iconSize: number = 15;
-  @Prop barWidth: number = 4;
-  @Prop barHeight: number = 16;
   @Prop titleFontSize: number = FONT_SIZE_BODY_MEDIUM;
 
-  // 内容白卡是否上淡绿底（C-2 拖拽目标格高亮复用）
+  // C-2：拖拽目标格高亮——整块容器叠一层淡绿（仅 backgroundColor 走 SPRING_GENERAL）
   @Prop contentTinted: boolean = false;
-  // 内容白卡描边是否显示（聚焦态卡片可能不需要内层描边，留开关）
+  // 整块容器描边是否显示
   @Prop showContentBorder: boolean = true;
-  // P1/P2：空态降级——内容容器退化为透明无装饰布局占位（无实白底/无描边/无阴影/不clip/不响应点击），
-  //   虚线框降权视觉完全交由 content 插槽自绘（守住 B-3「空轻满重」分层，空态不进 geometryTransition）。
-  //   true 时仅复用 ZoneShell 的统一标题行（解决 P1 浅染底不一致 + P2 平行实现），内容区不套实白卡。
+  // B-3 空态降级：整块底色更淡（中性）、描边更细、标题降灰，内容区交给 content 插槽自绘虚线降权框。
   @Prop contentDashed: boolean = false;
-  // 内容白卡是否响应点击/按压（网格态点白卡进聚焦；聚焦态卡内自有交互，关闭）
+  // 整块容器是否响应点击/按压（网格态点格子进聚焦；聚焦态卡内自有交互，关闭）
   @Prop contentClickable: boolean = false;
-  // 内容白卡按压态（宿主透传 @State）
+  // 整块容器按压态（宿主透传 @State）
   @Prop contentPressed: boolean = false;
-  // 内容白卡按压事件回上
+  // 整块容器按压事件回上
   onContentTouch: (pressed: boolean) => void = () => {};
-  // 内容白卡点击回调（网格态进聚焦）
+  // 整块容器点击回调（网格态进聚焦）
   onTapContent: (zone: string) => void = () => {};
-
-  // 标题行点击回调（网格态进聚焦 / 聚焦态可空）+ 按压态由宿主控制
-  onTapTitle: (zone: string) => void = () => {};
-  // 标题行是否响应点击与按压（聚焦态顶栏一般不需要整条点击）
-  @Prop titleClickable: boolean = true;
-  // 标题行按压态（宿主透传，保证与宿主其它按压联动一致）
-  @Prop titlePressed: boolean = false;
-  // 标题行按压事件回上（宿主维护 @State，避免 ZoneShell 自持状态与宿主脱节）
-  onTitleTouch: (pressed: boolean) => void = () => {};
 
   // 内容插槽（必填）
   @BuilderParam content: () => void;
-  // 标题行右侧插槽（网格态数量 / 聚焦态进度+关闭等，默认空）
+  // 标题右侧 trailing 插槽（网格态数量 / 聚焦态关闭键等，默认空）
   @BuilderParam titleTrailing: () => void = this.emptyTrailing;
+  // 标题点击/clickable 在新模型下整块容器统一承接，标题不单独响应，保留空壳避免宿主报错
+  @Prop titleClickable: boolean = true;
 
   @Builder
   emptyTrailing() {
   }
 
   build() {
-    Column({ space: 6 }) {
+    // 整块淡色容器：标题坐顶部，内容排标题下方，顶部对齐，空白由淡色背景消化。
+    Column() {
       this.buildTitleRow()
 
-      // 内容白卡
+      // 内容区：占据标题下剩余高度（layoutWeight 1），透明无装饰，顶部对齐。
+      //   白卡层已移除——内容直接坐在淡色容器里，留白即同色背景（便单式）。
       Column() {
         this.content()
       }
       .width('100%')
       .layoutWeight(1)
-      // P1/P2：空态降级时透明底（虚线框交给 content 插槽），否则白卡/拖拽淡绿底
-      // C-2：拖拽目标格淡绿底（仅 backgroundColor 走 SPRING_GENERAL，与原 ZoneGridCell 一致）
-      .backgroundColor(this.contentDashed
-        ? Color.Transparent
-        : (this.contentTinted ? LIGHT_PRIMARY_COLOR : CARD_BG))
-      .animation({ curve: SPRING_GENERAL() })
-      // B-2：阴影升档 + 极淡部位色描边，形成盒子感（静态属性，由下方 SPRING_PRESS 段兜住）
-      // 空态降级：无圆角填充/无描边/无阴影/不clip，纯透明布局占位
-      .borderRadius(this.contentDashed ? 0 : CARD_RADIUS)
-      .border(this.contentDashed || !this.showContentBorder
-        ? undefined
-        : { width: 0.5, color: this.zoneStroke, style: BorderStyle.Solid })
-      .shadow(this.contentDashed ? undefined : { radius: 12, color: SHADOW_LIGHT, offsetY: 4 })
-      .clip(!this.contentDashed)
       .alignItems(HorizontalAlign.Start)
       .justifyContent(FlexAlign.Start)
-      .scale({
-        x: this.contentClickable && this.contentPressed ? PRESS_SCALE_DOWN : 1.0,
-        y: this.contentClickable && this.contentPressed ? PRESS_SCALE_DOWN : 1.0
-      })
-      .animation({ curve: SPRING_PRESS() })
-      .onTouch((e: TouchEvent) => {
-        if (!this.contentClickable) {
-          return;
-        }
-        if (e.type === TouchType.Down) {
-          this.onContentTouch(true);
-        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-          this.onContentTouch(false);
-        }
-      })
-      .onClick(() => {
-        if (this.contentClickable) {
-          this.onTapContent(this.zone);
-        }
-      })
     }
     .width('100%')
     .height('100%')
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  // ---- 标题行：色条 + 图标 + 名称 + trailing 插槽 ----
-  @Builder
-  private buildTitleRow() {
-    Row({ space: 6 }) {
-      // Zone 主题色条（唯一保留部位彩色的色彩锚点）
-      Row()
-        .width(this.barWidth)
-        .height(this.barHeight)
-        .borderRadius(2)
-        .backgroundColor(this.zoneColor)
-
-      SymbolGlyph($r(zoneIconName(this.zone)))
-        .fontSize(this.iconSize)
-        .fontColor([TEXT_MAIN])
-
-      Text(zoneDisplayName(this.zone))
-        .fontSize(this.titleFontSize)
-        .fontWeight(FONT_WEIGHT_MEDIUM)
-        .fontColor(TEXT_MAIN)
-
-      Blank()
-
-      this.titleTrailing()
-    }
-    .width('100%')
-    .height(this.titleBarHeight)
-    .backgroundColor(this.zoneTint)
-    .borderRadius(8)
-    .padding({ left: 8, right: 8 })
-    .alignItems(VerticalAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+    // 整块淡色填充底：空态降级为更淡中性、拖拽态叠淡绿，否则 zoneFill
+    .backgroundColor(this.contentDashed
+      ? DIVIDER_COLOR
+      : (this.contentTinted ? LIGHT_PRIMARY_COLOR : this.zoneFill))
+    .animation({ curve: SPRING_GENERAL() })
+    .borderRadius(CARD_RADIUS)
+    // 描边：空态更细更浅（降权），否则 zoneStroke
+    .border(!this.showContentBorder
+      ? undefined
+      : (this.contentDashed
+        ? { width: 0.5, color: DIVIDER_COLOR, style: BorderStyle.Solid }
+        : { width: 1, color: this.zoneStroke, style: BorderStyle.Solid }))
+    .clip(true)
     .scale({
-      x: this.titleClickable && this.titlePressed ? PRESS_SCALE_DOWN : 1.0,
-      y: this.titleClickable && this.titlePressed ? PRESS_SCALE_DOWN : 1.0
+      x: this.contentClickable && this.contentPressed ? PRESS_SCALE_DOWN : 1.0,
+      y: this.contentClickable && this.contentPressed ? PRESS_SCALE_DOWN : 1.0
     })
     .animation({ curve: SPRING_PRESS() })
     .onTouch((e: TouchEvent) => {
-      if (!this.titleClickable) {
+      if (!this.contentClickable) {
         return;
       }
       if (e.type === TouchType.Down) {
-        this.onTitleTouch(true);
+        this.onContentTouch(true);
       } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-        this.onTitleTouch(false);
+        this.onContentTouch(false);
       }
     })
     .onClick(() => {
-      if (this.titleClickable) {
-        this.onTapTitle(this.zone);
+      if (this.contentClickable) {
+        this.onTapContent(this.zone);
       }
     })
+  }
+
+  // ---- 标题：居中、彩色文字（无色条、无独立染色块） + trailing 插槽 ----
+  // 便单式：标题就是容器顶部的一行彩色居中文字，trailing（数量/关闭键）靠右悬浮。
+  @Builder
+  private buildTitleRow() {
+    Stack({ alignContent: Alignment.Center }) {
+      // 居中彩色标题
+      Text(zoneDisplayName(this.zone))
+        .fontSize(this.titleFontSize)
+        .fontWeight(FONT_WEIGHT_BOLD)
+        // 空态标题降灰（B-3 轻一档），否则彩色
+        .fontColor(this.contentDashed ? TEXT_TERTIARY : this.zoneColor)
+
+      // trailing 靠右（数量 / 关闭键）
+      Row() {
+        this.titleTrailing()
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.End)
+      .alignItems(VerticalAlign.Center)
+    }
+    .width('100%')
+    .height(this.titleBarHeight)
+    .padding({ left: 12, right: 12 })
   }
 }

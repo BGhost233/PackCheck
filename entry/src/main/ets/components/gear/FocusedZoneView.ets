@@ -16,7 +16,7 @@ import {
   DIVIDER_COLOR,
   INPUT_BG,
   ZONE_MISC_STROKE,
-  ZONE_MISC_TINT
+  ZONE_MISC_FILL
 } from '../../constants/Colors';
 import {
   FONT_SIZE_TITLE_MEDIUM,
@@ -35,7 +35,7 @@ import {
 import { ChecklistItem, GearItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { vibrator } from '@kit.SensorServiceKit';
-import { zoneDisplayName, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
+import { zoneDisplayName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
 import { ZoneShell } from './ZoneShell';
 
@@ -46,9 +46,9 @@ export struct FocusedZoneView {
   // 问题4c：装备库全量，用于 fromGearId 反查品类/备注/品牌等详情
   @Prop gears: GearItem[] = [];
   @Prop zoneColor: string = TEXT_SECONDARY;
-  // D-2：ZoneShell 外壳需要的描边色 + 标题行浅染底，由父层透传（与网格态用同一 helper）
+  // ZoneShell 外壳需要的描边色 + 整块淡色填充底，由父层透传（与网格态用同一 helper）
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
-  @Prop zoneTint: string = ZONE_MISC_TINT;
+  @Prop zoneFill: string = ZONE_MISC_FILL;
 
   // 是否处于激活（聚焦）态：由父传入 focusedZone != null。
   // false→true 时触发列表错落入场（review V2；FocusedZoneView 常驻树，不能用 aboutToAppear）
@@ -115,11 +115,9 @@ export struct FocusedZoneView {
       zone: this.zone,
       zoneColor: this.zoneColor,
       zoneStroke: this.zoneStroke,
-      zoneTint: this.zoneTint,
-      // 聚焦态标题行宽松尺寸（区别于网格态紧凑）
+      zoneFill: this.zoneFill,
+      // 聚焦态标题区宽松尺寸（区别于网格态紧凑）
       titleBarHeight: 44,
-      iconSize: 18,
-      barHeight: 20,
       titleFontSize: FONT_SIZE_TITLE_MEDIUM,
       // 顶栏整条不响应点击（关闭键 / 内容各自处理）
       titleClickable: false,
@@ -198,18 +196,11 @@ export struct FocusedZoneView {
     .padding({ left: 16, right: 16, top: 8, bottom: 16 })
   }
 
-  // ---- 标题行右侧 trailing：进度 + × 关闭键 ----
-  // D-2：聚焦态外壳 = ZoneShell，标题行左侧（色条+图标+名）由 ZoneShell 渲染，
-  //   关闭键与进度统一收进 trailing 插槽，与网格态「数量 trailing」结构对位，保证两端外壳一致。
+  // ---- 标题行右侧 trailing：× 关闭键 ----
+  // 便单式：聚焦态去掉「已完成/总数」进度（靠列表本身表达），trailing 只保留 × 关闭键。
   @Builder
   private buildTopTrailing() {
     Row({ space: 10 }) {
-      // 该区进度
-      Text(this.progress().checked.toString() + ' / ' + this.progress().total.toString())
-        .fontSize(FONT_SIZE_BODY_MEDIUM)
-        .fontWeight(FONT_WEIGHT_MEDIUM)
-        .fontColor(TEXT_SECONDARY)
-
       // 关闭键
       Row() {
         SymbolGlyph($r('sys.symbol.xmark'))
@@ -386,9 +377,5 @@ export struct FocusedZoneView {
     }
     // 通知父层弹出自绘浮层
     this.onLongPressItem(item);
-  }
-
-  private progress(): LoadoutProgress {
-    return calcProgress(this.items);
   }
 }

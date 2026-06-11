@@ -27,13 +27,13 @@ import {
   ZONE_CARRY_STROKE,
   ZONE_SLEEP_STROKE,
   ZONE_MISC_STROKE,
-  ZONE_HEAD_TINT,
-  ZONE_UPPER_TINT,
-  ZONE_LOWER_TINT,
-  ZONE_FEET_TINT,
-  ZONE_CARRY_TINT,
-  ZONE_SLEEP_TINT,
-  ZONE_MISC_TINT
+  ZONE_HEAD_FILL,
+  ZONE_UPPER_FILL,
+  ZONE_LOWER_FILL,
+  ZONE_FEET_FILL,
+  ZONE_CARRY_FILL,
+  ZONE_SLEEP_FILL,
+  ZONE_MISC_FILL
 } from '../../constants/Colors';
 import {
   SPRING_GENERAL,
@@ -235,10 +235,11 @@ this.computeCellHeight();
   // ---- 全屏聚焦层（常驻树，geometryTransition 共享元素配对端）----
   @Builder
   private buildFocusedLayer() {
-    // D-2：聚焦态 = 卡片浮层（不再铺满整屏）。
-    //   外层定位容器留边距（左右 20vp）+ 垂直居中，卡片宽度撑满边距内空间、
-    //   高度自适应并封顶（maxHeight 80%，卡内 List 滚动）。
-    //   geometryTransition 仍挂外层节点、id 不变 → 与网格态 ZoneGridCell 配对端连续放大。
+    // 聚焦态 = 卡片浮层（不再铺满整屏）。
+    // 外层定位容器：只负责留边距（左右 20vp）+ 垂直居中，不参与几何插值。
+    //   geometryTransition 下沉到 FocusedZoneView（= ZoneShell 卡片节点）本身——
+    //   与网格端 GridItem（那张卡）几何对应，转场是「同一块淡色容器连续放大」，
+    //   修复此前挂全屏居中容器导致标题被甩到屏幕中央 / 背景药丸悬空的错位。
     Column() {
       FocusedZoneView({
         zone: this.focusedZoneRender,
@@ -246,7 +247,7 @@ this.computeCellHeight();
         gears: this.gears,
         zoneColor: this.zoneColor(this.focusedZoneRender),
         zoneStroke: this.zoneStroke(this.focusedZoneRender),
-        zoneTint: this.zoneTint(this.focusedZoneRender),
+        zoneFill: this.zoneFill(this.focusedZoneRender),
         active: this.focusedZone != null,
         onClose: () => { this.closeFocus(); },
         onTapEmpty: (z: string) => { this.onOpenPicker(z); },
@@ -260,9 +261,10 @@ this.computeCellHeight();
       })
         .width('100%')
         .constraintSize({ maxHeight: '80%' })
+        // D-3：follow:true 让转场期间节点跟随布局插值，从原格几何中心连续长大到聚焦落点（就地放大）。
+        //   挂在卡片节点上而非外层全屏容器，保证两端共享元素都是「那张卡」本身。
+        .geometryTransition('zone_' + this.focusedZoneRender, { follow: true })
     }
-    // D-3：follow:true 让转场期间节点跟随布局插值，从原格几何中心连续长大到聚焦落点（就地放大）
-    .geometryTransition('zone_' + this.focusedZoneRender, { follow: true })
     .width('100%')
     .height('100%')
     .padding({ left: 20, right: 20 })
@@ -524,7 +526,7 @@ this.computeCellHeight();
             items: this.itemsForZone(zone),
             zoneColor: this.zoneColor(zone),
             zoneStroke: this.zoneStroke(zone),
-            zoneTint: this.zoneTint(zone),
+            zoneFill: this.zoneFill(zone),
             cellHeight: this.cellHeight,
             isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === zone,
             draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
@@ -562,7 +564,7 @@ this.computeCellHeight();
           items: this.itemsForZone(BodyZone.Misc),
           zoneColor: this.zoneColor(BodyZone.Misc),
           zoneStroke: this.zoneStroke(BodyZone.Misc),
-          zoneTint: this.zoneTint(BodyZone.Misc),
+          zoneFill: this.zoneFill(BodyZone.Misc),
           cellHeight: this.cellHeight,
           isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === BodyZone.Misc,
           draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
@@ -789,17 +791,17 @@ this.computeCellHeight();
     }
   }
 
-  // B-1：zone → 浅染底色（复用 ZONE_*_TINT），用于标题行浅彩底
-  private zoneTint(zone: string): string {
+  // zone → 整块淡色填充底（ZONE_*_FILL，便单式色块），透传给 ZoneGridCell / FocusedZoneView
+  private zoneFill(zone: string): string {
     switch (zone) {
-      case BodyZone.Head: return ZONE_HEAD_TINT;
-      case BodyZone.UpperBody: return ZONE_UPPER_TINT;
-      case BodyZone.LowerBody: return ZONE_LOWER_TINT;
-      case BodyZone.Feet: return ZONE_FEET_TINT;
-      case BodyZone.Carry: return ZONE_CARRY_TINT;
-      case BodyZone.Sleep: return ZONE_SLEEP_TINT;
-      case BodyZone.Misc: return ZONE_MISC_TINT;
-      default: return ZONE_MISC_TINT;
+      case BodyZone.Head: return ZONE_HEAD_FILL;
+      case BodyZone.UpperBody: return ZONE_UPPER_FILL;
+      case BodyZone.LowerBody: return ZONE_LOWER_FILL;
+      case BodyZone.Feet: return ZONE_FEET_FILL;
+      case BodyZone.Carry: return ZONE_CARRY_FILL;
+      case BodyZone.Sleep: return ZONE_SLEEP_FILL;
+      case BodyZone.Misc: return ZONE_MISC_FILL;
+      default: return ZONE_MISC_FILL;
     }
   }
 }

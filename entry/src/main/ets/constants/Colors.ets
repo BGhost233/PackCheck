@@ -106,6 +106,17 @@ export const ZONE_CARRY_TINT: string = '#33FFA726';
 export const ZONE_SLEEP_TINT: string = '#337E57C2';
 export const ZONE_MISC_TINT: string = '#3378909C';
 
+// ============ Zone 整块填充底色（便单式淡色块容器，~12% opacity） ============
+// 用于 ZoneShell 整格淡色填充背景。比 TINT(20%) 更淡，避免整块染色过浓发脏；
+// 比 STROKE(8~14%) 略重，保证内容文字在其上仍清晰可读。便单四象限色块同档观感。
+export const ZONE_HEAD_FILL: string = '#1F42A5F5';
+export const ZONE_UPPER_FILL: string = '#1FEF5350';
+export const ZONE_LOWER_FILL: string = '#1F5C6BC0';
+export const ZONE_FEET_FILL: string = '#1F8D6E63';
+export const ZONE_CARRY_FILL: string = '#1FFFA726';
+export const ZONE_SLEEP_FILL: string = '#1F7E57C2';
+export const ZONE_MISC_FILL: string = '#1F78909C';
+
 // ============ Zone 容器描边色（按饱和度分档，B-1） ============
 // 高饱和（蓝/红/靛）~8% alpha，中饱和（橙/紫）~11%，低饱和（棕/灰蓝）~14%，
 // 目的：视觉描边深浅在七个部位间观感均衡，避免高饱和色描边过重。
