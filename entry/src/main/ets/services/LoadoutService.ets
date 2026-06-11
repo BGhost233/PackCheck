@@ -34,6 +34,24 @@ export function groupByZone(items: ChecklistItem[]): Map<string, ChecklistItem[]
   return map;
 }
 
+/**
+ * 按 Zone 分组，始终返回全部 7 个 Zone（含空数组）。
+ * 统一清单视图（网格态）用：7 格子始终可见，空 Zone 渲染空态虚线格。
+ * 顺序固定为人体从上到下（杂项末尾）。spec §4.4。
+ */
+export function groupByZoneAll(items: ChecklistItem[]): Map<string, ChecklistItem[]> {
+  const map = new Map<string, ChecklistItem[]>();
+  const zoneOrder: string[] = [
+    BodyZone.Head, BodyZone.UpperBody, BodyZone.LowerBody,
+    BodyZone.Feet, BodyZone.Carry, BodyZone.Sleep, BodyZone.Misc
+  ];
+  for (const zone of zoneOrder) {
+    const zoneItems = items.filter((item) => inferZoneFromGroup(item.group) === zone);
+    map.set(zone, zoneItems);
+  }
+  return map;
+}
+
 /** Misc Zone 内部按品类分子组 */
 export function groupMiscByCategory(items: ChecklistItem[], gears: GearItem[]): Map<string, ChecklistItem[]> {
   const map = new Map<string, ChecklistItem[]>();
@@ -53,13 +71,13 @@ export function groupMiscByCategory(items: ChecklistItem[], gears: GearItem[]): 
 // 排序
 // ============================================================
 
-/** 按 LayerOrder 升序排序（同层保持原序） */
+/**
+ * @deprecated D-1（spec §3.1）：一期取消「层级」概念。保留签名向后兼容，
+ * 内部不再做分层排序，按 items 数组原始顺序（= 添加顺序）恒等返回。
+ * 后续积累实际使用数据后再决定是否加回。
+ */
 export function sortItemsByLayer(items: ChecklistItem[], gears: GearItem[]): ChecklistItem[] {
-  return items.slice().sort((a, b) => {
-    const layerA = getLayerForItem(a, gears);
-    const layerB = getLayerForItem(b, gears);
-    return layerA - layerB;
-  });
+  return items;
 }
 
 // ============================================================

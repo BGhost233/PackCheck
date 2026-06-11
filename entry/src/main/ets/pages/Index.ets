@@ -1870,7 +1870,11 @@ struct Index {
             this.openGearItemActionSheet(item);
           },
           onLayerChange: (itemId: string, layer: string) => {
-            // TODO: Phase 5 - 层级切换逻辑
+            // 一期取消「层级」概念，spec D-1：保留 callback 签名占位，无逻辑
+          },
+          onTapZoneTitle: (zone: string) => {
+            // Phase 1：点击格子标题先打开装备选择器占位；Phase 3 改为全屏聚焦态
+            this.openGearPickerSheet();
           },
           onDeleteTrip: () => {
             const checklist = this.checklists.find(c => c.id === this.selectedChecklistId);
