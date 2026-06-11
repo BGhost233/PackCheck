@@ -33,6 +33,7 @@ import {
   DURATION_OVERLAY_ENTER,
   DURATION_OVERLAY_DISMISS
 } from '../../constants/AnimationTokens';
+import { CARD_RADIUS } from '../../constants/Layout';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { groupByZoneAll, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
@@ -90,9 +91,19 @@ export struct UnifiedChecklistView {
   // 反算得到的单格高度
   @State private cellHeight: number = CELL_HEIGHT_FALLBACK;
 
-  // Phase 4：长按浮层状态
+  // Phase 4：长按浮层 + 拖拽状态
   @State private overlayItem: ChecklistItem | null = null;
   @State private overlayVisible: boolean = false;
+  @State private overlayPhase: string = 'idle'; // 'idle' | 'menu' | 'dragging'
+  @State private dragOffsetX: number = 0;
+  @State private dragOffsetY: number = 0;
+  // 拖拽起始点（手指全局坐标），用于计算浮层绝对位置
+  private dragAnchorX: number = 0;
+  private dragAnchorY: number = 0;
+  // 目标 zone 高亮
+  @State private dropTargetZone: string | null = null;
+  // 各 zone 格子的全局 Rect（由 onAreaChange 收集）
+  private zoneRects: Map<string, number[]> = new Map();
   // 全屏聚焦的 Zone（null = 网格态）。spec §2.2 / §4.5.6
   // 问题4a：改 @Link 由 Index 持有 @State 源，使 onBackPressed 能读判断「是否聚焦」做分层拦截。
   //   注意：Index 不直接改此值（会丢收起动画），而是递增 closeFocusSignal 让本组件走带动画的 closeFocus()。
@@ -220,6 +231,7 @@ this.computeCellHeight();
   // ---- Phase 4：长按浮层控制 ----
   private showOverlay(item: ChecklistItem): void {
     this.overlayItem = item;
+    this.overlayPhase = 'menu';
     // 延迟一帧触发入场动画（确保条件渲染挂载后再 animate）
     setTimeout(() => {
       this.getUIContext().animateTo({
@@ -238,6 +250,7 @@ this.computeCellHeight();
       onFinish: () => {
         this.overlayItem = null;
         this.overlayVisible = false;
+        this.overlayPhase = 'idle';
       }
     }, () => {
       this.overlayVisible = false;
@@ -273,6 +286,102 @@ this.computeCellHeight();
         }
       }
     ] as ContextMenuItem[];
+  }
+
+  // ---- Phase 4 阶段2：网格态拖拽逻辑 ----
+
+  // 网格态长按触发（来自 ZoneGridCell）
+  private handleGridLongPress(item: ChecklistItem, globalX: number, globalY: number): void {
+    this.overlayItem = item;
+    this.overlayPhase = 'menu';
+    this.dragAnchorX = globalX;
+    this.dragAnchorY = globalY;
+    this.dragOffsetX = 0;
+    this.dragOffsetY = 0;
+    this.dropTargetZone = null;
+    // 入场动画
+    setTimeout(() => {
+      this.getUIContext().animateTo({
+        curve: SHARP_SNAP,
+        duration: DURATION_OVERLAY_ENTER
+      }, () => {
+        this.overlayVisible = true;
+      });
+    }, 16);
+  }
+
+  // Pan 更新
+  private handleDragUpdate(offsetX: number, offsetY: number): void {
+    if (this.overlayItem === null) {
+      return;
+    }
+    // 首次移动：从 menu 切换到 dragging
+    if (this.overlayPhase === 'menu') {
+      this.overlayPhase = 'dragging';
+    }
+    this.dragOffsetX = offsetX;
+    this.dragOffsetY = offsetY;
+    // 命中判定目标 zone
+    this.dropTargetZone = this.hitTestZone(
+      this.dragAnchorX + offsetX,
+      this.dragAnchorY + offsetY
+    );
+  }
+
+  // Pan 结束（松手）
+  private handleDragEnd(offsetX: number, offsetY: number): void {
+    if (this.overlayItem === null) {
+      return;
+    }
+    const target = this.hitTestZone(
+      this.dragAnchorX + offsetX,
+      this.dragAnchorY + offsetY
+    );
+    // 落入有效目标 zone 且不是原 zone → 移动
+    if (target !== null && target !== this.overlayItem!.group) {
+      this.onMoveItemToZone(this.overlayItem!.id, target);
+    }
+    // 回弹/消失动画
+    this.getUIContext().animateTo({
+      curve: SPRING_GENERAL(),
+      onFinish: () => {
+        this.resetDragState();
+      }
+    }, () => {
+      this.dragOffsetX = 0;
+      this.dragOffsetY = 0;
+      this.overlayVisible = false;
+      this.dropTargetZone = null;
+    });
+  }
+
+  private resetDragState(): void {
+    this.overlayItem = null;
+    this.overlayPhase = 'idle';
+    this.overlayVisible = false;
+    this.dragOffsetX = 0;
+    this.dragOffsetY = 0;
+    this.dropTargetZone = null;
+  }
+
+  // 坐标命中判定：当前全局坐标落在哪个 zone 格子内
+  private hitTestZone(globalX: number, globalY: number): string | null {
+    const allZones: string[] = [...GRID_SINGLE_ZONES, BodyZone.Misc];
+    for (let i = 0; i < allZones.length; i++) {
+      const zone = allZones[i];
+      const rect = this.zoneRects.get(zone);
+      if (rect === undefined) {
+        continue;
+      }
+      const rx = rect[0];
+      const ry = rect[1];
+      const rw = rect[2];
+      const rh = rect[3];
+      if (globalX >= rx && globalX <= rx + rw && globalY >= ry && globalY <= ry + rh) {
+        return zone;
+      }
+    }
+    return null;
   }
 
   private progress(): LoadoutProgress {
@@ -315,7 +424,12 @@ this.computeCellHeight();
             cellHeight: this.cellHeight,
             onTapTitle: (z: string) => { this.openFocus(z); },
             onTapEmpty: (z: string) => { this.onOpenPicker(z); },
-            onToggleCheck: this.onToggleCheck
+            onToggleCheck: this.onToggleCheck,
+            onLongPressItem: (item: ChecklistItem, gx: number, gy: number) => {
+              this.handleGridLongPress(item, gx, gy);
+            },
+            onPanUpdate: (ox: number, oy: number) => { this.handleDragUpdate(ox, oy); },
+            onPanFinish: (ox: number, oy: number) => { this.handleDragEnd(ox, oy); }
           })
         }
         .geometryTransition('zone_' + zone)
@@ -325,6 +439,10 @@ this.computeCellHeight();
         .animation({
           curve: SPRING_GENERAL(),
           delay: staggerDelay(index)
+        })
+        .onAreaChange((_o: Area, n: Area) => {
+          const pos = n.globalPosition as Record<string, number>;
+          this.zoneRects.set(zone, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
         })
       }, (zone: string) => zone + '_' + this.itemsForZone(zone).length.toString())
 
@@ -337,7 +455,12 @@ this.computeCellHeight();
           cellHeight: this.cellHeight,
           onTapTitle: (z: string) => { this.openFocus(z); },
           onTapEmpty: (z: string) => { this.onOpenPicker(z); },
-          onToggleCheck: this.onToggleCheck
+          onToggleCheck: this.onToggleCheck,
+          onLongPressItem: (item: ChecklistItem, gx: number, gy: number) => {
+            this.handleGridLongPress(item, gx, gy);
+          },
+          onPanUpdate: (ox: number, oy: number) => { this.handleDragUpdate(ox, oy); },
+          onPanFinish: (ox: number, oy: number) => { this.handleDragEnd(ox, oy); }
         })
       }
       .columnStart(0)
@@ -349,6 +472,10 @@ this.computeCellHeight();
       .animation({
         curve: SPRING_GENERAL(),
         delay: staggerDelay(GRID_SINGLE_ZONES.length)
+      })
+      .onAreaChange((_o: Area, n: Area) => {
+        const pos = n.globalPosition as Record<string, number>;
+        this.zoneRects.set(BodyZone.Misc, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
       })
     }
     .columnsTemplate('1fr 1fr')
@@ -422,37 +549,93 @@ this.computeCellHeight();
       .animation({ curve: SPRING_GENERAL(), delay: 150 })
   }
 
-  // ---- Phase 4：自绘浮层 Builder ----
+  // ---- Phase 4：自绘浮层 Builder（双阶段：menu / dragging）----
   @Builder
   private buildLongPressOverlay() {
-    // 全屏蒙层 + 居中详情卡&菜单
     Stack() {
-      // 蒙层（点击蒙层关闭）
+      // 蒙层（menu 阶段可点击关闭；dragging 阶段半透明不拦截）
       Column()
         .width('100%')
         .height('100%')
         .backgroundColor('#33000000')
         .opacity(this.overlayVisible ? 1 : 0)
-        .onClick(() => { this.dismissOverlay(); })
+        .onClick(() => {
+          if (this.overlayPhase !== 'dragging') {
+            this.dismissOverlay();
+          }
+        })
 
-      // 详情卡 + 菜单（居中偏上）
-      Column() {
-        GearItemContextMenu({
-          item: this.overlayItem!,
-          gear: this.findGearForItem(this.overlayItem!),
-          menuItems: this.buildOverlayMenuItems()
+      // 阶段1：详情卡 + 菜单（居中偏上），仅 menu 阶段可见
+      if (this.overlayPhase === 'menu' || this.overlayPhase === 'idle') {
+        Column() {
+          GearItemContextMenu({
+            item: this.overlayItem!,
+            gear: this.findGearForItem(this.overlayItem!),
+            menuItems: this.buildOverlayMenuItems()
+          })
+        }
+        .width('80%')
+        .constraintSize({ maxWidth: 320 })
+        .opacity(this.overlayVisible ? 1 : 0)
+        .scale({ x: this.overlayVisible ? 1 : 0.9, y: this.overlayVisible ? 1 : 0.9 })
+        .offset({ y: -40 })
+      }
+
+      // 阶段2：拖拽跟手胶囊（白色圆角条 + item 名称）
+      if (this.overlayPhase === 'dragging') {
+        Row({ space: 8 }) {
+          Text(this.overlayItem!.name)
+            .fontSize(14)
+            .fontColor(TEXT_MAIN)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .height(40)
+        .padding({ left: 16, right: 16 })
+        .backgroundColor(CARD_BG)
+        .borderRadius(20)
+        .shadow({ radius: 16, color: OVERLAY_DIM, offsetY: 6 })
+        .position({
+          x: this.dragAnchorX + this.dragOffsetX - 60,
+          y: this.dragAnchorY + this.dragOffsetY - 20
         })
       }
-      .width('80%')
-      .constraintSize({ maxWidth: 320 })
-      .opacity(this.overlayVisible ? 1 : 0)
-      .scale({ x: this.overlayVisible ? 1 : 0.9, y: this.overlayVisible ? 1 : 0.9 })
-      .offset({ y: -40 })
+
+      // 目标 zone 高亮指示器（叠加在网格上方，只在拖拽态显示）
+      if (this.overlayPhase === 'dragging' && this.dropTargetZone !== null) {
+        this.buildDropHighlight()
+      }
     }
     .width('100%')
     .height('100%')
-    .hitTestBehavior(HitTestMode.Default)
+    .hitTestBehavior(this.overlayPhase === 'dragging' ? HitTestMode.None : HitTestMode.Default)
   }
+
+  // 目标 zone 高亮边框
+  @Builder
+  private buildDropHighlight() {
+    // 从 zoneRects 取目标 zone 的位置
+    Column()
+      .width(this.getDropHighlightWidth())
+      .height(this.getDropHighlightHeight())
+      .position({ x: this.getDropHighlightX(), y: this.getDropHighlightY() })
+      .borderRadius(CARD_RADIUS)
+      .border({ width: 2.5, color: PRIMARY_COLOR, style: BorderStyle.Solid })
+      .backgroundColor('#0D2D7D46')  // PRIMARY_COLOR 5% opacity
+      .hitTestBehavior(HitTestMode.None)
+  }
+
+  private getDropHighlightRect(): number[] {
+    if (this.dropTargetZone === null) {
+      return [0, 0, 0, 0];
+    }
+    return this.zoneRects.get(this.dropTargetZone) ?? [0, 0, 0, 0];
+  }
+
+  private getDropHighlightX(): number { return this.getDropHighlightRect()[0]; }
+  private getDropHighlightY(): number { return this.getDropHighlightRect()[1]; }
+  private getDropHighlightWidth(): number { return this.getDropHighlightRect()[2]; }
+  private getDropHighlightHeight(): number { return this.getDropHighlightRect()[3]; }
 
   // 通过 ChecklistItem 的 fromGearId 反查 GearItem
   private findGearForItem(item: ChecklistItem): GearItem | undefined {
