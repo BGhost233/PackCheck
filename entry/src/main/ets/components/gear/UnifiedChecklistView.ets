@@ -12,7 +12,6 @@ import {
   PAGE_BG,
   TRANSPARENT,
   OVERLAY_DIM,
-  DANGER_COLOR,
   ZONE_HEAD_COLOR,
   ZONE_UPPER_COLOR,
   ZONE_LOWER_COLOR,
@@ -31,6 +30,7 @@ import {
   SHARP_SNAP,
   EASE_FADE,
   DURATION_OVERLAY_ENTER,
+  DURATION_OVERLAY_FADE,
   DURATION_OVERLAY_DISMISS
 } from '../../constants/AnimationTokens';
 import { CARD_RADIUS } from '../../constants/Layout';
@@ -126,8 +126,12 @@ export struct UnifiedChecklistView {
     });
   }
 
+  // C1 守卫：组件卸载后 timer 回调不再操作 state
+  private isAlive: boolean = true;
+
   aboutToDisappear() {
     this.appeared = false;
+    this.isAlive = false;
   }
 
 onTripChange(): void {
@@ -234,6 +238,7 @@ this.computeCellHeight();
     this.overlayPhase = 'menu';
     // 延迟一帧触发入场动画（确保条件渲染挂载后再 animate）
     setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({
         curve: SHARP_SNAP,
         duration: DURATION_OVERLAY_ENTER
@@ -243,10 +248,11 @@ this.computeCellHeight();
     }, 16);
   }
 
-  private dismissOverlay(): void {
+  private dismissOverlay(fast: boolean = false): void {
+    const duration = fast ? 80 : DURATION_OVERLAY_DISMISS;
     this.getUIContext().animateTo({
       curve: EASE_FADE,
-      duration: DURATION_OVERLAY_DISMISS,
+      duration: duration,
       onFinish: () => {
         this.overlayItem = null;
         this.overlayVisible = false;
@@ -264,7 +270,7 @@ this.computeCellHeight();
         icon: $r('sys.symbol.square_and_pencil'),
         label: '编辑',
         action: () => {
-          this.dismissOverlay();
+          this.dismissOverlay(true);
           this.onEditItem(item);
         }
       },
@@ -272,7 +278,7 @@ this.computeCellHeight();
         icon: $r('sys.symbol.arrow_up_and_down_square_portrait'),
         label: '移动到…',
         action: () => {
-          this.dismissOverlay();
+          this.dismissOverlay(true);
           this.onRequestMoveSheet(item);
         }
       },
@@ -281,11 +287,11 @@ this.computeCellHeight();
         label: '移除',
         destructive: true,
         action: () => {
-          this.dismissOverlay();
+          this.dismissOverlay(true);
           this.onRemoveItem(item.id);
         }
       }
-    ] as ContextMenuItem[];
+    ];
   }
 
   // ---- Phase 4 阶段2：网格态拖拽逻辑 ----
@@ -301,6 +307,7 @@ this.computeCellHeight();
     this.dropTargetZone = null;
     // 入场动画
     setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({
         curve: SHARP_SNAP,
         duration: DURATION_OVERLAY_ENTER
@@ -315,7 +322,7 @@ this.computeCellHeight();
     if (this.overlayItem === null) {
       return;
     }
-    // 首次移动：从 menu 切换到 dragging
+    // 首次移动：从 menu 切换到 dragging（opacity 过渡由 .animation 驱动，不需要 animateTo）
     if (this.overlayPhase === 'menu') {
       this.overlayPhase = 'dragging';
     }
@@ -341,7 +348,7 @@ this.computeCellHeight();
     if (target !== null && target !== this.overlayItem!.group) {
       this.onMoveItemToZone(this.overlayItem!.id, target);
     }
-    // 回弹/消失动画
+    // 回弹/消失动画（translate 归零走 Spring，opacity 归零走隐式 animation）
     this.getUIContext().animateTo({
       curve: SPRING_GENERAL(),
       onFinish: () => {
@@ -350,8 +357,9 @@ this.computeCellHeight();
     }, () => {
       this.dragOffsetX = 0;
       this.dragOffsetY = 0;
-      this.overlayVisible = false;
       this.dropTargetZone = null;
+      this.overlayPhase = 'idle';
+      this.overlayVisible = false;
     });
   }
 
@@ -486,6 +494,8 @@ this.computeCellHeight();
     .padding({ left: GRID_PADDING, right: GRID_PADDING, top: 8, bottom: 100 })
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring)
+    // B2：拖拽期间锁定 Grid 滚动，防止边拖边滚导致落点偏移
+    .enableScrollInteraction(this.overlayPhase !== 'dragging')
   }
 
   @Builder
@@ -549,7 +559,7 @@ this.computeCellHeight();
       .animation({ curve: SPRING_GENERAL(), delay: 150 })
   }
 
-  // ---- Phase 4：自绘浮层 Builder（双阶段：menu / dragging）----
+  // ---- Phase 4：自绘浮层 Builder（双阶段：menu / dragging，用 opacity 过渡而非 if 销毁）----
   @Builder
   private buildLongPressOverlay() {
     Stack() {
@@ -565,44 +575,49 @@ this.computeCellHeight();
           }
         })
 
-      // 阶段1：详情卡 + 菜单（居中偏上），仅 menu 阶段可见
-      if (this.overlayPhase === 'menu' || this.overlayPhase === 'idle') {
-        Column() {
-          GearItemContextMenu({
-            item: this.overlayItem!,
-            gear: this.findGearForItem(this.overlayItem!),
-            menuItems: this.buildOverlayMenuItems()
-          })
-        }
-        .width('80%')
-        .constraintSize({ maxWidth: 320 })
-        .opacity(this.overlayVisible ? 1 : 0)
-        .scale({ x: this.overlayVisible ? 1 : 0.9, y: this.overlayVisible ? 1 : 0.9 })
-        .offset({ y: -40 })
-      }
-
-      // 阶段2：拖拽跟手胶囊（白色圆角条 + item 名称）
-      if (this.overlayPhase === 'dragging') {
-        Row({ space: 8 }) {
-          Text(this.overlayItem!.name)
-            .fontSize(14)
-            .fontColor(TEXT_MAIN)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .height(40)
-        .padding({ left: 16, right: 16 })
-        .backgroundColor(CARD_BG)
-        .borderRadius(20)
-        .shadow({ radius: 16, color: OVERLAY_DIM, offsetY: 6 })
-        .position({
-          x: this.dragAnchorX + this.dragOffsetX - 60,
-          y: this.dragAnchorY + this.dragOffsetY - 20
+      // 阶段1：详情卡 + 菜单（居中偏上）——常驻渲染，opacity 控制可见性
+      // B1 修正：不用 if 条件销毁（硬消失），改为 opacity + animation 交叉淡入淡出
+      Column() {
+        GearItemContextMenu({
+          item: this.overlayItem!,
+          gear: this.findGearForItem(this.overlayItem!),
+          menuItems: this.buildOverlayMenuItems()
         })
       }
+      .width('80%')
+      .constraintSize({ maxWidth: 320 })
+      .opacity(this.overlayPhase === 'menu' && this.overlayVisible ? 1 : 0)
+      .scale({
+        x: this.overlayPhase === 'menu' && this.overlayVisible ? 1 : 0.9,
+        y: this.overlayPhase === 'menu' && this.overlayVisible ? 1 : 0.9
+      })
+      .offset({ y: -40 })
+      .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
+      .hitTestBehavior(this.overlayPhase === 'menu' ? HitTestMode.Default : HitTestMode.None)
+
+      // 阶段2：拖拽跟手胶囊——常驻渲染，opacity 控制可见性
+      // V1+V3 修正：position 锚定手指起始点（不做动画），translate 驱动跟手偏移（Spring 可平滑归零）
+      Row({ space: 8 }) {
+        Text(this.overlayItem!.name)
+          .fontSize(14)
+          .fontColor(TEXT_MAIN)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .constraintSize({ maxWidth: 160 })
+      }
+      .height(40)
+      .padding({ left: 16, right: 16 })
+      .backgroundColor(CARD_BG)
+      .borderRadius(20)
+      .shadow({ radius: 16, color: OVERLAY_DIM, offsetY: 6 })
+      .position({ x: this.dragAnchorX, y: this.dragAnchorY })
+      .translate({ x: this.dragOffsetX, y: this.dragOffsetY - 40 })
+      .opacity(this.overlayPhase === 'dragging' ? 1 : 0)
+      .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
+      .hitTestBehavior(HitTestMode.None)
 
       // 目标 zone 高亮指示器（叠加在网格上方，只在拖拽态显示）
-      if (this.overlayPhase === 'dragging' && this.dropTargetZone !== null) {
+      if (this.dropTargetZone !== null && this.overlayPhase === 'dragging') {
         this.buildDropHighlight()
       }
     }
