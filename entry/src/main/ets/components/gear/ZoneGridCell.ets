@@ -13,6 +13,7 @@ import {
   PLACEHOLDER_COLOR,
   SHADOW_LIGHT,
   PRIMARY_COLOR,
+  LIGHT_PRIMARY_COLOR,
   ZONE_MISC_COLOR,
   ZONE_MISC_STROKE,
   ZONE_MISC_TINT
@@ -168,7 +169,9 @@ export struct ZoneGridCell {
       }
       .width('100%')
       .layoutWeight(1)
-      .backgroundColor(CARD_BG)
+      // C-2：拖拽目标格叠淡绿底（与外层绿框+glow 三重反馈），离开恢复白底
+      .backgroundColor(this.isDropTarget ? LIGHT_PRIMARY_COLOR : CARD_BG)
+      .animation({ curve: SPRING_GENERAL() })
       .borderRadius(CARD_RADIUS)
       // B-2：阴影升档 + 极淡部位色描边，形成「盒子感」
       .border({ width: 0.5, color: this.zoneStroke, style: BorderStyle.Solid })
