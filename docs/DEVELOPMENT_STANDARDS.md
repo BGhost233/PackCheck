@@ -250,6 +250,17 @@ animateTo({ curve: SPRING_HERO_EXPAND() }, () => {
 .transition(TransitionEffect.OPACITY)
 ```
 
+**同页就地放大（geometryTransition 第二种语境）：**
+
+同一页面内元素从小卡放大铺满（如核查清单网格态格子 ↔ 全屏聚焦态），与跨页转场参数相反——必须用 `{ follow: true }` 让节点从原几何中心连续插值长大，而非淡入淡出。
+
+```typescript
+// 两端为同一 id，且外壳结构 100% 一致（抽公共 Shell 组件复用）
+.geometryTransition('zone_' + zone, { follow: true })
+```
+
+铁律：(1) 两端共用同一外壳组件（如 `ZoneShell`），结构/样式 100% 对齐，否则 follow 期间会跳变；(2) 隐藏未参与端用 `opacity(0) + hitTest(None)`，禁止 `visibility(Hidden)`（脱离渲染树会丢失配对）；(3) 跨页 Navigation 转场反而禁止 follow:true（破坏文档流），二者不可混用。
+
 **级联入场（列表/菜单）：**
 
 ```typescript

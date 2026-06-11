@@ -1,6 +1,27 @@
 # Changelog
 
-## v0.7.0 (2026-06-11) · 开发中
+## v0.7.1 (2026-06-23)
+
+UI 质感提升（Phase A-E）+ 审查修订。功能骨架不动，只做视觉与交互反馈层精装修，向便单的质感看齐。
+
+**Phase A-E 质感提升**
+
+- **Phase A 拖动态去灰**：蒙层 dragging 阶段 opacity→0，胶囊浮起（scale 1.05 + 阴影加深）
+- **Phase B 容器化 + 空轻满重**：满格子白卡加 `ZONE_*_STROKE` 极淡描边 + 阴影升级 + 标题行浅染 `ZONE_*_TINT`；空格子改「空轻满重」降权——虚线降权框 + 不进 `geometryTransition`（B-3 层级倒置：空态不抢视觉权重），列高对齐
+- **Phase C 拖动物理感深化**：源位虚线空槽 + 目标格高亮微调
+- **Phase D 转场重构**：抽出共享 `ZoneShell` 外壳，网格态与聚焦态两端外壳 100% 一致 → `zone_*` 共享元素转场用 `{ follow: true }` 就地放大（节点从原格几何中心连续长大到聚焦落点）；背景联动压暗 + 虚化下沉（不缩放）
+- **Phase E 顶部信息区 + 进度条 + 勾选态**：元信息行图标点睛 + 数据强调；进度条填充换 `SPRING_COUNTER`；勾选完成态视觉强化
+
+**审查修订（审查文档 packcheck-v0.7.1-review.md · Everest · commit `4405f6b`）**
+
+- **P1/P2 统一标题行**：空态标题行原是 `buildTitleRow` 平行实现，未走 `ZoneShell` 浅染底。`ZoneShell` 新增 `contentDashed` 开关——开关打开时内容容器降级为透明无装饰占位，标题行复用统一外壳但内容区保持虚线降权（守住 B-3 空轻满重），删除 `ZoneGridCell.buildTitleRow`
+- **O3 手势层统一**：聚焦态 item 行原用 `Stack(透明 Image 手势层 + ChecklistRow)`，与网格态 `Column` wrapper 不一致。统一改为 `Column(){ ChecklistRow }.gesture(LongPressGesture 400→handleLongPress)`，tap 由 ChecklistRow onClick 处理
+- **O4 分隔点可见度**：列表元信息分隔点原用 `DIVIDER_COLOR(#F0F0F0)` 过淡看不见。新增 `META_SEPARATOR(#C2C2C2)` token（弱于 plain 文字 #999、强于纯背景线），TripDetailPage 分隔点改引用
+- **P3 维持 / O1·O2 不改**：聚焦浮层 `maxHeight '80%'` 维持（父容器 `height('100%')` 确定 + 已有 `'60%'` 生产先例，待真机验证）；O1 分隔点本身、O2 follow:true 平滑度评估后不改
+
+> 待真机验收（无法自动化）：P3 maxHeight '80%' 是否生效、O2 zone_* follow:true 转场平滑度、D 阶段录屏对比便单。
+
+## v0.7.0 (2026-06-23)
 
 带格子的核查清单（统一视图）· PackCheck 第二个灵魂。砍掉配装/清单 Tab 切换，合并为单一界面：预设身体部位格子作为分组骨架，格子里填装备 + 出发前逐项打勾。
 

@@ -20,9 +20,9 @@
 - 确认出发采用「滑动出发」交互（正圆滑块骑在轨道上 + 白色遮罩吞噬已滑区域 + 磁吸吸附 + 三阶段仪式 + 卡片飘走）
 - 滑块到达后三阶段仪式：Phase1 锁定确认（150ms，放大+波纹+双击振动）→ Phase2 充能蓄力（400ms，卡片收缩+文字切换+飞机旋转+光晕）→ Phase3 弹射升空（微放大+推力振动+飘走），总计~1000ms
 - 滑动过程增强：按下 haptic.effect.soft + 颜色加深 + 轨道下沉；滑动中绿色进度条 + 25%/50%/75% 棘轮振动
-- 主题色 `#2D7D46` 山野绿
+- 主题色 `#2D7D46` 山野绿；列表元信息分隔点用 `META_SEPARATOR(#C2C2C2)`（弱于 plain 文字 #999、强于背景线；不要用 `DIVIDER_COLOR(#F0F0F0)` — 过淡看不见）
 - 所有动画使用 Spring 弹性曲线，严禁 linear/ease
-- 页面转场使用 `geometryTransition(id)` 无参形式（非 sharedTransition；禁止 `{ follow: true }` — 会破坏文档流布局）
+- `geometryTransition` 两种语境，参数不同（详避坑 #10）：跨页 Navigation 转场（`trip-*`）用**无参形式**（follow:true 会破坏文档流布局）；同页就地放大（`zone_*` 网格态↔聚焦态）用 **`{ follow: true }`**，前提是两端 `ZoneShell` 外壳 100% 一致 + 同帧赋值
 - NavDestination 加 `.onBackPressed()` 拦截系统手势返回，统一走 `animateTo { pop(false) }` 保证 geometryTransition 生效
 - 转场 Spring 参数：expand `springMotion(0.42, 0.73)`，collapse `springMotion(0.36, 0.78)` — 经实机调优，兼顾弹性和克制
 - 转场时源页面施加 `contentBlur=12` + `contentScale=0.94` 消散效果，增强空间纵深
@@ -65,8 +65,9 @@
 - TripCeremonyCard 暴露 `onExitStart` 回调，退场动画启动第一帧触发，供父组件并行驱动背景恢复
 - **统一核查清单视图（v0.7.0 第二灵魂）**：行程详情页砍掉配装/清单 SegmentButton 切换，合并为单一 `UnifiedChecklistView`。组件结构：
   - `UnifiedChecklistView`（容器）：网格态展示 7 个身体部位 Zone（2 列网格 + 杂项跨列），管理 focusedZone / focusedCloseSignal 透传
-  - `ZoneGridCell`：单个格子卡片，空态铺虚线框 + 「+」，有内容显示装备摘要；点击触发 geometryTransition 共享元素转场
-  - `FocusedZoneView`：全屏聚焦态，点格子放大铺满全屏逐项核查；内含 ChecklistRow 列表 + buildItemDetail 手风琴详情 + buildAddRow
+  - `ZoneShell`（v0.7.1 抽出）：网格态与聚焦态**共用同一外壳**（标题行浅染 `ZONE_*_TINT` + `ZONE_*_STROKE` 描边），两端 100% 一致是 `zone_*` geometryTransition `{ follow: true }` 就地放大不退化的前提。`@Prop contentDashed` 开关：为 true 时内容容器降级为透明无装饰占位（供空态复用外壳但不抢视觉权重）
+  - `ZoneGridCell`：单个格子卡片，满格走 `ZoneShell` 白卡、点击触发 `zone_*` 转场；空格子走 `ZoneShell(contentDashed:true)` 的虚线降权框（`buildEmptyContent`）**不进 geometryTransition**—「空轻满重」B-3：空态不抢视觉权重。已删 `buildTitleRow` 平行实现
+  - `FocusedZoneView`：全屏聚焦态，点格子放大铺满全屏逐项核查；内含 ChecklistRow 列表 + buildItemDetail 手风琴详情 + buildAddRow。item 行长按手势用 `Column` wrapper + `LongPressGesture`（O3：与网格态统一，不用透明 Stack 图层）；maxHeight `'80%'`（父容器 height('100%') 确定，沿用 '60%' 生产先例）
   - `ChecklistRow`：单行装备，契约 `checkOnlyHotzone=true` → check 圆圈负责勾选、行其余区域调 `onTapRow`（聚焦态用于展开详情）
   - Zone 映射：`BodyZone` 枚举 + `CATEGORY_SLOT_MAP` 在 `constants/GearLoadout.ets`；`groupByZoneAll`/`groupByZone`/`sortItemsByLayer` 等聚合函数在 `services/LoadoutService.ets`。装备按 `category` 查表自动归入格子
 - `ChecklistItem { id, name, group, checked, weight?, price?, fromGearId? }`（无 category/note/brand；聚焦态详情经 fromGearId 反查 GearItem 取 category/brand/note）
@@ -82,7 +83,7 @@
 7. **动画不要叠加** — 同一属性不能同时有 `.animation()` 和 `animateTo()`，选一种。实战案例：WeightGauge ring 的 `.scale()` 同时有 `.animation({ curve: SPRING_PRESS() })` 修饰和 `animateTo` 驱动 → 运行时两者竞争产生卡顿/抖动。解法：去掉 `.animation()` 修饰，只保留 `animateTo` 统一驱动
 8. **@Builder 回调参数 this 丢失** — 异步回调（弹窗/选择器）中 this 丢失。规则：参数只传数据，不传带 this 的回调
 9. **onTouch vs onClick 冲突** — 父 `.onClick()` 拦截子事件。父只需触摸态时用 `.onTouch(TouchType.Down)` 代替
-10. **geometryTransition + Navigation** — pushPath/pop 必须在 animateTo 内 + animated=false；NavDestination 加 `.transition(OPACITY)`；禁止 `{ follow: true }`；必须 `.onBackPressed()` 拦截系统返回走 animateTo
+10. **geometryTransition 分两种语境**—跨页 Navigation（`trip-*` 首页→详情）：pushPath/pop 必须在 animateTo 内 + animated=false；NavDestination 加 `.transition(OPACITY)`；用**无参形式**（`{ follow: true }` 会破坏文档流布局）；必须 `.onBackPressed()` 拦截系统返回走 animateTo。同页就地放大（`zone_*` UnifiedChecklistView 网格态↔聚焦态）：反而要用 **`{ follow: true }`** 让节点从原格几何中心连续长大到落点，前提是两端 `ZoneShell` 外壳 100% 一致 + 同帧赋值；隐藏源节点用 `opacity(0)+hitTest(None)` 不能 `visibility(Hidden)`（后者脱离渲染树丢失配对端）
 11. **覆盖层退场背景恢复必须并行** — 子组件暴露 `onExitStart`，退场第一帧触发；恢复用 EaseOut 不用 Spring
 12. **波纹/粒子用固定组件** — 预置固定数量 Circle + `.animation()` 驱动，不用 ForEach 动态创建
 13. **连续手势振动节奏** — 棘轮式按阈值触发，state 记录已触发阈值防重复。预设：clock.timer < effect.soft < effect.hard < effect.sharp
