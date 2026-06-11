@@ -26,7 +26,11 @@ import { zoneDisplayName, zoneIconName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
 
 // 网格态单格内最多预览的 item 数（超出折叠为「+N 件」提示）。spec §2.1.3
-const MAX_PREVIEW_ITEMS: number = 3;
+// P4：收缩态露 4 个装备名（配合降格高）
+const MAX_PREVIEW_ITEMS: number = 4;
+// P4：网格态核查行压缩一档（聚焦态仍用默认宽松尺寸）
+const GRID_ROW_HEIGHT: number = 32;
+const GRID_CHECK_SIZE: number = 20;
 
 @Component
 export struct ZoneGridCell {
@@ -71,8 +75,8 @@ export struct ZoneGridCell {
         ForEach(this.previewItems(), (item: ChecklistItem) => {
           ChecklistRow({
             item: item,
-            rowHeight: 40,
-            checkSize: 22,
+            rowHeight: GRID_ROW_HEIGHT,
+            checkSize: GRID_CHECK_SIZE,
             checkOnlyHotzone: true,
             onToggleCheck: this.onToggleCheck
           })

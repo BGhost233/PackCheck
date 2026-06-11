@@ -8,6 +8,8 @@ import {
   PRIMARY_COLOR,
   TEXT_SECONDARY,
   CARD_BG,
+  PAGE_BG,
+  TRANSPARENT,
   OVERLAY_DIM,
   ZONE_HEAD_COLOR,
   ZONE_UPPER_COLOR,
@@ -45,9 +47,12 @@ const GRID_SINGLE_ZONES: string[] = [
 // 网格布局常量
 const GRID_PADDING: number = 16;   // 左右页边距
 const GRID_GUTTER: number = 12;    // 行/列间距
-const FIRST_SCREEN_ROWS: number = 2.5; // 首屏暗示密度：2 行完整 + 半行
-// 反算兜底（无法取得屏高时）
-const CELL_HEIGHT_FALLBACK: number = 160;
+// P4：首屏暗示密度提高到 2.8 行（2 行完整 + 0.8 行露头），单格更矮、底部留出下滑暗示
+const FIRST_SCREEN_ROWS: number = 2.8;
+// 反算兜底（无法取得屏高时）。P4：随密度提高同步下调
+const CELL_HEIGHT_FALLBACK: number = 148;
+// P4：底部渐隐高斯模糊遮罩高度，暗示下方还有格子可滑
+const BOTTOM_FADE_HEIGHT: number = 64;
 
 @Component
 export struct UnifiedChecklistView {
@@ -112,6 +117,9 @@ this.computeCellHeight();
         // P1：空态不再切引导页，统一走网格态——0 件时所有 Zone 走虚线空格子，
         // 用户直接点对应部位空格子加装备（「带格子的核查清单」纲领）。
         this.buildGridState()
+
+        // P4：底部渐隐高斯模糊遮罩，暗示下方还有格子可滑（聚焦态隐藏）。
+        this.buildBottomFade()
 
         // FAB 始终显示（空态也可从右下角全局新增）。
         this.buildFAB()
@@ -287,6 +295,26 @@ this.computeCellHeight();
       y: (this.appeared ? 1 : 0.8) * this.fabScale
     })
     .animation({ curve: SPRING_GENERAL(), delay: 200 })
+  }
+
+  // ---- 底部渐隐高斯模糊遮罩（P4）----
+  // 贴底渐隐：上透明 → 下 PAGE_BG，叠轻度模糊，暗示下方还有格子可滑。
+  // hitTestBehavior(None)：不拦截滚动/点击，纯视觉层。聚焦态隐藏。
+  @Builder
+  private buildBottomFade() {
+    Column()
+      .width('100%')
+      .height(BOTTOM_FADE_HEIGHT)
+      .backgroundBlurStyle(BlurStyle.Thin)
+      .linearGradient({
+        angle: 180,
+        colors: [[TRANSPARENT, 0.0], [PAGE_BG, 1.0]]
+      })
+      .position({ left: 0, bottom: 0 })
+      .hitTestBehavior(HitTestMode.None)
+      .visibility(this.focusedZone == null ? Visibility.Visible : Visibility.Hidden)
+      .opacity(this.appeared ? 1 : 0)
+      .animation({ curve: SPRING_GENERAL(), delay: 150 })
   }
 
   // ---- Helpers ----
