@@ -14,6 +14,7 @@ import {
 import { vibrator } from '@kit.SensorServiceKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
+import { computeGearTripCount } from '../services/FootprintService';
 import {
   ARROW_COLOR,
   CARD_BG,
@@ -356,8 +357,9 @@ export struct GearPage {
     return value === undefined ? 0 : value;
   }
 
+  // 同行次数实时派生：含该装备的不同行程数，单一事实源是行程数据（不再读 item.tripCount）
   private gearTripCount(item: GearItem): number {
-    return item.tripCount === undefined ? 0 : item.tripCount;
+    return computeGearTripCount(item.id, this.checklists);
   }
 
   private gearValueRatio(item: GearItem): number {
