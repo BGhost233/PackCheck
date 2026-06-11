@@ -18,7 +18,21 @@ import {
   ZONE_FEET_COLOR,
   ZONE_CARRY_COLOR,
   ZONE_SLEEP_COLOR,
-  ZONE_MISC_COLOR
+  ZONE_MISC_COLOR,
+  ZONE_HEAD_STROKE,
+  ZONE_UPPER_STROKE,
+  ZONE_LOWER_STROKE,
+  ZONE_FEET_STROKE,
+  ZONE_CARRY_STROKE,
+  ZONE_SLEEP_STROKE,
+  ZONE_MISC_STROKE,
+  ZONE_HEAD_TINT,
+  ZONE_UPPER_TINT,
+  ZONE_LOWER_TINT,
+  ZONE_FEET_TINT,
+  ZONE_CARRY_TINT,
+  ZONE_SLEEP_TINT,
+  ZONE_MISC_TINT
 } from '../../constants/Colors';
 import {
   SPRING_GENERAL,
@@ -702,6 +716,34 @@ this.computeCellHeight();
       case BodyZone.Sleep: return ZONE_SLEEP_COLOR;
       case BodyZone.Misc: return ZONE_MISC_COLOR;
       default: return TEXT_SECONDARY;
+    }
+  }
+
+  // B-1：zone → 容器描边色（饱和度分档），透传给 ZoneGridCell / ZoneShell
+  private zoneStroke(zone: string): string {
+    switch (zone) {
+      case BodyZone.Head: return ZONE_HEAD_STROKE;
+      case BodyZone.UpperBody: return ZONE_UPPER_STROKE;
+      case BodyZone.LowerBody: return ZONE_LOWER_STROKE;
+      case BodyZone.Feet: return ZONE_FEET_STROKE;
+      case BodyZone.Carry: return ZONE_CARRY_STROKE;
+      case BodyZone.Sleep: return ZONE_SLEEP_STROKE;
+      case BodyZone.Misc: return ZONE_MISC_STROKE;
+      default: return ZONE_MISC_STROKE;
+    }
+  }
+
+  // B-1：zone → 浅染底色（复用 ZONE_*_TINT），用于标题行浅彩底
+  private zoneTint(zone: string): string {
+    switch (zone) {
+      case BodyZone.Head: return ZONE_HEAD_TINT;
+      case BodyZone.UpperBody: return ZONE_UPPER_TINT;
+      case BodyZone.LowerBody: return ZONE_LOWER_TINT;
+      case BodyZone.Feet: return ZONE_FEET_TINT;
+      case BodyZone.Carry: return ZONE_CARRY_TINT;
+      case BodyZone.Sleep: return ZONE_SLEEP_TINT;
+      case BodyZone.Misc: return ZONE_MISC_TINT;
+      default: return ZONE_MISC_TINT;
     }
   }
 }

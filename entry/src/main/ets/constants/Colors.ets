@@ -99,6 +99,17 @@ export const ZONE_CARRY_TINT: string = '#33FFA726';
 export const ZONE_SLEEP_TINT: string = '#337E57C2';
 export const ZONE_MISC_TINT: string = '#3378909C';
 
+// ============ Zone 容器描边色（按饱和度分档，B-1） ============
+// 高饱和（蓝/红/靛）~8% alpha，中饱和（橙/紫）~11%，低饱和（棕/灰蓝）~14%，
+// 目的：视觉描边深浅在七个部位间观感均衡，避免高饱和色描边过重。
+export const ZONE_HEAD_STROKE: string = '#1442A5F5';
+export const ZONE_UPPER_STROKE: string = '#14EF5350';
+export const ZONE_LOWER_STROKE: string = '#145C6BC0';
+export const ZONE_FEET_STROKE: string = '#248D6E63';
+export const ZONE_CARRY_STROKE: string = '#1CFFA726';
+export const ZONE_SLEEP_STROKE: string = '#1C7E57C2';
+export const ZONE_MISC_STROKE: string = '#2478909C';
+
 // ============ Ceremony 渐变/光效 ============
 export const WHITE_TRANSPARENT: string = '#00FFFFFF';
 export const SHIMMER_WHITE_FAINT: string = '#18FFFFFF';
