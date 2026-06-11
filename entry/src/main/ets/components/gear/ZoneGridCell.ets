@@ -1,7 +1,8 @@
 // 统一清单视图 - 网格态单格组件
 // 职责：渲染单个 BodyZone 的格子（有内容态白卡 / 空态虚线框）
-// 标题行 = Zone 色条 + 图标 + 名称 + 数量；点击标题进全屏聚焦（Phase 3 接入）
-// Phase 1：仅骨架（标题 + 空态/有内容态外壳 + item 名称占位）；CheckMark / 勾选交互留 Phase 2
+// 标题行 = Zone 色条 + 图标 + 名称 + 数量；点击标题/白卡主体进全屏聚焦
+// P2 双热区：白卡内 ChecklistRow 走 checkOnlyHotzone——点 check 圆圈仅勾选，
+//   点装备名/空白/标题冒泡到外层触发全屏聚焦。空态点虚线框打开 picker。
 // spec §2.1.3 / §2.1.2
 
 import {
@@ -41,6 +42,8 @@ export struct ZoneGridCell {
 
   // 标题行按压
   @State private titlePressed: boolean = false;
+  // P2：白卡主体（装备名/空白）按压——点这里整卡进全屏聚焦，与标题行同语义
+  @State private contentPressed: boolean = false;
 
   build() {
     // 空态与有内容态双层常驻，用 opacity 互斥做 crossfade，避免 if/else 硬切（review V3）。
@@ -62,12 +65,15 @@ export struct ZoneGridCell {
       this.buildTitleRow(true)
 
       // 内容白卡：前 N 条 item 核查行 + 折叠提示
+      // P2：白卡整体绑 onClick→进全屏聚焦；ChecklistRow 走双热区（checkOnlyHotzone），
+      //   点 check 圆圈仅勾选不冒泡，点装备名/空白冒泡到这里触发聚焦。
       Column({ space: 0 }) {
         ForEach(this.previewItems(), (item: ChecklistItem) => {
           ChecklistRow({
             item: item,
             rowHeight: 40,
             checkSize: 22,
+            checkOnlyHotzone: true,
             onToggleCheck: this.onToggleCheck
           })
         }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
@@ -93,6 +99,19 @@ export struct ZoneGridCell {
       .clip(true)
       .alignItems(HorizontalAlign.Start)
       .justifyContent(FlexAlign.Start)
+      .scale({ x: this.contentPressed ? PRESS_SCALE_DOWN : 1.0, y: this.contentPressed ? PRESS_SCALE_DOWN : 1.0 })
+      .animation({ curve: SPRING_PRESS() })
+      .onTouch((e: TouchEvent) => {
+        if (e.type === TouchType.Down) {
+          this.contentPressed = true;
+        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+          this.contentPressed = false;
+        }
+      })
+      .onClick(() => {
+        // 点装备名/空白/折叠提示均进全屏聚焦（check 圆圈已拦截不冒泡到此）
+        this.onTapTitle(this.zone);
+      })
     }
     .width('100%')
     .height('100%')

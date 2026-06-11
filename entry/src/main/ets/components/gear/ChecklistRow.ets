@@ -2,6 +2,8 @@
 // 职责：左侧圆形 CheckMark + 装备名，点击切换 checked，勾选弹跳动画
 // 网格态（紧凑）与全屏聚焦态（宽松）共用，通过 rowHeight/checkSize prop 调整尺寸
 // spec §2.1.3 / §3.3：勾选 scale 0.8→1.1→1.0(SPRING_PRESS)；已勾文字变灰 + 实心绿勾
+// P2 双热区：checkOnlyHotzone=true 时整行不绑 onClick，只 check 圆圈拦截勾选，
+//   装备名/空白处的点击冒泡到外层格子触发聚焦；false 时整行点击即勾选（聚焦态用）
 
 import {
   PRIMARY_COLOR,
@@ -26,6 +28,8 @@ export struct ChecklistRow {
   @Prop rowHeight: number = 40;
   @Prop checkSize: number = 24;
   @Prop fontSize: number = FONT_SIZE_BODY_MEDIUM;
+  // P2：true 时仅 check 圆圈是勾选热区，整行其余区域点击冒泡给外层（网格态）
+  @Prop checkOnlyHotzone: boolean = false;
 
   // 回调
   onToggleCheck: (itemId: string) => void = () => {};
@@ -61,6 +65,8 @@ export struct ChecklistRow {
   build() {
     Row({ space: 10 }) {
       // 圆形 CheckMark：未勾空心灰圈 / 已勾实心绿圆 + 白勾
+      // P2：checkOnlyHotzone 时此 Stack 单独绑 onClick 拦截勾选 + 按压反馈，
+      //   不触碰整行 onClick，避免与外层聚焦手势冲突
       Stack() {
         // 外圈（恒在）
         Circle()
@@ -82,6 +88,28 @@ export struct ChecklistRow {
       .width(this.checkSize)
       .height(this.checkSize)
       .alignContent(Alignment.Center)
+      // 热区命中区域略放大，便于点击；按压反馈仅在双热区模式下挂到圆圈上
+      .scale({
+        x: this.checkOnlyHotzone && this.pressed ? 0.9 : 1.0,
+        y: this.checkOnlyHotzone && this.pressed ? 0.9 : 1.0
+      })
+      .animation({ curve: SPRING_PRESS() })
+      .onTouch((e: TouchEvent) => {
+        if (!this.checkOnlyHotzone) {
+          return;
+        }
+        if (e.type === TouchType.Down) {
+          this.pressed = true;
+        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+          this.pressed = false;
+        }
+      })
+      .onClick(() => {
+        if (this.checkOnlyHotzone) {
+          // 拦截：仅圆圈触发勾选，点击不冒泡到外层格子聚焦手势
+          this.onToggleCheck(this.item.id);
+        }
+      })
 
       // 装备名（已勾变灰）
       Text(this.item.name)
@@ -97,9 +125,16 @@ export struct ChecklistRow {
     .height(this.rowHeight)
     .padding({ left: 12, right: 12 })
     .alignItems(VerticalAlign.Center)
-    .scale({ x: this.pressed ? 0.96 : 1.0, y: this.pressed ? 0.96 : 1.0 })
+    // 整行按压反馈仅在「整行点击勾选」模式（聚焦态）下生效
+    .scale({
+      x: !this.checkOnlyHotzone && this.pressed ? 0.96 : 1.0,
+      y: !this.checkOnlyHotzone && this.pressed ? 0.96 : 1.0
+    })
     .animation({ curve: SPRING_PRESS() })
     .onTouch((e: TouchEvent) => {
+      if (this.checkOnlyHotzone) {
+        return;
+      }
       if (e.type === TouchType.Down) {
         this.pressed = true;
       } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
@@ -107,7 +142,10 @@ export struct ChecklistRow {
       }
     })
     .onClick(() => {
-      this.onToggleCheck(this.item.id);
+      // 双热区模式整行不绑勾选，点击冒泡至外层格子触发聚焦
+      if (!this.checkOnlyHotzone) {
+        this.onToggleCheck(this.item.id);
+      }
     })
   }
 }
