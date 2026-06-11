@@ -155,6 +155,7 @@ export struct GearPickerSheet {
                 this.buildCategorySection(group)
               }, (group: CategoryGroup) => group.category + '_' + group.gears.length.toString())
             }
+            .padding({ top: 4 })
           }
           .layoutWeight(1)
           .scrollBar(BarState.Off)
@@ -324,18 +325,27 @@ export struct GearPickerSheet {
     .alignContent(Alignment.Center)
   }
 
-  // P5：单个品类分组——折叠头（品类名 + 计数 + chevron）+ 展开时的装备行列表
+  // 问题3：iOS grouped 风格分组——浅灰胶囊标题块（色条 + 加重标题 + 计数 + chevron）
+  //   + 组间留白 + 展开时装备行缩进，增强各品类区分度。
   @Builder
   private buildCategorySection(group: CategoryGroup) {
     Column({ space: 0 }) {
-      // 分组头（可点击折叠/展开）
+      // 分组头：浅灰胶囊标题块（可点击折叠/展开）
       Row({ space: 8 }) {
+        // 左侧主题色条，强化分组起点的视觉锚点
+        Row()
+          .width(3)
+          .height(14)
+          .borderRadius(1.5)
+          .backgroundColor(PRIMARY_COLOR)
+
         Text(group.category)
-          .fontSize(13)
-          .fontWeight(FontWeight.Medium)
+          .fontSize(14)
+          .fontWeight(FontWeight.Bold)
           .fontColor(TEXT_MAIN)
         Text(group.gears.length.toString())
           .fontSize(12)
+          .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_TERTIARY)
         Blank()
         SymbolGlyph($r('sys.symbol.chevron_right'))
@@ -346,19 +356,29 @@ export struct GearPickerSheet {
           .animation({ curve: SPRING_CHEVRON() })
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 12, bottom: 12 })
+      .height(40)
+      .padding({ left: 12, right: 12 })
+      .borderRadius(10)
+      .backgroundColor(INPUT_BG)
+      .alignItems(VerticalAlign.Center)
       .onClick(() => {
         this.toggleCategory(group.category);
       })
 
-      // 展开态：该品类下装备行
+      // 展开态：该品类下装备行（整体缩进，从属于上方分组头）
       if (this.isCategoryExpanded(group.category)) {
-        ForEach(group.gears, (gear: GearItem) => {
-          this.buildGearRow(gear)
-        }, (gear: GearItem) => gear.id)
+        Column({ space: 0 }) {
+          ForEach(group.gears, (gear: GearItem) => {
+            this.buildGearRow(gear)
+          }, (gear: GearItem) => gear.id)
+        }
+        .width('100%')
+        .padding({ top: 4 })
       }
     }
     .width('100%')
+    // 组间留白：分组与分组之间拉开距离，强化分块感
+    .margin({ bottom: 10 })
   }
 
   @Builder
@@ -401,7 +421,8 @@ export struct GearPickerSheet {
       .animation({ curve: SPRING_PRESS() })
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+    // grouped 风格缩进：装备行左缩到与分组头色条对齐内侧，体现从属层级
+    .padding({ left: 24, right: 12, top: 11, bottom: 11 })
     .onClick(() => {
       this.onToggleGear(gear);
     })

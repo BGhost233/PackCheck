@@ -274,16 +274,20 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
             }
           })
         } else if (this.sheetMode === SHEET_GEAR_PICKER) {
+          // 问题3 根因修复：GearPickerSheet 根节点 height('100%') 在外层 Column({space:14}) 里
+          // 无 layoutWeight 时高度计算异常，把搜索栏顶到上方、Scroll 撑到卡片底，中间留出大段空白。
+          // 加 .layoutWeight(1) 让它正确吃掉卡片剩余高度，分组紧贴汇总栏。
           GearPickerSheet({
             gears: this.gears,
             categories: this.categories,
             selectedItemIds: this.pickerSelectedIds,
             preselectZone: this.pickerPreselectZone,
-onToggleGear: this.onPickerToggleGear,
-onAddGear: this.onPickerAddGear,
-onClose: this.onClose
-})
-} else if (this.sheetMode === SHEET_GEAR_ITEM_ACTION) {
+            onToggleGear: this.onPickerToggleGear,
+            onAddGear: this.onPickerAddGear,
+            onClose: this.onClose
+          })
+            .layoutWeight(1)
+        } else if (this.sheetMode === SHEET_GEAR_ITEM_ACTION) {
           GearItemActionSheet({
             item: this.actionItem,
             onMoveToZone: this.onActionMoveToZone,
