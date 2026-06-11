@@ -163,6 +163,11 @@ struct Index {
   @State private selectedMultiGearIds: string[] = [];
   @State private generateTripTitle: string = '';
   @State private selectedChecklistId: string = '';
+  // 问题4a：聚焦态 @State 源，向 TripDetailPage → UnifiedChecklistView @Link 透传。
+  //   null = 网格态，非 null = 当前聚焦的 Zone。onBackPressed 据此分层拦截。
+  @State private focusedZone: string | null = null;
+  // 问题4a：递增此信号通知 UnifiedChecklistView 走带动画的收起聚焦（避免 Index 直接改 focusedZone 丢动画）。
+  @State private focusedCloseSignal: number = 0;
   @State private sheetMode: string = SHEET_NONE;
   @State private sheetTranslateY: number = 800;
   @State private sheetOverlayOpacity: number = 0;
@@ -1086,6 +1091,8 @@ struct Index {
   }
 
   private returnToHome(): void {
+    // 问题4a：离开行程详情页时清空聚焦态，避免下次进入残留
+    this.focusedZone = null;
     this.stopShakeListening();
     this.tabsController.changeIndex(0);
     if (this.navPathStack.size() > 0) {
@@ -1860,6 +1867,8 @@ struct Index {
           collapsedGroups: this.collapsedGroups,
           highlightedItemId: this.highlightedItemId,
           checklistRenderNonce: this.checklistRenderNonce,
+          focusedZone: this.focusedZone,
+          closeFocusSignal: this.focusedCloseSignal,
           onReturnHome: () => {
             this.returnToHome();
           },
@@ -1902,6 +1911,9 @@ struct Index {
           onLongPressItem: (item: ChecklistItem) => {
             this.openGearItemActionSheet(item);
           },
+          onMoveItemToZone: (itemId: string, zone: string) => {
+            this.moveItemToZone(itemId, zone);
+          },
           onLayerChange: (itemId: string, layer: string) => {
             // 一期取消「层级」概念，spec D-1：保留 callback 签名占位，无逻辑
           },
@@ -1919,6 +1931,16 @@ struct Index {
       .geometryTransition('trip-' + this.selectedChecklistId)
       .transition(TransitionEffect.opacity(0))
       .onBackPressed(() => {
+        // 问题4a：系统返回/侧滑手势分层拦截——优先关 sheet，其次收聚焦，最后才返回首页。
+        if (this.sheetMode !== SHEET_NONE) {
+          this.closeSheet();
+          return true;
+        }
+        if (this.focusedZone != null) {
+          // 递增信号让 UnifiedChecklistView 走带动画收起（不直接改 focusedZone 以保留动画）
+          this.focusedCloseSignal = this.focusedCloseSignal + 1;
+          return true;
+        }
         this.returnToHome();
         return true;
       })

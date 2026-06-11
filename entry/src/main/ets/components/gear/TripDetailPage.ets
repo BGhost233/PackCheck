@@ -22,6 +22,10 @@ export struct TripDetailPage {
   @Prop collapsedGroups: string[] = [];
   @Prop highlightedItemId: string = '';
   @Prop checklistRenderNonce: number = 0;
+  // 问题4a：聚焦态由 Index 持有 @State 源，本层 @Link 透传给 UnifiedChecklistView，使 Index onBackPressed 能分层拦截
+  @Link focusedZone: string | null;
+  // 问题4a：Index 命中聚焦态时递增此信号，透传给 UnifiedChecklistView 走带动画收起
+  @Prop closeFocusSignal: number;
 
   // 返回按钮按压
   @State private backScale: number = 1.0;
@@ -52,6 +56,8 @@ export struct TripDetailPage {
   onOpenGearPicker: (zone?: string) => void = () => {};
   onLongPressItem: (item: ChecklistItem) => void = () => {};
   onLayerChange: (itemId: string, layer: string) => void = () => {};
+  // 问题4：聚焦态长按转拖拽移动装备到目标 Zone（改 group），透传到 Index 持久化
+  onMoveItemToZone: (itemId: string, zone: string) => void = () => {};
 
   private currentChecklist(): TripChecklist | undefined {
     for (let i = 0; i < this.checklists.length; i++) {
@@ -93,8 +99,13 @@ export struct TripDetailPage {
         trip: this.currentChecklist() ?? { id: '', title: '', items: [], createdAt: 0 },
         gears: this.gears,
         reservedTopHeight: this.reservedTop(),
+        focusedZone: this.focusedZone,
+        closeFocusSignal: this.closeFocusSignal,
         onOpenPicker: (zone?: string) => { this.onOpenGearPicker(zone); },
-        onToggleCheck: this.onToggleChecklistItem
+        onToggleCheck: this.onToggleChecklistItem,
+        onMoveItemToZone: this.onMoveItemToZone,
+        onEditItem: this.onOpenEditItem,
+        onRemoveItem: this.onDeleteChecklistItem
       })
         .layoutWeight(1)
     }

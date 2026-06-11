@@ -67,6 +67,12 @@ export struct UnifiedChecklistView {
   // zone 可选：从空格子进入时透传对应 Zone，picker 据此排序高亮并预选临时新建分区（review I4）
   onOpenPicker: (zone?: string) => void = () => {};
   onToggleCheck: (itemId: string) => void = () => {};
+  // 问题4：装备移动到目标 Zone（聚焦态长按转拖拽落点 → 改 group），透传到 Index 持久化
+  onMoveItemToZone: (itemId: string, zone: string) => void = () => {};
+  // 问题4：聚焦态长按菜单「编辑」，透传到 Index 打开编辑态
+  onEditItem: (item: ChecklistItem) => void = () => {};
+  // 问题4：聚焦态长按菜单「从本次行程移除」，透传到 Index
+  onRemoveItem: (itemId: string) => void = () => {};
 
   // FAB 按压状态
   @State private fabScale: number = 1.0;
@@ -75,7 +81,11 @@ export struct UnifiedChecklistView {
   // 反算得到的单格高度
   @State private cellHeight: number = CELL_HEIGHT_FALLBACK;
   // 全屏聚焦的 Zone（null = 网格态）。spec §2.2 / §4.5.6
-  @State private focusedZone: string | null = null;
+  // 问题4a：改 @Link 由 Index 持有 @State 源，使 onBackPressed 能读判断「是否聚焦」做分层拦截。
+  //   注意：Index 不直接改此值（会丢收起动画），而是递增 closeFocusSignal 让本组件走带动画的 closeFocus()。
+  @Link focusedZone: string | null;
+  // 问题4a：Index 命中聚焦态时递增此信号，本组件 @Watch 后走带动画的 closeFocus()。
+  @Prop @Watch('onCloseFocusSignal') closeFocusSignal: number;
   // 当前/上次聚焦渲染的 Zone（F-3：FocusedZoneView 常驻树用 visibility 切换，退场时仍需有 zone 可渲染）
   @State private focusedZoneRender: string = BodyZone.Misc;
 
@@ -154,6 +164,19 @@ this.computeCellHeight();
       .height('100%')
       .visibility(this.focusedZone != null ? Visibility.Visible : Visibility.Hidden)
       .hitTestBehavior(this.focusedZone != null ? HitTestMode.Default : HitTestMode.None)
+  }
+
+  // 问题4a：Index onBackPressed 命中聚焦态时递增 closeFocusSignal，此处响应走带动画的收起。
+  //   首帧 closeFocusSignal=0 不触发；仅当外部递增（>0 且无聚焦时也无害）才收起。
+  private lastCloseSignal: number = 0;
+  onCloseFocusSignal(): void {
+    if (this.closeFocusSignal === this.lastCloseSignal) {
+      return;
+    }
+    this.lastCloseSignal = this.closeFocusSignal;
+    if (this.focusedZone != null) {
+      this.closeFocus();
+    }
   }
 
   // 进入聚焦：先设定渲染 zone，再 Spring 放大
