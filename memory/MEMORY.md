@@ -3,7 +3,15 @@
 ## 工作流约定
 
 - **每次改动即 commit**：每次修改构建验证通过后，立即 `git add -A && git commit`，保持细粒度回滚点，方便随时回滚。
-- **构建命令**：`/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin/hvigorw assembleApp --no-daemon`（hvigorw 位于 command-line-tools 独立安装目录，无需 DEVECO_SDK_HOME）
+- **构建命令**（推荐，本轮验证有效）：
+  ```bash
+  cd /Users/bghost233/Documents/PackCheck && \
+  export DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk" && \
+  export PATH="/Applications/DevEco-Studio.app/Contents/tools/node/bin:$PATH" && \
+  /Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleHap --mode module -p product=default --no-daemon 2>&1 | grep -E "ERROR|BUILD"
+  ```
+  用 DevEco-Studio 内置的 hvigor + node + SDK，必须导出 `DEVECO_SDK_HOME`。`grep -E "ERROR|BUILD"` 过滤出关键行。
+  （旧路径 `/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin/hvigorw assembleApp` 仍存在但已弃用 — 任务名 assembleApp 不被当前工程接受，统一用上面这套。）
 - **先出方案再动手**：任何需求先输出理解+方案+理由，确认后才写代码。
 
 ## 设计决策
@@ -33,6 +41,14 @@
 - 行程托盘动态滚速：边缘区域 100vp，二次曲线加速 `speed = minSpeed + (maxSpeed - minSpeed) * t²`（min=2, max=12），手感自然。Timer 每次回调读 mutable field `trayScrollSpeed`，无需重启 timer 即可变速
 - 行程托盘尺寸优化：位置从 screenHeight-200 → screenHeight-240，卡片从 100×80 → 88×68，间距 12→10，容纳更多行程
 
+### 聚焦态完整交互体系（问题4，v0.7.0）
+
+- **4a 收起态透传链**：focusedZone 由 Index `@State` 源 → TripDetailPage `@Link` → UnifiedChecklistView `@Link` → FocusedZoneView `@Prop active` 三层透传。onBackPressed 分层拦截：sheet 打开→closeSheet / focusedZone≠null→focusedCloseSignal++ / else→returnToHome
+- **4a 收起保留动画技巧**：Index 不直接改 focusedZone（会丢 SPRING_HERO_COLLAPSE 转场动画），而是递增 `focusedCloseSignal: number`，下游组件 @Watch 后调组件内 `closeFocus()` 走正常退场
+- **4b 点空白/左右划收起**：借力 ArkUI 事件消费机制——组件绑 `.onClick`（即便空回调）即消费事件不冒泡。聚焦态根 Column 绑 `.onClick(() => onClose())` 收起，各子元素各自消费自己的点击，只有点空白区才冒泡触发收起。配 `PanGesture({direction: Horizontal, distance: 24})` 左右划也收起。不新增返回按钮
+- **4c 单击装备名展开详情（手风琴）**：ChecklistRow 用 `checkOnlyHotzone: true` 让 check 圆圈只负责勾选、行其余调 `onTapRow` → `toggleExpand(item.id)`（SPRING_GENERAL 手风琴 toggle，同时只展开一个）。详情 buildItemDetail 经 fromGearId 反查 GearItem 取 category/brand/note，用 Flex wrap chips 展示。ForEach key 拼入展开态 `(expandedItemId===item.id?'e':'c')`。进退聚焦时 onActiveChange 重置 expandedItemId
+- **4d 长按菜单 + 拖拽跨区（推迟 phase4）**：onEditItem/onRemoveItem/onMoveItemToZone 三回调透传链已贯通到 FocusedZoneView 并预埋注释，Index.moveItemToZone 改 group 逻辑已就绪。手势消费方（长按弹菜单 + 长按不松手转拖拽收缩网格跨 Zone）留待 phase4。方案建议见 plan §六：阈值分流（短按展开/长按菜单）+ 收缩网格拖放
+
 ## 架构
 
 - 已从 Index.ets 提取独立组件：TripCeremonyCard、EditGearPanel、EditItemPanel、GearFilterPanel
@@ -47,6 +63,13 @@
 - AnimationTokens.ets 中定义了 9 个 Spring 预设：SPRING_GENERAL / PRESS / TAB / COUNTER / SCROLL / HERO_EXPAND / HERO_COLLAPSE / PANEL_ENTER / PANEL_EXIT + 时长/缩放常量
 - 导航架构：单 Page（Index.ets）+ Navigation NavPathStack，两个 NavDestination（ChecklistDetail、ReviewPage）
 - TripCeremonyCard 暴露 `onExitStart` 回调，退场动画启动第一帧触发，供父组件并行驱动背景恢复
+- **统一核查清单视图（v0.7.0 第二灵魂）**：行程详情页砍掉配装/清单 SegmentButton 切换，合并为单一 `UnifiedChecklistView`。组件结构：
+  - `UnifiedChecklistView`（容器）：网格态展示 7 个身体部位 Zone（2 列网格 + 杂项跨列），管理 focusedZone / focusedCloseSignal 透传
+  - `ZoneGridCell`：单个格子卡片，空态铺虚线框 + 「+」，有内容显示装备摘要；点击触发 geometryTransition 共享元素转场
+  - `FocusedZoneView`：全屏聚焦态，点格子放大铺满全屏逐项核查；内含 ChecklistRow 列表 + buildItemDetail 手风琴详情 + buildAddRow
+  - `ChecklistRow`：单行装备，契约 `checkOnlyHotzone=true` → check 圆圈负责勾选、行其余区域调 `onTapRow`（聚焦态用于展开详情）
+  - Zone 映射：`BodyZone` 枚举 + `CATEGORY_SLOT_MAP` 在 `constants/GearLoadout.ets`；`groupByZoneAll`/`groupByZone`/`sortItemsByLayer` 等聚合函数在 `services/LoadoutService.ets`。装备按 `category` 查表自动归入格子
+- `ChecklistItem { id, name, group, checked, weight?, price?, fromGearId? }`（无 category/note/brand；聚焦态详情经 fromGearId 反查 GearItem 取 category/brand/note）
 
 ## ArkUI 避坑清单（实战总结，共 41 条）
 
@@ -137,6 +160,6 @@
 
 ## 已知限制
 
-- hvigorw 位于 `/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin/hvigorw`，不在默认 shell PATH 中，需使用完整路径调用
+- 构建路径不在默认 shell PATH 中，需按「工作流约定」里那套完整命令调用（含 DEVECO_SDK_HOME 导出）
 - ArkTS 禁止对象展开运算符 `{ ...obj }` — 编译错误 `arkts-no-spread`，展平属性需逐字段赋值
 - `@Prop` 装饰器不支持接口（interface）类型分组，只能 `@Prop` 基础类型或 class 实例

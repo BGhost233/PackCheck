@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.0 (2026-06-11) · 开发中
+
+带格子的核查清单（统一视图）· PackCheck 第二个灵魂。砍掉配装/清单 Tab 切换，合并为单一界面：预设身体部位格子作为分组骨架，格子里填装备 + 出发前逐项打勾。
+
+- **统一视图重构（Phase 1-3）**：行程详情页移除配装/清单 SegmentButton，合并为 `UnifiedChecklistView`。网格态展示 7 个身体部位 Zone（2 列网格 + 杂项跨列，`ZoneGridCell`），空行程直接铺虚线空格子（去掉引导页）；点格子走 `geometryTransition` 共享元素转场放大铺满全屏聚焦态（`FocusedZoneView`）逐项核查。装备按 `category` 经 `LoadoutService.groupByZoneAll` 自动归入对应格子
+- **第一批真机问题打磨（P1-P5）**：网格态双热区（圆圈勾选 / 行其余进聚焦）；降格高露 4 条摘要 + 底部渐隐遮罩；GearPickerSheet 去品类 tab 改分组折叠；新建装备入口顶部常驻 + 搜不到就建 + 临时入库二选一
+- **聚焦态完整交互体系（问题4 第一批 · 4a/4b/4c）**：
+  - 4a：focusedZone 三层 @Link 透传（Index→TripDetailPage→UnifiedChecklistView→FocusedZoneView）；onBackPressed 分层拦截（sheet→关闭 / 聚焦态→收起 / 否则→回首页）；收起走 `focusedCloseSignal` 信号递增保留 SPRING_HERO_COLLAPSE 退场动画
+  - 4b：点格子空白 / 左右划（PanGesture Horizontal 24vp）即收起回网格，不新增返回按钮——借力 ArkUI 事件消费机制，子元素各自消费点击、仅空白冒泡触发收起
+  - 4c：单击装备名手风琴展开详情（`checkOnlyHotzone` + `onTapRow` → `toggleExpand`），经 `fromGearId` 反查 GearItem 取 category/brand/note 用 Flex wrap chips 展示，同时只展开一项
+- **预埋（4d 推迟 phase4）**：聚焦态长按弹二级菜单 + 长按转拖拽跨 Zone 移动。三回调（onEditItem/onRemoveItem/onMoveItemToZone）透传链已贯通 + `Index.moveItemToZone` 改 group 逻辑就绪，仅手势消费方待 phase4 实现
+
 ## v0.6.1 (2026-06-10)
 
 Sheet 体系统一 & 交互打磨 & GearPage 瘦身起步 & 配装系统质量加固。

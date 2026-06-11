@@ -185,3 +185,31 @@ commit message 用多个 `-m`，不含换行。
 4. **P3 入库 category**：是否强制用户选 → 倾向默认按 zone 推断、不强制。
 
 以上 4 点若实施中需偏离倾向，会先同步再改。
+
+---
+
+## 六、第二批真机问题（问题4：聚焦态完整交互体系）
+
+> 来源：2026-06-11 真机自测后用户追加需求。P1-P5（第一批）落地后，针对**全屏聚焦态**提出的完整交互体系。
+> 用户原话：「点格子展开后，再次点击展开后的格子或左右划就收起聚焦回网格，不要新增返回按钮；格子展开态时单击装备名展开装备详情，长按显示二级菜单，不松手保持拖拽则格子收缩，可拖拽装备到别的格子。」
+
+拆成 4 个子任务，按 4a→4b→4c→4d 顺序，每个独立构建验证 + commit。
+
+| 子任务 | 内容 | 状态 | commit |
+|--------|------|------|--------|
+| 4a | 聚焦态状态透传 Index + onBackPressed 分层拦截（有 sheet 关 sheet → 有聚焦收聚焦 → 否则返回首页，侧滑同样分层） | ✅ 完成 | `14bee41` |
+| 4b | 聚焦态点空白处 / 左右划任意方向收起聚焦回网格（无返回按钮） | ✅ 完成 | `42c9a85` |
+| 4c | 单击装备名原地手风琴展开详情（品类/重量/品牌/备注，经 `fromGearId` 反查装备库） | ✅ 完成 | `42c9a85` |
+| 4d | 长按弹二级菜单（编辑/移除）+ 长按不松手转拖拽跨 Zone 移动装备 | ⏸ **推迟到 phase4** | `7ce4155`（仅预埋注释） |
+
+### 关键实现决策
+
+**4a 状态透传链**：聚焦态 `focusedZone` 由 Index 持有 `@State` 源 → TripDetailPage `@Link` → UnifiedChecklistView `@Link` → FocusedZoneView `@Prop active`。收起用「信号递增」技巧：Index 不直接改 `focusedZone`（会丢失 `SPRING_HERO_COLLAPSE` 收起动画），而是递增 `focusedCloseSignal: number`，UnifiedChecklistView `@Watch` 后调自己的 `closeFocus()`（动画封装留在组件内）。
+
+**4b 收起机制（借力 ArkUI 事件消费）**：聚焦态根 Column 绑 `onClick(收起)` + 横向 `PanGesture(distance:24, 收起)`。利用「组件绑 onClick 即消费事件不冒泡」特性——装备行 ChecklistRow / check 圆圈 / 底部添加行 / 顶栏关闭键各自消费点击，只有点到「行间空隙 / 列表底部留白 / 顶栏空白」才冒泡到根触发收起。无需新增返回按钮。
+
+**4c 双热区 + 手风琴**：聚焦态 ChecklistRow 改 `checkOnlyHotzone: true`——点 check 圆圈勾选，点装备名/行其余区调 `onTapRow` → `toggleExpand(id)` 原地手风琴展开详情。详情经 `fromGearId` 反查 `GearItem` 取品类/品牌/备注；临时装备（无 fromGearId）只显已有字段，全空显「暂无更多信息」占位。
+
+**4d 推迟（phase4）**：`onEditItem`/`onRemoveItem`/`onMoveItemToZone` 三层透传链已贯通到 FocusedZoneView 并预埋（回调默认空函数，build 内暂无消费方），phase4 只需在 build 里挂手势消费，不用再改透传链。Index 侧 `moveItemToZone(itemId, zone)` 改 group 的落地逻辑已就绪。
+- **手势方案建议（phase4 直接用）**：阈值分流——长按≈500ms 手指基本不动 → 弹轻量浮层菜单（编辑/移除）；长按后手指明显移动 → 不弹菜单、聚焦态 SPRING 收缩回 2 列网格、被拖装备跟手浮起、悬停目标格子高亮、松手落入 → `moveItemToZone` 改 group。两条路互斥不互吞，规避 ArkUI menu-then-drag 手势互吞的真机风险。
+- group 改写无需担心被覆盖：`inferZoneFromGroup` 只在推断时用，`assignSlot` 只在 GearPickerSheet 加装备时用一次，无运行时自动重算逻辑。
