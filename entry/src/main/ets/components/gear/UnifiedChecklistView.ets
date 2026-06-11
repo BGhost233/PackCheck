@@ -151,11 +151,15 @@ this.computeCellHeight();
     FocusedZoneView({
       zone: this.focusedZoneRender,
       items: this.itemsForZone(this.focusedZoneRender),
+      gears: this.gears,
       zoneColor: this.zoneColor(this.focusedZoneRender),
       active: this.focusedZone != null,
       onClose: () => { this.closeFocus(); },
       onTapEmpty: (z: string) => { this.onOpenPicker(z); },
       onToggleCheck: this.onToggleCheck,
+      onEditItem: this.onEditItem,
+      onRemoveItem: this.onRemoveItem,
+      onMoveItemToZone: this.onMoveItemToZone,
       // D-2「逐项核查本区」携带 Zone 进入 Review，后续 Phase 接入；此处先占位不误触
       onReviewZone: (z: string) => {}
     })
