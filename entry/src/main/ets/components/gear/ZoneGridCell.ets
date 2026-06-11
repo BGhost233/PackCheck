@@ -7,11 +7,14 @@
 
 import {
   CARD_BG,
+  TEXT_MAIN,
   TEXT_TERTIARY,
   DIVIDER_COLOR,
-  SHADOW_SUBTLE,
+  SHADOW_LIGHT,
   PRIMARY_COLOR,
-  ZONE_MISC_COLOR
+  ZONE_MISC_COLOR,
+  ZONE_MISC_STROKE,
+  ZONE_MISC_TINT
 } from '../../constants/Colors';
 import {
   FONT_SIZE_BODY_MEDIUM,
@@ -38,6 +41,9 @@ export struct ZoneGridCell {
   @Prop zone: string = BodyZone.Misc;
   @Prop items: ChecklistItem[] = [];
   @Prop zoneColor: string = ZONE_MISC_COLOR;
+  // B-2：容器描边色 + 标题行浅染底（由父层 zoneStroke/zoneTint helper 传入）
+  @Prop zoneStroke: string = ZONE_MISC_STROKE;
+  @Prop zoneTint: string = ZONE_MISC_TINT;
   @Prop cellHeight: number = 160;
 
   // 回调（Phase 2/3 接入）
@@ -150,7 +156,9 @@ export struct ZoneGridCell {
       .layoutWeight(1)
       .backgroundColor(CARD_BG)
       .borderRadius(CARD_RADIUS)
-      .shadow({ radius: 8, color: SHADOW_SUBTLE, offsetY: 2 })
+      // B-2：阴影升档 + 极淡部位色描边，形成「盒子感」
+      .border({ width: 0.5, color: this.zoneStroke, style: BorderStyle.Solid })
+      .shadow({ radius: 12, color: SHADOW_LIGHT, offsetY: 4 })
       .clip(true)
       .alignItems(HorizontalAlign.Start)
       .justifyContent(FlexAlign.Start)
@@ -227,12 +235,12 @@ export struct ZoneGridCell {
 
       SymbolGlyph($r(zoneIconName(this.zone)))
         .fontSize(15)
-        .fontColor([this.zoneColor])
+        .fontColor([TEXT_MAIN])
 
       Text(zoneDisplayName(this.zone))
         .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontWeight(FONT_WEIGHT_MEDIUM)
-        .fontColor(this.zoneColor)
+        .fontColor(TEXT_MAIN)
 
       Blank()
 
@@ -243,8 +251,11 @@ export struct ZoneGridCell {
       }
     }
     .width('100%')
-    .height(24)
-    .padding({ left: 4, right: 4 })
+    .height(28)
+    // B-2：标题行浅彩底 + 圆角，色条保留部位色作色彩锚点，图标/文字改深色
+    .backgroundColor(this.zoneTint)
+    .borderRadius(8)
+    .padding({ left: 8, right: 8 })
     .alignItems(VerticalAlign.Center)
     .scale({
       x: clickable && this.titlePressed ? PRESS_SCALE_DOWN : 1.0,
