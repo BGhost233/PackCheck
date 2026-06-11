@@ -69,8 +69,9 @@ export struct ZoneGridCell {
       this.buildTitleRow(true)
 
       // 内容白卡：前 N 条 item 核查行 + 折叠提示
-      // P2：白卡整体绑 onClick→进全屏聚焦；ChecklistRow 走双热区（checkOnlyHotzone），
-      //   点 check 圆圈仅勾选不冒泡，点装备名/空白冒泡到这里触发聚焦。
+      // P2/问题1：ChecklistRow 走双热区（checkOnlyHotzone），点 check 圆圈仅勾选；
+      //   点装备名/行空白由 ChecklistRow 直接调 onTapRow→onTapTitle 进聚焦（ArkUI onClick 消费事件不冒泡，
+      //   不能靠白卡 onClick 接装备行点击，故由本行直接回调）。白卡 onClick 仅兜底空白/折叠提示区。
       Column({ space: 0 }) {
         ForEach(this.previewItems(), (item: ChecklistItem) => {
           ChecklistRow({
@@ -78,7 +79,8 @@ export struct ZoneGridCell {
             rowHeight: GRID_ROW_HEIGHT,
             checkSize: GRID_CHECK_SIZE,
             checkOnlyHotzone: true,
-            onToggleCheck: this.onToggleCheck
+            onToggleCheck: this.onToggleCheck,
+            onTapRow: () => { this.onTapTitle(this.zone); }
           })
         }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
 

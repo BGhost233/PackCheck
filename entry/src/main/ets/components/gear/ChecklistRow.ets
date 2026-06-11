@@ -2,8 +2,10 @@
 // 职责：左侧圆形 CheckMark + 装备名，点击切换 checked，勾选弹跳动画
 // 网格态（紧凑）与全屏聚焦态（宽松）共用，通过 rowHeight/checkSize prop 调整尺寸
 // spec §2.1.3 / §3.3：勾选 scale 0.8→1.1→1.0(SPRING_PRESS)；已勾文字变灰 + 实心绿勾
-// P2 双热区：checkOnlyHotzone=true 时整行不绑 onClick，只 check 圆圈拦截勾选，
-//   装备名/空白处的点击冒泡到外层格子触发聚焦；false 时整行点击即勾选（聚焦态用）
+// P2 双热区：checkOnlyHotzone=true 时整行 onClick 不勾选、而是调 onTapRow，check 圆圈单独拦截勾选；
+//   false 时整行点击即勾选（聚焦态用）。
+//   注（问题1 根因）：ArkUI 中只要绑定 .onClick（即便回调体空）就消费事件不冒泡，
+//   所以不能靠「整行空 onClick 让事件冒泡到外层白卡」——必须由本行直接回调 onTapRow。
 
 import {
   PRIMARY_COLOR,
@@ -33,6 +35,9 @@ export struct ChecklistRow {
 
   // 回调
   onToggleCheck: (itemId: string) => void = () => {};
+  // P2/问题1：双热区模式下点击装备名/行空白区（非 check 圆圈）时触发，
+  //   由外层白卡传入 openFocus，取代不可靠的事件冒泡。非双热区模式不使用。
+  onTapRow: () => void = () => {};
 
   // 勾选标记缩放（弹跳动画）
   @State private checkScale: number = 0;
@@ -142,8 +147,12 @@ export struct ChecklistRow {
       }
     })
     .onClick(() => {
-      // 双热区模式整行不绑勾选，点击冒泡至外层格子触发聚焦
-      if (!this.checkOnlyHotzone) {
+      if (this.checkOnlyHotzone) {
+        // 双热区：点击装备名/行空白区直接调 onTapRow（外层白卡 openFocus）。
+        // check 圆圈的 onClick 会先消费该区域点击，不会走到这里。
+        this.onTapRow();
+      } else {
+        // 聚焦态：整行点击即勾选
         this.onToggleCheck(this.item.id);
       }
     })
