@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.6.1
+## 当前版本：v0.7.0
 
 ### 已实现功能
 
@@ -66,11 +66,17 @@ entry/src/main/ets/
 │       ├── ProfileEditSheet.ets
 │       ├── MoveGroupSheet.ets
 │       └── GearPickerSheet.ets — 配装装备选择器（品类筛选+搜索+临时添加）
-│   ├── gear/                — 配装系统组件
-│   │   ├── LoadoutView.ets      — 配装视图主组件（Zone 卡片网格 + FAB）
-│   │   ├── LoadoutProgressBar.ets — 配装进度条（counter 动画 + 庆祝弹动）
-│   │   ├── LoadoutZoneCard.ets  — Zone 卡片（按身体部位分组展示）
-│   │   └── LoadoutGearItem.ets  — 单个装备项（勾选+层级badge+按压反馈）
+│   ├── gear/                — 核查清单系统组件（统一视图）
+│   │   ├── TripDetailPage.ets      — 行程详情页（替代旧双 Tab，删 SegmentButton）
+│   │   ├── UnifiedChecklistView.ets— 统一核查清单主视图（2 列网格 + 全屏聚焦 + 长按浮层 + 拖拽管理）
+│   │   ├── ZoneGridCell.ets       — 网格态单格（空态虚线框 / 有内容白卡 + 勾选 + 长按手势）
+│   │   ├── FocusedZoneView.ets    — 全屏聚焦单格子视图（geometryTransition + 手风琴详情 + 点空白/左右划收起）
+│   │   ├── GearItemContextMenu.ets — 自绘长按浮层（详情缩略图 + 编辑/移动到/移除菜单，复用 GearPage 视觉）
+│   │   ├── ChecklistRow.ets       — 通用核查行（圆形 CheckMark + 勾选弹跳 + 双热区模式）
+│   │   ├── LoadoutProgressBar.ets — 全局进度条（counter 动画 + 100% 庆祝）
+│   │   ├── LoadoutView.ets        — 配装视图（deprecated，逻辑已合入 UnifiedChecklistView）
+│   │   ├── LoadoutZoneCard.ets    — Zone 卡片（deprecated）
+│   │   └── LoadoutGearItem.ets    — 装备行（deprecated）
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
 │   ├── PackStore.ets        — Preferences 持久化封装（schema 版本化 + 错误守卫）
@@ -142,9 +148,10 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.5.8 | ✅ 已完成 | 编辑模式 Bug 修复 + 装备库空态轻量重设计 |
 | v0.5.9 | ✅ 已完成 | 全量代码审查修复（213 项问题，覆盖安全/动效/Token/类型） |
 | v0.6.0 | ✅ 已完成 | v2 服役档案 · 第一步地基层（3 Tab + 人生足迹 + 双段展开 + 渐进 chip + 配装种子 + 趋势图删除） |
-| v0.6.1 | ✅ 当前 | Sheet 体系统一 + 下滑关闭手势 + 文档重组 |
-| v0.7.0 | 🚧 下一步 | 带格子的核查清单统一视图（第二步·引擎）：合并配装/清单 + 格子始终可见 + 空态虚线框 + 行程→装备反哺 |
-| v0.8.0 | 📋 计划中 | GearPage 组件瘦身（FabController/DragToTripOverlay/GroupDragController 提取） |
+| v0.6.1 | ✅ 已完成 | Sheet 体系统一 + 下滑关闭手势 + 文档重组 |
+| v0.7.0 | ✅ 当前 | 带格子的核查清单统一视图（第二步·引擎）：Phase 1-4 全部完成——统一网格态骨架 + 核查能力 + 全屏聚焦态 + 连贯手势（长按菜单+跨Zone拖拽流转）。配装/清单 Tab 切换已砍，统一为单一界面。详 CHANGELOG |
+| v0.7.1 | 📋 计划中 | UI 质感提升：容器化（白卡+描边）、空/满视觉权重修正、收→展转场重构（便单式边框连续放大）、拖动物理感深化。详 docs/v2-foundation/plans/2026-06-22-checklist-visual-polish-benchmark.md |
+| v0.8.0 | 📋 远期 | GearPage 组件瘦身（FabController/DragToTripOverlay/GroupDragController 提取） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 
 ## 开发约定

@@ -10,7 +10,26 @@
   - 4a：focusedZone 三层 @Link 透传（Index→TripDetailPage→UnifiedChecklistView→FocusedZoneView）；onBackPressed 分层拦截（sheet→关闭 / 聚焦态→收起 / 否则→回首页）；收起走 `focusedCloseSignal` 信号递增保留 SPRING_HERO_COLLAPSE 退场动画
   - 4b：点格子空白 / 左右划（PanGesture Horizontal 24vp）即收起回网格，不新增返回按钮——借力 ArkUI 事件消费机制，子元素各自消费点击、仅空白冒泡触发收起
   - 4c：单击装备名手风琴展开详情（`checkOnlyHotzone` + `onTapRow` → `toggleExpand`），经 `fromGearId` 反查 GearItem 取 category/brand/note 用 Flex wrap chips 展示，同时只展开一项
-- **预埋（4d 推迟 phase4）**：聚焦态长按弹二级菜单 + 长按转拖拽跨 Zone 移动。三回调（onEditItem/onRemoveItem/onMoveItemToZone）透传链已贯通 + `Index.moveItemToZone` 改 group 逻辑就绪，仅手势消费方待 phase4 实现
+- **预埋（4d 推迟 phase4）**：聚焦态长按弹二级菜单 + 长按转拖拽跨 Zone 移动。三回调（onEditItem/onRemoveItem/onMoveItemToZone）透传链已贯通 + `Index.moveItemToZone` 改 group 逻辑就绪
+
+**Phase 4 — 连贯手势（长按菜单 + 跨 Zone 拖拽流转）· 2026-06-23 完成**
+
+- **自绘长按浮层（阶段1）**：`GearItemContextMenu` 新建自绘组件，长按 ≥400ms 弹出装备详情悬浮缩略图（品类/重量/品牌/备注，复用 GearPage 视觉）+ 浮动菜单（编辑/移动到…/移除，红色删除）。触觉反馈 `vibrator` 轻档。支持 full 模式（网格态 LongPress+Pan）和 menu-only 模式（聚焦态仅 LongPress）
+- **跨 Zone 拖拽流转（阶段2）**：`GestureGroup(Sequence, LongPress(400) + Pan(distance:5))` 绑在 ChecklistRow wrapper 上实现便单式一气呵成——长按出菜单→不松手 Pan 接管→松手落位。落点经 `onAreaChange` 预缓存 zone 全局坐标 + 轻量矩形碰撞检测判定目标格，`Index.moveItemToZone` immutable 更新 group 字段持久化
+- **跟手胶囊 + 格子 glow 高亮**：拖拽态白色圆角胶囊 `position()+dragCurrentX/Y` 实时跟手；目标格子 `isDropTarget` prop 驱动 PRIMARY_COLOR 2.5vp 绿框 + `#402D7D46` 光晕 shadow；进入新 zone 时 tick 触觉反馈；源位置半透明影子占位
+- **拖拽态交互细节**：蒙层 dragging 阶段 opacity→0（全程常亮）；菜单→拖拽 EASE_FADE 120ms 交叉淡入淡出；拖拽期 `enableScrollInteraction(false)` 锁 Grid 滚动；松手 SPRING_GENERAL 回弹后 resetDragState
+- **gearTripCount 实时派生重构**：`computeGearTripCount(gearId, trips)` → 遍历所有行程 Set 去重计数，GearPage 排序/预览/芯片全链路改为实时调用；不再依赖 `GearItem.tripCount` 缓存字段，消除数据不同步隐患
+
+**Phase 1-4 系统性 Bug 修复 · 多轮**
+
+- **HitTestMode.None 不可靠**：ZoneGridCell Stack 双层常驻（空态叠在有内容态上），父层 `hitTest(None)` 不阻止子元素 onClick → 所有点击/勾选/长按被空态虚线区拦截路由到 GearPicker。修：回退 if/else 条件渲染（两种状态不可同时存在视图树）
+- **格子高度异常**：if/else 替代 Stack 后丢失外层 `.height(cellHeight)` 约束，100% 在 Grid 中解析为全屏高度。修：加 Column wrapper 承载 cellHeight
+- **长按手势失效**：GestureGroup 绑在下层 Image，上层 ChecklistRow.onClick 独占触摸序列 → LongPressGesture 永远等不到 400ms。修：GestureGroup 移到包裹 ChecklistRow 的 Column wrapper 上，wrapper 只有 gesture 无 onClick
+- **聚焦转场退化为淡入淡出**：GridItem `visibility(Hidden)` 使元素脱离渲染树 → geometryTransition 丢失源配对端。修：改 `opacity(0)+hitTest(None)` 保留在树中
+- **勾选无即时视觉反馈**：ForEach key 含 `checked` 状态 → toggle 后 key 变 → 组件销毁重建 → aboutToAppear 直设终值跳过 @Watch 弹跳动效。修：网格态/聚焦态两处 ForEach key 去掉 checked，仅 `item.id`
+- **拖拽胶囊/高亮坐标错位**：全局坐标当局部坐标喂 `position()` + Pan offset 累积方式错误。修：`onAreaChange` 加空守卫防护 globalPosition undefined，新增 `longPressGlobalX/Y` + `dragCurrentX/Y` 单坐标系 `position()` 方案
+- **底部渐隐灰色**：`TRANSPARENT(#00000000)`→`PAGE_BG` 渐变中段混合出灰色矩形。修：起始色改用 `#00F8F9FA` 透明羽白
+- **勾选+拖拽触觉反馈补全**：ChecklistRow 勾选时 vibrator tick，进入新 drop zone 时 vibrator tick
 
 ## v0.6.1 (2026-06-10)
 
