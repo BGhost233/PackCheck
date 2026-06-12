@@ -55,8 +55,12 @@ export struct ProfilePage {
   private hasAppeared: boolean = false;
   // 在途的数字滚动动画句柄（组件销毁/数据刷新前取消，避免竞争）
   private counterHandles: CounterTimerHandle[] = [];
+  // 错落入场 setTimeout handle（组件销毁时清除，避免销毁后调 animateTo）
+  private staggerTimerIds: number[] = [];
+  private isAlive: boolean = true;
 
   aboutToAppear(): void {
+    this.isAlive = true;
     this.refreshFootprint(true);
     // 段落错落入场
     this.staggerSections();
@@ -64,7 +68,16 @@ export struct ProfilePage {
   }
 
   aboutToDisappear(): void {
+    this.isAlive = false;
     this.cancelAllCounters();
+    this.clearAllStaggerTimers();
+  }
+
+  private clearAllStaggerTimers(): void {
+    for (const id of this.staggerTimerIds) {
+      clearTimeout(id);
+    }
+    this.staggerTimerIds = [];
   }
 
   onDataChange(): void {
@@ -75,21 +88,25 @@ export struct ProfilePage {
 
   private staggerSections(): void {
     // Hero 区
-    setTimeout(() => {
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.heroOpacity = 1;
         this.heroTranslateY = 0;
       });
     }, 60);
+    this.staggerTimerIds.push(id);
     // 时间线段
-    setTimeout(() => {
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.timelineOpacity = 1;
         this.timelineTranslateY = 0;
       });
       // 时间线各条目逐条入场
       for (let i = 0; i < 5; i++) {
-        setTimeout(() => {
+        const itemId = setTimeout(() => {
+          if (!this.isAlive) { return; }
           this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
             const opacities = this.timelineItemOpacities.slice();
             opacities[i] = 1;
@@ -99,28 +116,36 @@ export struct ProfilePage {
             this.timelineItemTranslateY = translates;
           });
         }, staggerDelay(i, 60));
+        this.staggerTimerIds.push(itemId);
       }
     }, staggerDelay(1, 120));
+    this.staggerTimerIds.push(id);
     // 伙伴段
-    setTimeout(() => {
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.companionOpacity = 1;
         this.companionTranslateY = 0;
       });
     }, staggerDelay(2, 120));
+    this.staggerTimerIds.push(id);
     // 数字群像
-    setTimeout(() => {
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.gridOpacity = 1;
         this.gridTranslateY = 0;
       });
     }, staggerDelay(3, 120));
+    this.staggerTimerIds.push(id);
     // 尾声
-    setTimeout(() => {
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.outroOpacity = 1;
       });
     }, staggerDelay(4, 120));
+    this.staggerTimerIds.push(id);
   }
 
   private refreshFootprint(animate: boolean): void {
