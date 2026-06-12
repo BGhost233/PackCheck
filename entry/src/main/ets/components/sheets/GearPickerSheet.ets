@@ -71,6 +71,8 @@ export struct GearPickerSheet {
   @State private overlayScale: number = PANEL_SCALE_START;
   @State private overlayOpacity: number = 0;
   @State private newEntryScale: number = 1.0;
+  // 品类分组 header 按压态
+  @State private pressedCategory: string = '';
 
   aboutToAppear(): void {
     // 从空格子进入时，新建装备默认落到该 Zone（review I4）
@@ -361,6 +363,15 @@ export struct GearPickerSheet {
       .borderRadius(10)
       .backgroundColor(INPUT_BG)
       .alignItems(VerticalAlign.Center)
+      .scale({ x: this.pressedCategory === group.category ? PRESS_SCALE_DOWN : 1.0, y: this.pressedCategory === group.category ? PRESS_SCALE_DOWN : 1.0 })
+      .animation({ curve: SPRING_PRESS() })
+      .onTouch((e: TouchEvent) => {
+        if (e.type === TouchType.Down) {
+          this.pressedCategory = group.category;
+        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+          this.pressedCategory = '';
+        }
+      })
       .onClick(() => {
         this.toggleCategory(group.category);
       })
