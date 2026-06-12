@@ -65,6 +65,10 @@ export struct HomePage {
   private wasLatestChecklistDone: boolean = false;
   private scroller: Scroller = new Scroller();
   private historyListScroller: ListScroller = new ListScroller();
+  private isAlive: boolean = true;
+  // timer handles 用于 aboutToDisappear 清理
+  private staggerTimerId: number = -1;
+  private celebrateTimerId: number = -1;
 
   private onChecklistRenderNonceChange(): void {
     const checklist = this.latestChecklist();
@@ -81,6 +85,7 @@ export struct HomePage {
   }
 
   aboutToAppear(): void {
+    this.isAlive = true;
     this.heroDaysDisplay = 0;
     this.heroNumberAnimated = false;
     this.progressNumeratorDisplay = 0;
@@ -89,10 +94,23 @@ export struct HomePage {
     this.historyStaggerReady = false;
     this.emptyHeroBreathScale = 1.02;
     this.wasLatestChecklistDone = false;
-    setTimeout(() => {
+    this.staggerTimerId = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.historyStaggerReady = true;
       this.checkCelebration();
     }, 100);
+  }
+
+  aboutToDisappear(): void {
+    this.isAlive = false;
+    if (this.staggerTimerId >= 0) {
+      clearTimeout(this.staggerTimerId);
+      this.staggerTimerId = -1;
+    }
+    if (this.celebrateTimerId >= 0) {
+      clearTimeout(this.celebrateTimerId);
+      this.celebrateTimerId = -1;
+    }
   }
 
   private scrollProgress(): number {
@@ -471,7 +489,8 @@ export struct HomePage {
       }, () => {
         this.heroRingCelebrateScale = 1.35;
       });
-      setTimeout(() => {
+      this.celebrateTimerId = setTimeout(() => {
+        if (!this.isAlive) { return; }
         this.getUIContext().animateTo({
           curve: SPRING_GENERAL()
         }, () => {

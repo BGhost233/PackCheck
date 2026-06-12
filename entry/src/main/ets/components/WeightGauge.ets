@@ -47,14 +47,31 @@ export struct WeightGauge {
   @State private gearCountPopScale: number = 1.0;
   @State private ringEntranceScale: number = 0;
   @State private pillEntranceIndices: boolean[] = [false, false, false];
+  private isAlive: boolean = true;
+  // timer handles for aboutToDisappear cleanup
+  private gaugeTimerIds: number[] = [];
+  private pillTimerIds: number[] = [];
 
   aboutToAppear(): void {
+    this.isAlive = true;
     this.displayWeight = 0;
     this.displayGearCount = 0;
     this.displayTotalPrice = 0;
     this.counterAnimated = false;
     this.ringEntranceScale = 0;
     this.pillEntranceIndices = [false, false, false];
+  }
+
+  aboutToDisappear(): void {
+    this.isAlive = false;
+    for (const id of this.gaugeTimerIds) {
+      clearTimeout(id);
+    }
+    this.gaugeTimerIds = [];
+    for (const id of this.pillTimerIds) {
+      clearTimeout(id);
+    }
+    this.pillTimerIds = [];
   }
 
   private getDisplayWeight(): number {
@@ -145,13 +162,15 @@ export struct WeightGauge {
     }, () => {
       this.ringBounceScale = 1.08;
     });
-    setTimeout(() => {
+    const bounceId = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({
         curve: SPRING_GENERAL()
       }, () => {
         this.ringBounceScale = 1.0;
       });
     }, 50);
+    this.gaugeTimerIds.push(bounceId);
 
     const nextMode: GaugeMode = this.gaugeMode === GaugeMode.WEIGHT ? GaugeMode.PRICE : GaugeMode.WEIGHT;
     this.getUIContext().animateTo({
@@ -252,21 +271,27 @@ export struct WeightGauge {
       }, () => {
         this.ringEntranceScale = 1.0;
       });
-      setTimeout(() => {
+      const id0 = setTimeout(() => {
+        if (!this.isAlive) { return; }
         const indices = [...this.pillEntranceIndices];
         indices[0] = true;
         this.pillEntranceIndices = indices;
       }, 50);
-      setTimeout(() => {
+      this.pillTimerIds.push(id0);
+      const id1 = setTimeout(() => {
+        if (!this.isAlive) { return; }
         const indices = [...this.pillEntranceIndices];
         indices[1] = true;
         this.pillEntranceIndices = indices;
       }, 130);
-      setTimeout(() => {
+      this.pillTimerIds.push(id1);
+      const id2 = setTimeout(() => {
+        if (!this.isAlive) { return; }
         const indices = [...this.pillEntranceIndices];
         indices[2] = true;
         this.pillEntranceIndices = indices;
       }, 210);
+      this.pillTimerIds.push(id2);
     })
   }
 
