@@ -91,16 +91,24 @@ export function staggeredOpacity(isEntered: boolean): number {
 /**
  * 数字滚动动画驱动。
  * 从 fromValue 平滑过渡到 toValue，每帧调用 onUpdate。
+ * 返回 { id } 句柄，可传给 stopCounterAnimate() 取消进行中的动画。
  *
  * 用法：
- *   counterAnimate(0, 1500, (v: number) => { this.displayWeight = v; })
+ *   const handle = counterAnimate(0, 1500, (v: number) => { this.displayWeight = v; })
+ *   // 需要取消时：
+ *   stopCounterAnimate(handle)
  */
+export interface CounterTimerHandle {
+  id: number;
+}
+
 export function counterAnimate(
   fromValue: number,
   toValue: number,
   onUpdate: (current: number) => void,
   duration: number = DURATION_COUNTER
-): void {
+): CounterTimerHandle {
+  const handle: CounterTimerHandle = { id: -1 };
   const startTime = Date.now();
   const diff = toValue - fromValue;
 
@@ -113,14 +121,26 @@ export function counterAnimate(
     onUpdate(current);
 
     if (progress < 1.0) {
-      // 约 60fps
-      setTimeout(tick, 16);
+      handle.id = setTimeout(tick, 16);
     } else {
       onUpdate(toValue);
+      handle.id = -1;
     }
   };
 
-  tick();
+  handle.id = setTimeout(tick, 16);
+  return handle;
+}
+
+/**
+ * 取消一个进行中的数字滚动动画。
+ * 传入 counterAnimate 返回的句柄；若 handle 为 undefined 或动画已完成则无操作。
+ */
+export function stopCounterAnimate(handle: CounterTimerHandle | undefined): void {
+  if (handle !== undefined && handle.id >= 0) {
+    clearTimeout(handle.id);
+    handle.id = -1;
+  }
 }
 
 // ============================================================

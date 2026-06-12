@@ -7,7 +7,7 @@ import {
   WHITE_SECONDARY, WHITE_SEMI_TRANSPARENT, PRIMARY_TINT_COLOR, LIGHT_PRIMARY_COLOR
 } from '../constants/Colors';
 import { PAGE_PADDING, CARD_RADIUS, CARD_PADDING, CHIP_RADIUS, FONT_FEATURE_TNUM } from '../constants/Layout';
-import { counterAnimate } from '../utils/AnimationUtils';
+import { counterAnimate, stopCounterAnimate, CounterTimerHandle } from '../utils/AnimationUtils';
 import {
   SPRING_GENERAL, SPRING_PRESS, STAGGER_OFFSET_Y, staggerDelay,
   PRESS_SCALE_DOWN, PRESS_SCALE_REST
@@ -53,12 +53,18 @@ export struct ProfilePage {
   @State private gridPressedIndex: number = -1;
 
   private hasAppeared: boolean = false;
+  // 在途的数字滚动动画句柄（组件销毁/数据刷新前取消，避免竞争）
+  private counterHandles: CounterTimerHandle[] = [];
 
   aboutToAppear(): void {
     this.refreshFootprint(true);
     // 段落错落入场
     this.staggerSections();
     this.hasAppeared = true;
+  }
+
+  aboutToDisappear(): void {
+    this.cancelAllCounters();
   }
 
   onDataChange(): void {
@@ -118,66 +124,76 @@ export struct ProfilePage {
   }
 
   private refreshFootprint(animate: boolean): void {
+    // 取消在途的数字滚动动画，避免多轮动画竞争同一 @State
+    this.cancelAllCounters();
+
     const prev = this.footprint;
     this.footprint = computeFootprint(this.trips, this.gears);
     if (animate) {
-      counterAnimate(0, this.footprint.totalDistanceKm, (v: number) => {
+      this.counterHandles.push(counterAnimate(0, this.footprint.totalDistanceKm, (v: number) => {
         this.animDistance = Math.round(v * 10) / 10;
-      });
-      counterAnimate(0, this.footprint.totalAscentM, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(0, this.footprint.totalAscentM, (v: number) => {
         this.animAscent = Math.round(v);
-      });
-      counterAnimate(0, this.footprint.tripCount, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(0, this.footprint.tripCount, (v: number) => {
         this.animTrips = Math.round(v);
-      });
-      counterAnimate(0, this.footprint.placeCount, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(0, this.footprint.placeCount, (v: number) => {
         this.animPlaces = Math.round(v);
-      });
-      counterAnimate(0, this.footprint.gearCount, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(0, this.footprint.gearCount, (v: number) => {
         this.animGearCount = Math.round(v);
-      });
-      counterAnimate(0, this.footprint.maxAltitude, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(0, this.footprint.maxAltitude, (v: number) => {
         this.animMaxAlt = Math.round(v);
-      });
-      counterAnimate(0, this.footprint.totalDurationHours, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(0, this.footprint.totalDurationHours, (v: number) => {
         this.animDuration = Math.round(v * 10) / 10;
-      });
+      }));
       const companion: LongestCompanion | undefined = this.footprint.longestCompanion;
       if (companion !== undefined) {
-        counterAnimate(0, companion.days, (v: number) => {
+        this.counterHandles.push(counterAnimate(0, companion.days, (v: number) => {
           this.animDays = Math.round(v);
-        });
+        }));
       }
     } else {
-      counterAnimate(prev.totalDistanceKm, this.footprint.totalDistanceKm, (v: number) => {
+      this.counterHandles.push(counterAnimate(prev.totalDistanceKm, this.footprint.totalDistanceKm, (v: number) => {
         this.animDistance = Math.round(v * 10) / 10;
-      });
-      counterAnimate(prev.totalAscentM, this.footprint.totalAscentM, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(prev.totalAscentM, this.footprint.totalAscentM, (v: number) => {
         this.animAscent = Math.round(v);
-      });
-      counterAnimate(prev.tripCount, this.footprint.tripCount, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(prev.tripCount, this.footprint.tripCount, (v: number) => {
         this.animTrips = Math.round(v);
-      });
-      counterAnimate(prev.placeCount, this.footprint.placeCount, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(prev.placeCount, this.footprint.placeCount, (v: number) => {
         this.animPlaces = Math.round(v);
-      });
-      counterAnimate(prev.gearCount, this.footprint.gearCount, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(prev.gearCount, this.footprint.gearCount, (v: number) => {
         this.animGearCount = Math.round(v);
-      });
-      counterAnimate(prev.maxAltitude, this.footprint.maxAltitude, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(prev.maxAltitude, this.footprint.maxAltitude, (v: number) => {
         this.animMaxAlt = Math.round(v);
-      });
-      counterAnimate(prev.totalDurationHours, this.footprint.totalDurationHours, (v: number) => {
+      }));
+      this.counterHandles.push(counterAnimate(prev.totalDurationHours, this.footprint.totalDurationHours, (v: number) => {
         this.animDuration = Math.round(v * 10) / 10;
-      });
+      }));
       const companion: LongestCompanion | undefined = this.footprint.longestCompanion;
       const prevDays = prev.longestCompanion !== undefined ? prev.longestCompanion.days : 0;
       if (companion !== undefined) {
-        counterAnimate(prevDays, companion.days, (v: number) => {
+        this.counterHandles.push(counterAnimate(prevDays, companion.days, (v: number) => {
           this.animDays = Math.round(v);
-        });
+        }));
       }
     }
+  }
+
+  private cancelAllCounters(): void {
+    for (const handle of this.counterHandles) {
+      stopCounterAnimate(handle);
+    }
+    this.counterHandles = [];
   }
 
   build() {
