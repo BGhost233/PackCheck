@@ -928,6 +928,7 @@ export struct HomePage {
         .width('100%')
         .height(this.historyListHeight())
         .scrollBar(BarState.Off)
+        .edgeEffect(EdgeEffect.Spring)
         .nestedScroll({ scrollForward: NestedScrollMode.PARENT_FIRST, scrollBackward: NestedScrollMode.PARENT_FIRST })
         .backgroundColor(CARD_BG)
         .borderRadius(16)
