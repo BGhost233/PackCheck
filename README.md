@@ -47,7 +47,7 @@ entry/src/main/ets/
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
 │   ├── ProfilePage.ets      — 「我」Tab 人生足迹年报叙事
 │   ├── ReviewPage.ets       — 核查复盘
-│   ├── ChecklistDetail.ets  — 清单详情（打勾核查）
+│   ├── CheckItemPanel.ets — 装备/清单项编辑面板
 │   ├── TripCeremonyCard.ets — 新建行程仪式卡片（翻转 + 滑动出发）
 │   ├── CategoryTagGroup.ets — 分类标签组（横向滚动 + 操作动效）
 │   ├── EditGearPanel.ets    — 装备编辑半屏面板
@@ -74,9 +74,6 @@ entry/src/main/ets/
 │   │   ├── GearItemContextMenu.ets — 自绘长按浮层（详情缩略图 + 编辑/移动到/移除菜单，复用 GearPage 视觉）
 │   │   ├── ChecklistRow.ets       — 通用核查行（圆形 CheckMark + 勾选弹跳 + 双热区模式）
 │   │   ├── LoadoutProgressBar.ets — 全局进度条（counter 动画 + 100% 庆祝）
-│   │   ├── LoadoutView.ets        — 配装视图（deprecated，逻辑已合入 UnifiedChecklistView）
-│   │   ├── LoadoutZoneCard.ets    — Zone 卡片（deprecated）
-│   │   └── LoadoutGearItem.ets    — 装备行（deprecated）
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
 │   ├── PackStore.ets        — Preferences 持久化封装（schema 版本化 + 错误守卫）

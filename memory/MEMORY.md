@@ -3,15 +3,15 @@
 ## 工作流约定
 
 - **每次改动即 commit**：每次修改构建验证通过后，立即 `git add -A && git commit`，保持细粒度回滚点，方便随时回滚。
-- **构建命令**（推荐，本轮验证有效）：
+- **构建命令**（推荐，多轮验证有效）：
   ```bash
   cd /Users/bghost233/Documents/PackCheck && \
   export DEVECO_SDK_HOME="/Applications/DevEco-Studio.app/Contents/sdk" && \
   export PATH="/Applications/DevEco-Studio.app/Contents/tools/node/bin:$PATH" && \
-  /Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw assembleHap --mode module -p product=default --no-daemon 2>&1 | grep -E "ERROR|BUILD"
+  node "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js" assembleApp --no-daemon 2>&1 | grep -E "ERROR|BUILD"
   ```
-  用 DevEco-Studio 内置的 hvigor + node + SDK，必须导出 `DEVECO_SDK_HOME`。`grep -E "ERROR|BUILD"` 过滤出关键行。
-  （旧路径 `/Users/bghost233/Desktop/harmonyOS/command-line-tools/bin/hvigorw assembleApp` 仍存在但已弃用 — 任务名 assembleApp 不被当前工程接受，统一用上面这套。）
+  用 DevEco-Studio 内置的 hvigor + node + SDK，必须导出 `DEVECO_SDK_HOME`。`grep -E "ERROR|BUILD"` 过滤出关键行。任务名 `assembleApp` 对当前工程**有效**（与 CLAUDE.md 铁律2 一致，已多次 BUILD SUCCESSFUL）。
+  （历史备注：曾尝试 `assembleHap --mode module -p product=default`，亦可，但统一以 `assembleApp` 为准。旧 Desktop 路径已弃用。）
 - **先出方案再动手**：任何需求先输出理解+方案+理由，确认后才写代码。
 
 ## 设计决策
@@ -45,7 +45,8 @@
 
 - **4a 收起态透传链**：focusedZone 由 Index `@State` 源 → TripDetailPage `@Link` → UnifiedChecklistView `@Link` → FocusedZoneView `@Prop active` 三层透传。onBackPressed 分层拦截：sheet 打开→closeSheet / focusedZone≠null→focusedCloseSignal++ / else→returnToHome
 - **4a 收起保留动画技巧**：Index 不直接改 focusedZone（会丢 SPRING_HERO_COLLAPSE 转场动画），而是递增 `focusedCloseSignal: number`，下游组件 @Watch 后调组件内 `closeFocus()` 走正常退场
-- **4b 点空白/左右划收起**：借力 ArkUI 事件消费机制——组件绑 `.onClick`（即便空回调）即消费事件不冒泡。聚焦态根 Column 绑 `.onClick(() => onClose())` 收起，各子元素各自消费自己的点击，只有点空白区才冒泡触发收起。配 `PanGesture({direction: Horizontal, distance: 24})` 左右划也收起。不新增返回按钮
+- **4b 点空白/左右划收起**（v0.7.2 修正实现）：借力 ArkUI 事件消费机制——子元素各自 `.onClick` 消费自己的点击不冒泡，只有点空白区才冒泡触发收起。配 `PanGesture({direction: Horizontal, distance: 24})` 左右划也收起，不新增返回按钮。
+  - **⚠️ 关键修正**：收起点击**不能**在 `FocusedZoneView` 外部给 `ZoneShell{}` 实例外挂 `.onClick`——会被 ZoneShell 根节点自身已有的 `.onClick` 抢占而失效（详见避坑 #42）。正确做法：复用 ZoneShell 内部已验证的链路，传 `contentClickable: true` + `onTapContent: () => onClose()`，与网格态 `ZoneGridCell` 进聚焦的机制完全一致。`gesture(PanGesture)` 外挂则不受此限制，左右划仍外挂在 ZoneShell 实例上有效
 - **4c 单击装备名展开详情（手风琴）**：ChecklistRow 用 `checkOnlyHotzone: true` 让 check 圆圈只负责勾选、行其余调 `onTapRow` → `toggleExpand(item.id)`（SPRING_GENERAL 手风琴 toggle，同时只展开一个）。详情 buildItemDetail 经 fromGearId 反查 GearItem 取 category/brand/note，用 Flex wrap chips 展示。ForEach key 拼入展开态 `(expandedItemId===item.id?'e':'c')`。进退聚焦时 onActiveChange 重置 expandedItemId
 - **4d 长按菜单 + 拖拽跨区（推迟 phase4）**：onEditItem/onRemoveItem/onMoveItemToZone 三回调透传链已贯通到 FocusedZoneView 并预埋注释，Index.moveItemToZone 改 group 逻辑已就绪。手势消费方（长按弹菜单 + 长按不松手转拖拽收缩网格跨 Zone）留待 phase4。方案建议见 plan §六：阈值分流（短按展开/长按菜单）+ 收缩网格拖放
 
@@ -67,12 +68,13 @@
   - `UnifiedChecklistView`（容器）：网格态展示 7 个身体部位 Zone（2 列网格 + 杂项跨列），管理 focusedZone / focusedCloseSignal 透传
   - `ZoneShell`（v0.7.1 抽出）：网格态与聚焦态**共用同一外壳**（标题行浅染 `ZONE_*_TINT` + `ZONE_*_STROKE` 描边），两端 100% 一致是 `zone_*` geometryTransition `{ follow: true }` 就地放大不退化的前提。`@Prop contentDashed` 开关：为 true 时内容容器降级为透明无装饰占位（供空态复用外壳但不抢视觉权重）
   - `ZoneGridCell`：单个格子卡片，满格走 `ZoneShell` 白卡、点击触发 `zone_*` 转场；空格子走 `ZoneShell(contentDashed:true)` 的虚线降权框（`buildEmptyContent`）**不进 geometryTransition**—「空轻满重」B-3：空态不抢视觉权重。已删 `buildTitleRow` 平行实现
-  - `FocusedZoneView`：全屏聚焦态，点格子放大铺满全屏逐项核查；内含 ChecklistRow 列表 + buildItemDetail 手风琴详情 + buildAddRow。item 行长按手势用 `Column` wrapper + `LongPressGesture`（O3：与网格态统一，不用透明 Stack 图层）；maxHeight `'80%'`（父容器 height('100%') 确定，沿用 '60%' 生产先例）
+  - `FocusedZoneView`：全屏聚焦态，点格子放大铺满全屏逐项核查；内含 ChecklistRow 列表 + buildItemDetail 手风琴详情 + buildAddRow。item 行长按手势用 `Column` wrapper + `LongPressGesture`（O3：与网格态统一，不用透明 Stack 图层）。
+    - **v0.7.2 满铺精装修**：顶部日期行 + 进度条双层 collapse 收没让渡空间，卡片满铺顶到 navbar 下沿（不再悬浮 maxHeight '80%'）；遮罩改纯羽白实心（`PAGE_BG`）盖住网格虚影；聚焦卡片用 `ZONE_*_FOCUS_BG`（20% 白底混合的近实心淡色，浮在白遮罩上不能用半透明否则透白发灰）+ `focusBorder: true`（2vp zone 主题色实色边框，给卡片实体轮廓）；去掉右上角 ×键，改「点卡片空白返回」（见 4b 修正）
   - `ChecklistRow`：单行装备，契约 `checkOnlyHotzone=true` → check 圆圈负责勾选、行其余区域调 `onTapRow`（聚焦态用于展开详情）
   - Zone 映射：`BodyZone` 枚举 + `CATEGORY_SLOT_MAP` 在 `constants/GearLoadout.ets`；`groupByZoneAll`/`groupByZone`/`sortItemsByLayer` 等聚合函数在 `services/LoadoutService.ets`。装备按 `category` 查表自动归入格子
 - `ChecklistItem { id, name, group, checked, weight?, price?, fromGearId? }`（无 category/note/brand；聚焦态详情经 fromGearId 反查 GearItem 取 category/brand/note）
 
-## ArkUI 避坑清单（实战总结，共 41 条）
+## ArkUI 避坑清单（实战总结，共 43 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -117,6 +119,10 @@
 39. **组件 aboutToDisappear 必须清 timer** — `if/else` 条件渲染销毁组件时 `setTimeout`/`setInterval` 不会自动清除。必须在 `aboutToDisappear()` 中 `clearInterval(id)` / `clearTimeout(id)`。否则 stale `this` 引用上调 `animateTo` 抛运行时异常
 40. **ForEach 退场动画** — ForEach diff 移除节点默认无动画（瞬间消失）。需在子组件根容器加 `.transition(TransitionEffect.OPACITY.combine(TransitionEffect.scale({x:0.95,y:0.95})).animation({curve: SPRING_GENERAL()}))`。入场同理
 41. **counter 动画 onCheckedChange 不做相等判断** — `if (display !== target)` 在快速连击时 display 可能卡在中间值导致判断失效。正确做法：无条件启动新动画，在 `animateCounter` 头部 `clearInterval` 取消旧动画即可
+
+42. **自定义组件外挂 `.onClick` 被组件根节点自身 onClick 抢占** — 给自定义组件实例（如 `ZoneShell{...}`）在外部链式挂 `.onClick()`，事件绑到组件根节点（如 ZoneShell 根 Column）。若该根节点**自身已经有 `.onClick`**（即便回调因开关为 false 而空跑），它仍会注册并**消费**点击事件，外层挂的 onClick 拿不到 → 外挂点击静默失效。实战：FocusedZoneView 外挂 `.onClick` 收起聚焦态完全无反应。**解法**：不外挂，改走组件内部已暴露的点击回调链路（ZoneShell 的 `contentClickable: true` + `onTapContent`）。**注意**：`.gesture(PanGesture)` 外挂在自定义组件实例上**可以**生效（机制与 onClick 不同），所以左右划返回外挂没问题——别因 onClick 失效误判 gesture 也失效
+
+43. **半透明色浮在白底上会「透白发灰」** — 聚焦卡片浮在纯白/羽白实心遮罩之上时，卡片填充若用半透明色（如降低 alpha 的 zone 色），底下的白会透上来把颜色冲淡发灰，且整体偏「飘」无实体感。**解法**：用**不透明实心混合色**——把 zone 主题色与白色按百分比预混成 hex 常量（如 20% 公式 `白*0.8 + color*0.2`：Head #42A5F5 → #D9EDFD）。token 化为 `ZONE_*_FOCUS_BG`。配 2vp 实色边框补实体轮廓。淡到 8% 几乎纯白辨不出 zone 色，20% 是肉眼可辨 + 不刺眼的平衡点
 
 ### 补充验证结论
 
