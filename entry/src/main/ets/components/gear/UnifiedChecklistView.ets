@@ -107,6 +107,8 @@ export struct UnifiedChecklistView {
   onRemoveItem: (itemId: string) => void = () => {};
   // Phase 4：长按菜单「移动到…」→ 由 Index 弹出 zone 选择面板
   onRequestMoveSheet: (item: ChecklistItem) => void = () => {};
+  // D-2：聚焦态「逐项核查本区」回调
+  onReviewZone: (zone: string) => void = () => {};
 
   // FAB 按压状态
   @State private fabScale: number = 1.0;
@@ -276,8 +278,7 @@ this.computeCellHeight();
         onRemoveItem: this.onRemoveItem,
         onMoveItemToZone: this.onMoveItemToZone,
         onLongPressItem: (item: ChecklistItem) => { this.showOverlay(item); },
-        // D-2「逐项核查本区」携带 Zone 进入 Review，后续 Phase 接入；此处先占位不误触
-        onReviewZone: (z: string) => {}
+        onReviewZone: this.onReviewZone
       })
         .width('100%')
         .height('100%')

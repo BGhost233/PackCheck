@@ -202,6 +202,8 @@ struct Index {
   @State private showTempAddNotice: boolean = false;
   @State private reviewIndex: number = 0;
   @State private reviewFinished: boolean = false;
+  // D-2：聚焦态「逐项核查本区」。非空时 Review 只展示 group===zone 的 item。
+  @State private reviewZoneFilter: string | null = null;
   @State private reviewDragX: number = 0;
   @State private highlightedItemId: string = '';
   // checklistRenderNonce：load-bearing 渲染强制刷新计数器。ArkUI 的 ForEach 对嵌套数组（checklist.items）
@@ -1066,7 +1068,22 @@ struct Index {
   }
 
   private openReviewMode(): void {
-    if (this.currentChecklistItemCount() === 0) {
+    this.reviewZoneFilter = null;
+    this.startReview();
+  }
+
+  // D-2：聚焦态「逐项核查本区」入口 — 进入 Review 只核查本 Zone item。
+  private openZoneReview(zone: string): void {
+    this.reviewZoneFilter = zone;
+    this.startReview();
+  }
+
+  private startReview(): void {
+    // filter 后计数：若本区无 item，提示并放弃
+    const items = this.reviewZoneFilter !== null
+      ? this.currentChecklist()?.items.filter(i => i.group === this.reviewZoneFilter) ?? []
+      : this.currentChecklist()?.items ?? [];
+    if (items.length === 0) {
       this.showToastMessage('暂无可核查物品');
       return;
     }
@@ -1668,8 +1685,12 @@ struct Index {
       return;
     }
     await this.setChecklistItemChecked(item.id, checked);
+    // D-2：zone filter 时按过滤后的 item 数量判断 finish
+    const totalItems = this.reviewZoneFilter !== null
+      ? checklist.items.filter(i => i.group === this.reviewZoneFilter).length
+      : checklist.items.length;
     const nextIndex = this.reviewIndex + 1;
-    if (nextIndex >= checklist.items.length) {
+    if (nextIndex >= totalItems) {
       this.reviewFinished = true;
     } else {
       this.reviewIndex = nextIndex;
@@ -1857,6 +1878,9 @@ struct Index {
           onOpenReview: () => {
             this.openReviewMode();
           },
+          onOpenZoneReview: (zone: string) => {
+            this.openZoneReview(zone);
+          },
           onToggleGroup: (group: string) => {
             this.toggleGroup(group);
           },
@@ -1922,6 +1946,7 @@ struct Index {
           reviewIndex: this.reviewIndex,
           reviewFinished: this.reviewFinished,
           reviewDragX: this.reviewDragX,
+          reviewZoneFilter: this.reviewZoneFilter,
           onUpdateDragX: (value: number) => {
             this.reviewDragX = value;
           },

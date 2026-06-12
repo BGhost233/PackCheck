@@ -61,6 +61,8 @@ export struct TripDetailPage {
   onOpenTempItem: () => void = () => {};
   onOpenImport: () => void = () => {};
   onOpenReview: () => void = () => {};
+  // D-2：聚焦态「逐项核查本区」回调
+  onOpenZoneReview: (zone: string) => void = () => {};
   onDeleteTrip: () => void = () => {};
   onToggleGroup: (group: string) => void = () => {};
   onOpenEditItem: (item: ChecklistItem) => void = () => {};
@@ -125,7 +127,8 @@ export struct TripDetailPage {
         onMoveItemToZone: this.onMoveItemToZone,
         onEditItem: this.onOpenEditItem,
         onRemoveItem: this.onDeleteChecklistItem,
-        onRequestMoveSheet: this.onRequestMoveSheet
+        onRequestMoveSheet: this.onRequestMoveSheet,
+        onReviewZone: this.onOpenZoneReview
       })
         .layoutWeight(1)
     }

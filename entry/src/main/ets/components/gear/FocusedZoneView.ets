@@ -103,6 +103,8 @@ export struct FocusedZoneView {
 
   // 底部添加行按压
   @State private addPressed: boolean = false;
+  // D-2：核查按钮按压
+  @State private reviewBtnPressed: boolean = false;
 
   build() {
     // D-2：聚焦态 = 卡片浮层（不再铺满）。外壳用 ZoneShell（与网格态共用），
@@ -125,7 +127,8 @@ export struct FocusedZoneView {
       //   不传 contentPressed（默认 false）→ scale 恒 1.0，大卡不缩放，无按压副作用。
       contentClickable: true,
       onTapContent: (_z: string) => { this.onClose(); },
-      // titleTrailing 不传 → 走 ZoneShell 默认 emptyTrailing（空插槽，已去掉 × 关闭键）。
+      // D-2：逐项核查本区按钮在 titleTrailing 插槽中
+      titleTrailing: () => { this.buildTrailing(); },
       content: () => { this.buildContent() }
     })
     // 问题4b：左右划任一方向收起聚焦回网格（无需返回按钮）。
@@ -342,5 +345,31 @@ export struct FocusedZoneView {
     }
     // 通知父层弹出自绘浮层
     this.onLongPressItem(item);
+  }
+
+  // D-2：聚焦态顶栏 trailing — 「逐项核查本区」图标按钮
+  @Builder
+  private buildTrailing() {
+    Row() {
+      Text('核查')
+        .fontSize(12)
+        .fontColor(TEXT_TERTIARY)
+    }
+    .width(32)
+    .height(32)
+    .borderRadius(16)
+    .justifyContent(FlexAlign.Center)
+    .scale({ x: this.reviewBtnPressed ? PRESS_SCALE_DOWN : 1.0, y: this.reviewBtnPressed ? PRESS_SCALE_DOWN : 1.0 })
+    .animation({ curve: SPRING_PRESS() })
+    .onTouch((e: TouchEvent) => {
+      if (e.type === TouchType.Down) {
+        this.reviewBtnPressed = true;
+      } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+        this.reviewBtnPressed = false;
+      }
+    })
+    .onClick(() => {
+      this.onReviewZone(this.zone);
+    })
   }
 }

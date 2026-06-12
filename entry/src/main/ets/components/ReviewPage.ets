@@ -27,6 +27,8 @@ export struct ReviewPage {
   @Prop reviewIndex: number = 0;
   @Prop reviewFinished: boolean = false;
   @Prop reviewDragX: number = 0;
+  // D-2：非空时只核对 group===zone 的 item（聚焦态「逐项核查本区」）
+  @Prop reviewZoneFilter: string | null = null;
 
   onUpdateDragX: (value: number) => void = (value: number): void => {};
   onMarkReviewItem: (checked: boolean) => void = (checked: boolean): void => {};
@@ -58,7 +60,26 @@ export struct ReviewPage {
     if (checklist === undefined || this.reviewIndex < 0 || this.reviewIndex >= checklist.items.length) {
       return undefined;
     }
-    return checklist.items[this.reviewIndex];
+    // D-2：zone filter 过滤后的 item 列表
+    const items = this.filteredItems(checklist);
+    if (this.reviewIndex >= items.length) {
+      return undefined;
+    }
+    return items[this.reviewIndex];
+  }
+
+  // D-2：返回经过 zone filter 过滤后的核查 item 列表
+  private filteredItems(checklist: TripChecklist): ChecklistItem[] {
+    if (this.reviewZoneFilter !== null && this.reviewZoneFilter.length > 0) {
+      const result: ChecklistItem[] = [];
+      for (let i = 0; i < checklist.items.length; i++) {
+        if (checklist.items[i].group === this.reviewZoneFilter) {
+          result.push(checklist.items[i]);
+        }
+      }
+      return result;
+    }
+    return checklist.items;
   }
 
   private currentReviewItemName(): string {
@@ -73,8 +94,9 @@ export struct ReviewPage {
 
   private checkedCount(checklist: TripChecklist): number {
     let count = 0;
-    for (let index = 0; index < checklist.items.length; index++) {
-      if (checklist.items[index].checked) {
+    const items = this.filteredItems(checklist);
+    for (let index = 0; index < items.length; index++) {
+      if (items[index].checked) {
         count++;
       }
     }
@@ -83,7 +105,10 @@ export struct ReviewPage {
 
   private currentChecklistItemCount(): number {
     const checklist = this.currentChecklist();
-    return checklist === undefined ? 0 : checklist.items.length;
+    if (checklist === undefined) {
+      return 0;
+    }
+    return this.filteredItems(checklist).length;
   }
 
   private reviewSummaryText(): string {
@@ -91,12 +116,46 @@ export struct ReviewPage {
     if (checklist === undefined) {
       return '';
     }
+    const total = this.currentChecklistItemCount();
     return '已带 ' + this.checkedCount(checklist).toString() + ' 件，未带 ' +
-      (checklist.items.length - this.checkedCount(checklist)).toString() + ' 件';
+      (total - this.checkedCount(checklist)).toString() + ' 件';
+  }
+
+  // D-2：聚焦态「逐项核查本区」顶栏 Zone 名
+  private reviewTitle(): string {
+    if (this.reviewZoneFilter !== null && this.reviewZoneFilter.length > 0) {
+      // 复用 LoadoutService.zoneDisplayName 做翻译
+      return '核查 · ' + this.zoneFilterDisplay();
+    }
+    return '';
+  }
+
+  private zoneFilterDisplay(): string {
+    switch (this.reviewZoneFilter) {
+      case 'head': return '头部';
+      case 'upper': return '上身';
+      case 'lower': return '下身';
+      case 'feet': return '脚部';
+      case 'carry': return '背负';
+      case 'sleep': return '睡眠';
+      case 'misc': return '杂项';
+      default: return this.reviewZoneFilter ?? '';
+    }
   }
 
   build() {
     Column() {
+      // D-2：聚焦态核查本区时显示 Zone 名提示退出返回聚焦态
+      if (this.reviewZoneFilter !== null && this.reviewZoneFilter.length > 0) {
+        Row() {
+          Text(this.reviewTitle())
+            .fontSize(13)
+            .fontColor(TEXT_TERTIARY)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .padding({ top: 8, bottom: 4 })
+      }
       Row({ space: 12 }) {
         SymbolGlyph($r('sys.symbol.chevron_left'))
           .fontSize(14)
