@@ -48,6 +48,9 @@ export struct ZoneShell {
   @Prop showContentBorder: boolean = true;
   // B-3 空态降级：整块底色更淡（中性）、描边更细、标题降灰，内容区交给 content 插槽自绘虚线降权框。
   @Prop contentDashed: boolean = false;
+  // 聚焦态描边加重：边框 2vp + zoneColor 主题色实色（轻透明 stroke 色变实色主题色）。
+  //   网格态描边轻（不抑底色块）；聚焦态是独立卡片需明确轮廓，加粗 + 实色才有「实体卡片」感。
+  @Prop focusBorder: boolean = false;
   // 整块容器是否响应点击/按压（网格态点格子进聚焦；聚焦态卡内自有交互，关闭）
   @Prop contentClickable: boolean = false;
   // 整块容器按压态（宿主透传 @State）
@@ -92,12 +95,14 @@ export struct ZoneShell {
       : (this.contentTinted ? LIGHT_PRIMARY_COLOR : this.zoneFill))
     .animation({ curve: SPRING_GENERAL() })
     .borderRadius(CARD_RADIUS)
-    // 描边：空态更细更浅（降权），否则 zoneStroke
+    // 描边：空态更细更浅（降权）；聚焦态 2vp + zoneColor 主题色实色（明确轮廓+实体感）；否则网格态 1vp + 轻 zoneStroke
     .border(!this.showContentBorder
       ? undefined
       : (this.contentDashed
         ? { width: 0.5, color: DIVIDER_COLOR, style: BorderStyle.Solid }
-        : { width: 1, color: this.zoneStroke, style: BorderStyle.Solid }))
+        : (this.focusBorder
+          ? { width: 2, color: this.zoneColor, style: BorderStyle.Solid }
+          : { width: 1, color: this.zoneStroke, style: BorderStyle.Solid })))
     .clip(true)
     .scale({
       x: this.contentClickable && this.contentPressed ? PRESS_SCALE_DOWN : 1.0,

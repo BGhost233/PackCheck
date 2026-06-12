@@ -116,18 +116,17 @@ export struct FocusedZoneView {
       // 聚焦态标题区宽松尺寸（区别于网格态紧凑）
       titleBarHeight: 44,
       titleFontSize: FONT_SIZE_TITLE_MEDIUM,
+      // 聚焦态边框加粗：2vp + 主题色实色，明确卡片轮廓 + 实体感（问题1）
+      focusBorder: true,
       // 顶栏整条不响应点击（内容各自处理）
       titleClickable: false,
-      contentClickable: false,
-      // 诉求3：去掉 × 关闭键，改为「点击展开的卡片空白即返回」（下方 .onClick 已承载）。
-      //   titleTrailing 不传 → 走 ZoneShell 默认 emptyTrailing（空插槽）。
+      // 诉求3 修复：点卡片空白返回。复用网格态同款 contentClickable→onTapContent 内部链路，
+      //   而非在 ZoneShell{} 外部挂 .onClick——外部 onClick 会被 ZoneShell 根节点自身的 onClick 抢占失效（旧 bug 根因）。
+      //   不传 contentPressed（默认 false）→ scale 恒 1.0，大卡不缩放，无按压副作用。
+      contentClickable: true,
+      onTapContent: (_z: string) => { this.onClose(); },
+      // titleTrailing 不传 → 走 ZoneShell 默认 emptyTrailing（空插槽，已去掉 × 关闭键）。
       content: () => { this.buildContent() }
-    })
-    // 诉求3 / 问题4b：点卡片空白处（非装备行/非 check）收起聚焦回网格。
-    //   ChecklistRow / check / 添加行各自 onClick 消费事件不冒泡，
-    //   只有点到行间隙 / 列表底部留白 / 顶栏空白才冒泡到此触发收起（替代已删除的 × 关闭键）。
-    .onClick(() => {
-      this.onClose();
     })
     // 问题4b：左右划任一方向收起聚焦回网格（无需返回按钮）。
     //   水平 PanGesture，划动超阈值即触发；fingers=1 避免与列表纵向滚动冲突。
