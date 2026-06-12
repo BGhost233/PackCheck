@@ -128,6 +128,31 @@ export class PackStore {
     return fallback;
   }
 
+  // 防抖 flush：连续写入合并为一次，避免高频操作（连打勾/拖拽）每次写磁盘
+  private flushTimerId: number = -1;
+  private static readonly FLUSH_DELAY: number = 200; // ms
+
+  private scheduleFlush(): void {
+    if (this.flushTimerId >= 0) {
+      clearTimeout(this.flushTimerId);
+    }
+    this.flushTimerId = setTimeout(() => {
+      this.flushNow();
+    }, PackStore.FLUSH_DELAY);
+  }
+
+  private async flushNow(): Promise<void> {
+    if (this.prefs === undefined) {
+      return;
+    }
+    try {
+      await this.prefs.flush();
+    } catch (error) {
+      hilog.warn(LOG_DOMAIN, LOG_TAG, 'flush failed: %{public}s', String(error));
+    }
+    this.flushTimerId = -1;
+  }
+
   private async writeString(key: string, value: string): Promise<void> {
     if (this.prefs === undefined) {
       hilog.warn(LOG_DOMAIN, LOG_TAG, 'writeString skipped (prefs undefined), key=%{public}s', key);
@@ -135,7 +160,7 @@ export class PackStore {
     }
     try {
       await this.prefs.put(key, value);
-      await this.prefs.flush();
+      this.scheduleFlush();
     } catch (error) {
       hilog.error(LOG_DOMAIN, LOG_TAG, 'writeString failed for key=%{public}s: %{public}s', key, String(error));
     }
