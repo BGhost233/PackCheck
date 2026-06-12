@@ -118,6 +118,7 @@ export struct GearPage {
   private trayAutoScrollTimer: number = -1;
   private screenWidth: number = 360; // fallback
   private screenHeight: number = 780;
+  private isAlive: boolean = true;
 
   private onSwipeResetNonceChange(): void {
     if (this.swipedGearId !== '') {
@@ -129,6 +130,7 @@ export struct GearPage {
   }
 
   aboutToAppear(): void {
+    this.isAlive = true;
     // 获取屏幕尺寸（vp）
     try {
       const defaultDisplay = display.getDefaultDisplaySync();
@@ -147,6 +149,17 @@ export struct GearPage {
     setTimeout(() => {
       this.listEntered = true;
     }, 20);
+  }
+
+  aboutToDisappear(): void {
+    this.isAlive = false;
+    this.stopTrayAutoScroll();
+    // 退出拖拽态：清理可能残留的拖拽动画状态
+    if (this.dragMode) {
+      this.dragMode = false;
+      this.showTripTray = false;
+      this.dragOverTripId = '';
+    }
   }
 
   private async loadCollapsedGroups(): Promise<void> {
@@ -285,6 +298,11 @@ export struct GearPage {
       return; // 已在滚动，只更新速度
     }
     this.trayAutoScrollTimer = setInterval(() => {
+      if (!this.isAlive) {
+        clearInterval(this.trayAutoScrollTimer);
+        this.trayAutoScrollTimer = -1;
+        return;
+      }
       const current = this.tripTrayScroller.currentOffset().xOffset;
       this.tripTrayScroller.scrollTo({
         xOffset: current + this.trayScrollSpeed,
