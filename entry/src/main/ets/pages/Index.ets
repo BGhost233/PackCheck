@@ -1515,21 +1515,33 @@ struct Index {
       if (cl.id !== checklist.id) {
         return cl;
       }
-      const updatedItems = cl.items.map(item => {
-        if (item.id === itemId) {
-          const copy: ChecklistItem = {
-            id: item.id,
-            name: item.name,
-            group: zone,
-            checked: item.checked,
-            weight: item.weight,
-            price: item.price,
-            fromGearId: item.fromGearId
-          };
-          return copy;
+      // 找到目标 item 并创建更新后的副本
+      const targetItem = cl.items.find(item => item.id === itemId);
+      if (targetItem === undefined) {
+        return cl;
+      }
+      const movedItem: ChecklistItem = {
+        id: targetItem.id,
+        name: targetItem.name,
+        group: zone,
+        checked: targetItem.checked,
+        weight: targetItem.weight,
+        price: targetItem.price,
+        fromGearId: targetItem.fromGearId
+      };
+      // 从数组中移除原 item（immutable spread 副本，避坑 #38）
+      const withoutMoved = cl.items.filter(item => item.id !== itemId);
+      // F-1：落点对齐目标格顶部（unshift）。
+      // 找目标 zone 第一个 item 的索引，插到它前面；若目标 zone 为空，插到末尾。
+      let insertAt = withoutMoved.length;
+      for (let i = 0; i < withoutMoved.length; i++) {
+        if (withoutMoved[i].group === zone) {
+          insertAt = i;
+          break;
         }
-        return item;
-      });
+      }
+      const updatedItems = withoutMoved.slice();
+      updatedItems.splice(insertAt, 0, movedItem);
       const updated: TripChecklist = {
         id: cl.id,
         title: cl.title,
