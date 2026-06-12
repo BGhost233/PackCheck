@@ -151,3 +151,25 @@ function formatDateLabel(timestamp: number): string {
   const d = new Date(timestamp);
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
+
+/**
+ * gearId → 出行次数 预计算 Map（O(n) 一次遍历）。
+ * 供按出行次数排序/渲染场景替代逐个查 computeGearTripCount，避免 O(trips × items) 的重复遍历。
+ */
+export function buildGearTripCountMap(trips: TripChecklist[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (let i = 0; i < trips.length; i++) {
+    const t = trips[i];
+    // 单行程内同一 gear 只计一次（去重）
+    const seenInTrip = new Set<string>();
+    for (let j = 0; j < t.items.length; j++) {
+      const gid = t.items[j].fromGearId;
+      if (gid !== undefined && gid.length > 0 && !seenInTrip.has(gid)) {
+        seenInTrip.add(gid);
+        const prev = map.get(gid);
+        map.set(gid, prev !== undefined ? prev + 1 : 1);
+      }
+    }
+  }
+  return map;
+}

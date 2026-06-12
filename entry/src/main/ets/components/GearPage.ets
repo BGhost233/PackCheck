@@ -15,6 +15,7 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import { computeGearTripCount } from '../services/FootprintService';
+import { buildGearTripCountMap } from '../services/FootprintService';
 import { computeFootprint, Footprint, LongestCompanion } from '../services/FootprintService';
 import {
   ARROW_COLOR,
@@ -86,6 +87,8 @@ export struct GearPage {
     tripCount: 0, totalDistanceKm: 0, totalAscentM: 0, totalDurationHours: 0,
     maxAltitude: 0, placeCount: 0, gearCount: 0, recentTrips: [],
   };
+  // gear id → 出行次数预计算 Map（避免 O(trips×items) 重复遍历）
+  @State private gearTripCountMap: Map<string, number> = new Map();
 
 @State private pressedGearId: string = '';
 @State private swipedGearId: string = '';
@@ -166,6 +169,8 @@ export struct GearPage {
   // 人生足迹聚合
   private refreshFootprint(): void {
     this.footprintVm = computeFootprint(this.checklists, this.gears);
+    // 预计算 gear→出行次数 map，渲染/排序时查表无需遍历
+    this.gearTripCountMap = buildGearTripCountMap(this.checklists);
   }
 
   aboutToDisappear(): void {
@@ -392,9 +397,9 @@ export struct GearPage {
     return value === undefined ? 0 : value;
   }
 
-  // 同行次数实时派生：含该装备的不同行程数，单一事实源是行程数据（不再读 item.tripCount）
+  // 同行次数实时派生：查预计算 Map，O(1)，避免每次排序/渲染重复遍历
   private gearTripCount(item: GearItem): number {
-    return computeGearTripCount(item.id, this.checklists);
+    return this.gearTripCountMap.get(item.id) ?? 0;
   }
 
   private gearValueRatio(item: GearItem): number {
