@@ -15,9 +15,11 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import { computeGearTripCount } from '../services/FootprintService';
+import { computeFootprint, Footprint, LongestCompanion } from '../services/FootprintService';
 import {
   ARROW_COLOR,
   CARD_BG,
+  CARD_PADDING,
   CHIP_RADIUS,
   DANGER_COLOR,
   DANGER_TINT,
@@ -53,7 +55,9 @@ import {
   TEXT_TERTIARY,
   TRANSPARENT,
   WHITE,
-  WHITE_SECONDARY
+  WHITE_SECONDARY,
+  AMBER_ACCENT,
+  SHADOW_MICRO
 } from '../constants/DesignTokens';
 import { getGroupColor } from '../utils/ColorUtils';
 
@@ -76,6 +80,12 @@ export struct GearPage {
   @Prop multiSelectMode: boolean = false;
   @Prop selectedMultiGearIds: string[] = [];
   @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
+
+  // 人生足迹精简聚合（装备库顶部黄金区，提纲 §3.4）
+  @State private footprintVm: Footprint = {
+    tripCount: 0, totalDistanceKm: 0, totalAscentM: 0, totalDurationHours: 0,
+    maxAltitude: 0, placeCount: 0, gearCount: 0, recentTrips: [],
+  };
 
 @State private pressedGearId: string = '';
 @State private swipedGearId: string = '';
@@ -139,6 +149,8 @@ export struct GearPage {
     } catch (e) {
       // fallback
     }
+    // 人生足迹聚合
+    this.refreshFootprint();
     // 初始位置：右下角
     this.fabX = this.screenWidth - 50 - 16;
     this.fabY = this.screenHeight - 50 - 160; // 留出 TabBar 空间
@@ -149,6 +161,11 @@ export struct GearPage {
     setTimeout(() => {
       this.listEntered = true;
     }, 20);
+  }
+
+  // 人生足迹聚合
+  private refreshFootprint(): void {
+    this.footprintVm = computeFootprint(this.checklists, this.gears);
   }
 
   aboutToDisappear(): void {
@@ -807,6 +824,15 @@ export struct GearPage {
               Column()
                 .width('100%')
                 .height(this.topSpacerHeight())
+            }
+            // 人生足迹精简聚合区（装备库顶部黄金区，提纲 §3.4）
+            if (this.gears.length > 0 && this.footprintVm.tripCount > 0) {
+              ListItem() {
+                this.FootprintRow()
+              }
+              .opacity(this.listEntered ? 1 : 0)
+              .translate({ y: this.listEntered ? 0 : STAGGER_OFFSET_Y })
+              .animation({ delay: staggerDelay(0, 30, 4, 200), curve: SPRING_GENERAL() })
             }
             if (this.gears.length === 0) {
               ListItem() {
@@ -1924,6 +1950,42 @@ export struct GearPage {
       .padding(18)
       .backgroundColor(CARD_BG)
       .borderRadius(16)
+  }
+
+  // ---- 人生足迹精简聚合行（装备库顶部黄金区，提纲 §3.4） ----
+  // 类似 Apple Health 摘要卡片：单行 chip 展示关键足迹数据，克制不抢装备列表主视觉
+  @Builder
+  private FootprintRow() {
+    Row({ space: 8 }) {
+      if (this.footprintVm.totalDistanceKm > 0) {
+        this.FootprintChip(this.footprintVm.totalDistanceKm.toString() + 'km')
+      }
+      if (this.footprintVm.totalAscentM > 0) {
+        this.FootprintChip(this.footprintVm.totalAscentM.toString() + 'm↑')
+      }
+      if (this.footprintVm.maxAltitude > 0) {
+        this.FootprintChip('▲' + this.footprintVm.maxAltitude.toString() + 'm')
+      }
+      if (this.footprintVm.longestCompanion !== undefined && this.footprintVm.longestCompanion.name.length > 0) {
+        this.FootprintChip(this.footprintVm.longestCompanion.name)
+      }
+    }
+    .width('100%')
+    .padding({ left: 4, right: 4, top: 4, bottom: 8 })
+  }
+
+  @Builder
+  private FootprintChip(text: string) {
+    Text(text)
+      .fontSize(11)
+      .fontColor(TEXT_SECONDARY)
+      .fontWeight(FontWeight.Medium)
+      .fontFeature(FONT_FEATURE_TNUM)
+      .maxLines(1)
+      .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+      .backgroundColor(CARD_BG)
+      .borderRadius(CHIP_RADIUS)
+      .shadow({ radius: 3, color: SHADOW_MICRO, offsetY: 1 })
   }
 
   // --- 行程托盘 ---
