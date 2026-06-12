@@ -652,6 +652,14 @@ export struct GearPage {
     return days.toString();
   }
 
+  // 陪伴天数来源标签：有 acquiredAt 不显示前缀；无 acquiredAt 时提示「大约」表示 fallback
+  private companionDaysLabel(item: GearItem): string {
+    if (typeof item.acquiredAt === 'number') {
+      return ' 天';
+    }
+    return ' 天左右';
+  }
+
   @Builder
   private CompanionChip(text: string) {
     Text(text)
@@ -1692,7 +1700,7 @@ export struct GearPage {
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .fontFeature("'tnum'")
-          Text(' 天')
+          Text(this.companionDaysLabel(item))
             .fontSize(13)
             .fontColor(TEXT_SECONDARY)
             .margin({ bottom: 2 })
