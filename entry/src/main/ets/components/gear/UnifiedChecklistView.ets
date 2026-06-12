@@ -1,6 +1,6 @@
 // 统一清单视图 - 主视图（网格态）
 // 职责：2 列网格展示全部 7 个 Zone 格子（有内容态 / 空态），首屏精确 2×2.5 密度
-// 替代旧的 LoadoutView + ChecklistDetail 双 Tab。spec §2.1 / §4
+// 替代旧的配装/清单双 Tab。spec §2.1 / §4
 // P1：空态不再切引导页，统一走网格态——0 件时所有 Zone 走虚线空格子，点对应部位空格子加装备
 
 import { display } from '@kit.ArkUI';
