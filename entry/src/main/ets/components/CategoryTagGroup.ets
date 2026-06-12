@@ -7,9 +7,11 @@ import {
   PAGE_BG,
   PRIMARY_COLOR,
   PRIMARY_PRESSED,
+  PRIMARY_STROKE_GHOST,
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
+  TRANSPARENT,
   WHITE,
   WHITE_SECONDARY
 } from '../constants/DesignTokens';
@@ -217,7 +219,7 @@ export struct CategoryTagGroup {
             .fontColor(PRIMARY_COLOR)
             .padding({ left: 10, right: 6, top: 6, bottom: 6 })
             .borderRadius(8)
-            .backgroundColor(this.pressedChip === '__done__' ? '#0D2D7D46' : '#00000000')
+            .backgroundColor(this.pressedChip === '__done__' ? PRIMARY_STROKE_GHOST : TRANSPARENT)
             .scale({
               x: this.pressedChip === '__done__' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
               y: this.pressedChip === '__done__' ? PRESS_SCALE_DOWN : PRESS_SCALE_REST

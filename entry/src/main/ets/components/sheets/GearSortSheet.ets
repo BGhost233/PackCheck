@@ -24,6 +24,15 @@ export struct GearSortSheet {
   onSelectSort: (mode: string) => void = (mode: string): void => {};
 
   @State private pressedOption: string = '';
+  // 超时守卫 timer：防止 onFinish 链中断导致 bounce 状态永久残留
+  private bounceGuardTimerId: number = -1;
+
+  aboutToDisappear(): void {
+    if (this.bounceGuardTimerId >= 0) {
+      clearTimeout(this.bounceGuardTimerId);
+      this.bounceGuardTimerId = -1;
+    }
+  }
 
   build() {
     Column({ space: 10 }) {
@@ -65,16 +74,25 @@ export struct GearSortSheet {
         this.pressedOption = mode;
       } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
         // 三段式: 0.96 → 1.02 → 1.0（onFinish 链式，不用 setTimeout）
+        //   加超时守卫：500ms 后强制清 bounce 状态，防止 onFinish 链中断导致永久残留
+        if (this.bounceGuardTimerId >= 0) {
+          clearTimeout(this.bounceGuardTimerId);
+        }
         this.getUIContext().animateTo({
           curve: SPRING_PRESS(),
           onFinish: () => {
             this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
               this.pressedOption = '';
+              this.bounceGuardTimerId = -1;
             });
           }
         }, () => {
           this.pressedOption = '__bounce_' + mode;
         });
+        this.bounceGuardTimerId = setTimeout(() => {
+          this.pressedOption = '';
+          this.bounceGuardTimerId = -1;
+        }, 500);
       }
     })
     .onClick(() => {

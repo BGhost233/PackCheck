@@ -1029,7 +1029,7 @@ struct Index {
     this.selectedChecklistId = created.id;
     this.closeSheet();
     this.startShakeListening();
-    this.pushChecklistDetail();
+    this.pushTripDetail();
   }
 
   private openChecklist(checklistId: string): void {
@@ -1038,10 +1038,10 @@ struct Index {
     this.startShakeListening();
     // 导航离开时收回清单页 swipeAction
     this.homeSwipeResetNonce++;
-    this.pushChecklistDetail();
+    this.pushTripDetail();
   }
 
-  private pushChecklistDetail(): void {
+  private pushTripDetail(): void {
     this.getUIContext().animateTo({
       curve: SPRING_HERO_EXPAND()
     }, () => {
@@ -1634,7 +1634,7 @@ struct Index {
     this.cancelGearMultiSelect();
     this.closeSheet();
     this.startShakeListening();
-    this.pushChecklistDetail();
+    this.pushTripDetail();
   }
 
 
