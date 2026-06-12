@@ -117,6 +117,18 @@ export const ZONE_CARRY_FILL: string = '#1FFFA726';
 export const ZONE_SLEEP_FILL: string = '#1F7E57C2';
 export const ZONE_MISC_FILL: string = '#1F78909C';
 
+// ============ Zone 聚焦态卡片底色（便单式近实心淡色块，白底掺 ~8% 彩，不透明） ============
+// 聚焦态卡片背后铺纯白遮罩隔离干扰，卡片本身需用「白里掺一点点彩」的实心色（非彩色降透明度），
+// 否则透出背后白会显灰发脏。色值 = ZONE_*_COLOR 与白色按 8% 混合后的不透明 hex，
+// 与便单四象限聚焦色块同档：极淡、纯净、可读性极高。
+export const ZONE_HEAD_FOCUS_BG: string = '#F7F8FE';
+export const ZONE_UPPER_FOCUS_BG: string = '#FEF1F1';
+export const ZONE_LOWER_FOCUS_BG: string = '#F2F3FA';
+export const ZONE_FEET_FOCUS_BG: string = '#F6F3F3';
+export const ZONE_CARRY_FOCUS_BG: string = '#FFF8EE';
+export const ZONE_SLEEP_FOCUS_BG: string = '#F5F2FA';
+export const ZONE_MISC_FOCUS_BG: string = '#F4F6F7';
+
 // ============ Zone 容器描边色（按饱和度分档，B-1） ============
 // 高饱和（蓝/红/靛）~8% alpha，中饱和（橙/紫）~11%，低饱和（棕/灰蓝）~14%，
 // 目的：视觉描边深浅在七个部位间观感均衡，避免高饱和色描边过重。

@@ -11,7 +11,13 @@ import {
   META_SEPARATOR
 } from '../../constants/Colors';
 import { PAGE_PADDING, FONT_FEATURE_TNUM } from '../../constants/Layout';
-import { SPRING_GENERAL, SPRING_PRESS, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
+import {
+  SPRING_GENERAL,
+  SPRING_PRESS,
+  PRESS_SCALE_DOWN,
+  SPRING_HERO_EXPAND,
+  SPRING_HERO_COLLAPSE
+} from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { UnifiedChecklistView } from './UnifiedChecklistView';
 
@@ -243,8 +249,16 @@ export struct TripDetailPage {
         }, (seg: MetaSegment, index: number) => seg.text + '_' + index.toString())
       }
       .width('100%')
-      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
+      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: this.focusedZone != null ? 0 : 8 })
       .justifyContent(FlexAlign.Center)
+      // 诉求1：进入聚焦时 head 日期行向上收没（height→0 + 淡出 + clip 裁切），
+      //   让出空间给聚焦卡片顶到 navbar 下沿。Spring 与聚焦转场同帧（focusedZone 驱动），
+      //   形成「head 被压扁吸走」的连续空间让渡，而非硬切消失。
+      //   日期为单行 12 字号，展开高度固定 28（与 reservedTop 的 SHARED_INFO 一致，可插值）。
+      .height(this.focusedZone != null ? 0 : 28)
+      .clip(true)
+      .opacity(this.focusedZone != null ? 0 : 1)
+      .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
       .scale({ x: this.infoScale, y: this.infoScale })
       .animation({ curve: SPRING_PRESS() })
       .onTouch((e: TouchEvent) => {

@@ -9,7 +9,6 @@
 // 长按菜单 + 长按转拖拽跨 Zone（问题4d）留 Phase 4，回调已预埋透传到位
 
 import {
-  CARD_BG,
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -102,8 +101,6 @@ export struct FocusedZoneView {
     return this.gears.find((g: GearItem) => g.id === item.fromGearId);
   }
 
-  // 顶部关闭键按压
-  @State private closePressed: boolean = false;
   // 底部添加行按压
   @State private addPressed: boolean = false;
 
@@ -119,15 +116,16 @@ export struct FocusedZoneView {
       // 聚焦态标题区宽松尺寸（区别于网格态紧凑）
       titleBarHeight: 44,
       titleFontSize: FONT_SIZE_TITLE_MEDIUM,
-      // 顶栏整条不响应点击（关闭键 / 内容各自处理）
+      // 顶栏整条不响应点击（内容各自处理）
       titleClickable: false,
       contentClickable: false,
-      titleTrailing: () => { this.buildTopTrailing() },
+      // 诉求3：去掉 × 关闭键，改为「点击展开的卡片空白即返回」（下方 .onClick 已承载）。
+      //   titleTrailing 不传 → 走 ZoneShell 默认 emptyTrailing（空插槽）。
       content: () => { this.buildContent() }
     })
-    // 问题4b：点卡片空白处（非装备行/非 check）收起聚焦。
-    //   ChecklistRow / check / 添加行 / 关闭键各自 onClick 消费事件不冒泡，
-    //   只有点到行间隙 / 列表底部留白 / 顶栏空白才冒泡到此触发收起。
+    // 诉求3 / 问题4b：点卡片空白处（非装备行/非 check）收起聚焦回网格。
+    //   ChecklistRow / check / 添加行各自 onClick 消费事件不冒泡，
+    //   只有点到行间隙 / 列表底部留白 / 顶栏空白才冒泡到此触发收起（替代已删除的 × 关闭键）。
     .onClick(() => {
       this.onClose();
     })
@@ -194,38 +192,6 @@ export struct FocusedZoneView {
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring)
     .padding({ left: 16, right: 16, top: 8, bottom: 16 })
-  }
-
-  // ---- 标题行右侧 trailing：× 关闭键 ----
-  // 便单式：聚焦态去掉「已完成/总数」进度（靠列表本身表达），trailing 只保留 × 关闭键。
-  @Builder
-  private buildTopTrailing() {
-    Row({ space: 10 }) {
-      // 关闭键
-      Row() {
-        SymbolGlyph($r('sys.symbol.xmark'))
-          .fontSize(16)
-          .fontColor([TEXT_SECONDARY])
-      }
-      .width(28)
-      .height(28)
-      .borderRadius(14)
-      .justifyContent(FlexAlign.Center)
-      .backgroundColor(CARD_BG)
-      .scale({ x: this.closePressed ? PRESS_SCALE_DOWN : 1.0, y: this.closePressed ? PRESS_SCALE_DOWN : 1.0 })
-      .animation({ curve: SPRING_PRESS() })
-      .onTouch((e: TouchEvent) => {
-        if (e.type === TouchType.Down) {
-          this.closePressed = true;
-        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-          this.closePressed = false;
-        }
-      })
-      .onClick(() => {
-        this.onClose();
-      })
-    }
-    .alignItems(VerticalAlign.Center)
   }
 
   // ---- 问题4c：装备详情手风琴展开区 ----

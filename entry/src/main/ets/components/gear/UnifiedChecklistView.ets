@@ -27,13 +27,20 @@ import {
   ZONE_CARRY_STROKE,
   ZONE_SLEEP_STROKE,
   ZONE_MISC_STROKE,
-  ZONE_HEAD_FILL,
-  ZONE_UPPER_FILL,
-  ZONE_LOWER_FILL,
-  ZONE_FEET_FILL,
-  ZONE_CARRY_FILL,
-  ZONE_SLEEP_FILL,
-  ZONE_MISC_FILL
+ZONE_HEAD_FILL,
+ZONE_UPPER_FILL,
+ZONE_LOWER_FILL,
+ZONE_FEET_FILL,
+ZONE_CARRY_FILL,
+ZONE_SLEEP_FILL,
+ZONE_MISC_FILL,
+ZONE_HEAD_FOCUS_BG,
+ZONE_UPPER_FOCUS_BG,
+ZONE_LOWER_FOCUS_BG,
+ZONE_FEET_FOCUS_BG,
+ZONE_CARRY_FOCUS_BG,
+ZONE_SLEEP_FOCUS_BG,
+ZONE_MISC_FOCUS_BG
 } from '../../constants/Colors';
 import {
   SPRING_GENERAL,
@@ -168,11 +175,21 @@ this.computeCellHeight();
   build() {
     Column() {
       // 顶部全局进度条（sticky 吸顶，仅有内容时显示）。spec §2.1 / §3.3
+      // 诉求1：进入聚焦时进度条随 head 一起向上收没（height→0 + 淡出 + clip），
+      //   与日期行（父层 TripDetailPage）协同让出空间给聚焦卡片顶到 navbar 下沿。
+      //   外层 collapse 容器：展开高度 48（与 TripDetailPage.reservedTop 的 PROGRESS_BAR 一致，可插值）。
       if (this.trip.items.length > 0) {
-        LoadoutProgressBar({
-          checked: this.progress().checked,
-          total: this.progress().total
-        })
+        Column() {
+          LoadoutProgressBar({
+            checked: this.progress().checked,
+            total: this.progress().total
+          })
+        }
+        .width('100%')
+        .height(this.focusedZone != null ? 0 : 48)
+        .clip(true)
+        .opacity(this.focusedZone != null ? 0 : 1)
+        .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
       }
 
       Stack() {
@@ -212,15 +229,17 @@ this.computeCellHeight();
     .height('100%')
   }
 
-  // ---- D-4：全屏压暗蒙层（常驻树，opacity 切换，焦点驱动）----
-  //   #33000000（OVERLAY_DIM）；与 SPRING_HERO 同帧淡入淡出；
-  //   层级在网格/FAB 之上、聚焦卡片之下；点蒙层 → 收起聚焦。
+  // ---- D-4：全屏聚焦遮罩（常驻树，opacity 切换，焦点驱动）----
+  //   诉求2：从半透明压暗黑（OVERLAY_DIM）改为纯羽白实心（PAGE_BG #F8F9FA）。
+  //   彻底盖住背后网格虚影 + 满屏水印，聚焦卡片浮在干净羽白底上，可读性拉满（仿便单纯白屏背景）。
+  //   半透明黑 + 透出网格 = 三层叠加发灰发脏，是上版「卡片背后透明可读性差」的根因。
+  //   与 SPRING_HERO 同帧淡入淡出；层级在网格/FAB 之上、聚焦卡片之下；点遮罩 → 收起聚焦。
   @Builder
   private buildFocusedScrim() {
     Column()
       .width('100%')
       .height('100%')
-      .backgroundColor(OVERLAY_DIM)
+      .backgroundColor(PAGE_BG)
       .opacity(this.focusedZone != null ? 1 : 0)
       .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
       // 非聚焦时彻底不拦截点击，避免遮住网格交互
@@ -235,8 +254,9 @@ this.computeCellHeight();
   // ---- 全屏聚焦层（常驻树，geometryTransition 共享元素配对端）----
   @Builder
   private buildFocusedLayer() {
-    // 聚焦态 = 卡片浮层（不再铺满整屏）。
-    // 外层定位容器：只负责留边距（左右 20vp）+ 垂直居中，不参与几何插值。
+    // 诉求1：聚焦态 = 卡片铺满 head 收没后让出的空间（顶到 navbar 下沿 ~ 底部 FAB 上方）。
+    //   外层定位容器：左右留边 16（与网格 GRID_PADDING 一致，转场更连贯）、顶部 8、底部留 96 给 FAB。
+    //   不再垂直居中悬浮 80%——卡片 height('100%') 撑满定位容器。
     //   geometryTransition 下沉到 FocusedZoneView（= ZoneShell 卡片节点）本身——
     //   与网格端 GridItem（那张卡）几何对应，转场是「同一块淡色容器连续放大」，
     //   修复此前挂全屏居中容器导致标题被甩到屏幕中央 / 背景药丸悬空的错位。
@@ -247,7 +267,7 @@ this.computeCellHeight();
         gears: this.gears,
         zoneColor: this.zoneColor(this.focusedZoneRender),
         zoneStroke: this.zoneStroke(this.focusedZoneRender),
-        zoneFill: this.zoneFill(this.focusedZoneRender),
+        zoneFill: this.zoneFocusBg(this.focusedZoneRender),
         active: this.focusedZone != null,
         onClose: () => { this.closeFocus(); },
         onTapEmpty: (z: string) => { this.onOpenPicker(z); },
@@ -260,15 +280,14 @@ this.computeCellHeight();
         onReviewZone: (z: string) => {}
       })
         .width('100%')
-        .constraintSize({ maxHeight: '80%' })
+        .height('100%')
         // D-3：follow:true 让转场期间节点跟随布局插值，从原格几何中心连续长大到聚焦落点（就地放大）。
         //   挂在卡片节点上而非外层全屏容器，保证两端共享元素都是「那张卡」本身。
         .geometryTransition('zone_' + this.focusedZoneRender, { follow: true })
     }
     .width('100%')
     .height('100%')
-    .padding({ left: 20, right: 20 })
-    .justifyContent(FlexAlign.Center)
+    .padding({ left: GRID_PADDING, right: GRID_PADDING, top: 8, bottom: 96 })
     .visibility(this.focusedZone != null ? Visibility.Visible : Visibility.Hidden)
     .hitTestBehavior(this.focusedZone != null ? HitTestMode.Default : HitTestMode.None)
   }
@@ -802,6 +821,22 @@ this.computeCellHeight();
       case BodyZone.Sleep: return ZONE_SLEEP_FILL;
       case BodyZone.Misc: return ZONE_MISC_FILL;
       default: return ZONE_MISC_FILL;
+    }
+  }
+
+  // zone → 聚焦态整块填充底（ZONE_*_FOCUS_BG，近实心「白里掺 8% 彩」）。
+  //   诉求3：聚焦卡片浮在纯羽白遮罩上，若沿用网格的 12% 半透明 FILL，透出羽白会发灰浑浊；
+  //   FOCUS_BG 是不透明实心淡色（白底掺彩算出的 hex），干净不透灰，仿便单聚焦色块质感。
+  private zoneFocusBg(zone: string): string {
+    switch (zone) {
+      case BodyZone.Head: return ZONE_HEAD_FOCUS_BG;
+      case BodyZone.UpperBody: return ZONE_UPPER_FOCUS_BG;
+      case BodyZone.LowerBody: return ZONE_LOWER_FOCUS_BG;
+      case BodyZone.Feet: return ZONE_FEET_FOCUS_BG;
+      case BodyZone.Carry: return ZONE_CARRY_FOCUS_BG;
+      case BodyZone.Sleep: return ZONE_SLEEP_FOCUS_BG;
+      case BodyZone.Misc: return ZONE_MISC_FOCUS_BG;
+      default: return ZONE_MISC_FOCUS_BG;
     }
   }
 }
