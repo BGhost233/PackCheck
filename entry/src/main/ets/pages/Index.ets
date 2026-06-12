@@ -3,7 +3,6 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 
 import { sensor, vibrator } from '@kit.SensorServiceKit';
 import { HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
-import { ChecklistDetail } from '../components/ChecklistDetail';
 import { GearPage } from '../components/GearPage';
 import { HomePage } from '../components/HomePage';
 import { ReviewPage } from '../components/ReviewPage';
@@ -277,12 +276,6 @@ struct Index {
       return;
     }
     updateState();
-  }
-
-  private checklistItemRenderKey(item: ChecklistItem): string {
-    return item.id + '|' + item.name + '|' + item.group + '|' +
-      (item.checked ? '1' : '0') + '|' + this.numberKey(item.weight) + '|' +
-      this.numberKey(item.price) + '|' + this.checklistRenderNonce.toString();
   }
 
   private numberKey(value: number | undefined): string {
@@ -1918,61 +1911,6 @@ struct Index {
           this.focusedCloseSignal = this.focusedCloseSignal + 1;
           return true;
         }
-        this.returnToHome();
-        return true;
-      })
-    } else if (name === 'ChecklistDetail') {
-      NavDestination() {
-        ChecklistDetail({
-          checklists: this.checklists,
-          gears: this.gears,
-          selectedChecklistId: this.selectedChecklistId,
-          collapsedGroups: this.collapsedGroups,
-          highlightedItemId: this.highlightedItemId,
-          checklistRenderNonce: this.checklistRenderNonce,
-          onReturnHome: () => {
-            this.returnToHome();
-          },
-          onOpenEditTrip: () => {
-            this.openEditTripSheet();
-          },
-          onOpenEditProfile: () => {
-            this.openEditProfileSheet();
-          },
-          onOpenDatePicker: () => {
-            this.openDatePicker();
-          },
-          onOpenTempItem: () => {
-            this.openTempItemSheet();
-          },
-          onOpenImport: () => {
-            this.openImportSheet();
-          },
-          onOpenReview: () => {
-            this.openReviewMode();
-          },
-          onToggleGroup: (group: string) => {
-            this.toggleGroup(group);
-          },
-          onOpenEditItem: (item: ChecklistItem) => {
-            this.openEditItemSheet(item);
-          },
-          onToggleChecklistItem: (itemId: string) => {
-            this.toggleChecklistItem(itemId);
-          },
-          onSaveChecklistItemToGear: (item: ChecklistItem) => {
-            this.saveChecklistItemToGear(item);
-          },
-          onDeleteChecklistItem: (itemId: string) => {
-            this.deleteChecklistItem(itemId);
-          }
-        })
-      }
-      .hideTitleBar(true)
-      .width('100%')
-      .height('100%')
-      .transition(TransitionEffect.OPACITY)
-      .onBackPressed(() => {
         this.returnToHome();
         return true;
       })
