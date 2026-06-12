@@ -1921,6 +1921,9 @@ export struct GearPage {
       .justifyContent(FlexAlign.Center)
       .backgroundColor(PRIMARY_TINT_COLOR)
       .borderRadius(32)
+      .opacity(this.listEntered ? 1 : 0)
+      .scale({ x: this.listEntered ? 1 : 0.9, y: this.listEntered ? 1 : 0.9 })
+      .animation({ curve: SPRING_GENERAL(), delay: 60 })
 
       // 文案
       Column({ space: 6 }) {
