@@ -810,16 +810,16 @@ export struct GearPage {
     return collapseRange - estimatedContentHeight + 80;
   }
 
-  // 渐进式模糊强度：0~0.3 无 | 0.3~1.0 线性增到 40
-  private gearHeaderBlurRadius(): number {
+  // 折叠态底部 hairline 分隔线：alpha 随 progress 0→1 浮现（对齐 iOS Large Title）
+  private gearHeaderBorderColor(): string {
     if (this.searchExpanded) {
-      return 0;
+      return '#00' + DIVIDER_COLOR.substring(1); // 搜索态不显示分隔线
     }
     const p = this.gearScrollProgress();
-    if (p < 0.3) {
-      return 0;
-    }
-    return Math.round(((p - 0.3) / 0.7) * 40);
+    const t = p < 0.5 ? 0 : Math.min(1, (p - 0.5) * 2);
+    const alpha = Math.round(t * 0xFF);
+    const hex = alpha < 16 ? '0' + alpha.toString(16).toUpperCase() : alpha.toString(16).toUpperCase();
+    return '#' + hex + DIVIDER_COLOR.substring(1); // DIVIDER_COLOR with dynamic alpha
   }
 
   // Header 动态高度：跟随滚动从 EXPANDED 收缩到 COLLAPSED
@@ -831,20 +831,9 @@ export struct GearPage {
     return GEAR_HEADER_EXPANDED - (GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED) * p;
   }
 
-  // 渐进式背景色：PAGE_BG → BLUR_BG，alpha 从 00 到 CC 跟随 progress
+  // Header 背景：全程实色羽白（折叠态去毛玻璃，避免半透明 + blur 合成发灰）
   private gearHeaderBgColor(): string {
-    if (this.searchExpanded) {
-      return PAGE_BG;
-    }
-    const p = this.gearScrollProgress();
-    if (p < 0.3) {
-      return PAGE_BG; // #F8F9FA 全不透明背景
-    }
-    // 0.3~1.0 线性插值 alpha: 0x00 → 0xCC (204)
-    const t = Math.min(1, (p - 0.3) / 0.7);
-    const alpha = Math.round(t * 0xCC);
-    const hex = alpha < 16 ? '0' + alpha.toString(16).toUpperCase() : alpha.toString(16).toUpperCase();
-    return '#' + hex + 'F8F9FA';
+    return PAGE_BG; // #F8F9FA 全不透明背景
   }
 
   // 顶部 spacer 高度：给 Header 腾出空间
@@ -1231,7 +1220,7 @@ export struct GearPage {
       .height(this.gearHeaderHeight())
       .clip(true)
       .backgroundColor(this.gearHeaderBgColor())
-      .backdropBlur(this.gearHeaderBlurRadius())
+      .border({ width: { bottom: 0.5 }, color: { bottom: this.gearHeaderBorderColor() } })
       .position({ x: 0, y: 0 })
       .hitTestBehavior(HitTestMode.Transparent)
     }
