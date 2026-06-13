@@ -1630,11 +1630,15 @@ struct Index {
   }
 
   private showBatchZoneSelector(): void {
-    // 使用系统 ActionSheet 让用户选择目标 Zone
+    // 使用系统 ActionSheet 让用户选择目标 Zone（过滤掉当前 zone）
     const zones: string[] = allZones();
+    const currentZone = this.focusedZone;
     const sheets: SheetInfo[] = [];
     for (let i = 0; i < zones.length; i++) {
       const targetZone = zones[i];
+      if (targetZone === currentZone) {
+        continue; // 跳过当前 zone，移动到自身无意义
+      }
       sheets.push({
         title: zoneDisplayName(targetZone),
         action: () => {
@@ -1693,6 +1697,10 @@ struct Index {
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
     this.batchMoveItemIds = [];
+    // 批量移动完成后关闭聚焦视图（触发 onActiveChange → 自动退出多选模式）
+    if (this.focusedZone != null) {
+      this.focusedCloseSignal = this.focusedCloseSignal + 1;
+    }
   }
 
   private async removeItemFromTrip(itemId: string): Promise<void> {

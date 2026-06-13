@@ -13,7 +13,6 @@ import {
   TEXT_SECONDARY,
   TEXT_TERTIARY,
   DIVIDER_COLOR,
-  INPUT_BG,
   ZONE_MISC_STROKE,
   ZONE_MISC_FILL
 } from '../../constants/Colors';
@@ -76,8 +75,6 @@ export struct FocusedZoneView {
 
   // #10：格子内排序回调（重排后的 item id 数组）
   onReorderItems: (zone: string, orderedIds: string[]) => void = () => {};
-  // #1：多选批量移动回调（选中的 item ids + 目标 zone）
-  onBatchMoveItems: (itemIds: string[], targetZone: string) => void = () => {};
   // #1：多选后请求弹出 Zone 选择面板
   onRequestBatchMoveSheet: (itemIds: string[]) => void = () => {};
 
@@ -125,13 +122,6 @@ export struct FocusedZoneView {
     this.onTapItem(item);
   }
 
-  // 问题4c：按 fromGearId 反查装备库详情（品类/备注/品牌）。临时装备无 fromGearId 则返回 undefined。
-  private gearForItem(item: ChecklistItem): GearItem | undefined {
-    if (item.fromGearId === undefined || item.fromGearId.length === 0) {
-      return undefined;
-    }
-    return this.gears.find((g: GearItem) => g.id === item.fromGearId);
-  }
 
   // 底部添加行按压
   @State private addPressed: boolean = false;
@@ -310,103 +300,6 @@ export struct FocusedZoneView {
     .height('100%')
   }
 
-  // ---- 问题4c：装备详情手风琴展开区 ----
-  // 数据优先取 ChecklistItem 自身（weight），缺失字段经 fromGearId 反查 GearItem（category/brand/note）。
-  // 临时装备（无 fromGearId）只展示已有字段；全空时显示占位「暂无更多信息」。
-  @Builder
-  private buildItemDetail(item: ChecklistItem) {
-    Column({ space: 8 }) {
-      // 品类 + 重量 + 品牌：一行 chips
-      Flex({ wrap: FlexWrap.Wrap }) {
-        if (this.detailCategory(item).length > 0) {
-          this.buildDetailChip('品类', this.detailCategory(item))
-        }
-        if (this.detailWeight(item).length > 0) {
-          this.buildDetailChip('重量', this.detailWeight(item))
-        }
-        if (this.detailBrand(item).length > 0) {
-          this.buildDetailChip('品牌', this.detailBrand(item))
-        }
-      }
-      .width('100%')
-
-      // 备注：整段文字
-      if (this.detailNote(item).length > 0) {
-        Text(this.detailNote(item))
-          .fontSize(FONT_SIZE_BODY_MEDIUM)
-          .fontColor(TEXT_SECONDARY)
-          .width('100%')
-      }
-
-      // 全空占位
-      if (!this.hasAnyDetail(item)) {
-        Text('暂无更多信息')
-          .fontSize(FONT_SIZE_BODY_MEDIUM)
-          .fontColor(TEXT_TERTIARY)
-          .width('100%')
-      }
-    }
-    .width('100%')
-    .padding({ left: 50, right: 16, top: 4, bottom: 12 })
-    .alignItems(HorizontalAlign.Start)
-  }
-
-  @Builder
-  private buildDetailChip(label: string, value: string) {
-    Row({ space: 4 }) {
-      Text(label)
-        .fontSize(FONT_SIZE_BODY_MEDIUM)
-        .fontColor(TEXT_TERTIARY)
-      Text(value)
-        .fontSize(FONT_SIZE_BODY_MEDIUM)
-        .fontWeight(FONT_WEIGHT_MEDIUM)
-        .fontColor(TEXT_MAIN)
-    }
-    .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-    .borderRadius(8)
-    .backgroundColor(INPUT_BG)
-    .margin({ right: 8, bottom: 8 })
-  }
-
-  private detailCategory(item: ChecklistItem): string {
-    const gear = this.gearForItem(item);
-    if (gear !== undefined && gear.category.length > 0) {
-      return gear.category;
-    }
-    return '';
-  }
-
-  private detailWeight(item: ChecklistItem): string {
-    let w: number | undefined = item.weight;
-    if (w === undefined) {
-      const gear = this.gearForItem(item);
-      w = gear !== undefined ? gear.weight : undefined;
-    }
-    return (w !== undefined && w > 0) ? (w.toString() + 'g') : '';
-  }
-
-  private detailBrand(item: ChecklistItem): string {
-    const gear = this.gearForItem(item);
-    if (gear !== undefined && gear.brand !== undefined && gear.brand.length > 0) {
-      return gear.brand;
-    }
-    return '';
-  }
-
-  private detailNote(item: ChecklistItem): string {
-    const gear = this.gearForItem(item);
-    if (gear !== undefined && gear.note !== undefined && gear.note.length > 0) {
-      return gear.note;
-    }
-    return '';
-  }
-
-  private hasAnyDetail(item: ChecklistItem): boolean {
-    return this.detailCategory(item).length > 0
-      || this.detailWeight(item).length > 0
-      || this.detailBrand(item).length > 0
-      || this.detailNote(item).length > 0;
-  }
 
   // ---- 底部虚线添加行 ----
   @Builder

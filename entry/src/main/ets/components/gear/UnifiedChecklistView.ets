@@ -114,8 +114,6 @@ export struct UnifiedChecklistView {
   onReviewZone: (zone: string) => void = () => {};
   // #10：格子内排序完成回调（重排后的 item id 数组）
   onReorderItems: (zone: string, orderedIds: string[]) => void = () => {};
-  // #1：多选批量移动回调
-  onBatchMoveItems: (itemIds: string[], targetZone: string) => void = () => {};
   // #1：多选后请求弹出 Zone 选择面板（由 Index 处理）
   onRequestBatchMoveSheet: (itemIds: string[]) => void = () => {};
 
@@ -185,6 +183,7 @@ export struct UnifiedChecklistView {
   aboutToDisappear() {
     this.appeared = false;
     this.isAlive = false;
+    this.stopAutoScroll();
   }
 
 onTripChange(): void {
