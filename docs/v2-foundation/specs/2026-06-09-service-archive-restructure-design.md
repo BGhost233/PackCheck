@@ -2,8 +2,8 @@
 
 > 版本：v2 · 2026-06-09
 > 状态：✅ 已定稿（2026-06-09 用户 review 通过）
-> 纲领文档：`docs/design/2026-06-04-product-vision-and-restructure.md`（v2）
-> 落地计划：`docs/superpowers/plans/2026-06-09-service-archive-foundation.md`（地基层第一步）
+> 纲领文档：`docs/vision/2026-06-04-product-vision-and-restructure.md`（v3）
+> 落地计划：已完成并归档删除（地基层 v0.6.0 已交付）
 > 本 spec 是纲领文档在工程层的落地，定义数据模型 diff、各页面交互逻辑、文案词典、三步走执行路径。
 
 ---

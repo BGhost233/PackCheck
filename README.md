@@ -146,9 +146,11 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.5.9 | ✅ 已完成 | 全量代码审查修复（213 项问题，覆盖安全/动效/Token/类型） |
 | v0.6.0 | ✅ 已完成 | v2 服役档案 · 第一步地基层（3 Tab + 人生足迹 + 双段展开 + 渐进 chip + 配装种子 + 趋势图删除） |
 | v0.6.1 | ✅ 已完成 | Sheet 体系统一 + 下滑关闭手势 + 文档重组 |
-| v0.7.0 | ✅ 当前 | 带格子的核查清单统一视图（第二步·引擎）：Phase 1-4 全部完成——统一网格态骨架 + 核查能力 + 全屏聚焦态 + 连贯手势（长按菜单+跨Zone拖拽流转）。配装/清单 Tab 切换已砍，统一为单一界面。详 CHANGELOG |
-| v0.7.1 | 📋 计划中 | UI 质感提升：容器化（白卡+描边）、空/满视觉权重修正、收→展转场重构（便单式边框连续放大）、拖动物理感深化。详 docs/v2-foundation/plans/2026-06-22-checklist-visual-polish-benchmark.md |
-| v0.8.0 | 📋 远期 | GearPage 组件瘦身（FabController/DragToTripOverlay/GroupDragController 提取） |
+| v0.7.0 | ✅ 已完成 | 带格子的核查清单统一视图（第二灵魂）：统一网格态 + 全屏聚焦态 + 长按菜单 + 跨Zone拖拽流转 |
+| v0.7.1 | ✅ 已完成 | UI 质感提升：容器化 + 转场重构 + 拖动物理感深化 + 审查修订 |
+| v0.7.2 | ✅ 已完成 | 聚焦态满铺精装修（遮罩/淡色块/边框/去×键） |
+| v0.7.3 | ✅ 当前 | 数据一致性修复 + 按压反馈补全 |
+| v0.8.0 | 📋 中期 | GearPage 组件瘦身（FabController/DragToTripOverlay/GroupDragController 提取） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 
 ## 开发约定

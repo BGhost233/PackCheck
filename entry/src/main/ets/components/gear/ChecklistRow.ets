@@ -10,6 +10,7 @@
 import {
   PRIMARY_COLOR,
   CARD_BG,
+  GROUP_HEADER_BG,
   TEXT_MAIN,
   DIVIDER_COLOR,
   TRANSPARENT
@@ -18,7 +19,7 @@ import {
   FONT_SIZE_BODY_MEDIUM,
   FONT_WEIGHT_MEDIUM
 } from '../../constants/Typography';
-import { SPRING_PRESS } from '../../constants/AnimationTokens';
+import { SPRING_PRESS, PRESS_SCALE_DOWN, PRESS_SCALE_REST } from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';
 import { vibrator } from '@kit.SensorServiceKit';
 
@@ -144,16 +145,14 @@ export struct ChecklistRow {
     // 完成态：整行温柔淡出（0.5），绿勾是唯一强反馈
     .opacity(this.item.checked ? 0.5 : 1.0)
     .animation({ curve: SPRING_PRESS() })
-    // 整行按压反馈仅在「整行点击勾选」模式（聚焦态）下生效
+    // 整行按压反馈：所有模式下均生效（对齐 GearPage 装备库体验）
+    .backgroundColor(this.pressed ? GROUP_HEADER_BG : CARD_BG)
     .scale({
-      x: !this.checkOnlyHotzone && this.pressed ? 0.96 : 1.0,
-      y: !this.checkOnlyHotzone && this.pressed ? 0.96 : 1.0
+      x: this.pressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+      y: this.pressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST
     })
     .animation({ curve: SPRING_PRESS() })
     .onTouch((e: TouchEvent) => {
-      if (this.checkOnlyHotzone) {
-        return;
-      }
       if (e.type === TouchType.Down) {
         this.pressed = true;
       } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {

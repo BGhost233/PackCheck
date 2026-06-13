@@ -74,7 +74,7 @@
   - Zone 映射：`BodyZone` 枚举 + `CATEGORY_SLOT_MAP` 在 `constants/GearLoadout.ets`；`groupByZoneAll`/`groupByZone`/`sortItemsByLayer` 等聚合函数在 `services/LoadoutService.ets`。装备按 `category` 查表自动归入格子
 - `ChecklistItem { id, name, group, checked, weight?, price?, fromGearId? }`（无 category/note/brand；聚焦态详情经 fromGearId 反查 GearItem 取 category/brand/note）
 
-## ArkUI 避坑清单（实战总结，共 43 条）
+## ArkUI 避坑清单（实战总结，共 44 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -123,6 +123,8 @@
 42. **自定义组件外挂 `.onClick` 被组件根节点自身 onClick 抢占** — 给自定义组件实例（如 `ZoneShell{...}`）在外部链式挂 `.onClick()`，事件绑到组件根节点（如 ZoneShell 根 Column）。若该根节点**自身已经有 `.onClick`**（即便回调因开关为 false 而空跑），它仍会注册并**消费**点击事件，外层挂的 onClick 拿不到 → 外挂点击静默失效。实战：FocusedZoneView 外挂 `.onClick` 收起聚焦态完全无反应。**解法**：不外挂，改走组件内部已暴露的点击回调链路（ZoneShell 的 `contentClickable: true` + `onTapContent`）。**注意**：`.gesture(PanGesture)` 外挂在自定义组件实例上**可以**生效（机制与 onClick 不同），所以左右划返回外挂没问题——别因 onClick 失效误判 gesture 也失效
 
 43. **半透明色浮在白底上会「透白发灰」** — 聚焦卡片浮在纯白/羽白实心遮罩之上时，卡片填充若用半透明色（如降低 alpha 的 zone 色），底下的白会透上来把颜色冲淡发灰，且整体偏「飘」无实体感。**解法**：用**不透明实心混合色**——把 zone 主题色与白色按百分比预混成 hex 常量（如 20% 公式 `白*0.8 + color*0.2`：Head #42A5F5 → #D9EDFD）。token 化为 `ZONE_*_FOCUS_BG`。配 2vp 实色边框补实体轮廓。淡到 8% 几乎纯白辨不出 zone 色，20% 是肉眼可辨 + 不刺眼的平衡点
+
+44. **`hitTestBehavior(HitTestMode.None)` 不可靠阻止子元素 `.onClick()`** — 父容器设 `hitTestBehavior(HitTestMode.None)` 时，其**子元素**自身注册的 `.onClick()` 仍可能拦截点击事件（平台 bug）。典型场景：Sheet/蒙层组件常驻 Stack 中，visible=false 时父 Stack 设 `HitTestMode.None`，但内部全屏 Column 的 `.onClick()` 仍吞掉所有点击 → 整页无法交互。**解法**：对含有 `.onClick()` 的不可见组件，**必须用 `if` 条件渲染将其从视图树中移除**，不能依赖 `hitTestBehavior(None)` 来屏蔽。退场动画需求时可延迟清空条件变量（如 400ms 后置 null）保留退场过渡。实战：`GearDetailSheet` 常驻 UnifiedChecklistView Stack 导致网格态全页无响应；`ZoneGridCell` 空态/内容态也用 if/else 而非双层常驻，同理
 
 ### 补充验证结论
 

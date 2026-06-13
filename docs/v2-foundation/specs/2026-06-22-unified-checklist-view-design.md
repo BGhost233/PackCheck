@@ -782,7 +782,7 @@ this.focusedZone = null
 | `docs/vision/2026-06-04-product-vision-and-restructure.md` §4 (v3) | 本方案的产品纲领依据 |
 | `docs/v2-foundation/specs/2026-06-09-service-archive-restructure-design.md` §6 | 本方案的技术底座 spec |
 | `docs/ROADMAP.md` v0.7.0 | 本方案对应的版本里程碑 |
-| `docs/v2-foundation/plans/2026-06-09-service-archive-foundation.md` Task 4 | 本方案的数据种子前置依赖（已完成） |
+| 地基层 Task 4（已完成，plan 文件已归档删除） | 本方案的数据种子前置依赖（已完成） |
 
 ---
 
