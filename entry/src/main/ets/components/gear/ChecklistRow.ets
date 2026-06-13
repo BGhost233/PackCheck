@@ -10,7 +10,6 @@
 import {
   PRIMARY_COLOR,
   CARD_BG,
-  GROUP_HEADER_BG,
   TEXT_MAIN,
   DIVIDER_COLOR,
   TRANSPARENT
@@ -146,7 +145,8 @@ export struct ChecklistRow {
     .opacity(this.item.checked ? 0.5 : 1.0)
     .animation({ curve: SPRING_PRESS() })
     // 整行按压反馈：所有模式下均生效（对齐 GearPage 装备库体验）
-    .backgroundColor(this.pressed ? GROUP_HEADER_BG : CARD_BG)
+    // 默认透明融入父容器淡色底（消除白色矩形割裂），按压态半透明白提示反馈
+    .backgroundColor(this.pressed ? '#33000000' : TRANSPARENT)
     .scale({
       x: this.pressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
       y: this.pressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST

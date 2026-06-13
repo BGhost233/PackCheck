@@ -1012,7 +1012,9 @@ this.computeCellHeight();
     }
     .width('100%')
     .height('100%')
-    .hitTestBehavior(this.overlayPhase === 'dragging' ? HitTestMode.None : HitTestMode.Default)
+    // Bug3 fix：仅在 menu 可见阶段拦截触摸（蒙层点击关闭），
+    // idle/dragging 阶段一律穿透——消除 dismissOverlay 后 150ms 清理延迟期间 Stack 吞事件的问题
+    .hitTestBehavior(this.overlayPhase === 'menu' && this.overlayVisible ? HitTestMode.Default : HitTestMode.None)
   }
 
   // 通过 ChecklistItem 的 fromGearId 反查 GearItem

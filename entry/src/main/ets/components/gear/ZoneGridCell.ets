@@ -67,6 +67,8 @@ export struct ZoneGridCell {
   @State private titlePressed: boolean = false;
   // P2：白卡主体（装备名/空白）按压——点这里整卡进全屏聚焦，与标题行同语义
   @State private contentPressed: boolean = false;
+  // Bug2 fix：长按触发后抑制紧随的 onClick（进聚焦），防止长按松手同时进入展开态
+  @State private longPressTriggered: boolean = false;
 
   build() {
     // if/else 而非 Stack 双层常驻：空态和有内容态不可同时存在于视图树，
@@ -111,7 +113,14 @@ export struct ZoneGridCell {
       contentClickable: true,
       contentPressed: this.contentPressed,
       onContentTouch: (pressed: boolean) => { this.contentPressed = pressed; },
-      onTapContent: (zone: string) => { this.onTapTitle(zone); },
+      onTapContent: (zone: string) => {
+        // Bug2：长按刚触发后抑制紧随的 tap 进聚焦
+        if (this.longPressTriggered) {
+          this.longPressTriggered = false;
+          return;
+        }
+        this.onTapTitle(zone);
+      },
       titleTrailing: () => { this.buildCountTrailing() },
       content: () => { this.buildPreviewList() }
     })
@@ -154,7 +163,14 @@ export struct ZoneGridCell {
               checkSize: GRID_CHECK_SIZE,
               checkOnlyHotzone: true,
               onToggleCheck: this.onToggleCheck,
-              onTapRow: () => { this.onTapTitle(this.zone); }
+              onTapRow: () => {
+                // Bug2：长按刚触发后抑制紧随的 tap 进聚焦
+                if (this.longPressTriggered) {
+                  this.longPressTriggered = false;
+                  return;
+                }
+                this.onTapTitle(this.zone);
+              }
             })
           }
           .width('100%')
@@ -164,9 +180,13 @@ export struct ZoneGridCell {
               GestureMode.Sequence,
               LongPressGesture({ repeat: false, duration: 400 })
                 .onAction((event: GestureEvent) => {
+                  // Bug2 fix：标记长按已触发，抑制松手后的 onClick 进聚焦
+                  this.longPressTriggered = true;
                   this.triggerHaptic();
                   const finger = event.fingerList[0];
                   this.onLongPressItem(item, finger.globalX, finger.globalY);
+                  // 安全兜底：500ms 后自动重置，防止极端情况永久阻塞
+                  setTimeout(() => { this.longPressTriggered = false; }, 500);
                 }),
               PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
                 .onActionUpdate((event: GestureEvent) => {

@@ -98,6 +98,8 @@ export struct FocusedZoneView {
   @State private reorderingItemId: string = ''; // 当前被拖拽排序的 item id（空 = 非排序态）
   @State private reorderInsertIndex: number = -1; // 拖拽项应插入的目标位置
   @State private reorderDragY: number = 0; // 拖拽项的 Y 偏移量
+  // Bug2 同类修复：长按触发后抑制紧随的 onClick（弹详情 Sheet / toggleSelection）
+  @State private longPressTriggered: boolean = false;
 
   // active false→true：重置后下一帧验入场；true→false：重置供下次重放
   onActiveChange(): void {
@@ -232,6 +234,11 @@ export struct FocusedZoneView {
                       ? (id: string) => { this.toggleSelection(id); }
                       : this.onToggleCheck,
                     onTapRow: () => {
+                      // Bug2 同类修复：长按刚触发后抑制紧随的 tap
+                      if (this.longPressTriggered) {
+                        this.longPressTriggered = false;
+                        return;
+                      }
                       if (this.isMultiSelectMode) {
                         this.toggleSelection(item.id);
                       } else {
@@ -384,6 +391,9 @@ export struct FocusedZoneView {
     } catch (e) {
       // 振动不可用时静默降级
     }
+    // Bug2 同类修复：标记长按已触发，抑制松手后的 onClick（多选/非多选均需）
+    this.longPressTriggered = true;
+    setTimeout(() => { this.longPressTriggered = false; }, 500);
     // Phase 5：多选模式下长按已选中项 → 准备批量拖拽
     if (this.isMultiSelectMode) {
       if (this.selectedIds.has(item.id)) {
