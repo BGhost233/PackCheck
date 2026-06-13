@@ -185,13 +185,6 @@ export struct FocusedZoneView {
       }
 
       List({ space: 0 }) {
-        // 顶部虚线「+ 添加到{Zone}」行（多选模式下隐藏）
-        if (!this.isMultiSelectMode) {
-          ListItem() {
-            this.buildAddRow()
-          }
-        }
-
         ForEach(this.items, (item: ChecklistItem, index: number) => {
           ListItem() {
             Column({ space: 0 }) {
@@ -333,7 +326,20 @@ export struct FocusedZoneView {
       .layoutWeight(1)
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
-      .padding({ left: 16, right: 16, top: 8, bottom: 16 })
+      .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+
+      // 问题5b：「添加到此部位」从列表顶部移到卡片底部吸附。
+      //   第一性原理：添加是该 Zone 的主操作，应长在拇指随手可达的底部且常驻可见，
+      //   而非藏在列表顶部需滚回去找（交互入口原则）。List layoutWeight(1) 吃掉中间空白——
+      //   内容少时列表在上、添加行吸底、中间留白成为自然呼吸区（而非"内容截断后的空荡"）；
+      //   内容多时添加行常驻底部不随列表滚走，随手可加。多选模式下隐藏。
+      if (!this.isMultiSelectMode) {
+        Column() {
+          this.buildAddRow()
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 4, bottom: 8 })
+      }
     }
     .width('100%')
     .height('100%')
@@ -369,7 +375,6 @@ export struct FocusedZoneView {
       style: BorderStyle.Dashed,
       radius: CARD_RADIUS
     })
-    .margin({ bottom: 8 })
     .scale({ x: this.addPressed ? PRESS_SCALE_DOWN : 1.0, y: this.addPressed ? PRESS_SCALE_DOWN : 1.0 })
     .animation({ curve: SPRING_PRESS() })
     .onTouch((e: TouchEvent) => {
