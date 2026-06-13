@@ -153,6 +153,15 @@ export class PackStore {
     this.flushTimerId = -1;
   }
 
+  /** 立即刷盘：取消防抖定时器并同步写入。用于页面销毁/切后台等紧急时刻。 */
+  async forceFlush(): Promise<void> {
+    if (this.flushTimerId >= 0) {
+      clearTimeout(this.flushTimerId);
+      this.flushTimerId = -1;
+    }
+    await this.flushNow();
+  }
+
   private async writeString(key: string, value: string): Promise<void> {
     if (this.prefs === undefined) {
       hilog.warn(LOG_DOMAIN, LOG_TAG, 'writeString skipped (prefs undefined), key=%{public}s', key);

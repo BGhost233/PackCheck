@@ -247,6 +247,12 @@ struct Index {
 
   aboutToDisappear(): void {
     this.stopShakeListening();
+    this.store.forceFlush();
+  }
+
+  onPageHide(): void {
+    // 切后台 / 被覆盖时立即刷盘，防止数据丢失
+    this.store.forceFlush();
   }
 
   private async loadAppData(): Promise<void> {
