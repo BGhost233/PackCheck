@@ -54,8 +54,7 @@ import {
   SHARP_SNAP,
   EASE_FADE,
   DURATION_OVERLAY_ENTER,
-  DURATION_OVERLAY_FADE,
-  DURATION_OVERLAY_DISMISS
+  DURATION_OVERLAY_FADE
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { resolveItemName } from '../../services/ChecklistService';
@@ -405,18 +404,17 @@ this.computeCellHeight();
   }
 
   private dismissOverlay(fast: boolean = false): void {
-    const duration = fast ? 80 : DURATION_OVERLAY_DISMISS;
-    this.getUIContext().animateTo({
-      curve: EASE_FADE,
-      duration: duration,
-      onFinish: () => {
-        this.overlayItem = null;
-        this.overlayVisible = false;
-        this.overlayPhase = 'idle';
-      }
-    }, () => {
-      this.overlayVisible = false;
-    });
+    // 立即重置交互状态——让 hitTestBehavior 瞬间放行，不再阻塞后续触摸
+    // 退出动画由 buildLongPressOverlay 内各元素的 .animation() 声明式修饰符自动驱动
+    this.overlayPhase = 'idle';
+    this.overlayVisible = false;
+    // 延迟清理数据引用，等退出动画播完再销毁（避免 if 条件销毁打断退出动画）
+    // DURATION_OVERLAY_FADE=120ms 是 .animation() 退出时长，需留足余量
+    const cleanupDelay = fast ? 150 : DURATION_OVERLAY_FADE + 80;
+    setTimeout(() => {
+      if (!this.isAlive) { return; }
+      this.overlayItem = null;
+    }, cleanupDelay);
   }
 
   private buildOverlayMenuItems(): ContextMenuItem[] {

@@ -12,7 +12,7 @@ import {
   DIVIDER_COLOR,
   INPUT_BG,
   SHADOW_DEFAULT,
-  SHADOW_LIGHT
+  SHADOW_MEDIUM
 } from '../../constants/Colors';
 import {
   FONT_SIZE_BODY_MEDIUM,
@@ -158,9 +158,10 @@ export struct GearItemContextMenu {
       }, (menuItem: ContextMenuItem, index: number) => index.toString())
     }
     .width(200)
-    .backgroundColor(CARD_BG)
+    .backgroundColor('#F2FFFFFF') // 92% 白底，配合 blur 透出底层色彩
+    .backgroundBlurStyle(BlurStyle.Thin)
     .borderRadius(14)
-    .shadow({ radius: 16, color: SHADOW_LIGHT, offsetY: 4 })
+    .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetY: 6 })
     .clip(true)
   }
 
