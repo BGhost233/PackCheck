@@ -1,7 +1,7 @@
 // 配装系统 - 装备选择 Sheet
-// 职责：展示装备库列表，按品类分组可折叠展开，连续多选，内联临时添加覆盖层
-// P5：去顶部品类 tab，改为装备按品类分组按行展示；默认全折叠，
-//   预选 Zone 命中的品类 / 搜索命中的品类自动展开
+// 职责：展示装备库全量列表，按品类分组可折叠展开，连续多选（点击即添加）
+// 新建装备为同层级内联态切换（列表态 ↔ 新建态），无弹窗/遮罩
+// GearPickerSheet 自管 head（标题随态 Spring 切换），SheetOverlay 不为它渲染统一 head
 
 import { LengthMetrics } from '@kit.ArkUI';
 import {
@@ -13,7 +13,6 @@ import {
   CARD_BG,
   INPUT_BG,
   PAGE_BG,
-  OVERLAY_DIM,
   TRANSPARENT,
   ZONE_HEAD_COLOR,
   ZONE_UPPER_COLOR,
@@ -31,11 +30,12 @@ import {
   ZONE_MISC_TINT
 } from '../../constants/Colors';
 import { BodyZone } from '../../constants/GearLoadout';
-import { SPRING_PRESS, SPRING_GENERAL, SPRING_CHEVRON, PANEL_SCALE_START, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
+import { SPRING_PRESS, SPRING_GENERAL, SPRING_CHEVRON, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
 import { GearItem, CATEGORY_FALLBACK, DEFAULT_CATEGORIES } from '../../models/PackModels';
-import { assignSlot, zoneDisplayName, allZones } from '../../services/LoadoutService';
+import { zoneDisplayName, allZones } from '../../services/LoadoutService';
+import { vibrator } from '@kit.SensorServiceKit';
 
-// P5：品类分组结果（仅含有装备的品类）
+// 品类分组结果
 interface CategoryGroup {
   category: string;
   gears: GearItem[];
@@ -46,211 +46,254 @@ export struct GearPickerSheet {
   // 数据
   @Prop gears: GearItem[] = [];
   @Prop categories: string[] = [];
-  @Prop selectedItemIds: string[] = []; // 已在行程中的装备 fromGearId 列表
-  // 从空格子进入时的预选 Zone（空串 = 无预选，向后兼容）：列表排序高亮 + 临时新建默认分区，review I4
+  @Prop selectedItemIds: string[] = [];
   @Prop preselectZone: string = '';
 
   // 回调
   onToggleGear: (gear: GearItem) => void = () => {};
-  // P3：新建装备统一回调——saveToLibrary 决定「存入装备库」还是「本次行程临时」；
-  //   入库时 category 为用户显式选择的品类（临时模式忽略 category）。
   onAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => void = () => {};
   onClose: () => void = () => {};
 
-  // 内部状态
+  // ===== 列表态状态 =====
   @State private searchText: string = '';
-  // P5：手动展开的品类集合（用数组而非 Set，便于 @State 变更检测；toggle 时整体新数组赋值）
   @State private expandedCategories: string[] = [];
-  @State private showTempOverlay: boolean = false;
+  @State private pressedCategory: string = '';
+  @State private lastAddedGearId: string = '';
+  @State private newEntryScale: number = 1.0;
+
+  // ===== 新建态状态 =====
+  @State private isCreateMode: boolean = false;
   @State private tempName: string = '';
   @State private tempZone: string = BodyZone.Misc;
   @State private tempWeight: string = '';
-  // P3：新建覆盖层——是否存入装备库（false = 本次行程临时）+ 入库时选择的品类
   @State private tempSaveToLibrary: boolean = false;
   @State private tempCategory: string = CATEGORY_FALLBACK;
-  @State private overlayScale: number = PANEL_SCALE_START;
-  @State private overlayOpacity: number = 0;
-  @State private newEntryScale: number = 1.0;
-  // 品类分组 header 按压态
-  @State private pressedCategory: string = '';
+
+  // ===== 态切换动画 =====
+  @State private listOffsetX: number = 0;
+  @State private listOpacity: number = 1;
+  @State private createOffsetX: number = 20;
+  @State private createOpacity: number = 0;
+  // head 标题
+  @State private headerTitle: string = '选择装备';
+  // 添加按钮按压
+  @State private addBtnScale: number = 1.0;
 
   aboutToAppear(): void {
-    // 从空格子进入时，新建装备默认落到该 Zone（review I4）
     if (this.preselectZone.length > 0) {
       this.tempZone = this.preselectZone;
     }
   }
 
   build() {
-    Stack() {
-      // 底层：正常 Sheet 内容
-      Column({ space: 0 }) {
-        // 搜索栏
-        Row({ space: 8 }) {
-          TextInput({ placeholder: '搜索装备...', text: this.searchText })
-            .onChange((value: string) => {
-              this.searchText = value;
-            })
-            .layoutWeight(1)
-            .height(36)
-            .fontSize(14)
-            .backgroundColor(INPUT_BG)
-            .borderRadius(10)
-            .padding({ left: 12, right: 12 })
-
-          // P3：顶部常驻「+ 新建装备」入口
-          Row({ space: 4 }) {
-            SymbolGlyph($r('sys.symbol.plus'))
-              .fontSize(14)
-              .fontColor([CARD_BG])
-            Text('新建')
-              .fontSize(13)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(CARD_BG)
-          }
-          .height(36)
-          .padding({ left: 12, right: 12 })
-          .backgroundColor(PRIMARY_COLOR)
-          .borderRadius(10)
-          .scale({ x: this.newEntryScale, y: this.newEntryScale })
-          .animation({ curve: SPRING_PRESS() })
-          .onTouch((e: TouchEvent) => {
-            if (e.type === TouchType.Down) {
-              this.newEntryScale = PRESS_SCALE_DOWN;
-            } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-              this.newEntryScale = 1.0;
-            }
-          })
-          .onClick(() => {
-            this.openNewGearOverlay('');
-          })
-        }
-        .width('100%')
-        .padding({ left: 16, right: 16, top: 4, bottom: 8 })
-
-        // 已选汇总栏
-        if (this.selectedItemIds.length > 0) {
-          Row({ space: 4 }) {
-            Text('已选 ' + this.selectedItemIds.length.toString() + ' 件')
-              .fontSize(12)
-              .fontWeight(FontWeight.Medium)
-              .fontColor(PRIMARY_COLOR)
-            Text(this.getZoneSummary())
-              .fontSize(11)
-              .fontColor(TEXT_TERTIARY)
-          }
-          .width('100%')
-          .padding({ left: 16, right: 16, bottom: 8 })
-        }
-
-        // 装备列表（可滚动）：P5 按品类分组折叠展开
-        if (this.filteredGears().length === 0 && this.gears.length === 0) {
-          // 装备库为空态
-          this.buildEmptyState()
-        } else if (this.filteredGears().length === 0 && this.searchText.length > 0) {
-          // 搜索无结果
-          this.buildSearchEmpty()
-        } else {
-          Scroll() {
-            Column({ space: 0 }) {
-              ForEach(this.groupedGears(), (group: CategoryGroup) => {
-                this.buildCategorySection(group)
-              }, (group: CategoryGroup) => group.category + '_' + group.gears.length.toString())
-            }
-            .padding({ top: 4 })
-          }
+    Column({ space: 0 }) {
+      // Head：标题 + 关闭（紧凑，高 36vp）
+      Row() {
+        Text(this.headerTitle)
+          .fontSize(16)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(TEXT_MAIN)
           .layoutWeight(1)
-          .scrollBar(BarState.Off)
-        }
+        Button('关闭')
+          .fontSize(13)
+          .fontColor(TEXT_SECONDARY)
+          .backgroundColor(TRANSPARENT)
+          .onClick(() => {
+            this.onClose();
+          })
       }
       .width('100%')
-      .height('100%')
+      .height(36)
+      .margin({ bottom: 6 })
 
-      // 上层：TempGearMiniSheet 内联覆盖层
-      if (this.showTempOverlay) {
-        // 遮罩
-        Column()
-          .width('100%')
-          .height('100%')
-          .backgroundColor(OVERLAY_DIM)
-          .opacity(this.overlayOpacity)
-          .onClick(() => {
-            this.closeTempOverlay();
-          })
-
-        // 居中卡片
-        Column({ space: 14 }) {
-          Text('新建装备')
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(TEXT_MAIN)
-
-          // P3：「本次行程临时 / 存入装备库」二选一 segment
-          Row({ space: 0 }) {
-            this.buildModeSegment('本次行程临时', false)
-            this.buildModeSegment('存入装备库', true)
-          }
-          .width('100%')
-          .padding(3)
-          .backgroundColor(INPUT_BG)
-          .borderRadius(10)
-
-          // 名称
-          Column({ space: 4 }) {
-            Text('名称')
-              .fontSize(12)
-              .fontColor(TEXT_SECONDARY)
-            TextInput({ placeholder: '装备名称', text: this.tempName })
+      // 内容区：列表态和新建态叠加
+      Stack() {
+        // 列表态
+        Column({ space: 0 }) {
+          // 搜索栏 + 新建按钮（一行）
+          Row({ space: 8 }) {
+            TextInput({ placeholder: '搜索装备...', text: this.searchText })
               .onChange((value: string) => {
-                this.tempName = value;
+                this.searchText = value;
               })
+              .layoutWeight(1)
               .height(36)
               .fontSize(14)
               .backgroundColor(INPUT_BG)
-              .borderRadius(8)
+              .borderRadius(10)
               .padding({ left: 12, right: 12 })
+
+            Row({ space: 4 }) {
+              SymbolGlyph($r('sys.symbol.plus'))
+                .fontSize(14)
+                .fontColor([CARD_BG])
+              Text('新建')
+                .fontSize(13)
+                .fontWeight(FontWeight.Medium)
+                .fontColor(CARD_BG)
+            }
+            .height(36)
+            .padding({ left: 12, right: 12 })
+            .backgroundColor(PRIMARY_COLOR)
+            .borderRadius(10)
+            .scale({ x: this.newEntryScale, y: this.newEntryScale })
+            .animation({ curve: SPRING_PRESS() })
+            .onTouch((e: TouchEvent) => {
+              if (e.type === TouchType.Down) {
+                this.newEntryScale = PRESS_SCALE_DOWN;
+              } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                this.newEntryScale = 1.0;
+              }
+            })
+            .onClick(() => {
+              this.enterCreateMode('');
+            })
+          }
+          .width('100%')
+
+          // 已选汇总（紧凑）
+          if (this.selectedItemIds.length > 0) {
+            Text('已添加 ' + this.selectedItemIds.length.toString() + ' 件装备')
+              .fontSize(12)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(PRIMARY_COLOR)
+              .margin({ top: 6 })
+          }
+
+          // 列表内容（紧贴上方）
+          if (this.filteredGears().length === 0 && this.gears.length === 0) {
+            this.buildEmptyState()
+          } else if (this.filteredGears().length === 0 && this.searchText.length > 0) {
+            this.buildSearchEmpty()
+          } else {
+            Scroll() {
+              Column({ space: 0 }) {
+                ForEach(this.groupedGears(), (group: CategoryGroup) => {
+                  this.buildCategorySection(group)
+                }, (group: CategoryGroup) => group.category + '_' + group.gears.length.toString())
+              }
+              .padding({ bottom: 24 })
+            }
+            .layoutWeight(1)
+            .scrollBar(BarState.Off)
+            .margin({ top: 8 })
+          }
+        }
+        .width('100%')
+        .height('100%')
+        .translate({ x: this.listOffsetX })
+        .opacity(this.listOpacity)
+
+        // 新建态
+        if (this.isCreateMode) {
+          this.buildCreateForm()
+        }
+      }
+      .layoutWeight(1)
+      .clip(true)
+    }
+    .width('100%')
+    .height('100%')
+    // 右滑手势：新建态返回列表态
+    .gesture(
+      PanGesture({ direction: PanDirection.Right, distance: 30 })
+        .onActionEnd(() => {
+          if (this.isCreateMode) {
+            this.exitCreateMode();
+          }
+        })
+    )
+  }
+
+  // ===== 新建态：全宽内联表单（紧凑布局）=====
+  @Builder
+  private buildCreateForm() {
+    Column({ space: 0 }) {
+      Scroll() {
+        Column({ space: 14 }) {
+          // 「同时存入装备库」Toggle
+          Row() {
+            Text('同时存入装备库')
+              .fontSize(14)
+              .fontColor(TEXT_MAIN)
+            Blank()
+            Toggle({ type: ToggleType.Switch, isOn: this.tempSaveToLibrary })
+              .onChange((isOn: boolean) => {
+                this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+                  this.tempSaveToLibrary = isOn;
+                });
+              })
+              .selectedColor(PRIMARY_COLOR)
+              .width(48)
+              .height(28)
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Center)
+
+          // 名称输入
+          Column({ space: 6 }) {
+            Text('名称')
+              .fontSize(13)
+              .fontColor(TEXT_SECONDARY)
+            TextInput({ placeholder: '输入装备名称', text: this.tempName })
+              .onChange((value: string) => {
+                this.tempName = value;
+              })
+              .height(42)
+              .fontSize(15)
+              .backgroundColor(INPUT_BG)
+              .borderRadius(10)
+              .padding({ left: 14, right: 14 })
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
 
-          // P3：入库时显式选择品类（临时模式隐藏）
-          if (this.tempSaveToLibrary) {
-            Column({ space: 6 }) {
-              Text('品类')
-                .fontSize(12)
-                .fontColor(TEXT_SECONDARY)
-              Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-                ForEach(this.categoryOptions(), (cat: string) => {
-                  Text(cat)
-                    .fontSize(12)
-                    .fontColor(this.tempCategory === cat ? CARD_BG : TEXT_MAIN)
-                    .backgroundColor(this.tempCategory === cat ? PRIMARY_COLOR : INPUT_BG)
-                    .borderRadius(14)
-                    .padding({ left: 10, right: 10, top: 5, bottom: 5 })
-                    .onClick(() => {
-                      this.tempCategory = cat;
-                    })
-                }, (cat: string) => cat)
-              }
+          // 入库时品类选择（Spring 展开）
+          Column({ space: 8 }) {
+            Text('品类')
+              .fontSize(13)
+              .fontColor(TEXT_SECONDARY)
+            Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
+              ForEach(this.categoryOptions(), (cat: string) => {
+                Text(cat)
+                  .fontSize(13)
+                  .fontWeight(this.tempCategory === cat ? FontWeight.Medium : FontWeight.Normal)
+                  .fontColor(this.tempCategory === cat ? CARD_BG : TEXT_MAIN)
+                  .backgroundColor(this.tempCategory === cat ? PRIMARY_COLOR : INPUT_BG)
+                  .borderRadius(14)
+                  .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+                  .animation({ curve: SPRING_PRESS() })
+                  .onClick(() => {
+                    this.triggerHaptic();
+                    this.tempCategory = cat;
+                  })
+              }, (cat: string) => cat)
             }
-            .width('100%')
-            .alignItems(HorizontalAlign.Start)
           }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .clip(true)
+          .height(this.tempSaveToLibrary ? undefined : 0)
+          .opacity(this.tempSaveToLibrary ? 1 : 0)
+          .animation({ curve: SPRING_GENERAL() })
 
           // 归属区域
-          Column({ space: 6 }) {
+          Column({ space: 8 }) {
             Text('归属区域')
-              .fontSize(12)
+              .fontSize(13)
               .fontColor(TEXT_SECONDARY)
             Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
               ForEach(allZones(), (zone: string) => {
                 Text(zoneDisplayName(zone))
-                  .fontSize(12)
+                  .fontSize(13)
+                  .fontWeight(this.tempZone === zone ? FontWeight.Medium : FontWeight.Normal)
                   .fontColor(this.tempZone === zone ? CARD_BG : TEXT_MAIN)
                   .backgroundColor(this.tempZone === zone ? this.getZoneColor(zone) : INPUT_BG)
                   .borderRadius(14)
-                  .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+                  .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+                  .animation({ curve: SPRING_PRESS() })
                   .onClick(() => {
+                    this.triggerHaptic();
                     this.tempZone = zone;
                   })
               }, (zone: string) => zone)
@@ -259,82 +302,73 @@ export struct GearPickerSheet {
           .width('100%')
           .alignItems(HorizontalAlign.Start)
 
-          // 重量
-          Column({ space: 4 }) {
+          // 重量（可选）
+          Column({ space: 6 }) {
             Text('重量（可选）')
-              .fontSize(12)
+              .fontSize(13)
               .fontColor(TEXT_SECONDARY)
-            Row({ space: 4 }) {
+            Row({ space: 6 }) {
               TextInput({ placeholder: '0', text: this.tempWeight })
                 .onChange((value: string) => {
                   this.tempWeight = value;
                 })
-                .width(80)
-                .height(36)
-                .fontSize(14)
+                .width(90)
+                .height(42)
+                .fontSize(15)
                 .backgroundColor(INPUT_BG)
-                .borderRadius(8)
-                .padding({ left: 12, right: 12 })
+                .borderRadius(10)
+                .padding({ left: 14, right: 14 })
                 .type(InputType.Number)
               Text('g')
-                .fontSize(13)
+                .fontSize(14)
                 .fontColor(TEXT_TERTIARY)
             }
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
-
-          // 按钮组
-          Row({ space: 12 }) {
-            Button('取消')
-              .fontSize(14)
-              .fontColor(TEXT_SECONDARY)
-              .backgroundColor(INPUT_BG)
-              .borderRadius(8)
-              .layoutWeight(1)
-              .height(40)
-              .onClick(() => {
-                this.closeTempOverlay();
-              })
-            Button(this.tempSaveToLibrary ? '入库并添加' : '添加')
-              .fontSize(14)
-              .fontColor(CARD_BG)
-              .backgroundColor(PRIMARY_COLOR)
-              .borderRadius(8)
-              .layoutWeight(1)
-              .height(40)
-              .enabled(this.tempName.trim().length > 0)
-              .opacity(this.tempName.trim().length > 0 ? 1.0 : 0.5)
-              .onClick(() => {
-                const parsed = Number(this.tempWeight);
-                const weight = (this.tempWeight.trim().length > 0 && !Number.isNaN(parsed)) ? parsed : undefined;
-                this.onAddGear(this.tempName.trim(), this.tempZone, weight, this.tempCategory, this.tempSaveToLibrary);
-                this.closeTempOverlay();
-              })
-          }
-          .width('100%')
         }
-        .width('80%')
-        .padding(20)
-        .backgroundColor(CARD_BG)
-        .borderRadius(16)
-        .scale({ x: this.overlayScale, y: this.overlayScale })
-        .opacity(this.overlayOpacity)
+        .padding({ bottom: 80 })
       }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+
+      // 底部固定按钮
+      Button(this.tempSaveToLibrary ? '入库并添加' : '添加到' + zoneDisplayName(this.tempZone))
+        .fontSize(15)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(CARD_BG)
+        .backgroundColor(PRIMARY_COLOR)
+        .borderRadius(22)
+        .width('100%')
+        .height(44)
+        .enabled(this.tempName.trim().length > 0)
+        .opacity(this.tempName.trim().length > 0 ? 1.0 : 0.4)
+        .scale({ x: this.addBtnScale, y: this.addBtnScale })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((e: TouchEvent) => {
+          if (e.type === TouchType.Down) {
+            this.addBtnScale = PRESS_SCALE_DOWN;
+          } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+            this.addBtnScale = 1.0;
+          }
+        })
+        .onClick(() => {
+          this.handleCreate();
+        })
+        .margin({ top: 8, bottom: 8 })
     }
     .width('100%')
     .height('100%')
-    .alignContent(Alignment.Center)
+    .backgroundColor(CARD_BG)
+    .translate({ x: this.createOffsetX })
+    .opacity(this.createOpacity)
   }
 
-  // 问题3：iOS grouped 风格分组——浅灰胶囊标题块（色条 + 加重标题 + 计数 + chevron）
-  //   + 组间留白 + 展开时装备行缩进，增强各品类区分度。
+  // ===== 品类分组区 =====
   @Builder
   private buildCategorySection(group: CategoryGroup) {
     Column({ space: 0 }) {
-      // 分组头：浅灰胶囊标题块（可点击折叠/展开）
       Row({ space: 8 }) {
-        // 左侧主题色条，强化分组起点的视觉锚点
         Row()
           .width(3)
           .height(14)
@@ -353,7 +387,6 @@ export struct GearPickerSheet {
         SymbolGlyph($r('sys.symbol.chevron_right'))
           .fontSize(13)
           .fontColor([TEXT_TERTIARY])
-          // 展开时箭头旋转 90° 朝下；SPRING_CHEVRON 弹性
           .rotate({ angle: this.isCategoryExpanded(group.category) ? 90 : 0 })
           .animation({ curve: SPRING_CHEVRON() })
       }
@@ -373,69 +406,69 @@ export struct GearPickerSheet {
         }
       })
       .onClick(() => {
-        this.toggleCategory(group.category);
+        this.toggleCategoryAnimated(group.category);
       })
 
-      // 展开态：该品类下装备行（整体缩进，从属于上方分组头）
-      if (this.isCategoryExpanded(group.category)) {
-        Column({ space: 0 }) {
-          ForEach(group.gears, (gear: GearItem) => {
-            this.buildGearRow(gear)
-          }, (gear: GearItem) => gear.id)
-        }
-        .width('100%')
-        .padding({ top: 4 })
+      Column({ space: 0 }) {
+        ForEach(group.gears, (gear: GearItem) => {
+          this.buildGearRow(gear)
+        }, (gear: GearItem) => gear.id + '_' + (this.isSelected(gear.id) ? '1' : '0'))
       }
+      .width('100%')
+      .padding({ top: this.isCategoryExpanded(group.category) ? 4 : 0 })
+      .clip(true)
+      .height(this.isCategoryExpanded(group.category) ? undefined : 0)
+      .opacity(this.isCategoryExpanded(group.category) ? 1 : 0)
+      .animation({ curve: SPRING_GENERAL() })
     }
     .width('100%')
-    // 组间留白：分组与分组之间拉开距离，强化分块感
-    .margin({ bottom: 10 })
+    .margin({ bottom: 8 })
   }
 
   @Builder
   private buildGearRow(gear: GearItem) {
     Row({ space: 8 }) {
-      // 装备名称 + 品牌
       Column({ space: 2 }) {
         Text(gear.name)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
-        if (gear.brand !== undefined && gear.brand.length > 0) {
-          Text(gear.brand)
-            .fontSize(11)
-            .fontColor(TEXT_TERTIARY)
+        Row({ space: 6 }) {
+          if (gear.brand !== undefined && gear.brand.length > 0) {
+            Text(gear.brand)
+              .fontSize(11)
+              .fontColor(TEXT_TERTIARY)
+          }
+          if (gear.weight !== undefined && gear.weight > 0) {
+            Text(gear.weight.toString() + 'g')
+              .fontSize(11)
+              .fontColor(TEXT_TERTIARY)
+          }
         }
       }
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      // 目标 Zone chip
-      Row({ space: 4 }) {
-        if (this.isSelected(gear.id)) {
+      if (this.isSelected(gear.id)) {
+        Row({ space: 4 }) {
           SymbolGlyph($r('sys.symbol.checkmark'))
             .fontSize(11)
             .fontColor([CARD_BG])
+          Text('已添加')
+            .fontSize(11)
+            .fontColor(CARD_BG)
         }
-        Text(zoneDisplayName(assignSlot(gear).zone))
-          .fontSize(11)
-          .fontColor(this.isSelected(gear.id) ? CARD_BG : TEXT_MAIN)
+        .padding({ left: 8, right: 8, top: 4, bottom: 4 })
+        .borderRadius(12)
+        .backgroundColor(this.getZoneColor(this.preselectZone.length > 0 ? this.preselectZone : BodyZone.Misc))
+        .animation({ curve: SPRING_PRESS() })
       }
-      .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-      .borderRadius(12)
-      .backgroundColor(this.isSelected(gear.id) ? PRIMARY_COLOR : this.getZoneTintColor(assignSlot(gear).zone))
-      // 预选 Zone 装备：未选中时描一圈主题色边框做轻量提示（review I4）
-      .border(this.isPreselectZone(gear) && !this.isSelected(gear.id)
-        ? { width: 1, color: PRIMARY_COLOR }
-        : { width: 0, color: TRANSPARENT })
-      .animation({ curve: SPRING_PRESS() })
     }
     .width('100%')
-    // grouped 风格缩进：装备行左缩到与分组头色条对齐内侧，体现从属层级
-    .padding({ left: 24, right: 12, top: 11, bottom: 11 })
+    .padding({ left: 24, right: 12, top: 10, bottom: 10 })
     .onClick(() => {
-      this.onToggleGear(gear);
+      this.handleGearTap(gear);
     })
   }
 
@@ -459,7 +492,7 @@ export struct GearPickerSheet {
         .height(40)
         .margin({ top: 8 })
         .onClick(() => {
-          this.openNewGearOverlay('');
+          this.enterCreateMode('');
         })
     }
     .width('100%')
@@ -473,7 +506,6 @@ export struct GearPickerSheet {
       Text('没有找到匹配的装备')
         .fontSize(14)
         .fontColor(TEXT_SECONDARY)
-      // P3：搜不到就建——直接用当前关键词预填新建覆盖层
       Button('+ 创建「' + this.searchText.trim() + '」')
         .fontSize(14)
         .fontColor(CARD_BG)
@@ -482,7 +514,7 @@ export struct GearPickerSheet {
         .height(40)
         .padding({ left: 16, right: 16 })
         .onClick(() => {
-          this.openNewGearOverlay(this.searchText.trim());
+          this.enterCreateMode(this.searchText.trim());
         })
     }
     .width('100%')
@@ -490,32 +522,59 @@ export struct GearPickerSheet {
     .justifyContent(FlexAlign.Center)
   }
 
-  // P3：新建覆盖层的「临时 / 入库」segment 按钮
-  @Builder
-  private buildModeSegment(label: string, saveToLibrary: boolean) {
-    Text(label)
-      .fontSize(13)
-      .fontWeight(this.tempSaveToLibrary === saveToLibrary ? FontWeight.Medium : FontWeight.Normal)
-      .fontColor(this.tempSaveToLibrary === saveToLibrary ? TEXT_MAIN : TEXT_SECONDARY)
-      .textAlign(TextAlign.Center)
-      .layoutWeight(1)
-      .height(32)
-      .borderRadius(8)
-      .backgroundColor(this.tempSaveToLibrary === saveToLibrary ? CARD_BG : TRANSPARENT)
-      .animation({ curve: SPRING_PRESS() })
-      .onClick(() => {
-        this.tempSaveToLibrary = saveToLibrary;
-      })
+  // ===== 态切换逻辑 =====
+
+  private enterCreateMode(presetName: string): void {
+    this.triggerHaptic();
+    this.tempName = presetName;
+    this.tempZone = this.preselectZone.length > 0 ? this.preselectZone : BodyZone.Misc;
+    this.tempWeight = '';
+    this.tempSaveToLibrary = false;
+    this.tempCategory = CATEGORY_FALLBACK;
+    this.createOffsetX = 20;
+    this.createOpacity = 0;
+    this.isCreateMode = true;
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.listOffsetX = -20;
+      this.listOpacity = 0;
+      this.createOffsetX = 0;
+      this.createOpacity = 1;
+      this.headerTitle = '新建装备';
+    });
   }
 
-  // ===== 辅助方法 =====
+  private exitCreateMode(): void {
+    this.triggerHaptic();
+    this.getUIContext().animateTo({
+      curve: SPRING_GENERAL(),
+      onFinish: () => {
+        this.isCreateMode = false;
+      }
+    }, () => {
+      this.createOffsetX = 20;
+      this.createOpacity = 0;
+      this.listOffsetX = 0;
+      this.listOpacity = 1;
+      this.headerTitle = '选择装备';
+    });
+  }
 
-  // 搜索过滤后的装备（品类分组前的全量集合）。P5：去掉品类筛选，仅按搜索关键词过滤。
+  private handleCreate(): void {
+    if (this.tempName.trim().length === 0) return;
+    this.triggerHaptic();
+    const parsed = Number(this.tempWeight);
+    const weight = (this.tempWeight.trim().length > 0 && !Number.isNaN(parsed)) ? parsed : undefined;
+    this.onAddGear(this.tempName.trim(), this.tempZone, weight, this.tempCategory, this.tempSaveToLibrary);
+    this.exitCreateMode();
+  }
+
+  // ===== 通用辅助 =====
+
   private filteredGears(): GearItem[] {
     let result = this.gears;
     if (this.searchText.trim().length > 0) {
       const keyword = this.searchText.trim().toLowerCase();
-      result = result.filter((g) => {
+      result = result.filter((g: GearItem) => {
         const nameMatch = g.name.toLowerCase().indexOf(keyword) >= 0;
         const brandMatch = g.brand !== undefined && g.brand.toLowerCase().indexOf(keyword) >= 0;
         return nameMatch || brandMatch;
@@ -524,8 +583,6 @@ export struct GearPickerSheet {
     return result;
   }
 
-  // P5：把 filteredGears 按 category 聚合成分组（仅含有装备的品类）。
-  // 顺序：先按 DEFAULT_CATEGORIES 预设顺序，自定义品类按首次出现顺序追加在后。
   private groupedGears(): CategoryGroup[] {
     const buckets = new Map<string, GearItem[]>();
     const customOrder: string[] = [];
@@ -550,71 +607,37 @@ export struct GearPickerSheet {
     return result;
   }
 
-  // P5：预选 Zone 对应的品类集合（数据驱动反查：遍历装备收集该 Zone 的 category，无硬编码映射）
-  private preselectCategories(): string[] {
-    if (this.preselectZone.length === 0) {
-      return [];
-    }
-    const cats: string[] = [];
-    for (const g of this.gears) {
-      if (assignSlot(g).zone === this.preselectZone) {
-        const cat = (g.category !== undefined && g.category.length > 0) ? g.category : CATEGORY_FALLBACK;
-        if (cats.indexOf(cat) < 0) {
-          cats.push(cat);
-        }
-      }
-    }
-    return cats;
-  }
-
-  // P5：品类是否展开 = 手动展开 OR 搜索命中（搜索态全展开方便看到结果）OR 预选 Zone 命中该品类
   private isCategoryExpanded(category: string): boolean {
     if (this.searchText.trim().length > 0) {
       return true;
     }
-    if (this.expandedCategories.indexOf(category) >= 0) {
-      return true;
-    }
-    return this.preselectCategories().indexOf(category) >= 0;
+    return this.expandedCategories.indexOf(category) >= 0;
   }
 
-  // P5：手动切换品类折叠态（整体新数组赋值触发 @State 刷新）
-  private toggleCategory(category: string): void {
-    const idx = this.expandedCategories.indexOf(category);
-    if (idx >= 0) {
-      const next = this.expandedCategories.slice();
-      next.splice(idx, 1);
-      this.expandedCategories = next;
-    } else {
-      this.expandedCategories = this.expandedCategories.concat([category]);
-    }
+  private toggleCategoryAnimated(category: string): void {
+    this.triggerHaptic();
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      const idx = this.expandedCategories.indexOf(category);
+      if (idx >= 0) {
+        const next = this.expandedCategories.slice();
+        next.splice(idx, 1);
+        this.expandedCategories = next;
+      } else {
+        this.expandedCategories = this.expandedCategories.concat([category]);
+      }
+    });
   }
 
-  // 是否为预选 Zone 的装备（用于列表轻量高亮提示）
-  private isPreselectZone(gear: GearItem): boolean {
-    return this.preselectZone.length > 0 && assignSlot(gear).zone === this.preselectZone;
+  private handleGearTap(gear: GearItem): void {
+    this.triggerHaptic();
+    if (!this.isSelected(gear.id)) {
+      this.lastAddedGearId = gear.id;
+    }
+    this.onToggleGear(gear);
   }
 
   private isSelected(gearId: string): boolean {
     return this.selectedItemIds.indexOf(gearId) >= 0;
-  }
-
-  private getZoneSummary(): string {
-    // 统计各 Zone 已选数量
-    const zoneCounts = new Map<string, number>();
-    for (const gearId of this.selectedItemIds) {
-      const gear = this.gears.find((g) => g.id === gearId);
-      if (gear !== undefined) {
-        const zone = assignSlot(gear).zone;
-        const existing = zoneCounts.get(zone) || 0;
-        zoneCounts.set(zone, existing + 1);
-      }
-    }
-    const parts: string[] = [];
-    zoneCounts.forEach((count, zone) => {
-      parts.push(zoneDisplayName(zone) + ' ' + count.toString());
-    });
-    return parts.length > 0 ? '> ' + parts.join(' - ') : '';
   }
 
   private getZoneColor(zone: string): string {
@@ -637,7 +660,6 @@ export struct GearPickerSheet {
     return ZONE_MISC_TINT;
   }
 
-  // P3：品类选项（预设 13 品类 + 装备库中出现过的自定义品类追加）
   private categoryOptions(): string[] {
     const result: string[] = DEFAULT_CATEGORIES.slice();
     for (const g of this.gears) {
@@ -649,30 +671,15 @@ export struct GearPickerSheet {
     return result;
   }
 
-  // P3：打开新建覆盖层。presetName 为预填名称（搜不到就建场景）。
-  //   修复隐 bug：不再强制重置 tempZone=Misc，尊重 preselectZone（从空格子进入时默认落该区）。
-  private openNewGearOverlay(presetName: string): void {
-    this.tempName = presetName;
-    this.tempZone = this.preselectZone.length > 0 ? this.preselectZone : BodyZone.Misc;
-    this.tempWeight = '';
-    this.tempSaveToLibrary = false;
-    this.tempCategory = CATEGORY_FALLBACK;
-    this.showTempOverlay = true;
-    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
-      this.overlayScale = 1.0;
-      this.overlayOpacity = 1.0;
-    });
-  }
-
-  private closeTempOverlay(): void {
-    this.getUIContext().animateTo({
-      curve: SPRING_PRESS(),
-      onFinish: () => {
-        this.showTempOverlay = false;
-      }
-    }, () => {
-      this.overlayScale = PANEL_SCALE_START;
-      this.overlayOpacity = 0;
-    });
+  private triggerHaptic(): void {
+    try {
+      vibrator.startVibration({
+        type: 'preset',
+        effectId: 'haptic.effect.soft',
+        count: 1
+      }, { usage: 'touch' });
+    } catch (_e) {
+      // 静默失败
+    }
   }
 }

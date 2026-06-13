@@ -128,30 +128,58 @@ export function countdownText(checklist: TripChecklist): string {
   return '已出发 ' + Math.abs(dayDiff).toString() + ' 天';
 }
 
-export function checklistItemWeight(item: ChecklistItem, gears: GearItem[]): number | undefined {
-  if (item.weight !== undefined) {
-    return item.weight;
+/**
+ * 「实时引用」模型：有 fromGearId 且 gear 在库 → 实时取 gear 数据；
+ * gear 已删（orphaned）→ 降级取 item 快照；无 fromGearId（临时项）→ item 自身。
+ */
+export function resolveItemName(item: ChecklistItem, gears: GearItem[]): string {
+  if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
+    const gear = gearById(gears, item.fromGearId);
+    if (gear !== undefined) {
+      return gear.name;
+    }
   }
-  if (item.fromGearId !== undefined) {
+  return item.name;
+}
+
+export function resolveItemCategory(item: ChecklistItem, gears: GearItem[]): string {
+  if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
+    const gear = gearById(gears, item.fromGearId);
+    if (gear !== undefined) {
+      return gear.category;
+    }
+  }
+  return item.group;
+}
+
+export function checklistItemWeight(item: ChecklistItem, gears: GearItem[]): number | undefined {
+  if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
     const gear = gearById(gears, item.fromGearId);
     if (gear !== undefined) {
       return gear.weight;
     }
   }
-  return undefined;
+  // orphaned 或临时项：fallback 到快照
+  return item.weight;
 }
 
 export function checklistItemPrice(item: ChecklistItem, gears: GearItem[]): number | undefined {
-  if (item.price !== undefined) {
-    return item.price;
-  }
-  if (item.fromGearId !== undefined) {
+  if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
     const gear = gearById(gears, item.fromGearId);
     if (gear !== undefined) {
       return gear.price;
     }
   }
-  return undefined;
+  // orphaned 或临时项：fallback 到快照
+  return item.price;
+}
+
+/** 判断引用的装备是否已从装备库删除（用于 UI 标识） */
+export function isOrphanedItem(item: ChecklistItem, gears: GearItem[]): boolean {
+  if (item.fromGearId === undefined || item.fromGearId.length === 0) {
+    return false;
+  }
+  return gearById(gears, item.fromGearId) === undefined;
 }
 
 export function checklistTotalWeight(checklist: TripChecklist, gears: GearItem[]): number {
@@ -363,8 +391,11 @@ export function findLatestChecklist(checklists: TripChecklist[]): TripChecklist 
 
 /**
  * 从装备列表中按 ID 筛选，生成 ChecklistItem 数组。
+ * @param zone 可选，指定装备归属的 BodyZone 枚举值。
+ *   有值时 group 直接填 zone（用户手动选择格子），
+ *   无值时 fallback 为 gear.category（兼容旧调用路径）。
  */
-export function buildItemsFromGears(gears: GearItem[], gearIds: string[]): ChecklistItem[] {
+export function buildItemsFromGears(gears: GearItem[], gearIds: string[], zone?: string): ChecklistItem[] {
   const items: ChecklistItem[] = [];
   for (let gearIndex = 0; gearIndex < gears.length; gearIndex++) {
     const gear = gears[gearIndex];
@@ -372,7 +403,7 @@ export function buildItemsFromGears(gears: GearItem[], gearIds: string[]): Check
       const item: ChecklistItem = {
         id: makeId('item'),
         name: gear.name,
-        group: gear.category,
+        group: (zone !== undefined && zone.length > 0) ? zone : gear.category,
         checked: false,
         weight: gear.weight,
         price: gear.price,

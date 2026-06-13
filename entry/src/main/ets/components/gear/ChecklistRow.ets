@@ -32,6 +32,8 @@ export struct ChecklistRow {
   @Prop fontSize: number = FONT_SIZE_BODY_MEDIUM;
   // P2：true 时仅 check 圆圈是勾选热区，整行其余区域点击冒泡给外层（网格态）
   @Prop checkOnlyHotzone: boolean = false;
+  // 「实时引用」模型：外部传入 resolved 的展示名。空串时 fallback 到 item.name（向后兼容）。
+  @Prop displayName: string = '';
 
   // 回调
   onToggleCheck: (itemId: string) => void = () => {};
@@ -127,7 +129,7 @@ export struct ChecklistRow {
 
       // 装备名：完成态去删除线 + 不变灰（文字始终 TEXT_MAIN），“完成”由整行 opacity 淡出表达，
       //   绿勾作唯一强反馈——避免「划掉报废」的脏感（贴便单：完成 = 安静淡出）。
-      Text(this.item.name)
+      Text(this.displayName.length > 0 ? this.displayName : this.item.name)
         .fontSize(this.fontSize)
         .fontColor(TEXT_MAIN)
         .layoutWeight(1)

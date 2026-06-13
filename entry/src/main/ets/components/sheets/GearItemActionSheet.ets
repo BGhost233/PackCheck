@@ -27,6 +27,7 @@ import { zoneDisplayName, allZones } from '../../services/LoadoutService';
 @Component
 export struct GearItemActionSheet {
   @Prop item: ChecklistItem = { id: '', name: '', group: '', checked: false };
+  @Prop displayName: string = '';
 
   // 回调
   onMoveToZone: (itemId: string, zone: string) => void = () => {};
@@ -42,7 +43,7 @@ export struct GearItemActionSheet {
     Column({ space: 0 }) {
       if (!this.showZoneSelector) {
         // 标题
-        Text(this.item.name)
+        Text(this.displayName.length > 0 ? this.displayName : this.item.name)
           .fontSize(16)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)

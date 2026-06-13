@@ -58,6 +58,7 @@ import {
   DURATION_OVERLAY_DISMISS
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
+import { resolveItemName } from '../../services/ChecklistService';
 import { BodyZone } from '../../constants/GearLoadout';
 import { vibrator } from '@kit.SensorServiceKit';
 import { groupByZoneAll, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
@@ -110,8 +111,6 @@ export struct UnifiedChecklistView {
   // D-2：聚焦态「逐项核查本区」回调
   onReviewZone: (zone: string) => void = () => {};
 
-  // FAB 按压状态
-  @State private fabScale: number = 1.0;
   // 入场动画控制
   @State private appeared: boolean = false;
   // 反算得到的单格高度
@@ -202,10 +201,7 @@ this.computeCellHeight();
         // P4：底部渐隐高斯模糊遮罩，暗示下方还有格子可滑（聚焦态隐藏）。
         this.buildBottomFade()
 
-        // FAB 始终显示（空态也可从右下角全局新增）。
-        this.buildFAB()
-
-        // D-4：全屏压暗蒙层。层级在网格/FAB 之上、聚焦卡片之下，点蒙层收起聚焦。
+        // D-4：全屏压暗蒙层。层级在网格之上、聚焦卡片之下，点蒙层收起聚焦。
         this.buildFocusedScrim()
 
         // 全屏聚焦态（F-3：常驻树，用 visibility 切换，position 叠加在网格之上）
@@ -235,7 +231,7 @@ this.computeCellHeight();
   //   诉求2：从半透明压暗黑（OVERLAY_DIM）改为纯羽白实心（PAGE_BG #F8F9FA）。
   //   彻底盖住背后网格虚影 + 满屏水印，聚焦卡片浮在干净羽白底上，可读性拉满（仿便单纯白屏背景）。
   //   半透明黑 + 透出网格 = 三层叠加发灰发脏，是上版「卡片背后透明可读性差」的根因。
-  //   与 SPRING_HERO 同帧淡入淡出；层级在网格/FAB 之上、聚焦卡片之下；点遮罩 → 收起聚焦。
+  //   与 SPRING_HERO 同帧淡入淡出；层级在网格之上、聚焦卡片之下；点遮罩 → 收起聚焦。
   @Builder
   private buildFocusedScrim() {
     Column()
@@ -256,8 +252,8 @@ this.computeCellHeight();
   // ---- 全屏聚焦层（常驻树，geometryTransition 共享元素配对端）----
   @Builder
   private buildFocusedLayer() {
-    // 诉求1：聚焦态 = 卡片铺满 head 收没后让出的空间（顶到 navbar 下沿 ~ 底部 FAB 上方）。
-    //   外层定位容器：左右留边 16（与网格 GRID_PADDING 一致，转场更连贯）、顶部 8、底部留 96 给 FAB。
+// 诉求1：聚焦态 = 卡片铺满 head 收没后让出的空间（顶到 navbar 下沿 ~ 底部安全区上方）。
+//   外层定位容器：左右留边 16（与网格 GRID_PADDING 一致，转场更连贯）、顶部 8、底部留 96。
     //   不再垂直居中悬浮 80%——卡片 height('100%') 撑满定位容器。
     //   geometryTransition 下沉到 FocusedZoneView（= ZoneShell 卡片节点）本身——
     //   与网格端 GridItem（那张卡）几何对应，转场是「同一块淡色容器连续放大」，
@@ -544,6 +540,7 @@ this.computeCellHeight();
           ZoneGridCell({
             zone: zone,
             items: this.itemsForZone(zone),
+            gears: this.gears,
             zoneColor: this.zoneColor(zone),
             zoneStroke: this.zoneStroke(zone),
             zoneFill: this.zoneFill(zone),
@@ -582,6 +579,7 @@ this.computeCellHeight();
         ZoneGridCell({
           zone: BodyZone.Misc,
           items: this.itemsForZone(BodyZone.Misc),
+          gears: this.gears,
           zoneColor: this.zoneColor(BodyZone.Misc),
           zoneStroke: this.zoneStroke(BodyZone.Misc),
           zoneFill: this.zoneFill(BodyZone.Misc),
@@ -633,46 +631,6 @@ this.computeCellHeight();
     .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
   }
 
-  @Builder
-  private buildFAB() {
-    Row() {
-      SymbolGlyph($r('sys.symbol.plus'))
-        .fontSize(24)
-        .fontColor([CARD_BG])
-    }
-    .width(56)
-    .height(56)
-    .borderRadius(28)
-    .backgroundColor(PRIMARY_COLOR)
-    .justifyContent(FlexAlign.Center)
-    .shadow({
-      radius: 12,
-      color: OVERLAY_DIM,
-      offsetX: 0,
-      offsetY: 4
-    })
-    .position({ right: GRID_PADDING, bottom: 32 })
-    .onTouch((e: TouchEvent) => {
-      if (e.type === TouchType.Down) {
-        this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
-          this.fabScale = 0.9;
-        });
-      } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-        this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
-          this.fabScale = 1.0;
-        });
-      }
-    })
-    .onClick(() => {
-      this.onOpenPicker();
-    })
-    .opacity(this.appeared ? 1 : 0)
-    .scale({
-      x: (this.appeared ? 1 : 0.8) * this.fabScale,
-      y: (this.appeared ? 1 : 0.8) * this.fabScale
-    })
-    .animation({ curve: SPRING_GENERAL(), delay: 200 })
-  }
 
   // ---- 底部渐隐遮罩（P4 / 问题2）----
   // 贴底渐隐：上透明 → 下 PAGE_BG，让底部格子自然 fade 进背景（Apple/Things 标准）。
@@ -720,6 +678,7 @@ this.computeCellHeight();
       Column() {
         GearItemContextMenu({
           item: this.overlayItem!,
+          displayName: resolveItemName(this.overlayItem!, this.gears),
           gear: this.findGearForItem(this.overlayItem!),
           menuItems: this.buildOverlayMenuItems()
         })
@@ -739,7 +698,7 @@ this.computeCellHeight();
       // position(x,y) 消费局部坐标 dragCurrentX/Y（已在 handleDragUpdate 中由全局→局部转换），
       // -60/-40 偏移让胶囊居中于手指上方。不再使用 translate()+anchor 双坐标系组合。
       Row({ space: 8 }) {
-        Text(this.overlayItem!.name)
+        Text(resolveItemName(this.overlayItem!, this.gears))
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .maxLines(1)

@@ -37,6 +37,7 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { zoneDisplayName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
 import { ZoneShell } from './ZoneShell';
+import { resolveItemName } from '../../services/ChecklistService';
 
 @Component
 export struct FocusedZoneView {
@@ -154,6 +155,7 @@ export struct FocusedZoneView {
             Column() {
               ChecklistRow({
                 item: item,
+                displayName: resolveItemName(item, this.gears),
                 rowHeight: 52,
                 checkSize: 28,
                 fontSize: FONT_SIZE_BODY_LARGE,

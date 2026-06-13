@@ -1,4 +1,5 @@
 import { CATEGORY_ALL, ChecklistItem, GearItem } from '../../models/PackModels';
+import { resolveItemName } from '../../services/ChecklistService';
 import {
   CARD_BG,
   DANGER_COLOR,
@@ -135,28 +136,31 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
           this.onClose();
         })
       Column({ space: 14 }) {
-        Row() {
-          Text(this.sheetTitle())
-            .fontSize(16)
-            .fontWeight(FontWeight.Medium)
-            .fontColor(TEXT_MAIN)
-            .layoutWeight(1)
-          if (this.sheetMode === SHEET_IMPORT && this.gears.length > 0) {
-            Button('+ 添加装备')
-              .fontSize(14)
-              .fontColor(PRIMARY_COLOR)
+        // GearPickerSheet 自建 head（标题随态切换），跳过统一 head
+        if (this.sheetMode !== SHEET_GEAR_PICKER) {
+          Row() {
+            Text(this.sheetTitle())
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+              .fontColor(TEXT_MAIN)
+              .layoutWeight(1)
+            if (this.sheetMode === SHEET_IMPORT && this.gears.length > 0) {
+              Button('+ 添加装备')
+                .fontSize(14)
+                .fontColor(PRIMARY_COLOR)
+                .backgroundColor(TRANSPARENT)
+                .onClick(() => {
+                  this.onAddGearFromImport();
+                })
+            }
+            Button(this.sheetMode === SHEET_TEMP_ITEM ? '完成' : '关闭')
+              .fontSize(13)
+              .fontColor(TEXT_SECONDARY)
               .backgroundColor(TRANSPARENT)
               .onClick(() => {
-                this.onAddGearFromImport();
+                this.onClose();
               })
           }
-          Button(this.sheetMode === SHEET_TEMP_ITEM ? '完成' : '关闭')
-            .fontSize(13)
-            .fontColor(TEXT_SECONDARY)
-            .backgroundColor(TRANSPARENT)
-            .onClick(() => {
-              this.onClose();
-            })
         }
         if (this.errorText.length > 0) {
           Text(this.errorText)
@@ -290,6 +294,7 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
         } else if (this.sheetMode === SHEET_GEAR_ITEM_ACTION) {
           GearItemActionSheet({
             item: this.actionItem,
+            displayName: resolveItemName(this.actionItem, this.gears),
             onMoveToZone: this.onActionMoveToZone,
             onViewDetail: this.onActionViewDetail,
             onRemove: this.onActionRemove,
@@ -299,7 +304,7 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
       }
       .width('100%')
       .height('72%')
-      .padding({ left: 16, right: 16, top: 16, bottom: 20 })
+      .padding({ left: 16, right: 16, top: this.sheetMode === SHEET_GEAR_PICKER ? 10 : 16, bottom: 20 })
       .backgroundColor(CARD_BG)
       .borderRadius({ topLeft: 24, topRight: 24 })
       .translate({ y: this.sheetTranslateY + this.sheetDragOffset })

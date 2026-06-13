@@ -37,6 +37,8 @@ export interface ContextMenuItem {
 export struct GearItemContextMenu {
   // 当前长按的 ChecklistItem
   @Prop item: ChecklistItem = { id: '', name: '', group: '', checked: false };
+  // 「实时引用」resolved 展示名（空串 fallback item.name）
+  @Prop displayName: string = '';
   // 通过 fromGearId 反查到的装备详情（可为 undefined = 临时装备）
   @Prop gear: GearItem | undefined = undefined;
   // 菜单项（由调用方注入具体 action）
@@ -60,8 +62,8 @@ export struct GearItemContextMenu {
   @Builder
   private buildPreviewCard() {
     Column({ space: 10 }) {
-      // 装备名（大字加粗）
-      Text(this.item.name)
+      // 装备名（大字加粗）—— 实时引用模型
+      Text(this.displayName.length > 0 ? this.displayName : this.item.name)
         .fontSize(FONT_SIZE_BODY_LARGE)
         .fontWeight(FONT_WEIGHT_BOLD)
         .fontColor(TEXT_MAIN)

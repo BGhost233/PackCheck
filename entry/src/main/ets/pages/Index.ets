@@ -124,7 +124,8 @@ import {
   buildItemsFromGears,
   prependChecklist,
   findLatestChecklist,
-  TripProfileUpdate
+  TripProfileUpdate,
+  resolveItemName
 } from '../services/ChecklistService';
 import { ProfilePage } from '../components/ProfilePage';
 
@@ -647,6 +648,11 @@ struct Index {
 
     await this.store.saveGears(nextGears);
     this.gears = nextGears;
+    // 「实时引用」模型：gear 数据变化后，行程内引用该 gear 的 item 展示名/重量/价格
+    // 自动从新 gears 回查。但 ForEach key 不变导致不重渲染，需 nonce 强制刷新。
+    if (updated) {
+      this.checklistRenderNonce = this.checklistRenderNonce + 1;
+    }
 
     await this.ensureCategory(category);
     if (this.returnToImportAfterGear) {
@@ -806,6 +812,8 @@ struct Index {
     const nextGears = this.gears.filter((item: GearItem) => item.id !== id);
     await this.store.saveGears(nextGears);
     this.gears = nextGears;
+    // 「实时引用」：gear 删除后行程内引用变 orphaned，强制 UI 刷新
+    this.checklistRenderNonce = this.checklistRenderNonce + 1;
 
     if (this.expandedGearId === id) {
       this.expandedGearId = '';
@@ -1188,7 +1196,7 @@ struct Index {
 
   private openEditItemSheet(item: ChecklistItem): void {
     this.editingItemId = item.id;
-    this.editingItemName = item.name;
+    this.editingItemName = resolveItemName(item, this.gears);
     this.editingItemGroup = item.group;
     this.editingItemWeight = numberInputText(this.checklistItemWeight(item));
     this.editingItemPrice = numberInputText(this.checklistItemPrice(item));
@@ -1212,7 +1220,7 @@ struct Index {
       return;
     }
 
-    const name = item.name.trim();
+    const name = resolveItemName(item, this.gears).trim();
     const group = item.group.trim().length === 0 ? '其他' : item.group.trim();
     if (name.length === 0) {
       this.showToastMessage('物品名称为空');
@@ -1463,7 +1471,9 @@ struct Index {
       this.applyChecklistState(nextChecklists);
       await this.store.saveChecklists(nextChecklists);
     } else {
-      const newItems = buildItemsFromGears(this.gears, [gear.id]);
+      // 透传 pickerPreselectZone：用户点的哪个格子，装备就直接进那个格子
+      const zone = this.pickerPreselectZone.length > 0 ? this.pickerPreselectZone : undefined;
+      const newItems = buildItemsFromGears(this.gears, [gear.id], zone);
       const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, newItems);
       this.applyChecklistState(nextChecklists);
       await this.store.saveChecklists(nextChecklists);
@@ -1489,8 +1499,8 @@ struct Index {
 
   // P3：新建装备并存入装备库，同时加入当前行程。
   //   入库构造范式对齐 saveGear()，weight 已是规范化数值，category 为用户显式选择。
-  // 注：zone 由 buildItemsFromGears 内部按 gear 反推归属分区，故此处入参不直接使用（用 _zone 占位）
-  private async createGearAndAddToTrip(name: string, _zone: string, weight: number | undefined, category: string): Promise<void> {
+  //   zone = 用户当前点击的格子（pickerPreselectZone），直接归入该格子。
+  private async createGearAndAddToTrip(name: string, zone: string, weight: number | undefined, category: string): Promise<void> {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
       return;
@@ -1509,8 +1519,9 @@ struct Index {
     await this.store.saveGears(nextGears);
     this.gears = nextGears;
     await this.ensureCategory(safeCategory);
-    // 挂入当前行程
-    const newItems = buildItemsFromGears(this.gears, [created.id]);
+    // 挂入当前行程——直接使用用户选择的 zone，不走品类自动推断
+    const targetZone = zone.length > 0 ? zone : undefined;
+    const newItems = buildItemsFromGears(this.gears, [created.id], targetZone);
     const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, newItems);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
@@ -1660,7 +1671,10 @@ struct Index {
 
   private currentReviewItemName(): string {
     const item = this.currentReviewItem();
-    return item === undefined ? '' : item.name;
+    if (item === undefined) {
+      return '';
+    }
+    return resolveItemName(item, this.gears);
   }
 
   private currentReviewItemGroup(): string {
@@ -1942,6 +1956,7 @@ struct Index {
       NavDestination() {
         ReviewPage({
           checklists: this.checklists,
+          gears: this.gears,
           selectedChecklistId: this.selectedChecklistId,
           reviewIndex: this.reviewIndex,
           reviewFinished: this.reviewFinished,

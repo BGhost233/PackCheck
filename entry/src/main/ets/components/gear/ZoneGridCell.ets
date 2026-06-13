@@ -20,10 +20,11 @@ import {
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
 import { SPRING_PRESS, PRESS_SCALE_DOWN, SPRING_GENERAL } from '../../constants/AnimationTokens';
-import { ChecklistItem } from '../../models/PackModels';
+import { ChecklistItem, GearItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { zoneDisplayName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
+import { resolveItemName } from '../../services/ChecklistService';
 import { ZoneShell } from './ZoneShell';
 import { vibrator } from '@kit.SensorServiceKit';
 
@@ -38,6 +39,8 @@ const GRID_CHECK_SIZE: number = 20;
 export struct ZoneGridCell {
   @Prop zone: string = BodyZone.Misc;
   @Prop items: ChecklistItem[] = [];
+  // 「实时引用」模型：传入装备库用于 resolve item 展示名
+  @Prop gears: GearItem[] = [];
   @Prop zoneColor: string = ZONE_MISC_COLOR;
   // 容器描边色 + 整块淡色填充底（由父层 zoneStroke/zoneFill helper 传入）
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
@@ -145,6 +148,7 @@ export struct ZoneGridCell {
           Column() {
             ChecklistRow({
               item: item,
+              displayName: resolveItemName(item, this.gears),
               rowHeight: GRID_ROW_HEIGHT,
               checkSize: GRID_CHECK_SIZE,
               checkOnlyHotzone: true,

@@ -8,7 +8,11 @@ import { ChecklistItem, GearItem } from '../models/PackModels';
 // 槽位分配
 // ============================================================
 
-/** 给定装备，返回应落入的 Zone + Layer */
+/**
+ * @deprecated 新流程已不再使用品类→Zone自动映射。
+ * 用户通过点击格子选择装备，Zone 由 buildItemsFromGears 的 zone 参数直接指定。
+ * 保留仅为旧数据兼容（旧版本创建的 item 可能依赖此推断）。
+ */
 export function assignSlot(gear: GearItem): SlotHint {
   return slotHintForCategory(gear.category);
 }

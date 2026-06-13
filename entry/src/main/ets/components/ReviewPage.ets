@@ -1,4 +1,5 @@
-import { ChecklistItem, TripChecklist } from '../models/PackModels';
+import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
+import { resolveItemName } from '../services/ChecklistService';
 import {
   CARD_BG,
   FONT_FEATURE_TNUM,
@@ -23,6 +24,7 @@ import {
 @Component
 export struct ReviewPage {
   @Prop checklists: TripChecklist[] = [];
+  @Prop gears: GearItem[] = [];
   @Prop selectedChecklistId: string = '';
   @Prop reviewIndex: number = 0;
   @Prop reviewFinished: boolean = false;
@@ -84,7 +86,10 @@ export struct ReviewPage {
 
   private currentReviewItemName(): string {
     const item = this.currentReviewItem();
-    return item === undefined ? '' : item.name;
+    if (item === undefined) {
+      return '';
+    }
+    return resolveItemName(item, this.gears);
   }
 
   private currentReviewItemGroup(): string {
