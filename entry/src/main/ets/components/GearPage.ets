@@ -13,6 +13,7 @@ import {
 } from '../constants/AnimationTokens';
 import { HeadCollapseController } from '../utils/HeadCollapseController';
 import { vibrator } from '@kit.SensorServiceKit';
+import { hdsEffect } from '@kit.UIDesignKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import { computeGearTripCount } from '../services/FootprintService';
@@ -1595,6 +1596,12 @@ export struct GearPage {
           x: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
           y: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST
         })
+        // hdsEffect 按压阴影：按下「陷入材质」高级感（仅真机生效，模拟器降级为无）
+        .visualEffect(new hdsEffect.HdsEffectBuilder()
+          .pressShadow(this.pressedGearId === item.id
+            ? hdsEffect.PressShadowType.BLEND_GRADIENT
+            : hdsEffect.PressShadowType.NONE)
+          .buildEffect())
         .animation({ curve: SPRING_PRESS() })
         .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
         .onTouch((event: TouchEvent) => {
