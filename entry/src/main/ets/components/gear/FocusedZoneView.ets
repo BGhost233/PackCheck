@@ -70,6 +70,13 @@ export struct FocusedZoneView {
   onMoveItemToZone: (itemId: string, zone: string) => void = () => {};
   // Phase 4：长按 item 触发浮层（通知父层弹自绘浮层）
   onLongPressItem: (item: ChecklistItem) => void = () => {};
+  // Phase 4：拖拽开始时通知父层 dismiss 菜单（长按弹菜单后继续拖动）
+  onDismissMenu: () => void = () => {};
+  // Phase 4：拖到边缘触发收缩 + 跨 zone 拖拽（传递 item + Pan 累积偏移）
+  onEdgeDragOut: (item: ChecklistItem, offsetX: number, offsetY: number) => void = () => {};
+  // Phase 4：边缘拖出后，后续 Pan 事件转发给父层（跟手 + 命中判定）
+  onEdgePanUpdate: (offsetX: number, offsetY: number) => void = () => {};
+  onEdgePanEnd: (offsetX: number, offsetY: number) => void = () => {};
   // #3：点击装备行弹出详情 Sheet（替代手风琴展开）
   onTapItem: (item: ChecklistItem) => void = () => {};
 
@@ -243,19 +250,24 @@ export struct FocusedZoneView {
                     .onAction(() => {
                       this.handleLongPress(item);
                     }),
-                  PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 5 })
+                  PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
                     .onActionStart(() => {
                       if (!this.isMultiSelectMode) {
+                        // 长按弹菜单后继续拖动 → dismiss 菜单 + 进入排序
+                        this.onDismissMenu();
                         this.startReorder(item, index);
                       }
                     })
                     .onActionUpdate((event: GestureEvent) => {
                       if (!this.isMultiSelectMode) {
-                        this.updateReorder(event.offsetY, index);
+                        this.updateReorder(event.offsetX, event.offsetY, index);
                       }
                     })
-                    .onActionEnd(() => {
+                    .onActionEnd((event: GestureEvent) => {
                       if (!this.isMultiSelectMode) {
+                        if (this.edgeDragFired) {
+                          this.onEdgePanEnd(event.offsetX, event.offsetY);
+                        }
                         this.finishReorder();
                       }
                     })
@@ -402,10 +414,31 @@ export struct FocusedZoneView {
     this.reorderingItemId = item.id;
     this.reorderDragY = 0;
     this.reorderInsertIndex = this.items.findIndex((i: ChecklistItem) => i.id === item.id);
+    this.edgeDragFired = false;
   }
 
-  private updateReorder(offsetY: number, originalIndex: number): void {
+  // 边缘检测阈值：手指 X 偏移超出此值时触发收缩 + 跨 zone 拖拽
+  private static readonly EDGE_THRESHOLD_X: number = 80;
+  // 防止重复触发边缘回调
+  private edgeDragFired: boolean = false;
+
+  private updateReorder(offsetX: number, offsetY: number, originalIndex: number): void {
     this.reorderDragY = offsetY;
+    // 边缘检测：横向偏移超阈值 → 触发收缩 + 跨 zone 拖拽
+    if (!this.edgeDragFired && Math.abs(offsetX) > FocusedZoneView.EDGE_THRESHOLD_X) {
+      this.edgeDragFired = true;
+      const item = this.items.find((i: ChecklistItem) => i.id === this.reorderingItemId);
+      if (item !== undefined) {
+        // 用 Pan 累积偏移 + 组件区域估算全局坐标（精确值由父层修正）
+        this.onEdgeDragOut(item, offsetX, offsetY);
+      }
+      return;
+    }
+    if (this.edgeDragFired) {
+      // 已触发边缘回调，后续 Pan 事件转发给父层做跨 zone 跟手
+      this.onEdgePanUpdate(offsetX, offsetY);
+      return;
+    }
     // 根据拖拽偏移计算目标插入位置
     const itemH = FocusedZoneView.ITEM_HEIGHT;
     const movedSlots = Math.round(offsetY / itemH);
@@ -422,6 +455,16 @@ export struct FocusedZoneView {
     if (this.reorderingItemId.length === 0) {
       return;
     }
+    // 如果已触发边缘拖出，不做排序持久化（item 已交给跨 zone 流程）
+    if (this.edgeDragFired) {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+        this.reorderingItemId = '';
+        this.reorderInsertIndex = -1;
+        this.reorderDragY = 0;
+      });
+      this.edgeDragFired = false;
+      return;
+    }
     const fromIndex = this.items.findIndex((i: ChecklistItem) => i.id === this.reorderingItemId);
     const toIndex = this.reorderInsertIndex;
     // 重置排序状态
@@ -430,6 +473,7 @@ export struct FocusedZoneView {
       this.reorderInsertIndex = -1;
       this.reorderDragY = 0;
     });
+    this.edgeDragFired = false;
     // 如果位置变了，通知父层持久化
     if (fromIndex !== toIndex && fromIndex >= 0 && toIndex >= 0) {
       const orderedIds = this.items.map((i: ChecklistItem) => i.id);

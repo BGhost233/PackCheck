@@ -322,6 +322,16 @@ this.computeCellHeight();
         onRemoveItem: this.onRemoveItem,
         onMoveItemToZone: this.onMoveItemToZone,
         onLongPressItem: (item: ChecklistItem) => { this.showOverlay(item); },
+        onDismissMenu: () => { this.dismissOverlay(true); },
+        onEdgeDragOut: (item: ChecklistItem, offsetX: number, offsetY: number) => {
+          this.handleEdgeDragOut(item, offsetX, offsetY);
+        },
+        onEdgePanUpdate: (offsetX: number, offsetY: number) => {
+          this.handleEdgePanUpdate(offsetX, offsetY);
+        },
+        onEdgePanEnd: (offsetX: number, offsetY: number) => {
+          this.handleEdgePanEnd(offsetX, offsetY);
+        },
         onTapItem: (item: ChecklistItem) => { this.openDetailSheet(item); },
         onReorderItems: (zone: string, orderedIds: string[]) => { this.onReorderItems(zone, orderedIds); },
         onRequestBatchMoveSheet: (ids: string[]) => { this.onRequestBatchMoveSheet(ids); },
@@ -368,6 +378,103 @@ this.computeCellHeight();
     this.getUIContext().animateTo({ curve: SPRING_HERO_COLLAPSE() }, () => {
       this.focusedZone = null;
     });
+  }
+
+  // Phase 4：展开态拖到边缘 → 收缩聚焦态 + 启动跨 zone 拖拽
+  // 保存边缘触发时的 Pan 偏移基准，后续 update 用差值计算胶囊位移
+  private edgeDragBaseOffsetX: number = 0;
+  private edgeDragBaseOffsetY: number = 0;
+
+  private handleEdgeDragOut(item: ChecklistItem, offsetX: number, offsetY: number): void {
+    // 保存触发时的偏移作为基准
+    this.edgeDragBaseOffsetX = offsetX;
+    this.edgeDragBaseOffsetY = offsetY;
+    // 1. 设置拖拽状态
+    this.overlayItem = item;
+    this.overlayPhase = 'dragging';
+    this.overlayVisible = true;
+    this.dropTargetZone = null;
+    // 胶囊初始位置：屏幕中央偏上（后续由 Pan 差值跟手修正）
+    try {
+      const di = display.getDefaultDisplaySync();
+      const screenW = this.getUIContext().px2vp(di.width);
+      const screenH = this.getUIContext().px2vp(di.height);
+      this.dragCurrentX = screenW / 2 - this.overlayOriginX;
+      this.dragCurrentY = screenH / 3 - this.overlayOriginY;
+    } catch (_e) {
+      this.dragCurrentX = 180;
+      this.dragCurrentY = 250;
+    }
+    this.dragOffsetX = 0;
+    this.dragOffsetY = 0;
+    // 2. 收缩聚焦态（geometryTransition 动画）
+    this.getUIContext().animateTo({ curve: SPRING_HERO_COLLAPSE() }, () => {
+      this.focusedZone = null;
+    });
+    // 3. 触觉反馈
+    this.triggerDropHaptic();
+  }
+
+  // Phase 4：边缘拖出后 Pan 跟手更新（FocusedZoneView 转发）
+  private handleEdgePanUpdate(offsetX: number, offsetY: number): void {
+    if (this.overlayItem === null || this.overlayPhase !== 'dragging') {
+      return;
+    }
+    // 用 Pan 偏移差值（相对边缘触发时）更新胶囊位置
+    const deltaX = offsetX - this.edgeDragBaseOffsetX;
+    const deltaY = offsetY - this.edgeDragBaseOffsetY;
+    try {
+      const di = display.getDefaultDisplaySync();
+      const screenW = this.getUIContext().px2vp(di.width);
+      const screenH = this.getUIContext().px2vp(di.height);
+      this.dragCurrentX = screenW / 2 - this.overlayOriginX + deltaX;
+      this.dragCurrentY = screenH / 3 - this.overlayOriginY + deltaY;
+    } catch (_e) {
+      this.dragCurrentX = 180 + deltaX;
+      this.dragCurrentY = 250 + deltaY;
+    }
+    // 命中判定（用胶囊中心的全局坐标）
+    const fingerGlobalX = this.dragCurrentX + this.overlayOriginX;
+    const fingerGlobalY = this.dragCurrentY + this.overlayOriginY;
+    const prevTarget = this.dropTargetZone;
+    this.dropTargetZone = this.hitTestZone(fingerGlobalX, fingerGlobalY);
+    if (this.dropTargetZone !== null && this.dropTargetZone !== prevTarget) {
+      this.triggerDropHaptic();
+    }
+  }
+
+  // Phase 4：边缘拖出后 Pan 结束（松手落点）
+  private handleEdgePanEnd(offsetX: number, offsetY: number): void {
+    if (this.overlayItem === null) {
+      return;
+    }
+    // 最终命中判定
+    const deltaX = offsetX - this.edgeDragBaseOffsetX;
+    const deltaY = offsetY - this.edgeDragBaseOffsetY;
+    let fingerGlobalX: number;
+    let fingerGlobalY: number;
+    try {
+      const di = display.getDefaultDisplaySync();
+      const screenW = this.getUIContext().px2vp(di.width);
+      const screenH = this.getUIContext().px2vp(di.height);
+      fingerGlobalX = screenW / 2 + deltaX;
+      fingerGlobalY = screenH / 3 + deltaY;
+    } catch (_e) {
+      fingerGlobalX = 180 + this.overlayOriginX + deltaX;
+      fingerGlobalY = 250 + this.overlayOriginY + deltaY;
+    }
+    const target = this.hitTestZone(fingerGlobalX, fingerGlobalY);
+    if (target !== null && target !== this.overlayItem!.group) {
+      this.onMoveItemToZone(this.overlayItem!.id, target);
+    }
+    // 重置拖拽状态
+    this.overlayPhase = 'idle';
+    this.overlayVisible = false;
+    this.dropTargetZone = null;
+    setTimeout(() => {
+      if (!this.isAlive) { return; }
+      this.overlayItem = null;
+    }, DURATION_OVERLAY_FADE + 80);
   }
 
   // ---- #3：装备详情 Sheet 控制 ----
