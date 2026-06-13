@@ -108,6 +108,8 @@ export struct GearPage {
   @State private categoryOrder: string[] = [];
 
     @State private pressedGroupId: string = '';
+  @State private pressedSortBtn: boolean = false;
+  @State private pressedFilterPill: boolean = false;
   @State private listEntered: boolean = false;
 
   // --- 分组拖拽排序 ---
@@ -1104,6 +1106,16 @@ export struct GearPage {
               .backgroundColor(PRIMARY_TINT_COLOR)
               .borderRadius(18)
               .margin({ left: 10 })
+              .scale({ x: this.pressedSortBtn ? PRESS_SCALE_DOWN : 1.0,
+                y: this.pressedSortBtn ? PRESS_SCALE_DOWN : 1.0 })
+              .animation({ curve: SPRING_PRESS() })
+              .onTouch((e: TouchEvent) => {
+                if (e.type === TouchType.Down) {
+                  this.pressedSortBtn = true;
+                } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                  this.pressedSortBtn = false;
+                }
+              })
               .onClick(() => {
                 this.onOpenSort();
               })
@@ -1132,6 +1144,16 @@ export struct GearPage {
                 .padding({ left: 12, right: 12 })
                 .backgroundColor(PRIMARY_TINT_COLOR)
                 .borderRadius(16)
+                .scale({ x: this.pressedFilterPill ? PRESS_SCALE_DOWN : 1.0,
+                  y: this.pressedFilterPill ? PRESS_SCALE_DOWN : 1.0 })
+                .animation({ curve: SPRING_PRESS() })
+                .onTouch((e: TouchEvent) => {
+                  if (e.type === TouchType.Down) {
+                    this.pressedFilterPill = true;
+                  } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                    this.pressedFilterPill = false;
+                  }
+                })
                 .onClick(() => {
                   this.onOpenFilterPanel();
                 })
