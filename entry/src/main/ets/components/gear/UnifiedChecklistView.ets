@@ -234,22 +234,27 @@ this.computeCellHeight();
         }
 
         // #3：装备详情底部半屏 Sheet
-        GearDetailSheet({
-          item: this.detailSheetItem,
-          gears: this.gears,
-          visible: this.detailSheetVisible,
-          onClose: () => { this.closeDetailSheet(); },
-          onEditGear: (_gearId: string) => {
-            this.closeDetailSheet();
-            if (this.detailSheetItem !== null) {
-              this.onEditItem(this.detailSheetItem);
+        // 条件渲染：ArkUI 中 hitTestBehavior(None) 不可靠地阻止子元素 onClick（避坑 ZoneGridCell 注释），
+        // 常驻树时蒙层 Column 的 onClick 仍拦截全屏点击导致网格态完全无法交互。
+        // 用 detailSheetItem !== null 作为条件（closeDetailSheet 延迟 400ms 清空 item 保留退场动画）。
+        if (this.detailSheetItem !== null) {
+          GearDetailSheet({
+            item: this.detailSheetItem,
+            gears: this.gears,
+            visible: this.detailSheetVisible,
+            onClose: () => { this.closeDetailSheet(); },
+            onEditGear: (_gearId: string) => {
+              this.closeDetailSheet();
+              if (this.detailSheetItem !== null) {
+                this.onEditItem(this.detailSheetItem);
+              }
+            },
+            onRemoveItem: (itemId: string) => {
+              this.onRemoveItem(itemId);
+              this.closeDetailSheet();
             }
-          },
-          onRemoveItem: (itemId: string) => {
-            this.onRemoveItem(itemId);
-            this.closeDetailSheet();
-          }
-        })
+          })
+        }
       }
       .layoutWeight(1)
       .width('100%')
