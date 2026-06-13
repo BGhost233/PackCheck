@@ -84,6 +84,8 @@
   - `ChecklistRow`：单行装备，契约 `checkOnlyHotzone=true` → check 圆圈负责勾选、行其余区域调 `onTapRow`（聚焦态用于展开详情）
   - Zone 映射：`BodyZone` 枚举 + `CATEGORY_SLOT_MAP` 在 `constants/GearLoadout.ets`；`groupByZoneAll`/`groupByZone`/`sortItemsByLayer` 等聚合函数在 `services/LoadoutService.ets`。装备按 `category` 查表自动归入格子
 - `ChecklistItem { id, name, group, checked, weight?, price?, fromGearId? }`（无 category/note/brand；聚焦态详情经 fromGearId 反查 GearItem 取 category/brand/note）
+- **结构防腐铁律已成文**（2026-06-14）：DEVELOPMENT_STANDARDS 第八章 + CLAUDE.md 会话启动第一动作。新增代码前必须 grep-before-add（先查全仓有无同名/同义实现再写）；判死代码看可达性（入口无调用点 → 整链不可达 → 可删）；拆分看阈值（>300行/>10 @State/>8 props/>60行方法），但动画状态机、geometryTransition 两端、拖拽浮层、Index 容器、内联 @Builder **不拆**
+- **targetWeightGram/WeightTargetEditor 死代码已清理**（commit `63f079a`）：openWeightEditor 无调用点 → showWeightEditor 永 false → 整套不可达。跨 GearPage/Index/PackStore 删除，PackStore 的 KEY_GEAR_TARGET_WEIGHT 从未被真实写入（无孤儿数据）。WeightGauge.ets 是全仓无实例化的孤立组件，其 targetWeight prop 与本链路无关
 
 ## ArkUI 避坑清单（实战总结，共 46 条）
 
