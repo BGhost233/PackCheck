@@ -34,6 +34,7 @@ import {
   staggerDelay
 } from '../constants/AnimationTokens';
 import { heroGradientStart } from '../utils/ColorUtils';
+import { HeadCollapseController } from '../utils/HeadCollapseController';
 
 
 @Component
@@ -52,8 +53,10 @@ export struct HomePage {
   @State private heroNumberAnimated: boolean = false;
   @State private progressNumeratorDisplay: number = 0;
   @State private progressAnimated: boolean = false;
-  @State private scrollOffset: number = 0;
-  @State private smoothScrollOffset: number = 0;
+  // head 折叠进度镜像（0=全展开，1=全折叠）。
+  //   ⚠️ 刷新陷阱：render 必须读此 @State（非控制器内部字段），controller.onChange 推动更新。
+  @State private headProgress: number = 0;
+  @State private headSnapping: boolean = false;
   @State private quickEntryPressed: string = '';
   @State private historyPressedId: string = '';
   @State private heroPressed: boolean = false;
@@ -66,6 +69,19 @@ export struct HomePage {
   private scroller: Scroller = new Scroller();
   private historyListScroller: ListScroller = new ListScroller();
   private isAlive: boolean = true;
+
+  // 统一折叠控制器（overlay 范式：head 定高浮在滚动容器上，靠内部元素变形）。
+  //   对齐 Large Title：跟手 1:1 + 松手就近吸附（补齐原本缺失的 onScrollStop）。
+  //   collapseDistance = HOME_COLLAPSE_MAX。onChange 推动 headProgress 镜像驱动所有 head 变形 + 内容区 hero 联动。
+  private headController: HeadCollapseController = new HeadCollapseController({
+    collapseDistance: HOME_COLLAPSE_MAX,
+    enableSnap: true,
+    getUIContext: () => this.getUIContext(),
+    onChange: (progress: number, snapping: boolean) => {
+      this.headSnapping = snapping;
+      this.headProgress = progress;
+    }
+  });
   // timer handles 用于 aboutToDisappear 清理
   private staggerTimerId: number = -1;
   private celebrateTimerId: number = -1;
@@ -90,7 +106,8 @@ export struct HomePage {
     this.heroNumberAnimated = false;
     this.progressNumeratorDisplay = 0;
     this.progressAnimated = false;
-    this.scrollOffset = 0;
+    this.headProgress = 0;
+    this.headSnapping = false;
     this.historyStaggerReady = false;
     this.emptyHeroBreathScale = 1.02;
     this.wasLatestChecklistDone = false;
@@ -113,8 +130,10 @@ export struct HomePage {
     }
   }
 
+  // head 折叠进度（0~1）。读 @State 镜像（非 controller.progress()）以触发 ArkUI 依赖收集。
+  //   所有 head 变形（字号/透明度/背景/模糊）与内容区 hero 联动均读此值。
   private scrollProgress(): number {
-    return Math.max(0, Math.min(1, this.smoothScrollOffset / HOME_COLLAPSE_MAX));
+    return this.headProgress;
   }
 
   private titleFontSize(): number {
@@ -547,10 +566,13 @@ export struct HomePage {
         .height('100%')
         .edgeEffect(EdgeEffect.Spring)
         .scrollBar(BarState.Off)
+        // 跟手：progress 严格 1:1 实时映射（零吸附、不抢手感）。
         .onDidScroll(() => {
-          const raw = this.scroller.currentOffset().yOffset;
-          this.scrollOffset = raw;
-          this.smoothScrollOffset = raw;
+          this.headController.handleScroll(this.scroller);
+        })
+        // 补齐 Large Title 就近吸附：松手惯性停在中间态时吸附到 0/1，绝不留半折叠残缺态。
+        .onScrollStop(() => {
+          this.headController.handleScrollStop(this.scroller);
         })
         .onTouch((event: TouchEvent) => {
           if (event.type === TouchType.Down && this.checklists.length > 0) {
