@@ -119,7 +119,6 @@ export struct GearPage {
   @State private pressedFilterPill: boolean = false;
   @State private pressedSearchBtn: boolean = false;
   @State private pressedCancelText: boolean = false;
-  @State private pressedDeleteAction: boolean = false;
   @State private pressedWeightClose: boolean = false;
   @State private listEntered: boolean = false;
 
@@ -1224,54 +1223,6 @@ export struct GearPage {
   }
 
   @Builder
-  private MultiSelectBar() {
-    Row({ space: 8 }) {
-      Text('选中 ' + this.selectedMultiGearIds.length.toString() + ' 件')
-        .fontSize(13)
-        .fontColor(TEXT_MAIN)
-        .fontFeature(FONT_FEATURE_TNUM)
-      Blank()
-      Button('移动分组')
-        .height(32)
-        .fontSize(12)
-        .fontColor(this.selectedMultiGearIds.length === 0 ? DISABLED_COLOR : TEXT_MAIN)
-        .backgroundColor(this.selectedMultiGearIds.length === 0 ? GROUP_HEADER_BG : DIVIDER_COLOR)
-        .enabled(this.selectedMultiGearIds.length > 0)
-        .onClick(() => {
-          this.onOpenMoveGroupSheet();
-        })
-      Button('删除')
-        .height(32)
-        .fontSize(12)
-        .fontColor(this.selectedMultiGearIds.length === 0 ? DISABLED_COLOR : DANGER_COLOR)
-        .backgroundColor(this.selectedMultiGearIds.length === 0 ? GROUP_HEADER_BG : DANGER_TINT)
-        .enabled(this.selectedMultiGearIds.length > 0)
-        .onClick(() => {
-          this.onBatchDeleteGears(this.selectedMultiGearIds);
-        })
-      Button('生成行程')
-        .height(32)
-        .fontSize(12)
-        .fontColor(WHITE)
-        .backgroundColor(this.selectedMultiGearIds.length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
-        .enabled(this.selectedMultiGearIds.length > 0)
-        .onClick(() => {
-          this.onOpenGenerateTripSheet();
-        })
-      Button('取消')
-        .height(32)
-        .fontSize(12)
-        .fontColor(TEXT_TERTIARY)
-        .backgroundColor(TRANSPARENT)
-        .onClick(() => {
-          this.onCancelGearMultiSelect();
-        })
-    }
-    .width('100%')
-    .padding({ left: PAGE_PADDING, right: PAGE_PADDING, bottom: 8 })
-  }
-
-  @Builder
   private GearGroupCard(group: string) {
     Column() {
       // 分组标题行（轻量标签，在卡片外部）
@@ -1814,33 +1765,6 @@ export struct GearPage {
         .layoutWeight(1)
     }
     .width('100%')
-  }
-
-  @Builder
-  private DeleteAction(item: GearItem) {
-    Row() {
-      Text('删除')
-        .fontSize(14)
-        .fontColor(WHITE)
-    }
-    .height(56)
-    .padding({ left: 18, right: 18 })
-    .margin({ left: 10 })
-    .backgroundColor(DANGER_COLOR)
-    .borderRadius(12)
-    .scale({ x: this.pressedDeleteAction ? PRESS_SCALE_DOWN : 1.0,
-      y: this.pressedDeleteAction ? PRESS_SCALE_DOWN : 1.0 })
-    .animation({ curve: SPRING_PRESS() })
-    .onTouch((e: TouchEvent) => {
-      if (e.type === TouchType.Down) {
-        this.pressedDeleteAction = true;
-      } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-        this.pressedDeleteAction = false;
-      }
-    })
-    .onClick(() => {
-      this.onConfirmDeleteGear(item);
-    })
   }
 
   @Builder
