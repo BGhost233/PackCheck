@@ -2063,6 +2063,11 @@ struct Index {
       .hideTitleBar(true)
       .width('100%')
       .height('100%')
+      // 方案A 沉浸式：NavDestination 默认背景仅铺到安全区内，导致状态栏/Home条区露出 Navigation 背景
+      //   产生肉眼色差与底部纯白条。expandSafeArea 让本页背景延伸至物理屏幕边缘，
+      //   与内容背景同源同色，三段（状态栏/内容/Home条）无缝。内容仍由系统避让，不被遮挡。
+      .backgroundColor(PAGE_BG)
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       .geometryTransition('trip-' + this.selectedChecklistId)
       .transition(TransitionEffect.opacity(0))
       .onBackPressed(() => {
