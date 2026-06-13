@@ -9,8 +9,6 @@ import {
   TEXT_TERTIARY,
   DIVIDER_COLOR,
   PLACEHOLDER_COLOR,
-  PRIMARY_COLOR,
-  PRIMARY_SHADOW_GLOW,
   ZONE_MISC_COLOR,
   ZONE_MISC_STROKE,
   ZONE_MISC_FILL
@@ -84,13 +82,17 @@ export struct ZoneGridCell {
     .width('100%')
     .height(this.cellHeight)
     .borderRadius(CARD_RADIUS)
+    // 问题2：拖拽落点高亮用「目标格自身的 zoneColor」而非固定主题绿——
+    //   第一性原理：高亮的本质是预告「松手落进这个格子」，颜色即归属。
+    //   拖到头部格亮蓝、下身格亮靛蓝……用户拖拽途中即可凭色预判落点。
+    //   glow 阴影同用 zoneColor（radius 16 营造发光扩散），无需为每 zone 单造 glow token。
     .border({
       width: this.isDropTarget ? 2.5 : 0,
-      color: this.isDropTarget ? PRIMARY_COLOR : 'transparent',
+      color: this.isDropTarget ? this.zoneColor : 'transparent',
       style: BorderStyle.Solid
     })
     .shadow(this.isDropTarget
-      ? { radius: 16, color: PRIMARY_SHADOW_GLOW, offsetY: 0 }
+      ? { radius: 16, color: this.zoneColor, offsetY: 0 }
       : undefined)
     .animation({ curve: SPRING_GENERAL() })
     .clip(true)
