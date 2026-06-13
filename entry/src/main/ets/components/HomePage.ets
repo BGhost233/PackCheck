@@ -35,6 +35,7 @@ import {
 } from '../constants/AnimationTokens';
 import { heroGradientStart } from '../utils/ColorUtils';
 import { HeadCollapseController } from '../utils/HeadCollapseController';
+import { hdsEffect } from '@kit.UIDesignKit';
 
 
 @Component
@@ -65,6 +66,8 @@ export struct HomePage {
   @State private emptyBtnPressed: boolean = false;
   @State private heroRingCelebrateScale: number = 1.0;
   @State private ringCelebrateColor: string = PRIMARY_COLOR;
+  // hdsEffect 按压视效：按下时 Hero 卡「陷入材质 + 点光晕染」，松手回弹（仅真机生效，模拟器降级为无）
+  @State private heroPressShadow: hdsEffect.PressShadowType = hdsEffect.PressShadowType.NONE;
   private wasLatestChecklistDone: boolean = false;
   private scroller: Scroller = new Scroller();
   private historyListScroller: ListScroller = new ListScroller();
@@ -707,12 +710,17 @@ export struct HomePage {
         x: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale(),
         y: this.heroPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST * this.heroScale()
       })
+      .visualEffect(new hdsEffect.HdsEffectBuilder()
+        .pressShadow(this.heroPressShadow)
+        .buildEffect())
       .animation({ curve: SPRING_PRESS() })
       .onTouch((event: TouchEvent) => {
         if (event.type === TouchType.Down) {
           this.heroPressed = true;
+          this.heroPressShadow = hdsEffect.PressShadowType.BLEND_GRADIENT;
         } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
           this.heroPressed = false;
+          this.heroPressShadow = hdsEffect.PressShadowType.NONE;
         }
       })
       .onClick(() => {
