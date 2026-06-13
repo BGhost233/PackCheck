@@ -6,6 +6,26 @@ import { formatKg, gearById } from './GearService';
  * 清单相关纯业务逻辑 — 不依赖 UI 上下文
  */
 
+/**
+ * 克隆一个 TripChecklist，仅替换其 items 列表，其余字段（meta/profile）原样保留。
+ * 用于在不可变更新（toggle/remove/updateItem）中复用清单的完整字段拷贝。
+ */
+export function cloneChecklistWithItems(source: TripChecklist, items: ChecklistItem[]): TripChecklist {
+  return {
+    id: source.id,
+    title: source.title,
+    date: source.date,
+    dateAt: source.dateAt,
+    items: items,
+    createdAt: source.createdAt,
+    destination: source.destination,
+    distanceKm: source.distanceKm,
+    maxAltitude: source.maxAltitude,
+    ascentM: source.ascentM,
+    durationHours: source.durationHours
+  };
+}
+
 export function checkedCount(checklist: TripChecklist): number {
   let count = 0;
   for (let index = 0; index < checklist.items.length; index++) {
@@ -480,20 +500,7 @@ export function toggleItemInChecklists(checklists: TripChecklist[], checklistId:
           nextItems.push(item);
         }
       }
-      const updatedChecklist: TripChecklist = {
-        id: source.id,
-        title: source.title,
-        date: source.date,
-        dateAt: source.dateAt,
-        items: nextItems,
-        createdAt: source.createdAt,
-        destination: source.destination,
-        distanceKm: source.distanceKm,
-        maxAltitude: source.maxAltitude,
-        ascentM: source.ascentM,
-        durationHours: source.durationHours
-      };
-      result.push(updatedChecklist);
+      result.push(cloneChecklistWithItems(source, nextItems));
     } else {
       result.push(source);
     }
@@ -510,20 +517,7 @@ export function removeItemFromChecklists(checklists: TripChecklist[], checklistI
     const source = checklists[index];
     if (source.id === checklistId) {
       const nextItems = source.items.filter((item: ChecklistItem) => item.id !== itemId);
-      const updatedChecklist: TripChecklist = {
-        id: source.id,
-        title: source.title,
-        date: source.date,
-        dateAt: source.dateAt,
-        items: nextItems,
-        createdAt: source.createdAt,
-        destination: source.destination,
-        distanceKm: source.distanceKm,
-        maxAltitude: source.maxAltitude,
-        ascentM: source.ascentM,
-        durationHours: source.durationHours
-      };
-      result.push(updatedChecklist);
+      result.push(cloneChecklistWithItems(source, nextItems));
     } else {
       result.push(source);
     }
@@ -598,20 +592,7 @@ export function updateItemFields(checklists: TripChecklist[], checklistId: strin
           nextItems.push(item);
         }
       }
-      const updatedChecklist: TripChecklist = {
-        id: source.id,
-        title: source.title,
-        date: source.date,
-        dateAt: source.dateAt,
-        items: nextItems,
-        createdAt: source.createdAt,
-        destination: source.destination,
-        distanceKm: source.distanceKm,
-        maxAltitude: source.maxAltitude,
-        ascentM: source.ascentM,
-        durationHours: source.durationHours
-      };
-      result.push(updatedChecklist);
+      result.push(cloneChecklistWithItems(source, nextItems));
     } else {
       result.push(source);
     }

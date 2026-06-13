@@ -1,5 +1,6 @@
 import { CATEGORY_FALLBACK, GearItem, ChecklistItem, TripChecklist } from '../models/PackModels';
 import { updateGear } from './GearService';
+import { cloneChecklistWithItems } from './ChecklistService';
 
 /**
  * 分组标签 CRUD + 全局数据同步逻辑
@@ -102,20 +103,7 @@ export function migrateChecklistsOnDelete(checklists: TripChecklist[], deletedCa
       }
     }
     if (hasChange) {
-      const updatedChecklist: TripChecklist = {
-        id: checklist.id,
-        title: checklist.title,
-        date: checklist.date,
-        dateAt: checklist.dateAt,
-        items: newItems,
-        createdAt: checklist.createdAt,
-        destination: checklist.destination,
-        distanceKm: checklist.distanceKm,
-        maxAltitude: checklist.maxAltitude,
-        ascentM: checklist.ascentM,
-        durationHours: checklist.durationHours
-      };
-      result.push(updatedChecklist);
+      result.push(cloneChecklistWithItems(checklist, newItems));
     } else {
       result.push(checklist);
     }
@@ -194,20 +182,7 @@ export function renameChecklistsCategory(checklists: TripChecklist[], oldName: s
       }
     }
     if (hasChange) {
-      const updatedChecklist: TripChecklist = {
-        id: checklist.id,
-        title: checklist.title,
-        date: checklist.date,
-        dateAt: checklist.dateAt,
-        items: newItems,
-        createdAt: checklist.createdAt,
-        destination: checklist.destination,
-        distanceKm: checklist.distanceKm,
-        maxAltitude: checklist.maxAltitude,
-        ascentM: checklist.ascentM,
-        durationHours: checklist.durationHours
-      };
-      result.push(updatedChecklist);
+      result.push(cloneChecklistWithItems(checklist, newItems));
     } else {
       result.push(checklist);
     }
