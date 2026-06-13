@@ -58,6 +58,7 @@ export struct GearPickerSheet {
   @State private searchText: string = '';
   @State private expandedCategories: string[] = [];
   @State private pressedCategory: string = '';
+  @State private pressedGearRowId: string = '';
   @State private lastAddedGearId: string = '';
   @State private newEntryScale: number = 1.0;
 
@@ -467,6 +468,17 @@ export struct GearPickerSheet {
     }
     .width('100%')
     .padding({ left: 24, right: 12, top: 10, bottom: 10 })
+    .borderRadius(12)
+    .scale({ x: this.pressedGearRowId === gear.id ? PRESS_SCALE_DOWN : 1.0,
+      y: this.pressedGearRowId === gear.id ? PRESS_SCALE_DOWN : 1.0 })
+    .animation({ curve: SPRING_PRESS() })
+    .onTouch((e: TouchEvent) => {
+      if (e.type === TouchType.Down) {
+        this.pressedGearRowId = gear.id;
+      } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+        this.pressedGearRowId = '';
+      }
+    })
     .onClick(() => {
       this.handleGearTap(gear);
     })

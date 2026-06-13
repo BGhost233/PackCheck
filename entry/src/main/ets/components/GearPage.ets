@@ -7,7 +7,7 @@ import {
   DURATION_TICK, DURATION_FAST,
   DURATION_CEREMONY_SHAKE,
   DURATION_NONE,
-  PRESS_SCALE_DOWN,
+  PRESS_SCALE_DOWN, PRESS_SCALE_REST,
   CURVE_LINEAR,
   STAGGER_OFFSET_Y, staggerDelay
 } from '../constants/AnimationTokens';
@@ -1402,9 +1402,13 @@ export struct GearPage {
       }
       .width('100%')
       .padding({ left: 14, right: 14, top: 4, bottom: 4 })
-    .backgroundColor(this.hasMultiGearSelection(item.id) ? LIGHT_PRIMARY_COLOR : CARD_BG)
-    .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : 1)
-    .animation({ curve: SPRING_GENERAL() })
+      .backgroundColor(this.hasMultiGearSelection(item.id) ? LIGHT_PRIMARY_COLOR : CARD_BG)
+      .scale({
+        x: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+        y: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST
+      })
+      .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : 1)
+      .animation({ curve: SPRING_PRESS() })
       .onClick(() => {
         this.onToggleMultiGearSelection(item.id);
       })
@@ -1518,8 +1522,12 @@ export struct GearPage {
         }
         .width('100%')
         .padding({ left: 14, right: 14, top: 4, bottom: 4 })
-    .backgroundColor(this.pressedGearId === item.id ? GROUP_HEADER_BG : CARD_BG)
-    .animation({ curve: SPRING_PRESS() })
+        .backgroundColor(this.pressedGearId === item.id ? GROUP_HEADER_BG : CARD_BG)
+        .scale({
+          x: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+          y: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST
+        })
+        .animation({ curve: SPRING_PRESS() })
         .translate({ x: this.swipedGearId === item.id ? this.swipeOffsetX : 0 })
         .onTouch((event: TouchEvent) => {
           if (event.type === TouchType.Down) {
