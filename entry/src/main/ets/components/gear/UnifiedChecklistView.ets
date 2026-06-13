@@ -332,6 +332,9 @@ this.computeCellHeight();
         onEdgePanEnd: (offsetX: number, offsetY: number) => {
           this.handleEdgePanEnd(offsetX, offsetY);
         },
+        onBatchDragOut: (itemIds: string[], offsetX: number, offsetY: number) => {
+          this.handleBatchDragOut(itemIds, offsetX, offsetY);
+        },
         onTapItem: (item: ChecklistItem) => { this.openDetailSheet(item); },
         onReorderItems: (zone: string, orderedIds: string[]) => { this.onReorderItems(zone, orderedIds); },
         onRequestBatchMoveSheet: (ids: string[]) => { this.onRequestBatchMoveSheet(ids); },
@@ -380,15 +383,19 @@ this.computeCellHeight();
     });
   }
 
-  // Phase 4：展开态拖到边缘 → 收缩聚焦态 + 启动跨 zone 拖拽
+  // Phase 4/5：展开态拖到边缘 / 多选批量拖拽 → 收缩聚焦态 + 启动跨 zone 拖拽
   // 保存边缘触发时的 Pan 偏移基准，后续 update 用差值计算胶囊位移
   private edgeDragBaseOffsetX: number = 0;
   private edgeDragBaseOffsetY: number = 0;
+  // Phase 5：批量拖拽的 item ids（空数组 = 单项拖拽）
+  private batchDragIds: string[] = [];
 
   private handleEdgeDragOut(item: ChecklistItem, offsetX: number, offsetY: number): void {
     // 保存触发时的偏移作为基准
     this.edgeDragBaseOffsetX = offsetX;
     this.edgeDragBaseOffsetY = offsetY;
+    // 单项拖出，清空批量 ids
+    this.batchDragIds = [];
     // 1. 设置拖拽状态
     this.overlayItem = item;
     this.overlayPhase = 'dragging';
@@ -412,6 +419,43 @@ this.computeCellHeight();
       this.focusedZone = null;
     });
     // 3. 触觉反馈
+    this.triggerDropHaptic();
+  }
+
+  // Phase 5：多选批量拖出（长按已选中项触发）
+  private handleBatchDragOut(itemIds: string[], offsetX: number, offsetY: number): void {
+    // 保存触发时的偏移作为基准
+    this.edgeDragBaseOffsetX = offsetX;
+    this.edgeDragBaseOffsetY = offsetY;
+    // 记录批量 ids
+    this.batchDragIds = itemIds;
+    // 用第一个 item 作为 overlayItem（胶囊显示用）
+    const firstItem = this.trip.items.find((i: ChecklistItem) => i.id === itemIds[0]);
+    if (firstItem === undefined) {
+      return;
+    }
+    this.overlayItem = firstItem;
+    this.overlayPhase = 'dragging';
+    this.overlayVisible = true;
+    this.dropTargetZone = null;
+    // 胶囊初始位置：屏幕中央偏上
+    try {
+      const di = display.getDefaultDisplaySync();
+      const screenW = this.getUIContext().px2vp(di.width);
+      const screenH = this.getUIContext().px2vp(di.height);
+      this.dragCurrentX = screenW / 2 - this.overlayOriginX;
+      this.dragCurrentY = screenH / 3 - this.overlayOriginY;
+    } catch (_e) {
+      this.dragCurrentX = 180;
+      this.dragCurrentY = 250;
+    }
+    this.dragOffsetX = 0;
+    this.dragOffsetY = 0;
+    // 收缩聚焦态
+    this.getUIContext().animateTo({ curve: SPRING_HERO_COLLAPSE() }, () => {
+      this.focusedZone = null;
+    });
+    // 触觉反馈
     this.triggerDropHaptic();
   }
 
@@ -465,9 +509,18 @@ this.computeCellHeight();
     }
     const target = this.hitTestZone(fingerGlobalX, fingerGlobalY);
     if (target !== null && target !== this.overlayItem!.group) {
-      this.onMoveItemToZone(this.overlayItem!.id, target);
+      if (this.batchDragIds.length > 0) {
+        // 批量移动：所有选中项移到目标 zone
+        for (const id of this.batchDragIds) {
+          this.onMoveItemToZone(id, target);
+        }
+      } else {
+        // 单项移动
+        this.onMoveItemToZone(this.overlayItem!.id, target);
+      }
     }
     // 重置拖拽状态
+    this.batchDragIds = [];
     this.overlayPhase = 'idle';
     this.overlayVisible = false;
     this.dropTargetZone = null;
@@ -929,7 +982,9 @@ this.computeCellHeight();
       // position(x,y) 消费局部坐标 dragCurrentX/Y（已在 handleDragUpdate 中由全局→局部转换），
       // -60/-40 偏移让胶囊居中于手指上方。不再使用 translate()+anchor 双坐标系组合。
       Row({ space: 8 }) {
-        Text(resolveItemName(this.overlayItem!, this.gears))
+        Text(this.batchDragIds.length > 1
+          ? `${this.batchDragIds.length} 件装备`
+          : resolveItemName(this.overlayItem!, this.gears))
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .maxLines(1)

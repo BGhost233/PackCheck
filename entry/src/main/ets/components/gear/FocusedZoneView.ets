@@ -77,6 +77,8 @@ export struct FocusedZoneView {
   // Phase 4：边缘拖出后，后续 Pan 事件转发给父层（跟手 + 命中判定）
   onEdgePanUpdate: (offsetX: number, offsetY: number) => void = () => {};
   onEdgePanEnd: (offsetX: number, offsetY: number) => void = () => {};
+  // Phase 5：多选批量拖拽 — 长按已选中项触发批量拖出
+  onBatchDragOut: (itemIds: string[], offsetX: number, offsetY: number) => void = () => {};
   // #3：点击装备行弹出详情 Sheet（替代手风琴展开）
   onTapItem: (item: ChecklistItem) => void = () => {};
 
@@ -252,23 +254,35 @@ export struct FocusedZoneView {
                     }),
                   PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
                     .onActionStart(() => {
-                      if (!this.isMultiSelectMode) {
+                      if (this.isMultiSelectMode && this.batchDragPending) {
+                        // Phase 5：多选批量拖拽 — 立即触发边缘拖出（不做格子内排序）
+                        this.edgeDragFired = true;
+                        const ids: string[] = Array.from(this.selectedIds);
+                        this.onBatchDragOut(ids, 0, 0);
+                      } else if (!this.isMultiSelectMode) {
                         // 长按弹菜单后继续拖动 → dismiss 菜单 + 进入排序
                         this.onDismissMenu();
                         this.startReorder(item, index);
                       }
                     })
                     .onActionUpdate((event: GestureEvent) => {
-                      if (!this.isMultiSelectMode) {
+                      if (this.edgeDragFired) {
+                        // 边缘拖出 / 批量拖拽：转发给父层
+                        this.onEdgePanUpdate(event.offsetX, event.offsetY);
+                      } else if (!this.isMultiSelectMode) {
                         this.updateReorder(event.offsetX, event.offsetY, index);
                       }
                     })
                     .onActionEnd((event: GestureEvent) => {
+                      if (this.edgeDragFired) {
+                        this.onEdgePanEnd(event.offsetX, event.offsetY);
+                        this.edgeDragFired = false;
+                        this.batchDragPending = false;
+                      }
                       if (!this.isMultiSelectMode) {
-                        if (this.edgeDragFired) {
-                          this.onEdgePanEnd(event.offsetX, event.offsetY);
-                        }
                         this.finishReorder();
+                      } else {
+                        this.batchDragPending = false;
                       }
                     })
                 )
@@ -352,6 +366,9 @@ export struct FocusedZoneView {
   }
 
   // Phase 4：长按触发 —— 触觉反馈 + 通知父层弹浮层（如果不继续拖动则弹菜单）
+  // Phase 5：多选模式下长按已选中项 → 准备批量拖拽（Pan 开始时触发）
+  private batchDragPending: boolean = false;
+
   private handleLongPress(item: ChecklistItem): void {
     // 触觉反馈（轻档）
     try {
@@ -362,9 +379,15 @@ export struct FocusedZoneView {
     } catch (e) {
       // 振动不可用时静默降级
     }
-    // #1：多选模式下长按 = 切换选中态（不弹菜单）
+    // Phase 5：多选模式下长按已选中项 → 准备批量拖拽
     if (this.isMultiSelectMode) {
-      this.toggleSelection(item.id);
+      if (this.selectedIds.has(item.id)) {
+        // 已选中项：标记待批量拖拽（Pan 开始时触发）
+        this.batchDragPending = true;
+      } else {
+        // 未选中项：切换选中态
+        this.toggleSelection(item.id);
+      }
       return;
     }
     // 通知父层弹出自绘浮层（如果后续 Pan 开始则会被排序模式覆盖）
