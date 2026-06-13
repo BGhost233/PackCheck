@@ -54,6 +54,8 @@ export struct HomePage {
   @State private heroNumberAnimated: boolean = false;
   @State private progressNumeratorDisplay: number = 0;
   @State private progressAnimated: boolean = false;
+  // 全屏沉浸：状态栏高度由 EntryAbility/Index 通过 AppStorage 全局下发，折叠头顶部据此避让。
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   // head 折叠进度镜像（0=全展开，1=全折叠）。
   //   ⚠️ 刷新陷阱：render 必须读此 @State（非控制器内部字段），controller.onChange 推动更新。
   @State private headProgress: number = 0;
@@ -546,10 +548,10 @@ export struct HomePage {
       Stack() {
         Scroll(this.scroller) {
           Column({ space: 20 }) {
-            // Spacer: reserve height for the fixed CollapsingHeader
+            // Spacer: reserve height for the fixed CollapsingHeader（含状态栏避让）
             Column()
               .width('100%')
-              .height(HOME_HEADER_COLLAPSED - 12)
+              .height(this.statusBarHeight + HOME_HEADER_COLLAPSED - 12)
             if (this.latestChecklist() !== undefined) {
               this.HeroCard();
             } else {
@@ -629,8 +631,8 @@ export struct HomePage {
       }
     }
     .width('100%')
-    .height(HOME_HEADER_COLLAPSED)
-    .padding({ left: PAGE_PADDING, right: PAGE_PADDING + 4 })
+    .height(this.statusBarHeight + HOME_HEADER_COLLAPSED)
+    .padding({ left: PAGE_PADDING, right: PAGE_PADDING + 4, top: this.statusBarHeight })
     .alignItems(VerticalAlign.Center)
     .backgroundColor(PAGE_BG)
     .border({ width: { bottom: 0.5 }, color: { bottom: this.homeHeaderBorderColor() } })

@@ -104,6 +104,8 @@ export struct GearPage {
   @State private fabDragging: boolean = false;
   private fabStartX: number = 0;
   private fabStartY: number = 0;
+  // 全屏沉浸：状态栏高度由 EntryAbility/Index 通过 AppStorage 全局下发，折叠头顶部据此避让。
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   // head 折叠进度镜像（0=全展开，1=全折叠）。
   //   ⚠️ 刷新陷阱：render 必须读此 @State（非 controller.progress()），controller.onChange 推动更新。
   @State private gearHeadProgress: number = 0;
@@ -836,12 +838,12 @@ export struct GearPage {
     return PAGE_BG; // #F8F9FA 全不透明背景
   }
 
-  // 顶部 spacer 高度：给 Header 腾出空间
+  // 顶部 spacer 高度：给 Header 腾出空间（含状态栏避让）
   private topSpacerHeight(): number {
     if (this.multiSelectMode || this.searchExpanded) {
-      return GEAR_HEADER_COLLAPSED;
+      return this.statusBarHeight + GEAR_HEADER_COLLAPSED;
     }
-    return GEAR_HEADER_EXPANDED - 20; // 减去 List padding-top(6) + space(16) 的多余间距，消除灰色间隙
+    return this.statusBarHeight + GEAR_HEADER_EXPANDED - 20; // 减去 List padding-top(6) + space(16) 的多余间距，消除灰色间隙
   }
 
   build() {
@@ -1020,9 +1022,9 @@ export struct GearPage {
           })
       }
       .width('100%')
-      .height(GEAR_HEADER_COLLAPSED)
+      .height(this.statusBarHeight + GEAR_HEADER_COLLAPSED)
       .alignItems(VerticalAlign.Center)
-      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: 6 })
+      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: this.statusBarHeight + 6 })
       .backgroundColor(PAGE_BG)
       .position({ x: 0, y: 0 })
       .zIndex(10)
@@ -1217,7 +1219,8 @@ export struct GearPage {
 
       }
       .width('100%')
-      .height(this.gearHeaderHeight())
+      .height(this.statusBarHeight + this.gearHeaderHeight())
+      .padding({ top: this.statusBarHeight })
       .clip(true)
       .backgroundColor(this.gearHeaderBgColor())
       .border({ width: { bottom: 0.5 }, color: { bottom: this.gearHeaderBorderColor() } })

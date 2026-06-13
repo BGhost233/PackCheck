@@ -23,17 +23,16 @@ export default class EntryAbility extends UIAbility {
     // Main window is created, set main page for this ability
     hilog.info(DOMAIN, 'PackCheck', '%{public}s', 'Ability onWindowStageCreate');
 
-    // 窗口背景色统一为 PAGE_BG + 状态栏文字适配
-    // 注意：不用 setWindowLayoutFullScreen，让系统自动管理安全区
-    // Navigation 的 expandSafeArea 负责背景延伸，内容保持在安全区内
+    // 真沉浸式：开启全屏布局，系统栏透明、内容穿透显示。
+    // 全屏后系统不再自动避让，状态栏/导航条高度由 Index 取 AvoidArea 下发各折叠头补 padding。
+    // ⚠️ 不再设 statusBarColor / navigationBarColor（设了会渲染不透明色块，造成「两层割裂」）。
     try {
       const mainWindow = windowStage.getMainWindowSync();
+      mainWindow.setWindowLayoutFullScreen(true);
       mainWindow.setWindowBackgroundColor(PAGE_BG);
       mainWindow.setWindowSystemBarProperties({
         statusBarContentColor: BLACK,
-        navigationBarContentColor: BLACK,
-        statusBarColor: PAGE_BG,
-        navigationBarColor: PAGE_BG
+        navigationBarContentColor: BLACK
       });
     } catch (error) {
       hilog.warn(DOMAIN, 'PackCheck', 'Failed to set window properties. Cause: %{public}s', JSON.stringify(error));

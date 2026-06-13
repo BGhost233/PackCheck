@@ -58,6 +58,8 @@ export struct TripDetailPage {
   @State private headCollapseProgress: number = 0;
   // 问题4a：是否处于吸附动画态（区分曲线：跟手用即时跟随，吸附用 SPRING_SCROLL）。
   @State private headSnapping: boolean = false;
+  // 全屏沉浸：状态栏高度由 EntryAbility/Index 通过 AppStorage 全局下发，navbar 顶部据此避让。
+  @StorageProp('statusBarHeight') statusBarHeight: number = 0;
 
   // ChecklistDetail callbacks (透传)
   onReturnHome: () => void = () => {};
@@ -120,7 +122,8 @@ export struct TripDetailPage {
     const SHARED_INFO: number = 28;   // 12 字号文案 + 8 bottom padding
     const PROGRESS_BAR: number = 48;  // 文案行 + 进度条 + 上下 padding
     const trip = this.currentChecklist();
-    let h: number = NAV_BAR;
+    // 全屏沉浸：navbar 顶部额外预留状态栏高度，需计入首屏 cell 反算。
+    let h: number = this.statusBarHeight + NAV_BAR;
     if (trip !== undefined && this.metaSegments().length > 0) {
       h += SHARED_INFO;
     }
@@ -248,8 +251,8 @@ export struct TripDetailPage {
       })
     }
     .width('100%')
-    .height(56)
-    .padding({ left: 12, right: 12 })
+    .height(this.statusBarHeight + 56)
+    .padding({ left: 12, right: 12, top: this.statusBarHeight })
     .alignItems(VerticalAlign.Center)
   }
 

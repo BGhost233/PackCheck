@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { window } from '@kit.ArkUI';
 
 import { sensor, vibrator } from '@kit.SensorServiceKit';
 import { HdsTabs, HdsTabsController, hdsMaterial, HdsNavigation } from '@kit.UIDesignKit';
@@ -21,7 +22,6 @@ import {
   LIGHT_PRIMARY_COLOR,
   OVERLAY_MASK,
   PAGE_BG,
-  PAGE_BG_TRANSLUCENT,
   PRIMARY_COLOR,
   PRIMARY_SHADOW_LIGHT,
   SHADOW_DEFAULT,
@@ -243,7 +243,33 @@ struct Index {
   };
 
   aboutToAppear(): void {
+    this.resolveSafeAreaInsets();
     this.loadAppData();
+  }
+
+  // 全屏沉浸后系统不再自动避让，取一次系统栏避让高度下发 AppStorage，各折叠头 @StorageProp 读取补 padding。
+  // 单位换算成 vp（AvoidArea 返回的是 px）。
+  private resolveSafeAreaInsets(): void {
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      window.getLastWindow(context).then((win: window.Window) => {
+        const topArea: window.AvoidArea = win.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+        const bottomArea: window.AvoidArea =
+          win.getWindowAvoidArea(window.AvoidAreaType.TYPE_NAVIGATION_INDICATOR);
+        const topVp: number = this.getUIContext().px2vp(topArea.topRect.height);
+        const bottomVp: number = this.getUIContext().px2vp(bottomArea.bottomRect.height);
+        AppStorage.setOrCreate('statusBarHeight', topVp);
+        AppStorage.setOrCreate('bottomBarHeight', bottomVp);
+      }).catch((error: Object) => {
+        AppStorage.setOrCreate('statusBarHeight', 0);
+        AppStorage.setOrCreate('bottomBarHeight', 0);
+        hilog.warn(0x0001, 'PackCheck', 'Failed to resolve safe area. Cause: %{public}s', JSON.stringify(error));
+      });
+    } catch (error) {
+      AppStorage.setOrCreate('statusBarHeight', 0);
+      AppStorage.setOrCreate('bottomBarHeight', 0);
+      hilog.warn(0x0001, 'PackCheck', 'Failed to resolve safe area. Cause: %{public}s', JSON.stringify(error));
+    }
   }
 
   aboutToDisappear(): void {
@@ -2324,10 +2350,8 @@ struct Index {
           .barHeight(this.multiSelectMode ? 0 : 56)
           .barFloatingStyle({
             barBottomMargin: 28,
-            gradientMask: {
-              maskColor: PAGE_BG_TRANSLUCENT,
-              maskHeight: 72
-            },
+            // gradientMask 已移除：从下往上的灰色渐变遮罩观感糟糕，删除后底部更干净。
+            //   保留 systemMaterialEffect 材质效果，Tab 悬浮胶囊外观不变。
             systemMaterialEffect: {
               materialType: hdsMaterial.MaterialType.IMMERSIVE,
               materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE
