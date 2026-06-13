@@ -82,7 +82,6 @@ export struct GearPage {
   @Prop gearSearchKeyword: string = '';
   @Prop gearSortMode: string = GEAR_SORT_GROUP;
   @Prop expandedGearId: string = '';
-  @Link targetWeightGram: number;
   @Prop multiSelectMode: boolean = false;
   @Prop selectedMultiGearIds: string[] = [];
   @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
@@ -99,9 +98,6 @@ export struct GearPage {
 @State private swipedGearId: string = '';
 @State private swipeOffsetX: number = 0;
 @State private searchExpanded: boolean = false;
-  @State private showWeightEditor: boolean = false;
-  @State private targetWeightInput: string = '';
-  @State private targetWeightError: string = '';
   @State private fabX: number = -1; // -1 表示未初始化，使用默认右下角位置
   @State private fabY: number = -1;
   @State private fabDragging: boolean = false;
@@ -122,7 +118,6 @@ export struct GearPage {
   @State private pressedFilterPill: boolean = false;
   @State private pressedSearchBtn: boolean = false;
   @State private pressedCancelText: boolean = false;
-  @State private pressedWeightClose: boolean = false;
   @State private listEntered: boolean = false;
 
   // --- 分组拖拽排序 ---
@@ -572,13 +567,6 @@ export struct GearPage {
     return (Math.round(weightGram / 100) / 10).toString() + 'kg';
   }
 
-  private targetInputText(): string {
-    if (this.targetWeightGram <= 0) {
-      return '10';
-    }
-    return (Math.round(this.targetWeightGram / 10) / 100).toString();
-  }
-
   private hasMultiGearSelection(id: string): boolean {
     return this.selectedMultiGearIds.indexOf(id) >= 0;
   }
@@ -661,34 +649,6 @@ export struct GearPage {
   private gearSummaryText(): string {
     return this.gears.length.toString() + '件 · ' + this.formatKg(totalGearWeight(this.gears)) +
       ' · ¥' + totalGearPrice(this.gears).toString();
-  }
-
-  private openWeightEditor(): void {
-    this.targetWeightInput = this.targetInputText();
-    this.targetWeightError = '';
-    this.showWeightEditor = true;
-  }
-
-  private closeWeightEditor(): void {
-    this.showWeightEditor = false;
-    this.targetWeightError = '';
-  }
-
-  private async saveTargetWeight(): Promise<void> {
-    const value = parseFloat(this.targetWeightInput.trim());
-    if (Number.isNaN(value) || value <= 0 || value > 100) {
-      this.targetWeightError = '请输入 0-100kg 之间的目标重量';
-      return;
-    }
-    const nextWeight = Math.round(value * 1000);
-    this.targetWeightGram = nextWeight;
-    this.closeWeightEditor();
-    try {
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      await this.store.init(context);
-      await this.store.saveGearTargetWeight(nextWeight);
-    } catch (error) {
-    }
   }
 
   private gearTitleFontSize(): number {
@@ -873,9 +833,6 @@ export struct GearPage {
       this.CollapsingHeader();
       if (!this.multiSelectMode) {
         this.Fab();
-      }
-      if (this.showWeightEditor) {
-        this.WeightTargetEditor();
       }
 
       // --- 分组拖拽浮动层 ---
@@ -1773,115 +1730,6 @@ export struct GearPage {
         this.onOpenAddGear();
       }
     })
-  }
-
-  @Builder
-  private WeightTargetEditor() {
-    Stack({ alignContent: Alignment.Center }) {
-      Column() {
-      }
-        .width('100%')
-        .height('100%')
-        .backgroundColor(OVERLAY_MASK)
-        .backdropBlur(20)
-        .onClick(() => {
-          this.closeWeightEditor();
-        })
-
-      Column({ space: 16 }) {
-        Row() {
-          Text('设置目标重量')
-            .fontSize(18)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-          Blank()
-          Row() {
-            SymbolGlyph($r('sys.symbol.xmark'))
-              .fontSize(20)
-              .fontColor([TEXT_SECONDARY])
-          }
-          .width(36)
-          .height(36)
-          .justifyContent(FlexAlign.Center)
-          .borderRadius(18)
-          .scale({ x: this.pressedWeightClose ? PRESS_SCALE_DOWN : 1.0,
-            y: this.pressedWeightClose ? PRESS_SCALE_DOWN : 1.0 })
-          .animation({ curve: SPRING_PRESS() })
-          .onTouch((e: TouchEvent) => {
-            if (e.type === TouchType.Down) {
-              this.pressedWeightClose = true;
-            } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-              this.pressedWeightClose = false;
-            }
-          })
-          .onClick(() => {
-            this.closeWeightEditor();
-          })
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        Row({ space: 8 }) {
-          TextInput({ text: this.targetWeightInput, placeholder: '例如 8.5' })
-            .type(InputType.Number)
-            .height(48)
-            .fontSize(16)
-            .fontColor(TEXT_MAIN)
-            .placeholderColor(TEXT_TERTIARY)
-            .backgroundColor(PAGE_BG)
-            .borderRadius(12)
-            .padding({ left: 12, right: 12 })
-            .layoutWeight(1)
-            .onChange((value: string) => {
-              this.targetWeightInput = value;
-              this.targetWeightError = '';
-            })
-          Text('kg')
-            .fontSize(15)
-            .fontColor(TEXT_SECONDARY)
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-
-        if (this.targetWeightError.length > 0) {
-          Text(this.targetWeightError)
-            .fontSize(12)
-            .fontColor(DANGER_COLOR)
-            .width('100%')
-        }
-
-        Row({ space: 12 }) {
-          Button('取消')
-            .height(44)
-            .fontSize(14)
-            .fontColor(TEXT_SECONDARY)
-            .backgroundColor(PAGE_BG)
-            .borderRadius(12)
-            .layoutWeight(1)
-            .onClick(() => {
-              this.closeWeightEditor();
-            })
-          Button('确认')
-            .height(44)
-            .fontSize(14)
-            .fontColor(WHITE)
-            .backgroundColor(PRIMARY_COLOR)
-            .borderRadius(12)
-            .layoutWeight(1)
-            .onClick(() => {
-              this.saveTargetWeight();
-            })
-        }
-        .width('100%')
-      }
-      .width('84%')
-      .padding({ left: 24, right: 24, top: 24, bottom: 24 })
-      .backgroundColor(CARD_BG)
-      .borderRadius(24)
-      .shadow({ radius: 24, color: SHADOW_LIGHT, offsetX: 0, offsetY: 8 })
-    }
-    .width('100%')
-    .height('100%')
   }
 
   // --- 行程托盘 ---

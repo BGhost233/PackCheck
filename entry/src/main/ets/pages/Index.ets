@@ -160,7 +160,6 @@ struct Index {
   @State private gearSearchKeyword: string = '';
   @State private gearSortMode: string = GEAR_SORT_GROUP;
   @State private expandedGearId: string = '';
-  @State private targetWeightGram: number = 10000;
   @State private multiSelectMode: boolean = false;
   @State private selectedMultiGearIds: string[] = [];
   @State private generateTripTitle: string = '';
@@ -291,7 +290,6 @@ struct Index {
       this.checklists = await this.store.getChecklists();
       this.checklists = [...this.checklists].sort((a: TripChecklist, b: TripChecklist) => b.createdAt - a.createdAt);
       this.categories = await this.store.getCategories();
-      this.targetWeightGram = await this.store.getGearTargetWeight();
       if (this.selectedChecklistId.length === 0 && this.checklists.length > 0) {
         this.selectedChecklistId = this.checklists[0].id;
       }
@@ -2273,7 +2271,6 @@ struct Index {
                 gearSortMode: this.gearSortMode,
                 expandedGearId: this.expandedGearId,
                 swipeResetNonce: this.gearSwipeResetNonce,
-                targetWeightGram: $targetWeightGram,
                 multiSelectMode: this.multiSelectMode,
                 selectedMultiGearIds: this.selectedMultiGearIds,
                 checklists: this.checklists,

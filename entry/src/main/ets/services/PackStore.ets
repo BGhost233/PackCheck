@@ -7,11 +7,9 @@ const STORE_NAME = 'packcheck_store';
 const KEY_GEARS = 'packcheck_gears';
 const KEY_CHECKLISTS = 'packcheck_checklists';
 const KEY_CATEGORIES = 'packcheck_categories';
-const KEY_GEAR_TARGET_WEIGHT = 'gear_target_weight';
 const KEY_COLLAPSED_GEAR_GROUPS = 'packcheck_collapsed_gear_groups';
 const KEY_CATEGORY_ORDER = 'packcheck_category_order';
 const KEY_SCHEMA_VERSION = 'packcheck_schema_version';
-const DEFAULT_GEAR_TARGET_WEIGHT = 10000;
 const CURRENT_SCHEMA_VERSION = 1;
 const DEFAULT_ARRAY = '[]';
 const LOG_DOMAIN = 0x0001;
@@ -79,19 +77,6 @@ export class PackStore {
 
   async saveCategories(categories: string[]): Promise<void> {
     await this.writeString(KEY_CATEGORIES, JSON.stringify(categories));
-  }
-
-  async getGearTargetWeight(): Promise<number> {
-    const value = await this.readString(KEY_GEAR_TARGET_WEIGHT, DEFAULT_GEAR_TARGET_WEIGHT.toString());
-    const parsed = Number(value);
-    if (!Number.isNaN(parsed) && parsed > 0) {
-      return parsed;
-    }
-    return DEFAULT_GEAR_TARGET_WEIGHT;
-  }
-
-  async saveGearTargetWeight(weightGram: number): Promise<void> {
-    await this.writeString(KEY_GEAR_TARGET_WEIGHT, weightGram.toString());
   }
 
   async getCollapsedGearGroups(): Promise<string[]> {
