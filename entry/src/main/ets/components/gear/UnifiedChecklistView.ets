@@ -84,11 +84,15 @@ const GRID_GUTTER: number = 12;    // 行/列间距
 const FIRST_SCREEN_ROWS: number = 2.8;
 // 反算兜底（无法取得屏高时）。P4：随密度提高同步下调
 const CELL_HEIGHT_FALLBACK: number = 148;
-// P4：底部渐隐遮罩高度，暗示下方还有格子可滑
-// 问题3b：升级为「真磨砂 + 渐变兜底」复合层。高度提到 88 给模糊足够的渐弱过渡空间
-const BOTTOM_FADE_HEIGHT: number = 88;
-// 模糊层高度（占遮罩下半部）：下方有卡片时透出柔化色块，顶部留出额外空间用渐变羽化模糊上边界
-const BOTTOM_FADE_BLUR_HEIGHT: number = 56;
+// 问题3b：底部「逐渐弥散」参数（linearGradientBlur 直接挂在 Grid 上，糊容器自身内容）。
+//   原理：模糊强度沿视口垂直方向连续渐变 → 物理上无硬边。
+// 模糊最大半径（底沿满值）。景深虚化量级，足够把底部卡片柔成「焦外」而不糊成一团。
+const BOTTOM_DIFFUSE_BLUR_RADIUS: number = 16;
+// 清晰停靠点：视口 0~此比例完全清晰，之后模糊强度线性爬升到底沿满值。
+//   0.8 = 仅最底部 20% 视口高度参与弥散，上方阅读区完全不受影响。
+const BOTTOM_DIFFUSE_CLEAR_STOP: number = 0.8;
+// 底部同色渐隐遮罩高度：纯 PAGE_BG 透明→实心，让渐糊的底部卡片继续淡入背景并贯通到安全区。
+const BOTTOM_FADE_HEIGHT: number = 96;
 
 @Component
 export struct UnifiedChecklistView {
@@ -913,6 +917,13 @@ this.computeCellHeight();
     .edgeEffect(EdgeEffect.Spring)
     // B2：拖拽期间锁定 Grid 滚动，防止边拖边滚导致落点偏移
     .enableScrollInteraction(this.overlayPhase !== 'dragging')
+    // 问题3b：底部「逐渐弥散」——linearGradientBlur 糊的是组件自身内容（卡片），
+    //   按视口垂直位置渐变：顶部 BOTTOM_DIFFUSE_CLEAR_STOP 以上完全清晰，往下模糊强度线性爬升到底沿满值。
+    //   物理上连续渐变 → 无任何硬边。聚焦态下方已有整网格 .blur，关闭弥散避免双重模糊。
+    .linearGradientBlur(this.focusedZone != null ? 0 : BOTTOM_DIFFUSE_BLUR_RADIUS, {
+      fractionStops: [[0, 0], [0, BOTTOM_DIFFUSE_CLEAR_STOP], [1, 1]],
+      direction: GradientDirection.Bottom
+    })
     // D-4：聚焦时网格虚化 + 极小下沉，制造「退到背后」纵深感（不缩放——网格可滚动，
     //   下行展开时前几行可能已滚出视口，缩放会出现锚点漂移）。随 SPRING_HERO 同帧联动。
     .blur(this.focusedZone != null ? GRID_FOCUS_BLUR : 0)
@@ -921,39 +932,27 @@ this.computeCellHeight();
   }
 
 
-  // ---- 底部渐隐遮罩（P4 / 问题3b：真磨砂 + 渐变兜底）----
-  // 第一性原理：毛玻璃要成立必须「背后有内容可散射」。底部下方滑过来的是彩色装备卡片 →
-  //   有高频内容 → 真 backdropBlur 成立，呈现 iOS Dock 那种「卡片融进毛玻璃」的质感。
-  // 脏灰风险（纯背景上模糊退化为灰矩形）由顶层渐变遮罩兜底：
-  //   - 模糊层只占下半部（BOTTOM_FADE_BLUR_HEIGHT），透出柔化色块；
-  //   - 渐变层全高 PAGE_BG_TRANSPARENT→PAGE_BG，羽化模糊上边界 + 无内容时盖住脏灰，优雅退化为纯净渐变。
+  // ---- 底部同色渐隐遮罩（P4 / 问题3b 配套）----
+  // 分工：模糊弥散由 Grid 自身的 linearGradientBlur 负责（见 buildGridState）；
+  //   本层只负责「渐糊的底部卡片继续淡入纯背景、并贯通到底部安全区」，消除内容与指示条之间的纯白突变段。
+  // 纯 PAGE_BG 透明→实心渐隐：用透明羽白起步（非透明黑，避免中段混出灰）。
+  // expandSafeArea(BOTTOM)：遮罩自身延伸覆盖底部安全区，与已铺底的 PAGE_BG 背景无缝接合 → 沉浸贯通。
   // hitTestBehavior(None)：不拦截滚动/点击，纯视觉层。聚焦态隐藏。
   @Builder
   private buildBottomFade() {
-    Stack({ alignContent: Alignment.Bottom }) {
-      // 底层：真磨砂。Thin 强度足以柔化卡片又不至于糊成一团；贴底放置，顶边由上层渐变羽化。
-      Column()
-        .width('100%')
-        .height(BOTTOM_FADE_BLUR_HEIGHT)
-        .backgroundBlurStyle(BlurStyle.Thin)
-
-      // 顶层：渐变遮罩。透明羽白→羽白，全程在 PAGE_BG 色系内（避免透明黑混出灰）。
-      //   作用：① 羽化模糊层硬上边界；② 内容不足时盖住脏灰，退化为纯净渐变。
-      Column()
-        .width('100%')
-        .height(BOTTOM_FADE_HEIGHT)
-        .linearGradient({
-          angle: 180,
-          colors: [[PAGE_BG_TRANSPARENT, 0.0], [PAGE_BG_TRANSPARENT, 0.45], [PAGE_BG, 1.0]]
-        })
-    }
-    .width('100%')
-    .height(BOTTOM_FADE_HEIGHT)
-    .position({ left: 0, bottom: 0 })
-    .hitTestBehavior(HitTestMode.None)
-    .visibility(this.focusedZone == null ? Visibility.Visible : Visibility.Hidden)
-    .opacity(this.appeared ? 1 : 0)
-    .animation({ curve: SPRING_GENERAL(), delay: 150 })
+    Column()
+      .width('100%')
+      .height(BOTTOM_FADE_HEIGHT)
+      .linearGradient({
+        angle: 180,
+        colors: [[PAGE_BG_TRANSPARENT, 0.0], [PAGE_BG_TRANSPARENT, 0.35], [PAGE_BG, 1.0]]
+      })
+      .position({ left: 0, bottom: 0 })
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
+      .hitTestBehavior(HitTestMode.None)
+      .visibility(this.focusedZone == null ? Visibility.Visible : Visibility.Hidden)
+      .opacity(this.appeared ? 1 : 0)
+      .animation({ curve: SPRING_GENERAL(), delay: 150 })
   }
 
   // ---- Phase 4：自绘浮层 Builder（双阶段：menu / dragging，用 opacity 过渡而非 if 销毁）----
