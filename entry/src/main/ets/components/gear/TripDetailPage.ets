@@ -79,6 +79,10 @@ export struct TripDetailPage {
   onMoveItemToZone: (itemId: string, zone: string) => void = () => {};
   // Phase 4：长按菜单「移动到…」→ 由 Index 弹出 zone 选择面板
   onRequestMoveSheet: (item: ChecklistItem) => void = () => {};
+  // #10：格子内排序完成回调
+  onReorderItems: (zone: string, orderedIds: string[]) => void = () => {};
+  // #1：多选批量移动请求（弹出 Zone 选择面板）
+  onRequestBatchMoveSheet: (itemIds: string[]) => void = () => {};
 
   private currentChecklist(): TripChecklist | undefined {
     for (let i = 0; i < this.checklists.length; i++) {
@@ -129,6 +133,8 @@ export struct TripDetailPage {
         onEditItem: this.onOpenEditItem,
         onRemoveItem: this.onDeleteChecklistItem,
         onRequestMoveSheet: this.onRequestMoveSheet,
+        onReorderItems: this.onReorderItems,
+        onRequestBatchMoveSheet: this.onRequestBatchMoveSheet,
         onReviewZone: this.onOpenZoneReview
       })
         .layoutWeight(1)

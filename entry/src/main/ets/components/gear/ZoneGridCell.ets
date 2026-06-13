@@ -50,6 +50,7 @@ export struct ZoneGridCell {
   // 回调（Phase 2/3 接入）
   onTapTitle: (zone: string) => void = () => {};
   onTapEmpty: (zone: string) => void = () => {};
+  onTapAdd: (zone: string) => void = () => {};
   onToggleCheck: (itemId: string) => void = () => {};
   // Phase 4：网格态长按+拖拽回调（full mode）
   onLongPressItem: (item: ChecklistItem, globalX: number, globalY: number) => void = () => {};
@@ -116,13 +117,40 @@ export struct ZoneGridCell {
     })
   }
 
-  // 标题行右侧：数量
+  // 标题行右侧：数量 + 添加按钮（#6 折叠态也能快速添加）
+  @State private addBtnPressed: boolean = false;
+
   @Builder
   private buildCountTrailing() {
     if (this.items.length > 0) {
-      Text(this.items.length.toString())
-        .fontSize(FONT_SIZE_CAPTION)
-        .fontColor(TEXT_TERTIARY)
+      Row({ space: 6 }) {
+        Text(this.items.length.toString())
+          .fontSize(FONT_SIZE_CAPTION)
+          .fontColor(TEXT_TERTIARY)
+
+        // 小型添加按钮：点击直接打开 picker，不进聚焦态
+        SymbolGlyph($r('sys.symbol.plus'))
+          .fontSize(14)
+          .fontColor([PRIMARY_COLOR])
+          .scale({
+            x: this.addBtnPressed ? PRESS_SCALE_DOWN : 1.0,
+            y: this.addBtnPressed ? PRESS_SCALE_DOWN : 1.0
+          })
+          .animation({ curve: SPRING_PRESS() })
+          .onTouch((e: TouchEvent) => {
+            if (e.type === TouchType.Down) {
+              this.addBtnPressed = true;
+            } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+              this.addBtnPressed = false;
+            }
+          })
+          .onClick(() => {
+            this.onTapAdd(this.zone);
+          })
+          .hitTestBehavior(HitTestMode.Block)
+          .padding(4)
+      }
+      .alignItems(VerticalAlign.Center)
     }
   }
 

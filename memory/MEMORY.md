@@ -136,34 +136,19 @@
 - `@Prop` 深拷贝 + ForEach key 只含 id → 不触发重渲染。解法：key 拼入变化属性 + nonce
 - `bindSheet` SheetOptions 不支持 `borderRadius`（编译通过运行报 warn），需移除
 
-## 快速核查功能（2025-06-22）
+## 快速核查功能（2026-06-22）
 
 - 首页 QuickEntries 第二个按钮从「装备库」替换为「快速核查」（装备库已有 3 条路径可达，按钮冗余）
 - `nearestFutureChecklist()` 只取 dateAt >= 今天的最近行程（过去行程已结束，不需要核查）
 - 按钮状态机：无未来行程→隐藏（只剩"新建行程"填满行）；未来行程 items=0→点击跳转详情页+toast"先添加装备再核查"；全勾选→"再检查一遍"；有未勾选→"快速核查"
 - 点击直接设置 `selectedChecklistId` 然后 `openReviewMode()`，跳过中间的详情页，减少操作路径
 
-## 动效 Token 体系重构记录（2025-06-24）
+## 数据一致性模式（2026-06-13）
 
-本次对 AnimationTokens.ets 和相关文件进行了全面审查修复，核心改动：
-
-**修复的 P0 运行时 Bug：**
-- WeightGauge `.scale()` 上同时存在 `.animation()` 和 `animateTo()` 竞争 → 删除 `.animation()` 修饰
-- GearSortSheet 按压 rest state 错误使用 `PRESS_SCALE_BOUNCE`(1.02) → 改为 `PRESS_SCALE_REST`(1.0)
-- `CURVE_STANDARD` 值为 `Curve.EaseInOut` 与规范定义不符 → 改为 `curves.cubicBezierCurve(0.4, 0.0, 0.2, 1.0)`
-
-**清理的 P2 代码质量问题：**
-- 全量清除 Spring+duration 混用（~50 处，跨 12 个文件：GearPage/HomePage/ChecklistDetail/TripCeremonyCard/EmptyIllustration/GearSortSheet/Index/EditGearPanel/EditItemPanel/AnimationUtils 等）
-- AnimationTokens 删除 8 个无消费者的废弃导出
-- Typography 删除重复常量 `FONT_FEATURE_TABULAR_NUMS`
-- Index.ets 清理 19 个未使用 import
-- TripCeremonyCard/AssetTrendCard/GearPage/HomePage 替换硬编码色值为 Colors token
-- 全局补充箭头函数类型标注
-
-**经验教训：**
-- Spring 系列函数（`springMotion`/`responsiveSpringMotion`/`springCurve`）**完全忽略** `duration` 字段，时间由 `response` 参数唯一决定。如果需要错落延迟，必须使用 `delay` 字段
-- 大批量机械修改适合 subagent 并行处理，但**必须事后逐文件复查**（本次 subagent 漏改 2 处、误保留 1 处）
-- `animateTo` 的 `curve` 字段接受 `Curve | ICurve | string` 三种类型，`cubicBezierCurve()` 返回 `ICurve` 可直接使用
+- **checklistRenderNonce 强制刷新**：任何修改装备属性（名称/分类等）的操作，执行后必须 `checklistRenderNonce++` 强制 ForEach 重建。ForEach key 拼入 nonce：`zone + '_' + length + '_' + nonce`。覆盖路径：batchDeleteGears / batchMoveGroup / executeCategoryDelete / executeCategoryRename / updateGear / createGear（后两者经 GearPickerSheet 关闭后已由其他 nonce 链路覆盖）
+- **resolveItemName 实时查找**：ChecklistItem 只存 `fromGearId`，显示名称优先从 gears 数组按 id 查找当前值，找不到才 fallback 到 item.name 快照。确保装备改名后清单即时反映
+- **PRESS_SCALE_DOWN 全局按压常量**：AnimationTokens 导出 `PRESS_SCALE_DOWN = 0.96`，所有可点击元素按压缩放统一引用此常量 + `SPRING_PRESS()` 曲线。FAB 和底部 Tab bar 例外（有独立反馈机制）
+- **forceFlush() 页面退出持久化**：NavDestination `.onBackPressed()` / `.onDisAppear()` 中调 `PackStore.forceFlush()` 确保编辑数据不丢
 
 ## 已知限制
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.7.3 (2026-06-13)
+
+数据一致性修复 + 按压反馈补全。修复装备 mutation 后清单视图不刷新的隐蔽 bug，补齐 GearPickerSheet / GearPage 残余按压反馈空白。
+
+**数据一致性**
+
+- **checklistRenderNonce 补齐**：`batchDeleteGears` / `batchMoveGroup` / `executeCategoryDelete` / `executeCategoryRename` 四条路径缺失 `checklistRenderNonce++`，导致 UnifiedChecklistView ForEach 不重建、装备名称/分类变更后视图陈旧。全部补齐 + ForEach key 追加 nonce 维度（`zone + '_' + length + '_' + nonce`）
+- **resolveItemName 实时查找**：ChecklistItem 显示名称改为 gear-first lookup（经 `fromGearId` 从 gears 数组实时取当前值），找不到才 fallback 到 `item.name` 快照，确保改名即时反映
+- **buildGearTripCountMap 派生**：消除已死 `GearItem.tripCount` 字段依赖，运行时遍历 trips 实时计算行程计数
+
+**按压反馈补全**
+
+- **GearPickerSheet**：装备行（`pressedGearRowId`）、品类胶囊（`pressedCatPill`）、Zone 胶囊（`pressedZonePill`）三处新增 scale press
+- **GearPage**：排序按钮（`pressedSortBtn`）、筛选胶囊（`pressedFilterPill`）、搜索胶囊（`pressedSearchBtn`）、取消文字（`pressedCancelText`）、DeleteAction（`pressedDeleteAction`）、WeightEditor 关闭按钮（`pressedWeightClose`）六处新增 scale press
+- 所有按压统一使用 `PRESS_SCALE_DOWN(0.96)` + `SPRING_PRESS()` 曲线
+
+> 核心经验沉淀至 MEMORY.md「数据一致性模式」section。
+
 ## v0.7.2 (2026-06-12)
 
 聚焦态满铺精装修 — 向便单质感看齐的两轮真机打磨。功能不动，只修聚焦态视觉密度与点击交互。

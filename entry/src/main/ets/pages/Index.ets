@@ -57,6 +57,7 @@ import {
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
 import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
+import { allZones, zoneDisplayName } from '../services/LoadoutService';
 import { PackStore } from '../services/PackStore';
 import {
   filterGears,
@@ -1560,6 +1561,140 @@ struct Index {
     this.closeSheet();
   }
 
+  // #10：格子内排序 — 按 orderedIds 重排指定 zone 的 items
+  private async reorderChecklistItems(zone: string, orderedIds: string[]): Promise<void> {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    const nextChecklists = this.checklists.map(cl => {
+      if (cl.id !== checklist.id) {
+        return cl;
+      }
+      // 分离：该 zone 的 items 和其他 zone 的 items
+      const zoneItems = cl.items.filter(item => item.group === zone);
+      const otherItems = cl.items.filter(item => item.group !== zone);
+      // 按 orderedIds 排序 zone items
+      const reordered: ChecklistItem[] = [];
+      for (const id of orderedIds) {
+        const found = zoneItems.find(item => item.id === id);
+        if (found !== undefined) {
+          reordered.push(found);
+        }
+      }
+      // 合并：保持其他 zone 的 items 位置不变，zone items 按新顺序插入原位置
+      const result: ChecklistItem[] = [];
+      let zoneInserted = false;
+      for (const item of cl.items) {
+        if (item.group === zone) {
+          if (!zoneInserted) {
+            // 第一次遇到该 zone 的 item 时，插入全部重排后的 items
+            result.push(...reordered);
+            zoneInserted = true;
+          }
+          // 跳过原始 zone items（已被 reordered 替代）
+        } else {
+          result.push(item);
+        }
+      }
+      if (!zoneInserted) {
+        result.push(...reordered);
+      }
+      const updated: TripChecklist = {
+        id: cl.id,
+        title: cl.title,
+        date: cl.date,
+        dateAt: cl.dateAt,
+        items: result,
+        createdAt: cl.createdAt,
+        destination: cl.destination,
+        distanceKm: cl.distanceKm,
+        maxAltitude: cl.maxAltitude,
+        ascentM: cl.ascentM,
+        durationHours: cl.durationHours
+      };
+      return updated;
+    });
+    this.applyChecklistState(nextChecklists);
+    await this.store.saveChecklists(nextChecklists);
+  }
+
+  // #1：批量移动 — 打开 Zone 选择面板（复用 actionSheet 模式，存 batch ids）
+  @State private batchMoveItemIds: string[] = [];
+
+  private openBatchMoveSheet(itemIds: string[]): void {
+    this.batchMoveItemIds = itemIds;
+    // 复用 actionSheetItem 的 zone 选择面板，用一个虚拟 item 触发
+    // 实际上直接弹一个简单的 zone 选择 ActionSheet
+    this.showBatchZoneSelector();
+  }
+
+  private showBatchZoneSelector(): void {
+    // 使用系统 ActionSheet 让用户选择目标 Zone
+    const zones: string[] = allZones();
+    const sheets: SheetInfo[] = [];
+    for (let i = 0; i < zones.length; i++) {
+      const targetZone = zones[i];
+      sheets.push({
+        title: zoneDisplayName(targetZone),
+        action: () => {
+          this.batchMoveItemsToZone(this.batchMoveItemIds, targetZone);
+        }
+      });
+    }
+    ActionSheet.show({
+      title: `移动 ${this.batchMoveItemIds.length} 件装备到…`,
+      message: '选择目标区域',
+      sheets: sheets,
+      cancel: () => {}
+    });
+  }
+
+  private async batchMoveItemsToZone(itemIds: string[], zone: string): Promise<void> {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    const nextChecklists = this.checklists.map(cl => {
+      if (cl.id !== checklist.id) {
+        return cl;
+      }
+      // 将所有选中 items 的 group 改为目标 zone
+      const updatedItems = cl.items.map(item => {
+        if (itemIds.indexOf(item.id) >= 0) {
+          const moved: ChecklistItem = {
+            id: item.id,
+            name: item.name,
+            group: zone,
+            checked: item.checked,
+            weight: item.weight,
+            price: item.price,
+            fromGearId: item.fromGearId
+          };
+          return moved;
+        }
+        return item;
+      });
+      const updated: TripChecklist = {
+        id: cl.id,
+        title: cl.title,
+        date: cl.date,
+        dateAt: cl.dateAt,
+        items: updatedItems,
+        createdAt: cl.createdAt,
+        destination: cl.destination,
+        distanceKm: cl.distanceKm,
+        maxAltitude: cl.maxAltitude,
+        ascentM: cl.ascentM,
+        durationHours: cl.durationHours
+      };
+      return updated;
+    });
+    this.applyChecklistState(nextChecklists);
+    await this.store.saveChecklists(nextChecklists);
+    this.batchMoveItemIds = [];
+  }
+
   private async removeItemFromTrip(itemId: string): Promise<void> {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
@@ -1800,7 +1935,8 @@ struct Index {
       return;
     }
     const nextChecklists = removeItemFromChecklists(this.checklists, checklist.id, itemId);
-    this.applyChecklistState(nextChecklists);
+    // animated: true → ForEach 节点移除时播放退场动画（修复 #7 删除无即时反馈）
+    this.applyChecklistState(nextChecklists, true);
     await this.store.saveChecklists(nextChecklists);
   }
 
@@ -1901,6 +2037,12 @@ struct Index {
           },
           onRequestMoveSheet: (item: ChecklistItem) => {
             this.openGearItemActionSheet(item);
+          },
+          onReorderItems: (zone: string, orderedIds: string[]) => {
+            this.reorderChecklistItems(zone, orderedIds);
+          },
+          onRequestBatchMoveSheet: (itemIds: string[]) => {
+            this.openBatchMoveSheet(itemIds);
           },
           onDeleteTrip: () => {
             const checklist = this.checklists.find(c => c.id === this.selectedChecklistId);

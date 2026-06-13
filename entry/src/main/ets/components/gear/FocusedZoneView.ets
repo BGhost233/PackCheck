@@ -45,6 +45,8 @@ export struct FocusedZoneView {
   @Prop items: ChecklistItem[] = [];
   // 问题4c：装备库全量，用于 fromGearId 反查品类/备注/品牌等详情
   @Prop gears: GearItem[] = [];
+  // 渲染 nonce：gear 编辑后父层 nonce++ 强制 ForEach 重建（修复 #9 编辑不即时更新）
+  @Prop renderNonce: number = 0;
   @Prop zoneColor: string = TEXT_SECONDARY;
   // ZoneShell 外壳需要的描边色 + 整块淡色填充底，由父层透传（与网格态用同一 helper）
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
@@ -53,6 +55,9 @@ export struct FocusedZoneView {
   // 是否处于激活（聚焦）态：由父传入 focusedZone != null。
   // false→true 时触发列表错落入场（review V2；FocusedZoneView 常驻树，不能用 aboutToAppear）
   @Prop @Watch('onActiveChange') active: boolean = false;
+  // #1：父层递增此信号触发进入多选模式（携带初始选中 item id）
+  @Prop @Watch('onMultiSelectSignal') multiSelectSignal: number = 0;
+  @Prop multiSelectInitialId: string = '';
 
   // callbacks
   onClose: () => void = () => {};
@@ -66,32 +71,58 @@ export struct FocusedZoneView {
   onMoveItemToZone: (itemId: string, zone: string) => void = () => {};
   // Phase 4：长按 item 触发浮层（通知父层弹自绘浮层）
   onLongPressItem: (item: ChecklistItem) => void = () => {};
+  // #3：点击装备行弹出详情 Sheet（替代手风琴展开）
+  onTapItem: (item: ChecklistItem) => void = () => {};
+
+  // #10：格子内排序回调（重排后的 item id 数组）
+  onReorderItems: (zone: string, orderedIds: string[]) => void = () => {};
+  // #1：多选批量移动回调（选中的 item ids + 目标 zone）
+  onBatchMoveItems: (itemIds: string[], targetZone: string) => void = () => {};
+  // #1：多选后请求弹出 Zone 选择面板
+  onRequestBatchMoveSheet: (itemIds: string[]) => void = () => {};
 
   // 列表错落入场控制（0 = 未入场，1 = 已就位）
   @State private listAppeared: boolean = false;
-  // 问题4c：当前手风琴展开详情的装备 id（null = 全部收起）。单击装备名 toggle，点别行自动收起当前行。
-  @State private expandedItemId: string | null = null;
+
+  // #1：多选模式
+  @State private isMultiSelectMode: boolean = false;
+  @State private selectedIds: Set<string> = new Set();
+
+  // #10：排序模式状态
+  @State private reorderingItemId: string = ''; // 当前被拖拽排序的 item id（空 = 非排序态）
+  @State private reorderInsertIndex: number = -1; // 拖拽项应插入的目标位置
+  @State private reorderDragY: number = 0; // 拖拽项的 Y 偏移量
 
   // active false→true：重置后下一帧验入场；true→false：重置供下次重放
   onActiveChange(): void {
     if (this.active) {
       this.listAppeared = false;
-      // 问题4c：每次进入聚焦重置展开态，避免残留上次的展开行
-      this.expandedItemId = null;
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.listAppeared = true;
       });
     } else {
       this.listAppeared = false;
-      this.expandedItemId = null;
+      // 退出聚焦时自动退出多选模式
+      if (this.isMultiSelectMode) {
+        this.isMultiSelectMode = false;
+        this.selectedIds = new Set();
+      }
     }
   }
 
-  // 问题4c：单击装备名 toggle 该行详情展开（手风琴：点别行自动收起当前行）
-  private toggleExpand(itemId: string): void {
-    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
-      this.expandedItemId = (this.expandedItemId === itemId) ? null : itemId;
-    });
+  // #1：父层递增 multiSelectSignal 时进入多选模式
+  private lastMultiSelectSignal: number = 0;
+  onMultiSelectSignal(): void {
+    if (this.multiSelectSignal === this.lastMultiSelectSignal) {
+      return;
+    }
+    this.lastMultiSelectSignal = this.multiSelectSignal;
+    this.enterMultiSelectMode(this.multiSelectInitialId);
+  }
+
+  // #3：点击装备行弹出详情 Sheet（替代原手风琴展开）
+  private handleTapItem(item: ChecklistItem): void {
+    this.onTapItem(item);
   }
 
   // 问题4c：按 fromGearId 反查装备库详情（品类/备注/品牌）。临时装备无 fromGearId 则返回 undefined。
@@ -145,57 +176,138 @@ export struct FocusedZoneView {
   // ---- 卡片内容：全量装备列表 + 底部添加行 ----
   @Builder
   private buildContent() {
-    List({ space: 0 }) {
-      ForEach(this.items, (item: ChecklistItem, index: number) => {
-        ListItem() {
-          Column({ space: 0 }) {
-            // O3：与网格态统一为 Column wrapper 直绑手势方案（替换原 Stack(透明Image+Row) 双层）。
-            //   wrapper 只有 gesture 无 onClick：tap（勾选/展开详情）由 ChecklistRow 内部 onClick 处理，
-            //   long press 由 wrapper 承接，两者不互斥——消除「ChecklistRow.onClick 独占触摸序列」隐患。
-            Column() {
-              ChecklistRow({
-                item: item,
-                displayName: resolveItemName(item, this.gears),
-                rowHeight: 52,
-                checkSize: 28,
-                fontSize: FONT_SIZE_BODY_LARGE,
-                checkOnlyHotzone: true,
-                onToggleCheck: this.onToggleCheck,
-                onTapRow: () => { this.toggleExpand(item.id); }
-              })
+    Column() {
+      // #1：多选模式工具栏
+      if (this.isMultiSelectMode) {
+        this.buildMultiSelectToolbar()
+      }
+
+      List({ space: 0 }) {
+        ForEach(this.items, (item: ChecklistItem, index: number) => {
+          ListItem() {
+            Column({ space: 0 }) {
+              Row({ space: 0 }) {
+                // #1：多选模式 checkbox
+                if (this.isMultiSelectMode) {
+                  Checkbox()
+                    .select(this.selectedIds.has(item.id))
+                    .selectedColor(this.zoneColor)
+                    .shape(CheckBoxShape.ROUNDED_SQUARE)
+                    .width(22)
+                    .height(22)
+                    .margin({ right: 12 })
+                    .onChange((checked: boolean) => {
+                      if (checked) {
+                        const next = new Set<string>(this.selectedIds);
+                        next.add(item.id);
+                        this.selectedIds = next;
+                      } else {
+                        const next = new Set<string>(this.selectedIds);
+                        next.delete(item.id);
+                        this.selectedIds = next;
+                      }
+                    })
+                    .transition(
+                      TransitionEffect.translate({ x: -24 })
+                        .combine(TransitionEffect.opacity(0))
+                        .animation({ curve: SPRING_GENERAL() })
+                    )
+                }
+
+                Column() {
+                  ChecklistRow({
+                    item: item,
+                    displayName: resolveItemName(item, this.gears),
+                    rowHeight: 52,
+                    checkSize: 28,
+                    fontSize: FONT_SIZE_BODY_LARGE,
+                    checkOnlyHotzone: true,
+                    onToggleCheck: this.isMultiSelectMode
+                      ? (id: string) => { this.toggleSelection(id); }
+                      : this.onToggleCheck,
+                    onTapRow: () => {
+                      if (this.isMultiSelectMode) {
+                        this.toggleSelection(item.id);
+                      } else {
+                        this.handleTapItem(item);
+                      }
+                    }
+                  })
+                }
+                .layoutWeight(1)
+              }
+              .width('100%')
+              .height(52)
+              .alignItems(VerticalAlign.Center)
+              .gesture(
+                GestureGroup(
+                  GestureMode.Sequence,
+                  LongPressGesture({ repeat: false, duration: 400 })
+                    .onAction(() => {
+                      this.handleLongPress(item);
+                    }),
+                  PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 5 })
+                    .onActionStart(() => {
+                      if (!this.isMultiSelectMode) {
+                        this.startReorder(item, index);
+                      }
+                    })
+                    .onActionUpdate((event: GestureEvent) => {
+                      if (!this.isMultiSelectMode) {
+                        this.updateReorder(event.offsetY, index);
+                      }
+                    })
+                    .onActionEnd(() => {
+                      if (!this.isMultiSelectMode) {
+                        this.finishReorder();
+                      }
+                    })
+                )
+              )
+
+              // #3：手风琴展开已移除，点击装备行现在弹出底部 Sheet
             }
             .width('100%')
-            .height(52)
-            .gesture(
-              LongPressGesture({ repeat: false, duration: 400 })
-                .onAction(() => {
-                  this.handleLongPress(item);
-                })
-            )
-
-            // 问题4c：手风琴详情区（重量/品类/备注/品牌），Spring 高度 + 透明度
-            if (this.expandedItemId === item.id) {
-              this.buildItemDetail(item)
-            }
           }
-          .width('100%')
-        }
-        // 错落入场：淡入 + translateY，按 index 递延（review V2）
-        .opacity(this.listAppeared ? 1 : 0)
-        .translate({ y: this.listAppeared ? 0 : STAGGER_OFFSET_Y })
-        .animation({ curve: SPRING_GENERAL(), delay: staggerDelay(index) })
-      }, (item: ChecklistItem) => item.id + '_' + (this.expandedItemId === item.id ? 'e' : 'c'))
+          // 错落入场：淡入 + translateY，按 index 递延（review V2）
+          .opacity(this.listAppeared ? 1 : 0)
+          .translate({
+            y: this.reorderTranslateY(item.id, index)
+          })
+          .animation({ curve: SPRING_GENERAL(), delay: this.reorderingItemId.length > 0 ? 0 : staggerDelay(index) })
+          // #10：排序中被拖项浮起
+          .scale({
+            x: this.reorderingItemId === item.id ? 1.03 : 1.0,
+            y: this.reorderingItemId === item.id ? 1.03 : 1.0
+          })
+          .shadow(this.reorderingItemId === item.id
+            ? { radius: 24, color: '#1A000000', offsetY: 8 }
+            : undefined)
+          .zIndex(this.reorderingItemId === item.id ? 100 : 0)
+          // 修复 #7：删除时退场动画（向左滑出 + 缩小 + 淡出）
+          .transition(TransitionEffect.asymmetric(
+            TransitionEffect.IDENTITY,
+            TransitionEffect.translate({ x: -40 }).animation({ curve: SPRING_GENERAL() })
+              .combine(TransitionEffect.scale({ x: 0.85, y: 0.85 }).animation({ curve: SPRING_GENERAL() }))
+              .combine(TransitionEffect.opacity(0).animation({ curve: SPRING_GENERAL() }))
+          ))
+        }, (item: ChecklistItem) => item.id + '_' + this.renderNonce.toString())
 
-      // 底部虚线「+ 添加到{Zone}」行
-      ListItem() {
-        this.buildAddRow()
+        // 底部虚线「+ 添加到{Zone}」行（多选模式下隐藏）
+        if (!this.isMultiSelectMode) {
+          ListItem() {
+            this.buildAddRow()
+          }
+        }
       }
+      .width('100%')
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+      .padding({ left: 16, right: 16, top: 8, bottom: 16 })
     }
     .width('100%')
     .height('100%')
-    .scrollBar(BarState.Off)
-    .edgeEffect(EdgeEffect.Spring)
-    .padding({ left: 16, right: 16, top: 8, bottom: 16 })
   }
 
   // ---- 问题4c：装备详情手风琴展开区 ----
@@ -334,7 +446,7 @@ export struct FocusedZoneView {
     })
   }
 
-  // Phase 4：长按触发 —— 触觉反馈 + 通知父层弹浮层
+  // Phase 4：长按触发 —— 触觉反馈 + 通知父层弹浮层（如果不继续拖动则弹菜单）
   private handleLongPress(item: ChecklistItem): void {
     // 触觉反馈（轻档）
     try {
@@ -345,8 +457,126 @@ export struct FocusedZoneView {
     } catch (e) {
       // 振动不可用时静默降级
     }
-    // 通知父层弹出自绘浮层
+    // #1：多选模式下长按 = 切换选中态（不弹菜单）
+    if (this.isMultiSelectMode) {
+      this.toggleSelection(item.id);
+      return;
+    }
+    // 通知父层弹出自绘浮层（如果后续 Pan 开始则会被排序模式覆盖）
     this.onLongPressItem(item);
+  }
+
+  // ---- #1：多选模式控制 ----
+  enterMultiSelectMode(initialItemId?: string): void {
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.isMultiSelectMode = true;
+      this.selectedIds = new Set();
+      if (initialItemId !== undefined && initialItemId.length > 0) {
+        this.selectedIds.add(initialItemId);
+      }
+    });
+  }
+
+  exitMultiSelectMode(): void {
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.isMultiSelectMode = false;
+      this.selectedIds = new Set();
+    });
+  }
+
+  private toggleSelection(itemId: string): void {
+    const next = new Set<string>(this.selectedIds);
+    if (next.has(itemId)) {
+      next.delete(itemId);
+    } else {
+      next.add(itemId);
+    }
+    this.selectedIds = next;
+  }
+
+  private selectAll(): void {
+    const all = new Set<string>();
+    for (const item of this.items) {
+      all.add(item.id);
+    }
+    this.selectedIds = all;
+  }
+
+  // ---- #10：格子内排序 ----
+  private static readonly ITEM_HEIGHT: number = 52;
+
+  private startReorder(item: ChecklistItem, _index: number): void {
+    this.reorderingItemId = item.id;
+    this.reorderDragY = 0;
+    this.reorderInsertIndex = this.items.findIndex((i: ChecklistItem) => i.id === item.id);
+  }
+
+  private updateReorder(offsetY: number, originalIndex: number): void {
+    this.reorderDragY = offsetY;
+    // 根据拖拽偏移计算目标插入位置
+    const itemH = FocusedZoneView.ITEM_HEIGHT;
+    const movedSlots = Math.round(offsetY / itemH);
+    let targetIndex = originalIndex + movedSlots;
+    targetIndex = Math.max(0, Math.min(this.items.length - 1, targetIndex));
+    if (targetIndex !== this.reorderInsertIndex) {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+        this.reorderInsertIndex = targetIndex;
+      });
+    }
+  }
+
+  private finishReorder(): void {
+    if (this.reorderingItemId.length === 0) {
+      return;
+    }
+    const fromIndex = this.items.findIndex((i: ChecklistItem) => i.id === this.reorderingItemId);
+    const toIndex = this.reorderInsertIndex;
+    // 重置排序状态
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.reorderingItemId = '';
+      this.reorderInsertIndex = -1;
+      this.reorderDragY = 0;
+    });
+    // 如果位置变了，通知父层持久化
+    if (fromIndex !== toIndex && fromIndex >= 0 && toIndex >= 0) {
+      const orderedIds = this.items.map((i: ChecklistItem) => i.id);
+      // 执行移动（ArkTS 不支持解构赋值）
+      const spliced = orderedIds.splice(fromIndex, 1);
+      const moved = spliced[0];
+      orderedIds.splice(toIndex, 0, moved);
+      this.onReorderItems(this.zone, orderedIds);
+    }
+  }
+
+  // 计算每个 item 的 translateY（排序让位 + 入场动画）
+  private reorderTranslateY(itemId: string, index: number): number {
+    // 入场动画
+    if (!this.listAppeared) {
+      return STAGGER_OFFSET_Y;
+    }
+    // 非排序态
+    if (this.reorderingItemId.length === 0) {
+      return 0;
+    }
+    // 被拖拽项：跟手
+    if (itemId === this.reorderingItemId) {
+      return this.reorderDragY;
+    }
+    // 其他项：根据 insertIndex 让位
+    const dragFromIndex = this.items.findIndex((i: ChecklistItem) => i.id === this.reorderingItemId);
+    const itemH = FocusedZoneView.ITEM_HEIGHT;
+    if (dragFromIndex < this.reorderInsertIndex) {
+      // 拖拽项向下移动：dragFromIndex+1 ~ reorderInsertIndex 的项向上让位
+      if (index > dragFromIndex && index <= this.reorderInsertIndex) {
+        return -itemH;
+      }
+    } else if (dragFromIndex > this.reorderInsertIndex) {
+      // 拖拽项向上移动：reorderInsertIndex ~ dragFromIndex-1 的项向下让位
+      if (index >= this.reorderInsertIndex && index < dragFromIndex) {
+        return itemH;
+      }
+    }
+    return 0;
   }
 
   // D-2：聚焦态顶栏 trailing — 「逐项核查本区」图标按钮
@@ -373,5 +603,83 @@ export struct FocusedZoneView {
     .onClick(() => {
       this.onReviewZone(this.zone);
     })
+  }
+
+  // ---- #1：多选模式工具栏 ----
+  @State private moveBtnPressed: boolean = false;
+  @State private cancelBtnPressed: boolean = false;
+  @State private selectAllBtnPressed: boolean = false;
+
+  @Builder
+  private buildMultiSelectToolbar() {
+    Row() {
+      // 已选计数
+      Text(`已选 ${this.selectedIds.size} 件`)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
+        .fontWeight(FONT_WEIGHT_MEDIUM)
+        .fontColor(TEXT_MAIN)
+
+      Blank()
+
+      // 全选按钮
+      Text(this.selectedIds.size === this.items.length ? '取消全选' : '全选')
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
+        .fontColor(this.zoneColor)
+        .scale({ x: this.selectAllBtnPressed ? PRESS_SCALE_DOWN : 1.0, y: this.selectAllBtnPressed ? PRESS_SCALE_DOWN : 1.0 })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((e: TouchEvent) => {
+          if (e.type === TouchType.Down) { this.selectAllBtnPressed = true; }
+          else if (e.type === TouchType.Up || e.type === TouchType.Cancel) { this.selectAllBtnPressed = false; }
+        })
+        .onClick(() => {
+          if (this.selectedIds.size === this.items.length) {
+            this.selectedIds = new Set();
+          } else {
+            this.selectAll();
+          }
+        })
+        .margin({ right: 16 })
+
+      // 移动到…按钮
+      Text('移动到…')
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
+        .fontColor(this.selectedIds.size > 0 ? this.zoneColor : TEXT_TERTIARY)
+        .scale({ x: this.moveBtnPressed ? PRESS_SCALE_DOWN : 1.0, y: this.moveBtnPressed ? PRESS_SCALE_DOWN : 1.0 })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((e: TouchEvent) => {
+          if (e.type === TouchType.Down) { this.moveBtnPressed = true; }
+          else if (e.type === TouchType.Up || e.type === TouchType.Cancel) { this.moveBtnPressed = false; }
+        })
+        .onClick(() => {
+          if (this.selectedIds.size > 0) {
+            const ids: string[] = Array.from(this.selectedIds);
+            this.onRequestBatchMoveSheet(ids);
+          }
+        })
+        .margin({ right: 16 })
+
+      // 取消按钮
+      Text('取消')
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
+        .fontColor(TEXT_SECONDARY)
+        .scale({ x: this.cancelBtnPressed ? PRESS_SCALE_DOWN : 1.0, y: this.cancelBtnPressed ? PRESS_SCALE_DOWN : 1.0 })
+        .animation({ curve: SPRING_PRESS() })
+        .onTouch((e: TouchEvent) => {
+          if (e.type === TouchType.Down) { this.cancelBtnPressed = true; }
+          else if (e.type === TouchType.Up || e.type === TouchType.Cancel) { this.cancelBtnPressed = false; }
+        })
+        .onClick(() => {
+          this.exitMultiSelectMode();
+        })
+    }
+    .width('100%')
+    .height(44)
+    .padding({ left: 16, right: 16 })
+    .alignItems(VerticalAlign.Center)
+    .transition(
+      TransitionEffect.translate({ y: -20 })
+        .combine(TransitionEffect.opacity(0))
+        .animation({ curve: SPRING_GENERAL() })
+    )
   }
 }

@@ -44,7 +44,7 @@ interface CategoryGroup {
 @Component
 export struct GearPickerSheet {
   // 数据
-  @Prop gears: GearItem[] = [];
+  @Prop @Watch('onGearsChange') gears: GearItem[] = [];
   @Prop categories: string[] = [];
   @Prop selectedItemIds: string[] = [];
   @Prop preselectZone: string = '';
@@ -54,6 +54,10 @@ export struct GearPickerSheet {
   onAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => void = () => {};
   onClose: () => void = () => {};
 
+  // ===== 乐观选中态：点击时立即更新本地状态，不等父级 Prop 回传 =====
+  @State private optimisticSelectedIds: string[] = [];
+  @State private optimisticInited: boolean = false;
+
   // ===== 列表态状态 =====
   @State private searchText: string = '';
   @State private expandedCategories: string[] = [];
@@ -61,6 +65,9 @@ export struct GearPickerSheet {
   @State private pressedGearRowId: string = '';
   @State private lastAddedGearId: string = '';
   @State private newEntryScale: number = 1.0;
+  // 性能优化：缓存分组结果，避免每次 build 重算（修复 #8 装备多时添加延迟）
+  @State private cachedGroups: CategoryGroup[] = [];
+  private lastGearsLength: number = -1; // 用于检测 gears prop 变化
 
   @State private pressedCatPill: string = '';
   @State private pressedZonePill: string = '';
@@ -87,6 +94,21 @@ export struct GearPickerSheet {
     if (this.preselectZone.length > 0) {
       this.tempZone = this.preselectZone;
     }
+    // 初始化乐观选中态为父级传入的已选 ID
+    this.optimisticSelectedIds = this.selectedItemIds.slice();
+    this.optimisticInited = true;
+    // 初始化分组缓存
+    this.refreshGroupCache();
+  }
+
+  private refreshGroupCache(): void {
+    this.lastGearsLength = this.gears.length;
+    this.cachedGroups = this.computeGroupedGears();
+  }
+
+  // gears prop 变化时自动刷新缓存（替代 build 内的命令式检测）
+  onGearsChange(): void {
+    this.refreshGroupCache();
   }
 
   build() {
@@ -119,6 +141,7 @@ export struct GearPickerSheet {
             TextInput({ placeholder: '搜索装备...', text: this.searchText })
               .onChange((value: string) => {
                 this.searchText = value;
+                this.refreshGroupCache();
               })
               .layoutWeight(1)
               .height(36)
@@ -155,9 +178,9 @@ export struct GearPickerSheet {
           }
           .width('100%')
 
-          // 已选汇总（紧凑）
-          if (this.selectedItemIds.length > 0) {
-            Text('已添加 ' + this.selectedItemIds.length.toString() + ' 件装备')
+          // 已选汇总（紧凑）— 使用乐观态实时反馈
+          if (this.optimisticSelectedIds.length > 0) {
+            Text('已添加 ' + this.optimisticSelectedIds.length.toString() + ' 件装备')
               .fontSize(12)
               .fontWeight(FontWeight.Medium)
               .fontColor(PRIMARY_COLOR)
@@ -172,7 +195,7 @@ export struct GearPickerSheet {
           } else {
             Scroll() {
               Column({ space: 0 }) {
-                ForEach(this.groupedGears(), (group: CategoryGroup) => {
+                ForEach(this.cachedGroups, (group: CategoryGroup) => {
                   this.buildCategorySection(group)
                 }, (group: CategoryGroup) => group.category + '_' + group.gears.length.toString())
               }
@@ -616,7 +639,7 @@ export struct GearPickerSheet {
     return result;
   }
 
-  private groupedGears(): CategoryGroup[] {
+  private computeGroupedGears(): CategoryGroup[] {
     const buckets = new Map<string, GearItem[]>();
     const customOrder: string[] = [];
     for (const g of this.filteredGears()) {
@@ -663,14 +686,23 @@ export struct GearPickerSheet {
 
   private handleGearTap(gear: GearItem): void {
     this.triggerHaptic();
-    if (!this.isSelected(gear.id)) {
+    // 乐观更新本地选中态，不等父级 Prop 回传（修复连续快速点击时视觉延迟）
+    const idx = this.optimisticSelectedIds.indexOf(gear.id);
+    if (idx >= 0) {
+      // 取消选中
+      const next = this.optimisticSelectedIds.slice();
+      next.splice(idx, 1);
+      this.optimisticSelectedIds = next;
+    } else {
+      // 选中
+      this.optimisticSelectedIds = this.optimisticSelectedIds.concat([gear.id]);
       this.lastAddedGearId = gear.id;
     }
     this.onToggleGear(gear);
   }
 
   private isSelected(gearId: string): boolean {
-    return this.selectedItemIds.indexOf(gearId) >= 0;
+    return this.optimisticSelectedIds.indexOf(gearId) >= 0;
   }
 
   private getZoneColor(zone: string): string {

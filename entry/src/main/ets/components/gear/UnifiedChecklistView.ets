@@ -66,6 +66,7 @@ import { ZoneGridCell } from './ZoneGridCell';
 import { FocusedZoneView } from './FocusedZoneView';
 import { LoadoutProgressBar } from './LoadoutProgressBar';
 import { GearItemContextMenu, ContextMenuItem } from './GearItemContextMenu';
+import { GearDetailSheet } from './GearDetailSheet';
 
 // 双列网格中走常规单列的 zone（杂项单独跨列渲染在末尾）。spec §2.1.2 F-5
 const GRID_SINGLE_ZONES: string[] = [
@@ -111,11 +112,25 @@ export struct UnifiedChecklistView {
   onRequestMoveSheet: (item: ChecklistItem) => void = () => {};
   // D-2：聚焦态「逐项核查本区」回调
   onReviewZone: (zone: string) => void = () => {};
+  // #10：格子内排序完成回调（重排后的 item id 数组）
+  onReorderItems: (zone: string, orderedIds: string[]) => void = () => {};
+  // #1：多选批量移动回调
+  onBatchMoveItems: (itemIds: string[], targetZone: string) => void = () => {};
+  // #1：多选后请求弹出 Zone 选择面板（由 Index 处理）
+  onRequestBatchMoveSheet: (itemIds: string[]) => void = () => {};
 
   // 入场动画控制
   @State private appeared: boolean = false;
   // 反算得到的单格高度
   @State private cellHeight: number = CELL_HEIGHT_FALLBACK;
+
+  // #3：装备详情底部半屏 Sheet
+  @State private detailSheetItem: ChecklistItem | null = null;
+  @State private detailSheetVisible: boolean = false;
+
+  // #1：多选模式信号（递增触发 FocusedZoneView 进入多选）
+  @State private multiSelectSignal: number = 0;
+  @State private multiSelectInitialId: string = '';
 
   // Phase 4：长按浮层 + 拖拽状态
   @State private overlayItem: ChecklistItem | null = null;
@@ -136,6 +151,12 @@ export struct UnifiedChecklistView {
   @State private dropTargetZone: string | null = null;
   // 各 zone 格子的全局 Rect（由 onAreaChange 收集）
   private zoneRects: Map<string, number[]> = new Map();
+  // #12：拖拽自动滚动
+  private gridScroller: Scroller = new Scroller();
+  private autoScrollTimer: number = -1;
+  private autoScrollSpeed: number = 0;
+  // 容器高度（用于计算边缘热区）
+  private containerHeight: number = 0;
   // 全屏聚焦的 Zone（null = 网格态）。spec §2.2 / §4.5.6
   // 问题4a：改 @Link 由 Index 持有 @State 源，使 onBackPressed 能读判断「是否聚焦」做分层拦截。
   //   注意：Index 不直接改此值（会丢收起动画），而是递增 closeFocusSignal 让本组件走带动画的 closeFocus()。
@@ -212,6 +233,24 @@ this.computeCellHeight();
         if (this.overlayItem !== null) {
           this.buildLongPressOverlay()
         }
+
+        // #3：装备详情底部半屏 Sheet
+        GearDetailSheet({
+          item: this.detailSheetItem,
+          gears: this.gears,
+          visible: this.detailSheetVisible,
+          onClose: () => { this.closeDetailSheet(); },
+          onEditGear: (_gearId: string) => {
+            this.closeDetailSheet();
+            if (this.detailSheetItem !== null) {
+              this.onEditItem(this.detailSheetItem);
+            }
+          },
+          onRemoveItem: (itemId: string) => {
+            this.onRemoveItem(itemId);
+            this.closeDetailSheet();
+          }
+        })
       }
       .layoutWeight(1)
       .width('100%')
@@ -222,6 +261,8 @@ this.computeCellHeight();
           this.overlayOriginX = n.globalPosition.x as number;
           this.overlayOriginY = n.globalPosition.y as number;
         }
+        // #12：记录容器高度用于边缘热区计算
+        this.containerHeight = n.height as number;
       })
     }
     .width('100%')
@@ -264,10 +305,13 @@ this.computeCellHeight();
         zone: this.focusedZoneRender,
         items: this.itemsForZone(this.focusedZoneRender),
         gears: this.gears,
+        renderNonce: this.checklistRenderNonce,
         zoneColor: this.zoneColor(this.focusedZoneRender),
         zoneStroke: this.zoneStroke(this.focusedZoneRender),
         zoneFill: this.zoneFocusBg(this.focusedZoneRender),
         active: this.focusedZone != null,
+        multiSelectSignal: this.multiSelectSignal,
+        multiSelectInitialId: this.multiSelectInitialId,
         onClose: () => { this.closeFocus(); },
         onTapEmpty: (z: string) => { this.onOpenPicker(z); },
         onToggleCheck: this.onToggleCheck,
@@ -275,6 +319,9 @@ this.computeCellHeight();
         onRemoveItem: this.onRemoveItem,
         onMoveItemToZone: this.onMoveItemToZone,
         onLongPressItem: (item: ChecklistItem) => { this.showOverlay(item); },
+        onTapItem: (item: ChecklistItem) => { this.openDetailSheet(item); },
+        onReorderItems: (zone: string, orderedIds: string[]) => { this.onReorderItems(zone, orderedIds); },
+        onRequestBatchMoveSheet: (ids: string[]) => { this.onRequestBatchMoveSheet(ids); },
         onReviewZone: this.onReviewZone
       })
         .width('100%')
@@ -318,6 +365,22 @@ this.computeCellHeight();
     this.getUIContext().animateTo({ curve: SPRING_HERO_COLLAPSE() }, () => {
       this.focusedZone = null;
     });
+  }
+
+  // ---- #3：装备详情 Sheet 控制 ----
+  private openDetailSheet(item: ChecklistItem): void {
+    this.detailSheetItem = item;
+    this.detailSheetVisible = true;
+  }
+
+  private closeDetailSheet(): void {
+    this.detailSheetVisible = false;
+    // 延迟清空 item，让退场动画完成
+    setTimeout(() => {
+      if (!this.detailSheetVisible) {
+        this.detailSheetItem = null;
+      }
+    }, 400);
   }
 
   // ---- Phase 4：长按浮层控制 ----
@@ -368,6 +431,16 @@ this.computeCellHeight();
         action: () => {
           this.dismissOverlay(true);
           this.onRequestMoveSheet(item);
+        }
+      },
+      {
+        icon: $r('sys.symbol.checkmark_circle'),
+        label: '选择多个',
+        action: () => {
+          this.dismissOverlay(true);
+          // 进入多选模式，初始选中当前 item
+          this.multiSelectInitialId = item.id;
+          this.multiSelectSignal++;
         }
       },
       {
@@ -423,8 +496,12 @@ this.computeCellHeight();
     const fingerGlobalX = this.longPressGlobalX + offsetX;
     const fingerGlobalY = this.longPressGlobalY + offsetY;
     // 胶囊跟手：position() 消费局部坐标
-    this.dragCurrentX = fingerGlobalX - this.overlayOriginX;
-    this.dragCurrentY = fingerGlobalY - this.overlayOriginY;
+    const localX = fingerGlobalX - this.overlayOriginX;
+    const localY = fingerGlobalY - this.overlayOriginY;
+    this.dragCurrentX = localX;
+    this.dragCurrentY = localY;
+    // #12：边缘热区自动滚动
+    this.checkAutoScroll(localY);
     // 命中判定
     const prevTarget = this.dropTargetZone;
     this.dropTargetZone = this.hitTestZone(fingerGlobalX, fingerGlobalY);
@@ -439,6 +516,8 @@ this.computeCellHeight();
     if (this.overlayItem === null) {
       return;
     }
+    // #12：停止自动滚动
+    this.stopAutoScroll();
     const fingerGlobalX = this.longPressGlobalX + offsetX;
     const fingerGlobalY = this.longPressGlobalY + offsetY;
     const target = this.hitTestZone(fingerGlobalX, fingerGlobalY);
@@ -468,6 +547,45 @@ this.computeCellHeight();
     this.dragCurrentX = 0;
     this.dragCurrentY = 0;
     this.dropTargetZone = null;
+    this.stopAutoScroll();
+  }
+
+  // ---- #12：拖拽边缘自动滚动 ----
+  private static readonly AUTO_SCROLL_EDGE: number = 80; // 热区高度 vp
+  private static readonly AUTO_SCROLL_INTERVAL: number = 16; // ~60fps
+
+  private checkAutoScroll(fingerLocalY: number): void {
+    const edge = UnifiedChecklistView.AUTO_SCROLL_EDGE;
+    if (fingerLocalY < edge) {
+      // 顶部热区：向上滚动（负值）
+      const ratio = (edge - fingerLocalY) / edge;
+      this.autoScrollSpeed = -ratio * 10;
+      this.startAutoScroll();
+    } else if (fingerLocalY > this.containerHeight - edge) {
+      // 底部热区：向下滚动（正值）
+      const ratio = (fingerLocalY - (this.containerHeight - edge)) / edge;
+      this.autoScrollSpeed = ratio * 10;
+      this.startAutoScroll();
+    } else {
+      this.stopAutoScroll();
+    }
+  }
+
+  private startAutoScroll(): void {
+    if (this.autoScrollTimer >= 0) {
+      return; // 已在滚动
+    }
+    this.autoScrollTimer = setInterval(() => {
+      this.gridScroller.scrollBy(0, this.autoScrollSpeed);
+    }, UnifiedChecklistView.AUTO_SCROLL_INTERVAL);
+  }
+
+  private stopAutoScroll(): void {
+    if (this.autoScrollTimer >= 0) {
+      clearInterval(this.autoScrollTimer);
+      this.autoScrollTimer = -1;
+      this.autoScrollSpeed = 0;
+    }
   }
 
   private triggerDropHaptic(): void {
@@ -534,7 +652,7 @@ this.computeCellHeight();
 
   @Builder
   private buildGridState() {
-    Grid() {
+    Grid(this.gridScroller) {
       // 前 6 个 zone 走双列自动布局
       ForEach(GRID_SINGLE_ZONES, (zone: string, index: number) => {
         GridItem() {
@@ -550,6 +668,7 @@ this.computeCellHeight();
             draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
             onTapTitle: (z: string) => { this.openFocus(z); },
             onTapEmpty: (z: string) => { this.onOpenPicker(z); },
+            onTapAdd: (z: string) => { this.onOpenPicker(z); },
             onToggleCheck: this.onToggleCheck,
             onLongPressItem: (item: ChecklistItem, gx: number, gy: number) => {
               this.handleGridLongPress(item, gx, gy);
@@ -589,6 +708,7 @@ this.computeCellHeight();
           draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
           onTapTitle: (z: string) => { this.openFocus(z); },
           onTapEmpty: (z: string) => { this.onOpenPicker(z); },
+          onTapAdd: (z: string) => { this.onOpenPicker(z); },
           onToggleCheck: this.onToggleCheck,
           onLongPressItem: (item: ChecklistItem, gx: number, gy: number) => {
             this.handleGridLongPress(item, gx, gy);
