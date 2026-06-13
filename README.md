@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.7.0
+## 当前版本：v0.7.4
 
 ### 已实现功能
 
@@ -47,7 +47,6 @@ entry/src/main/ets/
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
 │   ├── ProfilePage.ets      — 「我」Tab 人生足迹年报叙事
 │   ├── ReviewPage.ets       — 核查复盘
-│   ├── CheckItemPanel.ets — 装备/清单项编辑面板
 │   ├── TripCeremonyCard.ets — 新建行程仪式卡片（翻转 + 滑动出发）
 │   ├── CategoryTagGroup.ets — 分类标签组（横向滚动 + 操作动效）
 │   ├── EditGearPanel.ets    — 装备编辑半屏面板
@@ -149,7 +148,8 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.7.0 | ✅ 已完成 | 带格子的核查清单统一视图（第二灵魂）：统一网格态 + 全屏聚焦态 + 长按菜单 + 跨Zone拖拽流转 |
 | v0.7.1 | ✅ 已完成 | UI 质感提升：容器化 + 转场重构 + 拖动物理感深化 + 审查修订 |
 | v0.7.2 | ✅ 已完成 | 聚焦态满铺精装修（遮罩/淡色块/边框/去×键） |
-| v0.7.3 | ✅ 当前 | 数据一致性修复 + 按压反馈补全 |
+| v0.7.3 | ✅ 已完成 | 数据一致性修复 + 按压反馈补全 |
+| v0.7.4 | ✅ 当前 | 行程详情页格子交互三 Bug 修复（白底/长按穿透/菜单关闭） |
 | v0.8.0 | 📋 中期 | GearPage 组件瘦身（FabController/DragToTripOverlay/GroupDragController 提取） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 

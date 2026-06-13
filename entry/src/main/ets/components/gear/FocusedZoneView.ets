@@ -159,6 +159,8 @@ export struct FocusedZoneView {
       //   而非在 ZoneShell{} 外部挂 .onClick——外部 onClick 会被 ZoneShell 根节点自身的 onClick 抢占失效（旧 bug 根因）。
       //   不传 contentPressed（默认 false）→ scale 恒 1.0，大卡不缩放，无按压副作用。
       contentClickable: true,
+      // 问题6：聚焦态走「原地静止」判定——上下滑动列表空白区不再误触发收起，仅原地轻点才返回。
+      tapNeedsStationary: true,
       onTapContent: (_z: string) => { this.onClose(); },
       // D-2：逐项核查本区按钮在 titleTrailing 插槽中
       titleTrailing: () => { this.buildTrailing(); },

@@ -53,6 +53,12 @@ export struct ZoneShell {
   @Prop focusBorder: boolean = false;
   // 整块容器是否响应点击/按压（网格态点格子进聚焦；聚焦态卡内自有交互，关闭）
   @Prop contentClickable: boolean = false;
+  // 问题6：tap 是否要求「原地静止」才生效。
+  //   false（默认，网格态）：用 onClick——依赖 ArkUI「子 onClick 消费则父 onClick 不触发」
+  //     的互斥语义，点 check 圈/装备名不会误冒泡进聚焦（原设计依赖，不可破坏）。
+  //   true（聚焦态）：用 onTouch 全程位移判定——聚焦态列表内容不足一屏时上下滑空白区会被
+  //     误判为 click 触发收起，故只认「位移 < TAP_SLOP 的原地轻点」，滑动一律忽略。
+  @Prop tapNeedsStationary: boolean = false;
   // 整块容器按压态（宿主透传 @State）
   @Prop contentPressed: boolean = false;
   // 整块容器按压事件回上
@@ -70,6 +76,16 @@ export struct ZoneShell {
   @Builder
   emptyTrailing() {
   }
+
+  // 问题6 修复：tap 关闭/进聚焦的位移判定。
+  //   原先整块容器用无脑 onClick → onTapContent，当聚焦态列表内容不足一屏时，
+  //   在内容空白区上下滑动（List 滚不动）→ 垂直 pan 冒泡到根节点被判成 click → 误触发收起。
+  //   第一性原理：浏览手势（上下滑）与返回手势（轻点）必须正交。改为 onTouch 全程记录
+  //   按下坐标，抬手时仅当位移 < TAP_SLOP 才认定为「原地轻点」，否则视为滑动、忽略。
+  private static readonly TAP_SLOP: number = 10;
+  private touchDownX: number = 0;
+  private touchDownY: number = 0;
+  private touchMoved: boolean = false;
 
   build() {
     // 整块淡色容器：标题坐顶部，内容排标题下方，顶部对齐，空白由淡色背景消化。
@@ -113,14 +129,39 @@ export struct ZoneShell {
       if (!this.contentClickable) {
         return;
       }
+      const touch = e.touches.length > 0 ? e.touches[0] : undefined;
       if (e.type === TouchType.Down) {
         this.onContentTouch(true);
-      } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+        this.touchMoved = false;
+        if (touch !== undefined) {
+          this.touchDownX = touch.x;
+          this.touchDownY = touch.y;
+        }
+      } else if (e.type === TouchType.Move) {
+        // 累积位移超阈值即标记为「滑动」，后续抬手不再触发轻点关闭
+        if (touch !== undefined) {
+          const dx = touch.x - this.touchDownX;
+          const dy = touch.y - this.touchDownY;
+          if (Math.abs(dx) > ZoneShell.TAP_SLOP || Math.abs(dy) > ZoneShell.TAP_SLOP) {
+            this.touchMoved = true;
+          }
+        }
+      } else if (e.type === TouchType.Up) {
         this.onContentTouch(false);
+        // 聚焦态（tapNeedsStationary）：仅「原地轻点」（位移 < TAP_SLOP）才触发，滑动一律忽略。
+        //   网格态由 onClick 处理（互斥语义），此处不重复触发。
+        if (this.tapNeedsStationary && !this.touchMoved) {
+          this.onTapContent(this.zone);
+        }
+      } else if (e.type === TouchType.Cancel) {
+        this.onContentTouch(false);
+        this.touchMoved = false;
       }
     })
     .onClick(() => {
-      if (this.contentClickable) {
+      // 网格态：保留 onClick 互斥语义（子 onClick 消费则不触发），点 check 圈/装备名不误进聚焦。
+      //   聚焦态走 onTouch 位移判定，这里跳过避免双触发。
+      if (this.contentClickable && !this.tapNeedsStationary) {
         this.onTapContent(this.zone);
       }
     })

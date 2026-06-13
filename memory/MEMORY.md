@@ -74,7 +74,7 @@
   - Zone 映射：`BodyZone` 枚举 + `CATEGORY_SLOT_MAP` 在 `constants/GearLoadout.ets`；`groupByZoneAll`/`groupByZone`/`sortItemsByLayer` 等聚合函数在 `services/LoadoutService.ets`。装备按 `category` 查表自动归入格子
 - `ChecklistItem { id, name, group, checked, weight?, price?, fromGearId? }`（无 category/note/brand；聚焦态详情经 fromGearId 反查 GearItem 取 category/brand/note）
 
-## ArkUI 避坑清单（实战总结，共 44 条）
+## ArkUI 避坑清单（实战总结，共 45 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -125,6 +125,8 @@
 43. **半透明色浮在白底上会「透白发灰」** — 聚焦卡片浮在纯白/羽白实心遮罩之上时，卡片填充若用半透明色（如降低 alpha 的 zone 色），底下的白会透上来把颜色冲淡发灰，且整体偏「飘」无实体感。**解法**：用**不透明实心混合色**——把 zone 主题色与白色按百分比预混成 hex 常量（如 20% 公式 `白*0.8 + color*0.2`：Head #42A5F5 → #D9EDFD）。token 化为 `ZONE_*_FOCUS_BG`。配 2vp 实色边框补实体轮廓。淡到 8% 几乎纯白辨不出 zone 色，20% 是肉眼可辨 + 不刺眼的平衡点
 
 44. **`hitTestBehavior(HitTestMode.None)` 不可靠阻止子元素 `.onClick()`** — 父容器设 `hitTestBehavior(HitTestMode.None)` 时，其**子元素**自身注册的 `.onClick()` 仍可能拦截点击事件（平台 bug）。典型场景：Sheet/蒙层组件常驻 Stack 中，visible=false 时父 Stack 设 `HitTestMode.None`，但内部全屏 Column 的 `.onClick()` 仍吞掉所有点击 → 整页无法交互。**解法**：对含有 `.onClick()` 的不可见组件，**必须用 `if` 条件渲染将其从视图树中移除**，不能依赖 `hitTestBehavior(None)` 来屏蔽。退场动画需求时可延迟清空条件变量（如 400ms 后置 null）保留退场过渡。实战：`GearDetailSheet` 常驻 UnifiedChecklistView Stack 导致网格态全页无响应；`ZoneGridCell` 空态/内容态也用 if/else 而非双层常驻，同理
+
+45. **`GestureGroup(Sequence, LongPress+Pan)` 不阻止子节点 onClick 触发** — 当 `GestureGroup(GestureMode.Sequence, LongPressGesture, PanGesture)` 绑在 wrapper Column 上时，LongPress `onAction` 触发后松手，子节点（如 ChecklistRow）的 `.onClick()` 仍会在 touchUp 时触发——ArkUI 的 Sequence 手势完成不消费后续 click 事件。**后果**：长按弹菜单后松手，同时触发行展开/收起（onClick），造成双重响应。**解法**：在 wrapper 上维护 `@State longPressTriggered: boolean = false`，LongPress `onAction` 中置 true + `setTimeout(() => { this.longPressTriggered = false }, 500)` 延迟重置；所有 onClick 回调（`onTapContent`/`onTapRow`）入口处 `if (this.longPressTriggered) return` 短路。**注意**：flag 赋值必须在任何 early return（如 `if (isMultiSelectMode) return`）**之前**，否则特定模式下长按仍会穿透触发 onClick
 
 ### 补充验证结论
 

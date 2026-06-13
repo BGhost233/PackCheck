@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.4 (2026-06-13)
+
+行程详情页格子交互三 Bug 修复。修复 ChecklistRow 白底色块突兀、长按同时触发菜单和行展开/收起、上下文菜单需多次点击才能关闭的问题。
+
+**Bug 修复**
+
+- **ChecklistRow 白底突兀**：格子内装备行 `backgroundColor` 从 `CARD_BG`（纯白）改为 `Color.TRANSPARENT`，融入 ZoneShell 的 `zoneFill` 底色，消除视觉割裂。按压态改用 `'#33000000'` 半透明黑叠加（适配任意底色）
+- **长按同时触发菜单 + 行展开/收起**：`GestureGroup(Sequence, LongPress+Pan)` 的 LongPress `onAction` 触发后松手，子节点 `.onClick()` 仍会触发（ArkUI 平台行为）。新增 `@State longPressTriggered: boolean` 标志位，LongPress 触发时置 true + 500ms 延迟重置，`onTapContent`/`onTapRow` 入口短路。ZoneGridCell + FocusedZoneView 两处同步修复
+- **上下文菜单需多次点击关闭**：覆盖层 Stack 的 `hitTestBehavior` 从 `overlayPhase === 'dragging' ? None : Default` 改为 `overlayPhase === 'menu' && overlayVisible ? Default : None`——仅在菜单可见时拦截触摸，其余时刻完全透传，消除 dismissOverlay 150ms 延迟窗口内的触摸吞噬
+
+**额外发现 & 修复**
+
+- **FocusedZoneView 多选模式穿透**：`longPressTriggered = true` 赋值必须在 `if (isMultiSelectMode) return` 之前，否则多选模式下长按仍穿透触发 onClick toggle
+
+> 核心经验沉淀至 MEMORY.md 避坑 #45（GestureGroup Sequence 不阻止子节点 onClick）。
+
 ## v0.7.3 (2026-06-13)
 
 数据一致性修复 + 按压反馈补全。修复装备 mutation 后清单视图不刷新的隐蔽 bug，补齐 GearPickerSheet / GearPage 残余按压反馈空白。

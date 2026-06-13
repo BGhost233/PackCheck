@@ -90,7 +90,7 @@ export const SHADOW_MEDIUM: string = '#28000000';
 
 // ============ Zone 颜色（配装系统） ============
 export const ZONE_HEAD_COLOR: string = '#42A5F5';
-export const ZONE_UPPER_COLOR: string = '#EF5350';
+export const ZONE_UPPER_COLOR: string = '#EC407A';
 export const ZONE_LOWER_COLOR: string = '#5C6BC0';
 export const ZONE_FEET_COLOR: string = '#8D6E63';
 export const ZONE_CARRY_COLOR: string = '#FFA726';
@@ -99,7 +99,7 @@ export const ZONE_MISC_COLOR: string = '#78909C';
 
 // ============ Zone 颜色半透明变体（20% opacity） ============
 export const ZONE_HEAD_TINT: string = '#3342A5F5';
-export const ZONE_UPPER_TINT: string = '#33EF5350';
+export const ZONE_UPPER_TINT: string = '#33EC407A';
 export const ZONE_LOWER_TINT: string = '#335C6BC0';
 export const ZONE_FEET_TINT: string = '#338D6E63';
 export const ZONE_CARRY_TINT: string = '#33FFA726';
@@ -110,7 +110,7 @@ export const ZONE_MISC_TINT: string = '#3378909C';
 // 用于 ZoneShell 整格淡色填充背景。比 TINT(20%) 更淡，避免整块染色过浓发脏；
 // 比 STROKE(8~14%) 略重，保证内容文字在其上仍清晰可读。便单四象限色块同档观感。
 export const ZONE_HEAD_FILL: string = '#1F42A5F5';
-export const ZONE_UPPER_FILL: string = '#1FEF5350';
+export const ZONE_UPPER_FILL: string = '#1FEC407A';
 export const ZONE_LOWER_FILL: string = '#1F5C6BC0';
 export const ZONE_FEET_FILL: string = '#1F8D6E63';
 export const ZONE_CARRY_FILL: string = '#1FFFA726';
@@ -123,7 +123,7 @@ export const ZONE_MISC_FILL: string = '#1F78909C';
 // 8% 太淡（zone 色辨不出、卡片飘在遮罩上无实体感），加深到 20%——明显可辨该部位主题色，
 // 又不至于像 FILL(半透明)那样大面积压抑，便单四象限聚焦色块同档：淡而有色、纯净、可读性高。
 export const ZONE_HEAD_FOCUS_BG: string = '#D9EDFD';
-export const ZONE_UPPER_FOCUS_BG: string = '#FCDDDC';
+export const ZONE_UPPER_FOCUS_BG: string = '#FCE0EC';
 export const ZONE_LOWER_FOCUS_BG: string = '#DEE1F2';
 export const ZONE_FEET_FOCUS_BG: string = '#E8E2E0';
 export const ZONE_CARRY_FOCUS_BG: string = '#FFEDD3';
@@ -131,10 +131,10 @@ export const ZONE_SLEEP_FOCUS_BG: string = '#E5DDF3';
 export const ZONE_MISC_FOCUS_BG: string = '#E4E9EB';
 
 // ============ Zone 容器描边色（按饱和度分档，B-1） ============
-// 高饱和（蓝/红/靛）~8% alpha，中饱和（橙/紫）~11%，低饱和（棕/灰蓝）~14%，
+// 高饱和（蓝/粉/靛）~8% alpha，中饱和（橙/紫）~11%，低饱和（棕/灰蓝）~14%，
 // 目的：视觉描边深浅在七个部位间观感均衡，避免高饱和色描边过重。
 export const ZONE_HEAD_STROKE: string = '#1442A5F5';
-export const ZONE_UPPER_STROKE: string = '#14EF5350';
+export const ZONE_UPPER_STROKE: string = '#14EC407A';
 export const ZONE_LOWER_STROKE: string = '#145C6BC0';
 export const ZONE_FEET_STROKE: string = '#248D6E63';
 export const ZONE_CARRY_STROKE: string = '#1CFFA726';

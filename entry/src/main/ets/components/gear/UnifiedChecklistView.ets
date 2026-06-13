@@ -348,7 +348,10 @@ this.computeCellHeight();
     }
     .width('100%')
     .height('100%')
-    .padding({ left: GRID_PADDING, right: GRID_PADDING, top: 8, bottom: 96 })
+    // 问题3c 修复：底部 padding 由 96 降到 24。原 96vp 把卡片下边界硬抬高 96vp，
+    //   卡片 clip(true) 导致列表滚到卡片下沿即被裁切，视觉上「内容到某条线突然截断消失」。
+    //   降到 24vp 后卡片几乎贴到底部安全区上方，列表内容可完整滚动展示，下方留呼吸而非硬切。
+    .padding({ left: GRID_PADDING, right: GRID_PADDING, top: 8, bottom: 24 })
     .visibility(this.focusedZone != null ? Visibility.Visible : Visibility.Hidden)
     .hitTestBehavior(this.focusedZone != null ? HitTestMode.Default : HitTestMode.None)
   }
