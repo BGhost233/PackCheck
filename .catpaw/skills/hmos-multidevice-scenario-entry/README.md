@@ -1,0 +1,3 @@
+# hmos-multidevice-scenario-entry
+
+Entry skill for HarmonyOS multi-device adaptation. Use when the task broadly concerns HarmonyOS multi-device adaptation, the task involves foldable device verification or when the correct scenario is still unclear. This skill classifies the request by phase and scenario type, then routes to one or more scenario files for screen and window size, fold state, avoid areas, interaction methods, natural orientation, or hardware access. Original repository：https://gitcode.com/HarmonyOS_Skills/harmonyos-agent-skills

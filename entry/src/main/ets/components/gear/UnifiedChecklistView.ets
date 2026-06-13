@@ -47,6 +47,8 @@ import {
   SPRING_PRESS,
   SPRING_HERO_EXPAND,
   SPRING_HERO_COLLAPSE,
+  SPRING_SCROLL,
+  SPRING_HEAD_FOLLOW,
   STAGGER_OFFSET_Y,
   GRID_FOCUS_BLUR,
   GRID_FOCUS_SINK_Y,
@@ -94,6 +96,12 @@ const BOTTOM_DIFFUSE_CLEAR_STOP: number = 0.8;
 // 底部同色渐隐遮罩高度：纯 PAGE_BG 透明→实心，让渐糊的底部卡片继续淡入背景并贯通到安全区。
 const BOTTOM_FADE_HEIGHT: number = 96;
 
+// 问题4a：head 随网格滚动渐进折叠的总位移（vp）。
+//   = SharedInfo(28，TripDetailPage 日期行) + ProgressBar(48，本组件进度条) = 76。
+//   网格滚动 0→此距离，headCollapseProgress 线性 0→1，期间严格 1:1 跟手（无动画）。
+//   松手后惯性停在中间态时再做就近吸附（Spring）。对齐 iOS Large Title 范式。
+const HEAD_COLLAPSE_DISTANCE: number = 76;
+
 @Component
 export struct UnifiedChecklistView {
   @Prop @Watch('onTripChange') trip: TripChecklist = { id: '', title: '', items: [], createdAt: 0 };
@@ -121,9 +129,18 @@ export struct UnifiedChecklistView {
   onReorderItems: (zone: string, orderedIds: string[]) => void = () => {};
   // #1：多选后请求弹出 Zone 选择面板（由 Index 处理）
   onRequestBatchMoveSheet: (itemIds: string[]) => void = () => {};
+  // 问题4a：head 折叠进度变化回调（0=全展开，1=全折叠）。父层 TripDetailPage 据此插值收起日期行（SharedInfo），
+  //   与本组件的 ProgressBar 折叠同帧联动，形成「整条 head 随滚动连续收没」的 iOS Large Title 手感。
+  //   snapping：是否吸附动画态（父层据此选曲线——跟手用即时跟随，吸附用 SPRING_SCROLL）。
+  onHeadCollapseChange: (progress: number, snapping: boolean) => void = () => {};
 
   // 入场动画控制
   @State private appeared: boolean = false;
+  // 问题4a：head 折叠进度（0=全展开，1=全折叠）。
+  //   跟手期间由 Grid.onScroll 实时 1:1 赋值（无动画）；松手惯性停在中间态时由 onScrollStop 走 Spring 吸附就近端。
+  @State private headCollapseProgress: number = 0;
+  // 问题4a：是否处于吸附动画中——区分曲线：跟手时不挂 animation（靠高频赋值实时跟），吸附时挂 SPRING_SCROLL。
+  @State private headSnapping: boolean = false;
   // 反算得到的单格高度
   @State private cellHeight: number = CELL_HEIGHT_FALLBACK;
 
@@ -199,6 +216,23 @@ onReservedTopChange(): void {
 this.computeCellHeight();
 }
 
+// 问题4a：有效折叠程度 = 两个来源取「更折叠」者。
+//   聚焦态吃满 1（聚焦卡片要顶到 navbar 下沿，head 必须全收）；非聚焦时跟随滚动进度。
+private effectiveHeadCollapse(): number {
+  return this.focusedZone != null ? 1 : this.headCollapseProgress;
+}
+
+// 问题4a：head 折叠动画曲线分三态——
+//   聚焦态开关切换走 SPRING_HERO（展/收方向不同）；
+//   滚动吸附走 SPRING_SCROLL（沉稳收尾）；
+//   跟手滚动走 SPRING_HEAD_FOLLOW（responsiveSpringMotion 近 1:1 实时跟随，不抢手感）。
+private headCollapseCurve(): ICurve {
+  if (this.focusedZone != null) {
+    return SPRING_HERO_EXPAND();
+  }
+  return this.headSnapping ? SPRING_SCROLL() : SPRING_HEAD_FOLLOW();
+}
+
   build() {
     Column() {
       // 顶部全局进度条（sticky 吸顶，仅有内容时显示）。spec §2.1 / §3.3
@@ -213,10 +247,13 @@ this.computeCellHeight();
           })
         }
         .width('100%')
-        .height(this.focusedZone != null ? 0 : 48)
+        // 问题4a：折叠程度融合两个来源——聚焦态吃满 1（走 SPRING_HERO 开关动画），
+        //   非聚焦时跟随滚动 headCollapseProgress（跟手 1:1 无动画，吸附走 SPRING_SCROLL）。
+        //   展开高度 48，线性插值到 0。
+        .height(48 * (1 - this.effectiveHeadCollapse()))
         .clip(true)
-        .opacity(this.focusedZone != null ? 0 : 1)
-        .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
+        .opacity(1 - this.effectiveHeadCollapse())
+        .animation({ curve: this.headCollapseCurve() })
       }
 
       Stack() {
@@ -941,6 +978,42 @@ this.computeCellHeight();
     .edgeEffect(EdgeEffect.Spring)
     // B2：拖拽期间锁定 Grid 滚动，防止边拖边滚导致落点偏移
     .enableScrollInteraction(this.overlayPhase !== 'dragging')
+    // 问题4a：head 随网格滚动渐进折叠。第一性原理——折叠程度 = 滚动意图的实时映射（连续量，非开关）。
+    //   跟手阶段严格 1:1 实时赋值、零动画、绝不抢手感；松手吸附交给 onScrollStop。
+    //   聚焦态下 head 已由 focusedZone 开关吃满折叠（走 SPRING_HERO），此处跳过避免双驱动打架。
+    .onScroll(() => {
+      if (this.focusedZone != null) {
+        return;
+      }
+      const yOffset: number = this.gridScroller.currentOffset().yOffset;
+      const p: number = Math.min(1, Math.max(0, yOffset / HEAD_COLLAPSE_DISTANCE));
+      this.headSnapping = false;
+      this.headCollapseProgress = p;
+      this.onHeadCollapseChange(p, false);
+    })
+    // 问题4a：松手 + 惯性结束后的「就近吸附」。对齐 iOS Large Title——绝不让 head 停在半折叠残缺态。
+    //   仅在中间态 (0,1) 开区间吸附；已是 0/1 时不做多余动画。吸附用 SPRING_SCROLL（沉稳收尾感）。
+    .onScrollStop(() => {
+      if (this.focusedZone != null) {
+        return;
+      }
+      const p: number = this.headCollapseProgress;
+      if (p <= 0 || p >= 1) {
+        return;
+      }
+      const targetProgress: number = p < 0.5 ? 0 : 1;
+      const targetOffset: number = targetProgress * HEAD_COLLAPSE_DISTANCE;
+      this.headSnapping = true;
+      this.gridScroller.scrollTo({
+        xOffset: 0,
+        yOffset: targetOffset,
+        animation: { curve: SPRING_SCROLL() }
+      });
+      this.getUIContext().animateTo({ curve: SPRING_SCROLL() }, () => {
+        this.headCollapseProgress = targetProgress;
+        this.onHeadCollapseChange(targetProgress, true);
+      });
+    })
     // 问题3b：底部「逐渐弥散」——linearGradientBlur 糊的是组件自身内容（卡片），
     //   按视口垂直位置渐变：顶部 BOTTOM_DIFFUSE_CLEAR_STOP 以上完全清晰，往下模糊强度线性爬升到底沿满值。
     //   物理上连续渐变 → 无任何硬边。聚焦态下方已有整网格 .blur，关闭弥散避免双重模糊。

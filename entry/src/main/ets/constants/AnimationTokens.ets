@@ -15,6 +15,10 @@ export const SPRING_SCROLL = (): ICurve => curves.springMotion(0.45, 0.85);
 export const SPRING_HERO_EXPAND = (): ICurve => curves.springMotion(0.42, 0.73);
 export const SPRING_HERO_COLLAPSE = (): ICurve => curves.springMotion(0.36, 0.78);
 
+// 问题4a：head 随滚动跟手折叠。responsiveSpringMotion 专为连续手势跟随设计——
+//   高频赋值时平滑接管而非重启动画，response 极短近 1:1 实时跟手、不抢手感。
+export const SPRING_HEAD_FOLLOW = (): ICurve => curves.responsiveSpringMotion(0.15, 1.0);
+
 // 面板弹性升起/收回
 export const SPRING_PANEL_ENTER = (): ICurve => curves.springMotion(0.38, 0.72);
 export const SPRING_PANEL_EXIT = (): ICurve => curves.springMotion(0.30, 0.88);

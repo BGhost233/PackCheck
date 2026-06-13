@@ -16,7 +16,8 @@ import {
   SPRING_PRESS,
   PRESS_SCALE_DOWN,
   SPRING_HERO_EXPAND,
-  SPRING_HERO_COLLAPSE
+  SPRING_SCROLL,
+  SPRING_HEAD_FOLLOW
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { UnifiedChecklistView } from './UnifiedChecklistView';
@@ -52,6 +53,11 @@ export struct TripDetailPage {
   @State private infoScale: number = 1.0;
   // 更多菜单展开
   @State private showMoreMenu: boolean = false;
+  // 问题4a：head 随网格滚动的折叠进度（0=全展开，1=全折叠），由 UnifiedChecklistView.onScroll 回调驱动。
+  //   本层据此插值收起日期行（SharedInfo），与子组件进度条折叠同帧联动。
+  @State private headCollapseProgress: number = 0;
+  // 问题4a：是否处于吸附动画态（区分曲线：跟手用即时跟随，吸附用 SPRING_SCROLL）。
+  @State private headSnapping: boolean = false;
 
   // ChecklistDetail callbacks (透传)
   onReturnHome: () => void = () => {};
@@ -83,6 +89,19 @@ export struct TripDetailPage {
   onReorderItems: (zone: string, orderedIds: string[]) => void = () => {};
   // #1：多选批量移动请求（弹出 Zone 选择面板）
   onRequestBatchMoveSheet: (itemIds: string[]) => void = () => {};
+
+  // 问题4a：有效折叠程度 = 聚焦态与滚动态取「更折叠」者。聚焦时日期行必须全收（让位给聚焦卡片）。
+  private effectiveHeadCollapse(): number {
+    return this.focusedZone != null ? 1 : this.headCollapseProgress;
+  }
+
+  // 问题4a：日期行折叠曲线——聚焦态走 SPRING_HERO；滚动吸附走 SPRING_SCROLL；跟手走 SPRING_HEAD_FOLLOW（近 1:1 实时）。
+  private headCollapseCurve(): ICurve {
+    if (this.focusedZone != null) {
+      return SPRING_HERO_EXPAND();
+    }
+    return this.headSnapping ? SPRING_SCROLL() : SPRING_HEAD_FOLLOW();
+  }
 
   private currentChecklist(): TripChecklist | undefined {
     for (let i = 0; i < this.checklists.length; i++) {
@@ -135,7 +154,12 @@ export struct TripDetailPage {
         onRequestMoveSheet: this.onRequestMoveSheet,
         onReorderItems: this.onReorderItems,
         onRequestBatchMoveSheet: this.onRequestBatchMoveSheet,
-        onReviewZone: this.onOpenZoneReview
+        onReviewZone: this.onOpenZoneReview,
+        // 问题4a：接收子组件 head 折叠进度，驱动本层 SharedInfo 日期行同帧收起。
+        onHeadCollapseChange: (progress: number, snapping: boolean) => {
+          this.headSnapping = snapping;
+          this.headCollapseProgress = progress;
+        }
       })
         .layoutWeight(1)
     }
@@ -265,10 +289,12 @@ export struct TripDetailPage {
       //   让出空间给聚焦卡片顶到 navbar 下沿。Spring 与聚焦转场同帧（focusedZone 驱动），
       //   形成「head 被压扁吸走」的连续空间让渡，而非硬切消失。
       //   日期为单行 12 字号，展开高度固定 28（与 reservedTop 的 SHARED_INFO 一致，可插值）。
-      .height(this.focusedZone != null ? 0 : 28)
+      // 问题4a：日期行高度/透明度随有效折叠程度插值（展开 28→折叠 0），
+      //   与子组件 ProgressBar 折叠同帧联动——整条 head 随滚动连续收没。
+      .height(28 * (1 - this.effectiveHeadCollapse()))
       .clip(true)
-      .opacity(this.focusedZone != null ? 0 : 1)
-      .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
+      .opacity(1 - this.effectiveHeadCollapse())
+      .animation({ curve: this.headCollapseCurve() })
       .scale({ x: this.infoScale, y: this.infoScale })
       .animation({ curve: SPRING_PRESS() })
       .onTouch((e: TouchEvent) => {

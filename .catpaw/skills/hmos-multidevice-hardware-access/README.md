@@ -1,0 +1,3 @@
+# hmos-multidevice-hardware-access
+
+Handle HarmonyOS hardware-capability adaptation through a declarative scene and resource index. Use when the task involves camera selection, camera rotation/stride/foldable adaptation, canIUse or SysCap checks, hardware fallback strategy, or multi-device hardware behavior differences. Original repository：https://gitcode.com/HarmonyOS_Skills/harmonyos-agent-skills

@@ -1,0 +1,3 @@
+# hmos-multidevice-fold-state
+
+HarmonyOS foldable-device adaptation skill for requirements, development, bug-fix, and verification phases. Activate when the task involves fold status detection, hover-mode split-screen layouts, crease avoidance, fold continuity, multi-fold form-factor mapping (e.g. F/M/G), inner/outer screen ratio differences, or fold-related issue remediation. Original repository：https://gitcode.com/HarmonyOS_Skills/harmonyos-agent-skills
