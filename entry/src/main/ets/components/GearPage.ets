@@ -110,6 +110,8 @@ export struct GearPage {
     @State private pressedGroupId: string = '';
   @State private pressedSortBtn: boolean = false;
   @State private pressedFilterPill: boolean = false;
+  @State private pressedSearchBtn: boolean = false;
+  @State private pressedCancelText: boolean = false;
   @State private listEntered: boolean = false;
 
   // --- 分组拖拽排序 ---
@@ -1060,6 +1062,16 @@ export struct GearPage {
                   .fontSize(14)
                   .fontColor(TEXT_SECONDARY)
                   .padding({ left: 10, right: 4 })
+                  .scale({ x: this.pressedCancelText ? PRESS_SCALE_DOWN : 1.0,
+                    y: this.pressedCancelText ? PRESS_SCALE_DOWN : 1.0 })
+                  .animation({ curve: SPRING_PRESS() })
+                  .onTouch((e: TouchEvent) => {
+                    if (e.type === TouchType.Down) {
+                      this.pressedCancelText = true;
+                    } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                      this.pressedCancelText = false;
+                    }
+                  })
                   .onClick(() => {
                     this.getUIContext().animateTo({
                       curve: SPRING_SEARCH()
@@ -1082,9 +1094,21 @@ export struct GearPage {
               adaptiveColor: AdaptiveColor.DEFAULT
             })
             .backgroundColor(this.searchExpanded ? GLASS_BG : PRIMARY_TINT_COLOR)
+            .scale({ x: (!this.searchExpanded && this.pressedSearchBtn) ? PRESS_SCALE_DOWN : 1.0,
+              y: (!this.searchExpanded && this.pressedSearchBtn) ? PRESS_SCALE_DOWN : 1.0 })
             .animation({ curve: SPRING_SEARCH() })
+            .onTouch((e: TouchEvent) => {
+              if (!this.searchExpanded) {
+                if (e.type === TouchType.Down) {
+                  this.pressedSearchBtn = true;
+                } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                  this.pressedSearchBtn = false;
+                }
+              }
+            })
             .onClick(() => {
               if (!this.searchExpanded) {
+                this.pressedSearchBtn = false;
                 this.getUIContext().animateTo({
                   curve: SPRING_SEARCH()
                 }, () => {

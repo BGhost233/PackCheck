@@ -62,6 +62,9 @@ export struct GearPickerSheet {
   @State private lastAddedGearId: string = '';
   @State private newEntryScale: number = 1.0;
 
+  @State private pressedCatPill: string = '';
+  @State private pressedZonePill: string = '';
+
   // ===== 新建态状态 =====
   @State private isCreateMode: boolean = false;
   @State private tempName: string = '';
@@ -263,7 +266,16 @@ export struct GearPickerSheet {
                   .backgroundColor(this.tempCategory === cat ? PRIMARY_COLOR : INPUT_BG)
                   .borderRadius(14)
                   .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+                  .scale({ x: this.pressedCatPill === cat ? PRESS_SCALE_DOWN : 1.0,
+                    y: this.pressedCatPill === cat ? PRESS_SCALE_DOWN : 1.0 })
                   .animation({ curve: SPRING_PRESS() })
+                  .onTouch((e: TouchEvent) => {
+                    if (e.type === TouchType.Down) {
+                      this.pressedCatPill = cat;
+                    } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                      this.pressedCatPill = '';
+                    }
+                  })
                   .onClick(() => {
                     this.triggerHaptic();
                     this.tempCategory = cat;
@@ -292,7 +304,16 @@ export struct GearPickerSheet {
                   .backgroundColor(this.tempZone === zone ? this.getZoneColor(zone) : INPUT_BG)
                   .borderRadius(14)
                   .padding({ left: 12, right: 12, top: 6, bottom: 6 })
+                  .scale({ x: this.pressedZonePill === zone ? PRESS_SCALE_DOWN : 1.0,
+                    y: this.pressedZonePill === zone ? PRESS_SCALE_DOWN : 1.0 })
                   .animation({ curve: SPRING_PRESS() })
+                  .onTouch((e: TouchEvent) => {
+                    if (e.type === TouchType.Down) {
+                      this.pressedZonePill = zone;
+                    } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                      this.pressedZonePill = '';
+                    }
+                  })
                   .onClick(() => {
                     this.triggerHaptic();
                     this.tempZone = zone;
