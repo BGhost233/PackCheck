@@ -22,6 +22,7 @@
 - 滑动过程增强：按下 haptic.effect.soft + 颜色加深 + 轨道下沉；滑动中绿色进度条 + 25%/50%/75% 棘轮振动
 - 主题色 `#2D7D46` 山野绿；列表元信息分隔点用 `META_SEPARATOR(#C2C2C2)`（弱于 plain 文字 #999、强于背景线；不要用 `DIVIDER_COLOR(#F0F0F0)` — 过淡看不见）
 - 所有动画使用 Spring 弹性曲线，严禁 linear/ease
+- **顶部折叠范式统一（对齐 iOS Large Title）**：项目内所有 head 随滚动折叠场景（首页/装备库/行程详情）统一走 `HeadCollapseController`。体验决策（第一性原理+Apple 标准自主定）：跟手期 progress 严格 1:1 实时映射（零吸附、不抢手感，走 `SPRING_HEAD_FOLLOW`）；松手惯性停在 (0,1) 中间态才就近吸附到 0 或 1（走 `SPRING_SCROLL`），绝不留半折叠残缺态。两种互不兼容的布局范式对控制器透明：inline 塌缩（TripDetailPage，head 真实兄弟节点高度归零）vs overlay 定高变形（HomePage/GearPage，head 用 `.position` 浮起靠字号/透明度变形）
 - `geometryTransition` 两种语境，参数不同（详避坑 #10）：跨页 Navigation 转场（`trip-*`）用**无参形式**（follow:true 会破坏文档流布局）；同页就地放大（`zone_*` 网格态↔聚焦态）用 **`{ follow: true }`**，前提是两端 `ZoneShell` 外壳 100% 一致 + 同帧赋值
 - NavDestination 加 `.onBackPressed()` 拦截系统手势返回，统一走 `animateTo { pop(false) }` 保证 geometryTransition 生效
 - 转场 Spring 参数：expand `springMotion(0.42, 0.73)`，collapse `springMotion(0.36, 0.78)` — 经实机调优，兼顾弹性和克制
@@ -61,7 +62,8 @@
 - PackModels.ets 导出 `CATEGORY_ALL`（哨兵常量替代魔法字符串 '全部'）和 `CATEGORY_FALLBACK`（受保护分类 '其他'）
 - `makeId()` 使用 `Date.now()` + 模块级单调递增计数器防碰撞
 - PackStore.ets schema 版本化（v1），初始化失败时 `initFailed` 标志位阻止写入
-- AnimationTokens.ets 中定义了 9 个 Spring 预设：SPRING_GENERAL / PRESS / TAB / COUNTER / SCROLL / HERO_EXPAND / HERO_COLLAPSE / PANEL_ENTER / PANEL_EXIT + 时长/缩放常量
+- AnimationTokens.ets 中定义了 9 个 Spring 预设：SPRING_GENERAL / PRESS / TAB / COUNTER / SCROLL / HERO_EXPAND / HERO_COLLAPSE / PANEL_ENTER / PANEL_EXIT + 时长/缩放常量；另有 `SPRING_HEAD_FOLLOW = curves.responsiveSpringMotion(0.15, 1.0)`（跟手近 1:1）供顶部折叠专用
+- **HeadCollapseController.ets（utils/，统一折叠数学内核）**：普通有状态 class，抽象边界 = 只统一「滚动数学」（progress 计算/跟手 1:1/松手就近吸附/曲线分流/强制折叠），**不统一 head 渲染**。配置走 `HeadCollapseConfig`：collapseDistance(折叠总位移 vp)/enableSnap/getUIContext(注入)/onChange(progress,snapping)/snapThreshold?。关键方法：`progress()` 返 forcedCollapsed?1:scrollProgress；`curve()` 分流(吸附/强折走 SCROLL、跟手走 HEAD_FOLLOW)；`handleScroll(scroller)` 挂 Grid.onScroll / List·Scroll.onDidScroll；`handleScrollStop(scroller)` 挂 .onScrollStop 做中间态吸附(scrollTo+animateTo)；`setForcedCollapsed(forced)` 旁路强折（聚焦/搜索）。三处已迁移对齐：TripDetailPage(UnifiedChecklistView 持控制器、TripDetail 只消费回调)、HomePage、GearPage。⚠️ GearPage 锁定态（searchExpanded/multiSelect）**不走 setForcedCollapsed**——搜索态视觉（纯背景 PAGE_BG/零模糊）≠ progress=1（半透明毛玻璃 #CCF8F9FA/模糊40），保留 bg/blur 特判、零视觉回归
 - 导航架构：单 Page（Index.ets）+ Navigation NavPathStack，两个 NavDestination（ChecklistDetail、ReviewPage）
 - TripCeremonyCard 暴露 `onExitStart` 回调，退场动画启动第一帧触发，供父组件并行驱动背景恢复
 - **统一核查清单视图（v0.7.0 第二灵魂）**：行程详情页砍掉配装/清单 SegmentButton 切换，合并为单一 `UnifiedChecklistView`。组件结构：
@@ -74,7 +76,7 @@
   - Zone 映射：`BodyZone` 枚举 + `CATEGORY_SLOT_MAP` 在 `constants/GearLoadout.ets`；`groupByZoneAll`/`groupByZone`/`sortItemsByLayer` 等聚合函数在 `services/LoadoutService.ets`。装备按 `category` 查表自动归入格子
 - `ChecklistItem { id, name, group, checked, weight?, price?, fromGearId? }`（无 category/note/brand；聚焦态详情经 fromGearId 反查 GearItem 取 category/brand/note）
 
-## ArkUI 避坑清单（实战总结，共 45 条）
+## ArkUI 避坑清单（实战总结，共 46 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -127,6 +129,8 @@
 44. **`hitTestBehavior(HitTestMode.None)` 不可靠阻止子元素 `.onClick()`** — 父容器设 `hitTestBehavior(HitTestMode.None)` 时，其**子元素**自身注册的 `.onClick()` 仍可能拦截点击事件（平台 bug）。典型场景：Sheet/蒙层组件常驻 Stack 中，visible=false 时父 Stack 设 `HitTestMode.None`，但内部全屏 Column 的 `.onClick()` 仍吞掉所有点击 → 整页无法交互。**解法**：对含有 `.onClick()` 的不可见组件，**必须用 `if` 条件渲染将其从视图树中移除**，不能依赖 `hitTestBehavior(None)` 来屏蔽。退场动画需求时可延迟清空条件变量（如 400ms 后置 null）保留退场过渡。实战：`GearDetailSheet` 常驻 UnifiedChecklistView Stack 导致网格态全页无响应；`ZoneGridCell` 空态/内容态也用 if/else 而非双层常驻，同理
 
 45. **`GestureGroup(Sequence, LongPress+Pan)` 不阻止子节点 onClick 触发** — 当 `GestureGroup(GestureMode.Sequence, LongPressGesture, PanGesture)` 绑在 wrapper Column 上时，LongPress `onAction` 触发后松手，子节点（如 ChecklistRow）的 `.onClick()` 仍会在 touchUp 时触发——ArkUI 的 Sequence 手势完成不消费后续 click 事件。**后果**：长按弹菜单后松手，同时触发行展开/收起（onClick），造成双重响应。**解法**：在 wrapper 上维护 `@State longPressTriggered: boolean = false`，LongPress `onAction` 中置 true + `setTimeout(() => { this.longPressTriggered = false }, 500)` 延迟重置；所有 onClick 回调（`onTapContent`/`onTapRow`）入口处 `if (this.longPressTriggered) return` 短路。**注意**：flag 赋值必须在任何 early return（如 `if (isMultiSelectMode) return`）**之前**，否则特定模式下长按仍会穿透触发 onClick
+
+46. **普通 class 改字段不触发 ArkUI re-render（控制器必配 @State 镜像）** — ArkUI 的依赖收集只订阅 `build()` 中读到的 `@State`/`@Link` 等装饰器状态。把状态放到一个**普通 class 实例**里（如 `HeadCollapseController` 的 `scrollProgress` 字段），改它**不会**触发任何 re-render——即使 build 里调了 `controller.progress()`。**后果**：滚动变了但 head 不动（画面定格）。**解法**：页面持一个 `@State progress` 镜像，控制器通过 `onChange(progress, snapping)` 回调推动页面 `this.headProgress = progress`（这才是装饰器赋值、触发刷新）；渲染处一律读 `this.headProgress` 镜像，**绝不**直接读 `controller.progress()`。**配套**：控制器无 `getUIContext()`，`animateTo` 需的 `UIContext` 必须由页面经 config 注入（`getUIContext: () => this.getUIContext()`）。适用于任何「逻辑抽到普通 class 但要驱动 UI」的场景
 
 ### 补充验证结论
 

@@ -22,9 +22,10 @@ entry/src/main/ets/
 │   ├── SheetMode.ets        — Sheet 状态枚举
 │   ├── GearSort.ets         — 排序枚举
 │   └── DesignTokens.ets     — Barrel re-export（保持旧 import 路径兼容）
-├── utils/                   — 工具函数（纯函数，无状态）
+├── utils/                   — 工具函数（纯函数为主，含个别通用 UI 基础设施 class）
 │   ├── ColorUtils.ets       — 颜色计算
-│   └── AnimationUtils.ets   — 通用动画封装（Builder/函数）
+│   ├── AnimationUtils.ets   — 通用动画封装（Builder/函数）
+│   └── HeadCollapseController.ets — 顶部折叠滚动数学内核（有状态 class，与业务无关）
 ├── services/                — 业务逻辑层（纯函数，无 class 包装）
 │   ├── GearService.ets      — 装备计算（筛选/排序/统计）
 │   ├── ChecklistService.ets — 行程清单操作（增删改查，immutable 更新）
@@ -338,7 +339,24 @@ ForEach(items, (item, index) => {
 3. 面板高度由内容决定，maxHeight 不超过 85%
 4. 进入时背景施加 `scale(0.94)` + `blur(12)` 消散效果
 
-### 4.3 组件接口设计原则
+### 4.3 顶部折叠统一控制器（HeadCollapseController.ets）
+
+项目内所有「顶部区域随内容滚动而折叠」的场景（首页 hero、装备库 header、行程详情日期行）统一走 `utils/HeadCollapseController.ets`，**禁止**各页面再手写一套 scrollOffset→progress 的滚动数学。
+
+**抽象边界（关键）**：控制器只统一「滚动数学内核」——progress 计算、跟手 1:1 映射、松手就近吸附、曲线分流、强制折叠旁路；**不统一 head 渲染**。项目存在两种互不兼容的折叠布局范式，对控制器完全透明：
+
+- **inline 塌缩范式**（TripDetailPage）：head 是滚动内容的真实兄弟节点，折叠时高度归零让位。
+- **overlay 定高变形范式**（HomePage / GearPage）：head 用 `.position` 浮在滚动容器上，靠内部元素字号/透明度变形。
+
+两种布局各自从 `onChange` 回调拿 `progress(0~1)` 去插值自己的 head，避开「两种布局强行统一」的坑。
+
+**体验范式：对齐 iOS Large Title。** 跟手期 progress 严格 1:1 实时映射（零吸附、不抢手感）；松手惯性停在 (0,1) 中间态时就近吸附到 0 或 1，绝不留半折叠残缺态。
+
+**⚠️ 刷新陷阱（铁律）**：控制器是普通 class，改内部字段**不触发** ArkUI re-render。故消费页面**必须**持有自己的 `@State progress` 镜像，由 `onChange` 回调推动更新，渲染一律读 `@State` 镜像、**绝不**直接读 `controller.progress()`。`animateTo` 需 `UIContext`，控制器无 `getUIContext()`，必须由页面经 config 注入。
+
+**接入三件套**：① 页面持 `headController` 实例 + `@State` 进度镜像；② 滚动容器挂 `handleScroll`（Grid 用 `.onScroll`、List/Scroll 用 `.onDidScroll`）+ `handleScrollStop`（挂 `.onScrollStop` 补吸附）；③ 旁路强折叠（聚焦/搜索展开）调 `setForcedCollapsed(true)`——但若锁定态的视觉（背景/模糊）与 `progress=1` 语义不等价（如 GearPage 搜索态是纯背景零模糊 ≠ progress=1 的半透明毛玻璃），则**保留各自视觉特判**、不强行收口到控制器。
+
+### 4.4 组件接口设计原则
 
 | 装饰器 | 使用场景 |
 |--------|----------|

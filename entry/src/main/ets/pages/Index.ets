@@ -2,7 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 
 import { sensor, vibrator } from '@kit.SensorServiceKit';
-import { HdsTabs, HdsTabsController, hdsMaterial } from '@kit.UIDesignKit';
+import { HdsTabs, HdsTabsController, hdsMaterial, HdsNavigation } from '@kit.UIDesignKit';
 import { GearPage } from '../components/GearPage';
 import { HomePage } from '../components/HomePage';
 import { ReviewPage } from '../components/ReviewPage';
@@ -2210,7 +2210,7 @@ struct Index {
 
   build() {
     Stack() {
-      Navigation(this.navPathStack) {
+      HdsNavigation(this.navPathStack) {
         Stack({ alignContent: Alignment.Bottom }) {
           HdsTabs({ controller: this.tabsController }) {
             TabContent() {

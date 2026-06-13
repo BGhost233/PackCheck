@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.7.5 (2026-06-13)
+
+顶部折叠交互全面对齐 iOS Large Title，并抽出统一控制器消除三处重复的滚动数学。
+
+**head 折叠交互（方案 A）**
+
+- **跟手 1:1 + 松手就近吸附**：head 随网格滚动渐进折叠，跟手期 progress 严格 1:1 实时映射（零吸附、不抢手感，走 `SPRING_HEAD_FOLLOW = curves.responsiveSpringMotion(0.15, 1.0)`）；松手惯性停在 (0,1) 中间态时就近吸附到 0 或 1（走 `SPRING_SCROLL`），绝不留半折叠残缺态。体验范式经第一性原理 + Apple 标准自主定夺，对齐 iOS Large Title
+- **TripDetailPage 基准实现**：`.onScroll` 映射 progress、`.onScrollStop` 触发吸附；SharedInfo 日期行 + ProgressBar 双层融合插值收没让渡空间，NavBar 常驻
+- 新增 `SPRING_HEAD_FOLLOW` token 到 AnimationTokens.ets
+
+**统一折叠控制器封装（refactor）**
+
+- **新增 `utils/HeadCollapseController.ets`**：统一项目内所有「顶部随滚动折叠」的滚动数学内核（progress 计算 / 跟手 1:1 / 松手就近吸附 / 曲线分流 / 强制折叠旁路）。普通有状态 class，配置走 `HeadCollapseConfig`（collapseDistance / enableSnap / getUIContext / onChange / snapThreshold?）
+- **抽象边界**：只统一「滚动数学」，**不统一 head 渲染**。项目两种互不兼容的折叠布局范式对控制器透明——inline 塌缩（TripDetailPage，head 真实兄弟节点高度归零）vs overlay 定高变形（HomePage / GearPage，head 用 `.position` 浮起靠字号/透明度变形），各自从 `onChange` 拿 progress 去插值自己的 head，避开「两种布局强行统一」的坑
+- **三处迁移对齐**（各独立 commit）：TripDetail / UnifiedChecklistView 基准 → HomePage（补齐 `.onScrollStop` 吸附）→ GearPage（补齐 `.onScrollStop` 吸附）
+- **GearPage 锁定态零视觉回归**：searchExpanded / multiSelect 锁定态的高度/背景/模糊视觉特判全部保留在各函数内，**不走 `setForcedCollapsed`**——搜索态视觉（纯背景 `PAGE_BG` / 零模糊）≠ progress=1（半透明毛玻璃 `#CCF8F9FA` / 模糊 40），语义不等价，只统一滚动内核
+
+**关键经验**
+
+- **刷新陷阱**：控制器是普通 class，改内部字段不触发 ArkUI re-render。消费页面必须持 `@State progress` 镜像，由 `onChange` 回调推动更新，渲染一律读镜像、绝不直接读 `controller.progress()`。`animateTo` 需的 `UIContext` 由页面经 config 注入
+
+> 核心经验沉淀至 MEMORY.md 避坑 #46（普通 class 改字段不触发 re-render）+ DEVELOPMENT_STANDARDS §4.3（顶部折叠统一控制器）。
+
 ## v0.7.4 (2026-06-13)
 
 行程详情页格子交互三 Bug 修复。修复 ChecklistRow 白底色块突兀、长按同时触发菜单和行展开/收起、上下文菜单需多次点击才能关闭的问题。
