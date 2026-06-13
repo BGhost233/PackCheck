@@ -85,8 +85,10 @@ const FIRST_SCREEN_ROWS: number = 2.8;
 // 反算兜底（无法取得屏高时）。P4：随密度提高同步下调
 const CELL_HEIGHT_FALLBACK: number = 148;
 // P4：底部渐隐遮罩高度，暗示下方还有格子可滑
-// 问题2：去掉 backgroundBlurStyle（纯背景上的模糊会变脏灰矩形），改为纯渐变遮罩，高度提到 72 让底部格子自然沉入背景
-const BOTTOM_FADE_HEIGHT: number = 72;
+// 问题3b：升级为「真磨砂 + 渐变兜底」复合层。高度提到 88 给模糊足够的渐弱过渡空间
+const BOTTOM_FADE_HEIGHT: number = 88;
+// 模糊层高度（占遮罩下半部）：下方有卡片时透出柔化色块，顶部留出额外空间用渐变羽化模糊上边界
+const BOTTOM_FADE_BLUR_HEIGHT: number = 56;
 
 @Component
 export struct UnifiedChecklistView {
@@ -919,27 +921,39 @@ this.computeCellHeight();
   }
 
 
-  // ---- 底部渐隐遮罩（P4 / 问题2）----
-  // 贴底渐隐：上透明 → 下 PAGE_BG，让底部格子自然 fade 进背景（Apple/Things 标准）。
-  // 问题2：原用 backgroundBlurStyle 在纯色背景上产生脏灰矩形，已移除，只留纯渐变。
+  // ---- 底部渐隐遮罩（P4 / 问题3b：真磨砂 + 渐变兜底）----
+  // 第一性原理：毛玻璃要成立必须「背后有内容可散射」。底部下方滑过来的是彩色装备卡片 →
+  //   有高频内容 → 真 backdropBlur 成立，呈现 iOS Dock 那种「卡片融进毛玻璃」的质感。
+  // 脏灰风险（纯背景上模糊退化为灰矩形）由顶层渐变遮罩兜底：
+  //   - 模糊层只占下半部（BOTTOM_FADE_BLUR_HEIGHT），透出柔化色块；
+  //   - 渐变层全高 PAGE_BG_TRANSPARENT→PAGE_BG，羽化模糊上边界 + 无内容时盖住脏灰，优雅退化为纯净渐变。
   // hitTestBehavior(None)：不拦截滚动/点击，纯视觉层。聚焦态隐藏。
   @Builder
   private buildBottomFade() {
-    Column()
-      .width('100%')
-      .height(BOTTOM_FADE_HEIGHT)
-      .linearGradient({
-        angle: 180,
-        // 渐变起始必须用 PAGE_BG 的 0-alpha 版本而非 TRANSPARENT(#00000000)：
-        // 透明黑 → 羽白的中段会混合出灰色，表现为页面底部一块灰色矩形。
-        // 用透明羽白 → 羽白保证渐变全程都在 PAGE_BG 色系内，纯净无杂色。
-        colors: [[PAGE_BG_TRANSPARENT, 0.0], [PAGE_BG, 1.0]]
-      })
-      .position({ left: 0, bottom: 0 })
-      .hitTestBehavior(HitTestMode.None)
-      .visibility(this.focusedZone == null ? Visibility.Visible : Visibility.Hidden)
-      .opacity(this.appeared ? 1 : 0)
-      .animation({ curve: SPRING_GENERAL(), delay: 150 })
+    Stack({ alignContent: Alignment.Bottom }) {
+      // 底层：真磨砂。Thin 强度足以柔化卡片又不至于糊成一团；贴底放置，顶边由上层渐变羽化。
+      Column()
+        .width('100%')
+        .height(BOTTOM_FADE_BLUR_HEIGHT)
+        .backgroundBlurStyle(BlurStyle.Thin)
+
+      // 顶层：渐变遮罩。透明羽白→羽白，全程在 PAGE_BG 色系内（避免透明黑混出灰）。
+      //   作用：① 羽化模糊层硬上边界；② 内容不足时盖住脏灰，退化为纯净渐变。
+      Column()
+        .width('100%')
+        .height(BOTTOM_FADE_HEIGHT)
+        .linearGradient({
+          angle: 180,
+          colors: [[PAGE_BG_TRANSPARENT, 0.0], [PAGE_BG_TRANSPARENT, 0.45], [PAGE_BG, 1.0]]
+        })
+    }
+    .width('100%')
+    .height(BOTTOM_FADE_HEIGHT)
+    .position({ left: 0, bottom: 0 })
+    .hitTestBehavior(HitTestMode.None)
+    .visibility(this.focusedZone == null ? Visibility.Visible : Visibility.Hidden)
+    .opacity(this.appeared ? 1 : 0)
+    .animation({ curve: SPRING_GENERAL(), delay: 150 })
   }
 
   // ---- Phase 4：自绘浮层 Builder（双阶段：menu / dragging，用 opacity 过渡而非 if 销毁）----

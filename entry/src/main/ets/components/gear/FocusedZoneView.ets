@@ -12,7 +12,6 @@ import {
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
-  DIVIDER_COLOR,
   ZONE_MISC_STROKE,
   ZONE_MISC_FILL
 } from '../../constants/Colors';
@@ -342,16 +341,22 @@ export struct FocusedZoneView {
 
 
   // ---- 顶部虚线添加行 ----
+  // 问题3a：添加区是该部位的主操作，必须比分隔线权重高。
+  //   原 DIVIDER_COLOR 虚线 + TEXT_TERTIARY 文字 = 分隔线级弱色，几乎看不见。
+  //   改为用 zoneColor（该部位主题色）描虚线 + 图标 + 文字——既拉起视觉权重，
+  //   又把「添加到此部位」与该格语义色绑定（第一性原理：可操作 > 装饰）。
   @Builder
   private buildAddRow() {
     Row({ space: 8 }) {
       SymbolGlyph($r('sys.symbol.plus'))
         .fontSize(18)
-        .fontColor([TEXT_TERTIARY])
+        .fontColor([this.zoneColor])
+        .fontWeight(FontWeight.Medium)
 
       Text('添加到' + zoneDisplayName(this.zone))
         .fontSize(FONT_SIZE_BODY_MEDIUM)
-        .fontColor(TEXT_TERTIARY)
+        .fontColor(this.zoneColor)
+        .fontWeight(FONT_WEIGHT_MEDIUM)
     }
     .width('100%')
     .height(52)
@@ -360,7 +365,7 @@ export struct FocusedZoneView {
     .borderRadius(CARD_RADIUS)
     .border({
       width: 1.5,
-      color: DIVIDER_COLOR,
+      color: this.zoneColor,
       style: BorderStyle.Dashed,
       radius: CARD_RADIUS
     })
@@ -556,18 +561,27 @@ export struct FocusedZoneView {
     return 0;
   }
 
-  // D-2：聚焦态顶栏 trailing — 「逐项核查本区」图标按钮
+  // D-2：聚焦态顶栏 trailing — 「逐项核查本区」按钮
+  // 问题3a：原 12px TEXT_TERTIARY 纯文字几乎不可见、不像可点。
+  //   升级为 zoneColor 淡填充小药丸 + 勾选图标 + 文字——明确「这是可点的核查入口」，
+  //   用部位主题色与该格语义统一（第一性原理：主操作必须自解释、视觉权重足）。
   @Builder
   private buildTrailing() {
-    Row() {
+    Row({ space: 4 }) {
+      SymbolGlyph($r('sys.symbol.checkmark_circle'))
+        .fontSize(14)
+        .fontColor([this.zoneColor])
       Text('核查')
-        .fontSize(12)
-        .fontColor(TEXT_TERTIARY)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
+        .fontWeight(FONT_WEIGHT_MEDIUM)
+        .fontColor(this.zoneColor)
     }
-    .width(32)
-    .height(32)
-    .borderRadius(16)
+    .height(30)
+    .padding({ left: 10, right: 12 })
+    .borderRadius(15)
+    .backgroundColor(this.zoneFill)
     .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
     .scale({ x: this.reviewBtnPressed ? PRESS_SCALE_DOWN : 1.0, y: this.reviewBtnPressed ? PRESS_SCALE_DOWN : 1.0 })
     .animation({ curve: SPRING_PRESS() })
     .onTouch((e: TouchEvent) => {

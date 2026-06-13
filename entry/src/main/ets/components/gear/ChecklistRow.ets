@@ -11,7 +11,7 @@ import {
   PRIMARY_COLOR,
   CARD_BG,
   TEXT_MAIN,
-  DIVIDER_COLOR,
+  PLACEHOLDER_COLOR,
   TRANSPARENT
 } from '../../constants/Colors';
 import {
@@ -89,7 +89,9 @@ export struct ChecklistRow {
           .width(this.checkSize)
           .height(this.checkSize)
           .fill(this.item.checked ? PRIMARY_COLOR : TRANSPARENT)
-          .stroke(this.item.checked ? PRIMARY_COLOR : DIVIDER_COLOR)
+          // 问题3a：未勾描边由 DIVIDER_COLOR(#F0F0F0 近白) 改为 PLACEHOLDER_COLOR(#BBBBBB)，
+          //   原色太浅几乎看不见 check 圈，加重后「待勾选」信号清晰又不抢戏。
+          .stroke(this.item.checked ? PRIMARY_COLOR : PLACEHOLDER_COLOR)
           .strokeWidth(2)
           .animation({ curve: SPRING_PRESS() })
 
