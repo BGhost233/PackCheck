@@ -353,3 +353,35 @@ export function allZones(): string[] {
 export function allLayers(): number[] {
   return [LayerOrder.Base, LayerOrder.Mid, LayerOrder.Shell, LayerOrder.Insulation, LayerOrder.Accessory];
 }
+
+/**
+ * 拖拽命中检测：给定手指全局坐标，返回命中的 zone（命中矩形列表中第一个），无命中返回 null。
+ *   纯几何计算，与坐标系无关：globalXY 与 zoneRects（全局坐标 [x,y,w,h]）同时减去 overlayOrigin 转局部后比较，
+ *   等价于直接在全局坐标系比较，此处保留原 UnifiedChecklistView 的局部坐标语义以确保零行为变更。
+ */
+export function hitTestZoneRect(
+  zoneRects: Map<string, number[]>,
+  candidateZones: string[],
+  globalX: number,
+  globalY: number,
+  overlayOriginX: number,
+  overlayOriginY: number
+): string | null {
+  const localX = globalX - overlayOriginX;
+  const localY = globalY - overlayOriginY;
+  for (let i = 0; i < candidateZones.length; i++) {
+    const zone = candidateZones[i];
+    const rect = zoneRects.get(zone);
+    if (rect === undefined) {
+      continue;
+    }
+    const rx = rect[0] - overlayOriginX;
+    const ry = rect[1] - overlayOriginY;
+    const rw = rect[2];
+    const rh = rect[3];
+    if (localX >= rx && localX <= rx + rw && localY >= ry && localY <= ry + rh) {
+      return zone;
+    }
+  }
+  return null;
+}

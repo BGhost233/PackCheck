@@ -31,7 +31,7 @@ import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels'
 import { resolveItemName } from '../../services/ChecklistService';
 import { BodyZone } from '../../constants/GearLoadout';
 import { hapticSoft, hapticSharp } from '../../utils/HapticUtils';
-import { groupByZoneAll, calcProgress, LoadoutProgress, zoneColor, zoneStroke, zoneFill, zoneFocusBg } from '../../services/LoadoutService';
+import { groupByZoneAll, calcProgress, LoadoutProgress, zoneColor, zoneStroke, zoneFill, zoneFocusBg, hitTestZoneRect } from '../../services/LoadoutService';
 import { ZoneGridCell } from './ZoneGridCell';
 import { FocusedZoneView } from './FocusedZoneView';
 import { LoadoutProgressBar } from './LoadoutProgressBar';
@@ -803,25 +803,8 @@ this.computeCellHeight();
   // 坐标命中判定：当前全局坐标落在哪个 zone 格子内
   // zoneRects 存全局坐标，需转局部后与手指局部坐标比较
   private hitTestZone(globalX: number, globalY: number): string | null {
-    const localX = globalX - this.overlayOriginX;
-    const localY = globalY - this.overlayOriginY;
-    const allZones: string[] = [...GRID_SINGLE_ZONES, BodyZone.Misc];
-    for (let i = 0; i < allZones.length; i++) {
-      const zone = allZones[i];
-      const rect = this.zoneRects.get(zone);
-      if (rect === undefined) {
-        continue;
-      }
-      // zoneRects 存全局坐标，转为局部与手指比较
-      const rx = rect[0] - this.overlayOriginX;
-      const ry = rect[1] - this.overlayOriginY;
-      const rw = rect[2];
-      const rh = rect[3];
-      if (localX >= rx && localX <= rx + rw && localY >= ry && localY <= ry + rh) {
-        return zone;
-      }
-    }
-    return null;
+    const candidateZones: string[] = [...GRID_SINGLE_ZONES, BodyZone.Misc];
+    return hitTestZoneRect(this.zoneRects, candidateZones, globalX, globalY, this.overlayOriginX, this.overlayOriginY);
   }
 
   private progress(): LoadoutProgress {
