@@ -118,7 +118,7 @@ export struct TripDetailPage {
   // 各段与各自渲染条件一致：NavBar 恒在；SharedInfo 仅 currentChecklist 有摘要文案时渲染；
   // ProgressBar 仅 items>0 时渲染。避免用硬编码默认值导致反算偏差（review B3）。
   private reservedTop(): number {
-    const NAV_BAR: number = 44;
+    const NAV_BAR: number = 40;
     const SHARED_INFO: number = 28;   // 12 字号文案 + 8 bottom padding
     const PROGRESS_BAR: number = 48;  // 文案行 + 进度条 + 上下 padding
     const trip = this.currentChecklist();
@@ -174,10 +174,10 @@ export struct TripDetailPage {
   @Builder
   private buildNavBar() {
     Row() {
-      // 返回按钮
+      // 返回按钮：SymbolGlyph 字形居中，与标题同线
       Row() {
         SymbolGlyph($r('sys.symbol.chevron_left'))
-          .fontSize(20)
+          .fontSize(22)
           .fontColor([TEXT_MAIN])
       }
       .width(40)
@@ -210,17 +210,20 @@ export struct TripDetailPage {
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      // 更多菜单
+      // 更多菜单：横排三点，容器 + 文本双居中保证与返回箭头同线
       Row() {
         Text('···')
-          .fontSize(20)
+          .fontSize(22)
           .fontWeight(FontWeight.Bold)
           .fontColor(TEXT_MAIN)
+          .textAlign(TextAlign.Center)
+          .height(40)
       }
       .width(40)
       .height(40)
       .borderRadius(20)
       .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
       .scale({ x: this.menuScale, y: this.menuScale })
       .animation({ curve: SPRING_PRESS() })
       .onTouch((e: TouchEvent) => {
@@ -251,9 +254,10 @@ export struct TripDetailPage {
       })
     }
     .width('100%')
-    .height(this.statusBarHeight + 44)
+    .height(this.statusBarHeight + 40)
     .padding({ left: 12, right: 12, top: this.statusBarHeight })
-    .alignItems(VerticalAlign.Bottom)
+    // 工具条三元素同线居中——横平竖直的正解（Bottom 会因子元素字形下沉散乱）
+    .alignItems(VerticalAlign.Center)
   }
 
   // E-3：顶部元信息区 = 行程档案标识。轻结构化单行——日期/地点纯文字弱化，
