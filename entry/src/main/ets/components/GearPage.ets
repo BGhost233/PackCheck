@@ -64,6 +64,8 @@ import {
   SHADOW_MICRO
 } from '../constants/DesignTokens';
 import { getGroupColor } from '../utils/ColorUtils';
+import { GearEmptyState } from './gear/GearEmptyState';
+import { GearEmptyText } from './gear/GearEmptyText';
 
 interface TripCardArea {
   id: string;
@@ -815,11 +817,11 @@ export struct GearPage {
             }
             if (this.gears.length === 0) {
               ListItem() {
-                this.EmptyState();
+                GearEmptyState({ entered: this.listEntered, onAddGear: () => { this.onOpenAddGear(); } })
               }
             } else if (this.filteredGears().length === 0) {
               ListItem() {
-                this.EmptyText('未找到相关装备');
+                GearEmptyText({ message: '未找到相关装备' })
               }
             } else {
               ForEach(this.displayGearGroups(), (group: string, index: number) => {
@@ -1880,67 +1882,6 @@ export struct GearPage {
     }
     .width('100%')
     .height('100%')
-  }
-
-  @Builder
-  private EmptyState() {
-    Column({ space: 20 }) {
-      // 图标：轻量圆形背景 + 系统图标
-      Row() {
-        SymbolGlyph($r('sys.symbol.bag'))
-          .fontSize(32)
-          .fontColor([PRIMARY_COLOR])
-      }
-      .width(64)
-      .height(64)
-      .justifyContent(FlexAlign.Center)
-      .backgroundColor(PRIMARY_TINT_COLOR)
-      .borderRadius(32)
-      .opacity(this.listEntered ? 1 : 0)
-      .scale({ x: this.listEntered ? 1 : 0.9, y: this.listEntered ? 1 : 0.9 })
-      .animation({ curve: SPRING_GENERAL(), delay: 60 })
-
-      // 文案
-      Column({ space: 6 }) {
-        Text('装备库空空如也')
-          .fontSize(16)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(TEXT_MAIN)
-        Text('添加你的第一件装备，开始记录户外家当')
-          .fontSize(13)
-          .fontColor(TEXT_TERTIARY)
-      }
-      .alignItems(HorizontalAlign.Center)
-
-      // 行动按钮
-      Button('添加装备')
-        .height(40)
-        .fontSize(14)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(WHITE)
-        .backgroundColor(PRIMARY_COLOR)
-        .padding({ left: 24, right: 24 })
-        .borderRadius(20)
-        .onClick(() => {
-          this.onOpenAddGear();
-        })
-    }
-    .width('100%')
-    .padding({ top: 48, bottom: 48 })
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-  }
-
-  @Builder
-  private EmptyText(message: string) {
-    Text(message)
-      .fontSize(14)
-      .fontColor(TEXT_TERTIARY)
-      .textAlign(TextAlign.Center)
-      .width('100%')
-      .padding(18)
-      .backgroundColor(CARD_BG)
-      .borderRadius(16)
   }
 
   // ---- 人生足迹精简聚合行（装备库顶部黄金区，提纲 §3.4） ----
