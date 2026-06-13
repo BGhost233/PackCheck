@@ -376,6 +376,7 @@ this.computeCellHeight();
     this.detailSheetVisible = false;
     // 延迟清空 item，让退场动画完成
     setTimeout(() => {
+      if (!this.isAlive) return;
       if (!this.detailSheetVisible) {
         this.detailSheetItem = null;
       }
