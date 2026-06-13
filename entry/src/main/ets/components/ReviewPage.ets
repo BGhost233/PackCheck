@@ -1,5 +1,6 @@
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import { resolveItemName } from '../services/ChecklistService';
+import { zoneDisplayName } from '../services/LoadoutService';
 import {
   CARD_BG,
   FONT_FEATURE_TNUM,
@@ -130,22 +131,9 @@ export struct ReviewPage {
   private reviewTitle(): string {
     if (this.reviewZoneFilter !== null && this.reviewZoneFilter.length > 0) {
       // 复用 LoadoutService.zoneDisplayName 做翻译
-      return '核查 · ' + this.zoneFilterDisplay();
+      return '核查 · ' + zoneDisplayName(this.reviewZoneFilter ?? '');
     }
     return '';
-  }
-
-  private zoneFilterDisplay(): string {
-    switch (this.reviewZoneFilter) {
-      case 'head': return '头部';
-      case 'upper': return '上身';
-      case 'lower': return '下身';
-      case 'feet': return '脚部';
-      case 'carry': return '背负';
-      case 'sleep': return '睡眠';
-      case 'misc': return '杂项';
-      default: return this.reviewZoneFilter ?? '';
-    }
   }
 
   build() {
