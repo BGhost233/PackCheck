@@ -173,6 +173,13 @@ export struct FocusedZoneView {
       }
 
       List({ space: 0 }) {
+        // 顶部虚线「+ 添加到{Zone}」行（多选模式下隐藏）
+        if (!this.isMultiSelectMode) {
+          ListItem() {
+            this.buildAddRow()
+          }
+        }
+
         ForEach(this.items, (item: ChecklistItem, index: number) => {
           ListItem() {
             Column({ space: 0 }) {
@@ -282,13 +289,6 @@ export struct FocusedZoneView {
               .combine(TransitionEffect.opacity(0).animation({ curve: SPRING_GENERAL() }))
           ))
         }, (item: ChecklistItem) => item.id + '_' + this.renderNonce.toString())
-
-        // 底部虚线「+ 添加到{Zone}」行（多选模式下隐藏）
-        if (!this.isMultiSelectMode) {
-          ListItem() {
-            this.buildAddRow()
-          }
-        }
       }
       .width('100%')
       .layoutWeight(1)
@@ -301,7 +301,7 @@ export struct FocusedZoneView {
   }
 
 
-  // ---- 底部虚线添加行 ----
+  // ---- 顶部虚线添加行 ----
   @Builder
   private buildAddRow() {
     Row({ space: 8 }) {
@@ -324,7 +324,7 @@ export struct FocusedZoneView {
       style: BorderStyle.Dashed,
       radius: CARD_RADIUS
     })
-    .margin({ top: 8 })
+    .margin({ bottom: 8 })
     .scale({ x: this.addPressed ? PRESS_SCALE_DOWN : 1.0, y: this.addPressed ? PRESS_SCALE_DOWN : 1.0 })
     .animation({ curve: SPRING_PRESS() })
     .onTouch((e: TouchEvent) => {
