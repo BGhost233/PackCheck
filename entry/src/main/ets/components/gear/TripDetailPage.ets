@@ -47,12 +47,10 @@ export struct TripDetailPage {
 
   // 返回按钮按压
   @State private backScale: number = 1.0;
-  // 更多菜单按压
+  // 逐项核查按钮按压
   @State private menuScale: number = 1.0;
   // 共享信息区按压
   @State private infoScale: number = 1.0;
-  // 更多菜单展开
-  @State private showMoreMenu: boolean = false;
   // 问题4a：head 随网格滚动的折叠进度（0=全展开，1=全折叠），由 UnifiedChecklistView.onScroll 回调驱动。
   //   本层据此插值收起日期行（SharedInfo），与子组件进度条折叠同帧联动。
   @State private headCollapseProgress: number = 0;
@@ -103,6 +101,18 @@ export struct TripDetailPage {
       return SPRING_HERO_EXPAND();
     }
     return this.headSnapping ? SPRING_SCROLL() : SPRING_HEAD_FOLLOW();
+  }
+
+  // 方案A：navbar 标题随折叠「呼吸」——展开态略大且轻微下沉（Large Title 余韵），
+  //   折叠态收回标准 navbar 标题位。与 SharedInfo 同帧联动，让整条 head 作为整体被压扁，消除割裂感。
+  // 字号：展开 20 → 折叠 17（标准 navbar 标题）。
+  private titleFontSize(): number {
+    const t: number = this.effectiveHeadCollapse();
+    return 20 - 3 * t;
+  }
+  // 下沉位移：展开 +4vp（向 SharedInfo 方向靠，强化「档案大标题」感）→ 折叠 0（归位居中）。
+  private titleOffsetY(): number {
+    return 4 * (1 - this.effectiveHeadCollapse());
   }
 
   private currentChecklist(): TripChecklist | undefined {
@@ -200,30 +210,28 @@ export struct TripDetailPage {
         this.onReturnHome();
       })
 
-      // 行程名称
+      // 行程名称：方案A 随折叠呼吸——字号 20→17、下沉 4→0，与 SharedInfo 同帧联动
       Text(this.currentChecklist()?.title ?? '')
-        .fontSize(17)
+        .fontSize(this.titleFontSize())
         .fontWeight(FontWeight.Medium)
         .fontColor(TEXT_MAIN)
         .layoutWeight(1)
         .textAlign(TextAlign.Center)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .translate({ y: this.titleOffsetY() })
+        .animation({ curve: this.headCollapseCurve() })
 
-      // 更多菜单：横排三点，容器 + 文本双居中保证与返回箭头同线
+      // 逐项核查入口：与首页核查图标统一（checkmark_shield）
       Row() {
-        Text('···')
+        SymbolGlyph($r('sys.symbol.checkmark_shield'))
           .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-          .textAlign(TextAlign.Center)
-          .height(40)
+          .fontColor([TEXT_MAIN])
       }
       .width(40)
       .height(40)
       .borderRadius(20)
       .justifyContent(FlexAlign.Center)
-      .alignItems(VerticalAlign.Center)
       .scale({ x: this.menuScale, y: this.menuScale })
       .animation({ curve: SPRING_PRESS() })
       .onTouch((e: TouchEvent) => {
@@ -234,23 +242,7 @@ export struct TripDetailPage {
         }
       })
       .onClick(() => {
-        this.showMoreMenu = true;
-      })
-      .bindMenu(this.showMoreMenu, [
-        {
-          value: '编辑行程信息',
-          action: () => { this.onOpenEditTrip(); }
-        },
-        {
-          value: '逐项核查',
-          action: () => { this.onOpenReview(); }
-        },
-        {
-          value: '删除行程',
-          action: () => { this.onDeleteTrip(); }
-        }
-      ], {
-        onDisappear: () => { this.showMoreMenu = false; }
+        this.onOpenReview();
       })
     }
     .width('100%')
