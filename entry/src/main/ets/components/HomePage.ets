@@ -44,6 +44,7 @@ import {
 import { heroGradientStart } from '../utils/ColorUtils';
 import { HeadCollapseController } from '../utils/HeadCollapseController';
 import { hdsEffect } from '@kit.UIDesignKit';
+import { HomeQuickEntry } from './home/HomeQuickEntry';
 
 
 @Component
@@ -68,7 +69,6 @@ export struct HomePage {
   //   ⚠️ 刷新陷阱：render 必须读此 @State（非控制器内部字段），controller.onChange 推动更新。
   @State private headProgress: number = 0;
   @State private headSnapping: boolean = false;
-  @State private quickEntryPressed: string = '';
   @State private historyPressedId: string = '';
   @State private heroPressed: boolean = false;
   @State private historyStaggerReady: boolean = false;
@@ -749,12 +749,20 @@ export struct HomePage {
   @Builder
   private QuickEntries() {
     Row({ space: 12 }) {
-      this.QuickEntry($r('sys.symbol.plus_circle'), '新建行程', PRIMARY_TINT_COLOR, PRIMARY_COLOR, () => {
-        this.onOpenTrip();
+      HomeQuickEntry({
+        icon: $r('sys.symbol.plus_circle'),
+        title: '新建行程',
+        bg: PRIMARY_TINT_COLOR,
+        color: PRIMARY_COLOR,
+        action: () => { this.onOpenTrip(); }
       });
       if (this.nearestFutureChecklist() !== undefined) {
-        this.QuickEntry($r('sys.symbol.checkmark_shield'), this.quickReviewLabel(), CARD_BG, TEXT_MAIN, () => {
-          this.handleQuickReview();
+        HomeQuickEntry({
+          icon: $r('sys.symbol.checkmark_shield'),
+          title: this.quickReviewLabel(),
+          bg: CARD_BG,
+          color: TEXT_MAIN,
+          action: () => { this.handleQuickReview(); }
         });
       }
     }
@@ -768,36 +776,6 @@ export struct HomePage {
     }
     // 统一交给父组件处理（父组件根据 items 数量判断进详情还是核查模式）
     this.onQuickReview(target.id);
-  }
-
-  @Builder
-  private QuickEntry(icon: Resource, title: string, bg: string, color: string, action: () => void) {
-    Column({ space: 5 }) {
-      SymbolGlyph(icon)
-        .fontSize(22)
-        .fontColor([color])
-      Text(title)
-        .fontSize(14)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(color)
-    }
-    .height(80)
-    .layoutWeight(1)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .backgroundColor(bg)
-    .borderRadius(16)
-    .shadow({ radius: bg === CARD_BG ? 8 : 0, color: SHADOW_MICRO, offsetX: 0, offsetY: 1 })
-    .scale({ x: this.quickEntryPressed === title ? PRESS_SCALE_DOWN : PRESS_SCALE_REST, y: this.quickEntryPressed === title ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
-    .animation({ curve: SPRING_PRESS() })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.quickEntryPressed = title;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.quickEntryPressed = '';
-      }
-    })
-    .onClick(action)
   }
 
   private historyListHeight(): number {
