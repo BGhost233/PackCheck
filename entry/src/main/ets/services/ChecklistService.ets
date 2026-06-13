@@ -142,6 +142,20 @@ export function resolveItemName(item: ChecklistItem, gears: GearItem[]): string 
   return item.name;
 }
 
+/**
+ * 性能：resolveItemName 的索引版，用预建的 gearIndex（见 buildGearIndex）O(1) 反查，
+ * 供 ForEach 渲染热路径调用，避免逐行 O(gears) 线性扫描。逻辑与 resolveItemName 等价。
+ */
+export function resolveItemNameByIndex(item: ChecklistItem, gearIndex: Map<string, GearItem>): string {
+  if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
+    const gear = gearIndex.get(item.fromGearId);
+    if (gear !== undefined) {
+      return gear.name;
+    }
+  }
+  return item.name;
+}
+
 export function resolveItemCategory(item: ChecklistItem, gears: GearItem[]): string {
   if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
     const gear = gearById(gears, item.fromGearId);

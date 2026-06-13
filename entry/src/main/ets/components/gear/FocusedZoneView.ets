@@ -35,14 +35,17 @@ import { vibrator } from '@kit.SensorServiceKit';
 import { zoneDisplayName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
 import { ZoneShell } from './ZoneShell';
-import { resolveItemName } from '../../services/ChecklistService';
+import { resolveItemNameByIndex } from '../../services/ChecklistService';
+import { buildGearIndex } from '../../services/GearService';
 
 @Component
 export struct FocusedZoneView {
   @Prop zone: string = BodyZone.Misc;
   @Prop items: ChecklistItem[] = [];
   // 问题4c：装备库全量，用于 fromGearId 反查品类/备注/品牌等详情
-  @Prop gears: GearItem[] = [];
+  @Prop @Watch('onGearsChange') gears: GearItem[] = [];
+  // 性能：gearId → GearItem 索引，渲染热路径 O(1) 反查，替代 ForEach 每行线性扫描
+  @State private gearIndex: Map<string, GearItem> = new Map();
   // 渲染 nonce：gear 编辑后父层 nonce++ 强制 ForEach 重建（修复 #9 编辑不即时更新）
   @Prop renderNonce: number = 0;
   @Prop zoneColor: string = TEXT_SECONDARY;
@@ -100,9 +103,18 @@ export struct FocusedZoneView {
   // Bug2 同类修复：长按触发后抑制紧随的 onClick（弹详情 Sheet / toggleSelection）
   @State private longPressTriggered: boolean = false;
 
+  // gears 变化时刷新索引缓存（常驻树组件不能用 aboutToAppear，靠 @Watch 驱动）
+  onGearsChange(): void {
+    this.gearIndex = buildGearIndex(this.gears);
+  }
+
   // active false→true：重置后下一帧验入场；true→false：重置供下次重放
   onActiveChange(): void {
     if (this.active) {
+      // 兜底：首次聚焦时确保索引就绪（gears 可能在构造后才到位）
+      if (this.gearIndex.size !== this.gears.length) {
+        this.gearIndex = buildGearIndex(this.gears);
+      }
       this.listAppeared = false;
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.listAppeared = true;
@@ -219,7 +231,7 @@ export struct FocusedZoneView {
                 Column() {
                   ChecklistRow({
                     item: item,
-                    displayName: resolveItemName(item, this.gears),
+                    displayName: resolveItemNameByIndex(item, this.gearIndex),
                     rowHeight: 52,
                     checkSize: 28,
                     fontSize: FONT_SIZE_BODY_LARGE,

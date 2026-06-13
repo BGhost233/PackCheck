@@ -22,7 +22,8 @@ import { ChecklistItem, GearItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
 import { zoneDisplayName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
-import { resolveItemName } from '../../services/ChecklistService';
+import { resolveItemNameByIndex } from '../../services/ChecklistService';
+import { buildGearIndex } from '../../services/GearService';
 import { ZoneShell } from './ZoneShell';
 import { vibrator } from '@kit.SensorServiceKit';
 
@@ -38,7 +39,9 @@ export struct ZoneGridCell {
   @Prop zone: string = BodyZone.Misc;
   @Prop items: ChecklistItem[] = [];
   // 「实时引用」模型：传入装备库用于 resolve item 展示名
-  @Prop gears: GearItem[] = [];
+  @Prop @Watch('onGearsChange') gears: GearItem[] = [];
+  // 性能：gearId → GearItem 索引，渲染热路径 O(1) 反查替代 resolveItemName 的线性扫描
+  @State private gearIndex: Map<string, GearItem> = new Map();
   @Prop zoneColor: string = ZONE_MISC_COLOR;
   // 容器描边色 + 整块淡色填充底（由父层 zoneStroke/zoneFill helper 传入）
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
@@ -67,6 +70,14 @@ export struct ZoneGridCell {
   @State private contentPressed: boolean = false;
   // Bug2 fix：长按触发后抑制紧随的 onClick（进聚焦），防止长按松手同时进入展开态
   @State private longPressTriggered: boolean = false;
+
+  aboutToAppear(): void {
+    this.gearIndex = buildGearIndex(this.gears);
+  }
+
+  private onGearsChange(): void {
+    this.gearIndex = buildGearIndex(this.gears);
+  }
 
   build() {
     // if/else 而非 Stack 双层常驻：空态和有内容态不可同时存在于视图树，
@@ -160,7 +171,7 @@ export struct ZoneGridCell {
           Column() {
             ChecklistRow({
               item: item,
-              displayName: resolveItemName(item, this.gears),
+              displayName: resolveItemNameByIndex(item, this.gearIndex),
               rowHeight: GRID_ROW_HEIGHT,
               checkSize: GRID_CHECK_SIZE,
               checkOnlyHotzone: true,

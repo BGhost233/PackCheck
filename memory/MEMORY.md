@@ -42,6 +42,15 @@
 - 行程托盘动态滚速：边缘区域 100vp，二次曲线加速 `speed = minSpeed + (maxSpeed - minSpeed) * t²`（min=2, max=12），手感自然。Timer 每次回调读 mutable field `trayScrollSpeed`，无需重启 timer 即可变速
 - 行程托盘尺寸优化：位置从 screenHeight-200 → screenHeight-240，卡片从 100×80 → 88×68，间距 12→10，容纳更多行程
 
+### HDS（@kit.UIDesignKit）使用边界（2026-06-13 落地）
+
+- **核心结论：HDS 在本项目只做「材质/视效层增强」，不做「框架替换」。** 项目所有自绘顶栏（HomePage Hero 卡 / GearPage 搜索工具栏 / 各页 HeadCollapseController 折叠导航）保真度高于 HDS 标准组件，替换 = 降质，已否决。
+- **唯一框架级替换：根容器 `Navigation` → `HdsNavigation`**（Index.ets）。零视觉风险，因为 `.hideTitleBar(true)`。SDK 已验证 `HdsNavigation(pathInfos?: NavPathStack)` 直接承接既有 `navPathStack`；`.navDestination(builder)` 的 `NavDestinationBuilder = (name, pageInfos) => void` 与现有行内 `NavDestinationMap` 签名兼容，**无需 routerMap 迁移**。`HdsNavigationAttribute extends CommonMethod`，`.mode()/.hideTitleBar()/.backgroundColor()/.expandSafeArea()` 全部继承可用。`geometryTransition('trip-*')` 跨页共享元素转场与 HdsNavigation 兼容（构建+实测通过）。
+- **hdsEffect 按压视效叠加范式**：在「高频 + 按压语义纯粹的点进去卡片」上叠 `pressShadow`。做法：`@State pressShadow` 或复用已有按压态 id，节点上加 `.visualEffect(new hdsEffect.HdsEffectBuilder().pressShadow(按下?BLEND_GRADIENT:NONE).buildEffect())`，在既有 `.onTouch` Down/Up 里切。已落地：HomePage Hero 卡、GearPage 装备卡（normal 模式，多选 compact 行不加）。
+- **⚠️ hdsEffect 沉浸视效模拟器不渲染，仅真机生效**（不影响构建）。设计/验收需 push 真机。
+- **被否决的叠加点**：TripDetailPage 无独立核心卡片（NavBar 是 icon 按钮、SharedInfo 是文字行）；真正卡片 `ZoneShell` 已被 `geometryTransition('zone_*')` 共享元素转场 + 长按转拖拽浮层占用，叠 pressShadow 感知极弱且与转场材质冲突 → 不做。原则：不往最复杂的交互节点塞视效。
+- **SDK 类型定义事实源**：`/Applications/DevEco-Studio.app/Contents/sdk/default/hms/ets/api/@hms.hds.hdsBaseComponent.d.ets`。API 签名不确定时直接读它，不靠搜索猜。
+
 ### 聚焦态完整交互体系（问题4，v0.7.0）
 
 - **4a 收起态透传链**：focusedZone 由 Index `@State` 源 → TripDetailPage `@Link` → UnifiedChecklistView `@Link` → FocusedZoneView `@Prop active` 三层透传。onBackPressed 分层拦截：sheet 打开→closeSheet / focusedZone≠null→focusedCloseSignal++ / else→returnToHome

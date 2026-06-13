@@ -303,6 +303,19 @@ export function gearById(gears: GearItem[], id: string): GearItem | undefined {
   return undefined;
 }
 
+/**
+ * 性能：构建 gearId → GearItem 索引，供渲染热路径 O(1) 反查，
+ * 替代在 ForEach 每行调用 gearById 的 O(items × gears) 线性扫描。
+ * 用法对齐 buildGearTripCountMap：消费组件 @Watch('gears') 时刷新一次缓存。
+ */
+export function buildGearIndex(gears: GearItem[]): Map<string, GearItem> {
+  const map = new Map<string, GearItem>();
+  for (let index = 0; index < gears.length; index++) {
+    map.set(gears[index].id, gears[index]);
+  }
+  return map;
+}
+
 export function presetCategories(userCategories: string[]): string[] {
   const nextCategories: string[] = [];
   for (let index = 0; index < DEFAULT_CATEGORIES.length; index++) {
