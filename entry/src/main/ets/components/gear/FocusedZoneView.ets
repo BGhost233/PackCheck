@@ -278,6 +278,11 @@ export struct FocusedZoneView {
                         this.onEdgePanEnd(event.offsetX, event.offsetY);
                         this.edgeDragFired = false;
                         this.batchDragPending = false;
+                        // 边缘拖出已由父层处理落点，不再走排序持久化
+                        if (!this.isMultiSelectMode) {
+                          this.finishReorder();
+                        }
+                        return;
                       }
                       if (!this.isMultiSelectMode) {
                         this.finishReorder();
