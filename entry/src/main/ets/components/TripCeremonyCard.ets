@@ -4,7 +4,7 @@ import {
   DURATION_CEREMONY_SHINE, DURATION_CEREMONY_SHIMMER,
   CURVE_STANDARD
 } from '../constants/AnimationTokens';
-import { vibrator } from '@kit.SensorServiceKit';
+import { hapticPreset } from '../utils/HapticUtils';
 import { inputMethod } from '@kit.IMEKit';
 import {
   CARD_BG,
@@ -563,21 +563,11 @@ return this.trackWidth - this.SLIDER_WIDTH;
   // 触觉
   // ============================================================
   private vibratePreset(effectId: string): void {
-    try {
-      vibrator.startVibration(
-        { type: 'preset', effectId: effectId, count: 1 },
-        { usage: 'touch' }
-      );
-    } catch (e) { /* ignore */ }
+    hapticPreset(effectId, 1);
   }
 
   private vibratePresetWithCount(effectId: string, count: number): void {
-    try {
-      vibrator.startVibration(
-        { type: 'preset', effectId: effectId, count: count },
-        { usage: 'touch' }
-      );
-    } catch (e) { /* ignore */ }
+    hapticPreset(effectId, count);
   }
 
   // ============================================================

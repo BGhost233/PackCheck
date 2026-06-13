@@ -33,7 +33,7 @@ import { BodyZone } from '../../constants/GearLoadout';
 import { SPRING_PRESS, SPRING_GENERAL, SPRING_CHEVRON, PRESS_SCALE_DOWN } from '../../constants/AnimationTokens';
 import { GearItem, CATEGORY_FALLBACK, DEFAULT_CATEGORIES } from '../../models/PackModels';
 import { zoneDisplayName, allZones } from '../../services/LoadoutService';
-import { vibrator } from '@kit.SensorServiceKit';
+import { hapticSoft } from '../../utils/HapticUtils';
 
 // 品类分组结果
 interface CategoryGroup {
@@ -737,14 +737,6 @@ export struct GearPickerSheet {
   }
 
   private triggerHaptic(): void {
-    try {
-      vibrator.startVibration({
-        type: 'preset',
-        effectId: 'haptic.effect.soft',
-        count: 1
-      }, { usage: 'touch' });
-    } catch (_e) {
-      // 静默失败
-    }
+    hapticSoft();
   }
 }

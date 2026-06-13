@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.7.6 (2026-06-13)
+
+行程详情页顶部体验收口 + 全屏沉浸。围绕「navbar 无效空白 / 元素错位 / 折叠时上半身死板不动」三个观感问题，从第一性原理重做 navbar 布局与折叠联动，并清掉一处弱视效。
+
+**navbar 重做**
+
+- **删 `···` 更多菜单，换单一「逐项核查」图标入口**：右上角原 `···` 三点菜单（编辑行程 / 逐项核查 / 删除行程）收口为单个 `checkmark_shield` 图标按钮（与首页核查入口同图标，统一肌肉记忆），直接 `onClick → onOpenReview`。`onOpenEditTrip` / `onDeleteTrip` 回调接口保留待挂别处，不删数据流
+- **三元素垂直居中对齐**：返回箭头 / 标题 / 右图标回归 `VerticalAlign.Center`。上一版误用 `VerticalAlign.Bottom` 想「贴近状态栏」，但 SymbolGlyph 与 Text 字形下沉量不同 → 各自的「底」不在一条线 → 散乱。第一性原理：工具条三元素本质应同线居中，「贴近状态栏」该靠压缩 navbar 高度实现，而非改对齐方式
+- **高度收窄消无效空白**：navbar 高度 56 → 44 → 40（`statusBarHeight + 40`），`reservedTop()` 的 `NAV_BAR` 同步 40
+
+**标题随折叠呼吸（方案 A）**
+
+- **消除「折叠时上半身死板不动」割裂感**：原折叠只有 SharedInfo 日期行 height→0，navbar 标题固定不动 → 上下割裂。方案 A 让标题随 `effectiveHeadCollapse()` 插值字号（20 → 17）+ 下沉（4 → 0），走同一 `headCollapseCurve()`，与 SharedInfo 同帧「一起被压扁」。返回箭头作为导航功能锚点保持稳定（符合导航直觉，不参与呼吸）
+- 新增 `titleFontSize()` / `titleOffsetY()` 两个插值方法；标题 Text 挂 `.translate({y})` + `.animation(headCollapseCurve())`
+
+**减法**
+
+- **删底部纯色弥散遮罩**：UnifiedChecklistView 移除 `buildBottomFade()` @Builder + Grid `.linearGradientBlur`（含 3 个 unused 常量 `BOTTOM_DIFFUSE_*` / `BOTTOM_FADE_HEIGHT`），底部不再叠一层弱感知的渐隐模糊
+- **拖拽落点保持格子本色**：ZoneShell 拖拽态背景去掉 `LIGHT_PRIMARY_COLOR` 淡绿高亮，落点保持目标格 `zoneFill` 本色（高亮交给外层 border/glow 的 `zoneColor`，避免双重着色把格子本色冲淡）
+
+**全屏沉浸（前置 effc555）**
+
+- EntryAbility 开 `setWindowLayoutFullScreen` 去系统栏底色；避让高度经 AppStorage 下发；GearPage / HomePage / TripDetailPage 折叠头补 `statusBarHeight` 避让；删 HdsTabs `gradientMask`（留 `systemMaterialEffect`）
+
+> 标题折叠呼吸沉淀至 DEVELOPMENT_STANDARDS §4.3（inline 塌缩范式：navbar 标题参与呼吸联动）。
+
 ## v0.7.5 (2026-06-13)
 
 顶部折叠交互全面对齐 iOS Large Title，并抽出统一控制器消除三处重复的滚动数学。

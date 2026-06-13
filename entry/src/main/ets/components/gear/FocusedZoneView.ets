@@ -31,7 +31,7 @@ import {
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem } from '../../models/PackModels';
 import { BodyZone } from '../../constants/GearLoadout';
-import { vibrator } from '@kit.SensorServiceKit';
+import { hapticSoft } from '../../utils/HapticUtils';
 import { zoneDisplayName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
 import { ZoneShell } from './ZoneShell';
@@ -407,14 +407,7 @@ export struct FocusedZoneView {
 
   private handleLongPress(item: ChecklistItem): void {
     // 触觉反馈（轻档）
-    try {
-      vibrator.startVibration(
-        { type: 'preset', effectId: 'haptic.effect.soft', count: 1 },
-        { usage: 'touch' }
-      );
-    } catch (e) {
-      // 振动不可用时静默降级
-    }
+    hapticSoft();
     // Bug2 同类修复：标记长按已触发，抑制松手后的 onClick（多选/非多选均需）
     this.longPressTriggered = true;
     setTimeout(() => { this.longPressTriggered = false; }, 500);

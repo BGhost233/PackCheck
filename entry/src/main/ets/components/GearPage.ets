@@ -12,7 +12,7 @@ import {
   STAGGER_OFFSET_Y, staggerDelay
 } from '../constants/AnimationTokens';
 import { HeadCollapseController } from '../utils/HeadCollapseController';
-import { vibrator } from '@kit.SensorServiceKit';
+import { hapticTime } from '../utils/HapticUtils';
 import { hdsEffect } from '@kit.UIDesignKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
@@ -288,9 +288,7 @@ export struct GearPage {
     this.dragX = startX;
     this.dragY = startY;
     // 触觉确认
-    try {
-      vibrator.startVibration({ type: 'time', duration: 30 }, { usage: 'touch' });
-    } catch (e) { /* 静默 */ }
+    hapticTime(30);
     // 弹出托盘 + 背景模糊
     this.getUIContext().animateTo({
       curve: SPRING_GENERAL()
@@ -314,9 +312,7 @@ export struct GearPage {
       this.dragOverTripId = hitId;
       if (hitId !== '') {
         // 振动反馈：进入目标
-        try {
-          vibrator.startVibration({ type: 'time', duration: 15 }, { usage: 'touch' });
-        } catch (e) { /* 静默 */ }
+        hapticTime(15);
       }
     }
     // 动态边缘滚动：越靠近边缘速度越快，中间区域不滚动
@@ -378,9 +374,7 @@ export struct GearPage {
     const hitTarget = this.dragOverTripId;
     if (hitTarget !== '' && this.selectedMultiGearIds.length > 0) {
       // 成功释放：强振动确认
-      try {
-        vibrator.startVibration({ type: 'time', duration: 40 }, { usage: 'touch' });
-      } catch (e) { /* 静默 */ }
+      hapticTime(40);
       if (hitTarget === '__new_trip__') {
         this.onAddGearsToNewTrip(this.selectedMultiGearIds);
       } else {
@@ -2347,11 +2341,7 @@ export struct GearPage {
     // 进入拖拽态
     this.groupDragMode = true;
     // 触觉反馈
-    try {
-      vibrator.startVibration({ type: 'time', duration: 30 }, { usage: 'touch' });
-    } catch (e) {
-      // 静默
-    }
+    hapticTime(30);
   }
 
   private updateGroupDrag(fingerY: number): void {
@@ -2389,9 +2379,7 @@ export struct GearPage {
           next.splice(i, 0, this.groupDragGroup);
           this.groupReorderList = next;
         });
-        try {
-          vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });
-        } catch (e) { /* 静默 */ }
+        hapticTime(20);
         return;
       } else if (currentIdx > i && virtualCenterY < midY) {
         // 向上移动
@@ -2403,9 +2391,7 @@ export struct GearPage {
           next.splice(i, 0, this.groupDragGroup);
           this.groupReorderList = next;
         });
-        try {
-          vibrator.startVibration({ type: 'time', duration: 20 }, { usage: 'touch' });
-        } catch (e) { /* 静默 */ }
+        hapticTime(20);
         return;
       }
       accumulatedY += h + 16; // 16 = list space
@@ -2425,11 +2411,7 @@ export struct GearPage {
       this.groupReorderList = [];
     });
     // 振动确认
-    try {
-      vibrator.startVibration({ type: 'time', duration: 30 }, { usage: 'touch' });
-    } catch (e) {
-      // 静默
-    }
+    hapticTime(30);
   }
 
   @Builder

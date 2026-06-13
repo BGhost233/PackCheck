@@ -58,7 +58,7 @@ import {
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { resolveItemName } from '../../services/ChecklistService';
 import { BodyZone } from '../../constants/GearLoadout';
-import { vibrator } from '@kit.SensorServiceKit';
+import { hapticSoft, hapticSharp } from '../../utils/HapticUtils';
 import { groupByZoneAll, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
 import { ZoneGridCell } from './ZoneGridCell';
 import { FocusedZoneView } from './FocusedZoneView';
@@ -817,14 +817,7 @@ this.computeCellHeight();
   //   明确的实体吸附感，又不刺激（拖拽扫过多格时频繁触发也不烦躁）。
   //   与长按触发拖拽同用 soft，时序不重叠，形成「soft = 与格子发生关系」的一致触觉语义。
   private triggerDropHaptic(): void {
-    try {
-      vibrator.startVibration(
-        { type: 'preset', effectId: 'haptic.effect.soft', count: 1 },
-        { usage: 'touch' }
-      );
-    } catch (_e) {
-      // 静默降级
-    }
+    hapticSoft();
   }
 
   // 问题1：拖拽成功落位的回执反馈。
@@ -832,14 +825,7 @@ this.computeCellHeight();
   //   更明确清脆的「成了」确认——用 sharp 与跨格 soft 分层：soft=途经，sharp=落定。
   //   仅在确实发生移动（target 有效且非原格）时触发，空落/原地放回不响。
   private triggerLandedHaptic(): void {
-    try {
-      vibrator.startVibration(
-        { type: 'preset', effectId: 'haptic.effect.sharp', count: 1 },
-        { usage: 'touch' }
-      );
-    } catch (_e) {
-      // 静默降级
-    }
+    hapticSharp();
   }
 
   // 坐标命中判定：当前全局坐标落在哪个 zone 格子内

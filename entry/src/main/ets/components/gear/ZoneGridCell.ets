@@ -25,7 +25,7 @@ import { ChecklistRow } from './ChecklistRow';
 import { resolveItemNameByIndex } from '../../services/ChecklistService';
 import { buildGearIndex } from '../../services/GearService';
 import { ZoneShell } from './ZoneShell';
-import { vibrator } from '@kit.SensorServiceKit';
+import { hapticSoft } from '../../utils/HapticUtils';
 
 // 网格态单格内最多预览的 item 数（超出折叠为「+N 件」提示）。spec §2.1.3
 // P4：收缩态露 4 个装备名（配合降格高）
@@ -302,14 +302,6 @@ export struct ZoneGridCell {
   }
 
   private triggerHaptic(): void {
-    try {
-      vibrator.startVibration({
-        type: 'preset',
-        effectId: 'haptic.effect.soft',
-        count: 1
-      }, { usage: 'touch' });
-    } catch (_e) {
-      // 模拟器/无振动器设备静默失败
-    }
+    hapticSoft();
   }
 }

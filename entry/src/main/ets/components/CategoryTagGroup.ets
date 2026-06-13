@@ -1,5 +1,5 @@
 import { LengthMetrics } from '@kit.ArkUI';
-import { vibrator } from '@kit.SensorServiceKit';
+import { hapticTime } from '../utils/HapticUtils';
 import {
   CHIP_BG_DEFAULT,
   CHIP_BORDER,
@@ -178,11 +178,7 @@ export struct CategoryTagGroup {
   }
 
   private triggerHaptic(duration: number = 10): void {
-    try {
-      vibrator.startVibration({ type: 'time', duration: duration }, { usage: 'touch' });
-    } catch (e) {
-      // 静默失败
-    }
+    hapticTime(duration);
   }
 
   private handleDelete(category: string): void {

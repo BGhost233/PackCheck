@@ -30,7 +30,7 @@ import {
   STAGGER_OFFSET_Y
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem } from '../../models/PackModels';
-import { vibrator } from '@kit.SensorServiceKit';
+import { hapticSoft } from '../../utils/HapticUtils';
 import { resolveItemName } from '../../services/ChecklistService';
 
 // Sheet 高度占屏幕比例
@@ -373,13 +373,6 @@ export struct GearDetailSheet {
   }
 
   private triggerHaptic(): void {
-    try {
-      vibrator.startVibration(
-        { type: 'preset', effectId: 'haptic.effect.soft', count: 1 },
-        { usage: 'touch' }
-      );
-    } catch (_e) {
-      // 振动不可用时静默降级
-    }
+    hapticSoft();
   }
 }

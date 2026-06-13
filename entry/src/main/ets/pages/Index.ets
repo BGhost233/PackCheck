@@ -2,7 +2,8 @@ import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 
-import { sensor, vibrator } from '@kit.SensorServiceKit';
+import { sensor } from '@kit.SensorServiceKit';
+import { hapticTime } from '../utils/HapticUtils';
 import { HdsTabs, HdsTabsController, hdsMaterial, HdsNavigation } from '@kit.UIDesignKit';
 import { GearPage } from '../components/GearPage';
 import { HomePage } from '../components/HomePage';
@@ -1956,11 +1957,7 @@ struct Index {
   }
 
   private async triggerLightVibration(): Promise<void> {
-    try {
-      await vibrator.startVibration({ type: 'time', duration: 50 }, { usage: 'touch' });
-    } catch (error) {
-      hilog.error(0x0001, 'PackCheck', 'triggerLightVibration failed: %{public}s', JSON.stringify(error));
-    }
+    hapticTime(50);
   }
 
   private async deleteChecklistItem(itemId: string): Promise<void> {

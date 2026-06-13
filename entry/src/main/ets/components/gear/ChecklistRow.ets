@@ -20,7 +20,7 @@ import {
 } from '../../constants/Typography';
 import { SPRING_PRESS, PRESS_SCALE_DOWN, PRESS_SCALE_REST } from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';
-import { vibrator } from '@kit.SensorServiceKit';
+import { hapticTick } from '../../utils/HapticUtils';
 
 @Component
 export struct ChecklistRow {
@@ -64,14 +64,7 @@ export struct ChecklistRow {
     const target: number = this.item.checked ? 1.0 : 0;
     if (this.checkScale !== target) {
       // 勾选触觉反馈（轻档 tick）
-      try {
-        vibrator.startVibration(
-          { type: 'preset', effectId: 'haptic.effect.tick', count: 1 },
-          { usage: 'touch' }
-        );
-      } catch (_e) {
-        // 静默降级
-      }
+      hapticTick();
       this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
         this.checkScale = target;
       });
