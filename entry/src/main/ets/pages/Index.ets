@@ -858,6 +858,7 @@ struct Index {
           const nextGears = this.gears.filter((item: GearItem) => !idSet.has(item.id));
           await this.store.saveGears(nextGears);
           this.gears = nextGears;
+          this.checklistRenderNonce++;
 
           this.cancelGearMultiSelect();
         }
@@ -882,6 +883,7 @@ struct Index {
     }
     await this.store.saveGears(nextGears);
     this.gears = nextGears;
+    this.checklistRenderNonce++;
     this.cancelGearMultiSelect();
   }
 

@@ -119,6 +119,7 @@ export struct TripDetailPage {
       UnifiedChecklistView({
         trip: this.currentChecklist() ?? { id: '', title: '', items: [], createdAt: 0 },
         gears: this.gears,
+        checklistRenderNonce: this.checklistRenderNonce,
         reservedTopHeight: this.reservedTop(),
         focusedZone: this.focusedZone,
         closeFocusSignal: this.closeFocusSignal,

@@ -92,6 +92,7 @@ const BOTTOM_FADE_HEIGHT: number = 72;
 export struct UnifiedChecklistView {
   @Prop @Watch('onTripChange') trip: TripChecklist = { id: '', title: '', items: [], createdAt: 0 };
   @Prop gears: GearItem[] = [];
+@Prop checklistRenderNonce: number = 0;
 // 顶部已占高度（NavBar + SharedInfo + ProgressBar），用于首屏 cell 高度反算
 // @Watch：aboutToAppear 时父层 build 可能尚未传入实算值，prop 后续更新需重算 cell 高度（review B3）
 @Prop @Watch('onReservedTopChange') reservedTopHeight: number = 180;
@@ -572,7 +573,7 @@ this.computeCellHeight();
           const pos = n.globalPosition as Record<string, number>;
           this.zoneRects.set(zone, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
         })
-      }, (zone: string) => zone + '_' + this.itemsForZone(zone).length.toString())
+      }, (zone: string) => zone + '_' + this.itemsForZone(zone).length.toString() + '_' + this.checklistRenderNonce.toString())
 
       // 杂项格跨 2 列（spec §2.1.2 F-5），单独渲染在末尾
       GridItem() {
