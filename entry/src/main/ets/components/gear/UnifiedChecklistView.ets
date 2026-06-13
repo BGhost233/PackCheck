@@ -47,8 +47,6 @@ import {
   SPRING_PRESS,
   SPRING_HERO_EXPAND,
   SPRING_HERO_COLLAPSE,
-  SPRING_SCROLL,
-  SPRING_HEAD_FOLLOW,
   STAGGER_OFFSET_Y,
   GRID_FOCUS_BLUR,
   GRID_FOCUS_SINK_Y,
@@ -68,6 +66,7 @@ import { FocusedZoneView } from './FocusedZoneView';
 import { LoadoutProgressBar } from './LoadoutProgressBar';
 import { GearItemContextMenu, ContextMenuItem } from './GearItemContextMenu';
 import { GearDetailSheet } from './GearDetailSheet';
+import { HeadCollapseController } from '../../utils/HeadCollapseController';
 
 // 双列网格中走常规单列的 zone（杂项单独跨列渲染在末尾）。spec §2.1.2 F-5
 const GRID_SINGLE_ZONES: string[] = [
@@ -100,6 +99,7 @@ const BOTTOM_FADE_HEIGHT: number = 96;
 //   = SharedInfo(28，TripDetailPage 日期行) + ProgressBar(48，本组件进度条) = 76。
 //   网格滚动 0→此距离，headCollapseProgress 线性 0→1，期间严格 1:1 跟手（无动画）。
 //   松手后惯性停在中间态时再做就近吸附（Spring）。对齐 iOS Large Title 范式。
+//   折叠数学统一交给 HeadCollapseController，此距离作为其 collapseDistance 配置入参。
 const HEAD_COLLAPSE_DISTANCE: number = 76;
 
 @Component
@@ -180,7 +180,8 @@ export struct UnifiedChecklistView {
   // 全屏聚焦的 Zone（null = 网格态）。spec §2.2 / §4.5.6
   // 问题4a：改 @Link 由 Index 持有 @State 源，使 onBackPressed 能读判断「是否聚焦」做分层拦截。
   //   注意：Index 不直接改此值（会丢收起动画），而是递增 closeFocusSignal 让本组件走带动画的 closeFocus()。
-  @Link focusedZone: string | null;
+//   @Watch：聚焦态变化 → 同步控制器 forcedCollapsed（聚焦时 head 强制吃满折叠）。
+  @Link @Watch('onFocusedZoneChange') focusedZone: string | null;
   // 问题4a：Index 命中聚焦态时递增此信号，本组件 @Watch 后走带动画的 closeFocus()。
   @Prop @Watch('onCloseFocusSignal') closeFocusSignal: number;
   // 当前/上次聚焦渲染的 Zone（F-3：FocusedZoneView 常驻树用 visibility 切换，退场时仍需有 zone 可渲染）
@@ -190,6 +191,24 @@ export struct UnifiedChecklistView {
   // 隐含前提（review C2）：Zone 分组只依赖 trip.items 自身字段，不依赖 gears。
   // 因此「gears 数据变化但 trip 引用不变」（如装备库重命名 gear）不会、也无需刷新本缓存。
   private zoneMapCache: Map<string, ChecklistItem[]> = new Map();
+
+  // 问题4a：统一折叠控制器。实例放本组件（持有 gridScroller）。
+  //   onChange 把 progress 同时写回本组件 @State 镜像（驱动 ProgressBar 折叠）与父层（驱动 SharedInfo 折叠）。
+  private headController: HeadCollapseController = new HeadCollapseController({
+    collapseDistance: HEAD_COLLAPSE_DISTANCE,
+    enableSnap: true,
+    getUIContext: () => this.getUIContext(),
+    onChange: (progress: number, snapping: boolean) => {
+      this.headSnapping = snapping;
+      this.headCollapseProgress = progress;
+      this.onHeadCollapseChange(progress, snapping);
+    }
+  });
+
+  // @Watch('focusedZone')：聚焦态切换时把强制满折叠信号同步给控制器。
+  onFocusedZoneChange(): void {
+    this.headController.setForcedCollapsed(this.focusedZone != null);
+  }
 
   aboutToAppear() {
     this.refreshCache();
@@ -218,20 +237,24 @@ this.computeCellHeight();
 
 // 问题4a：有效折叠程度 = 两个来源取「更折叠」者。
 //   聚焦态吃满 1（聚焦卡片要顶到 navbar 下沿，head 必须全收）；非聚焦时跟随滚动进度。
-private effectiveHeadCollapse(): number {
-  return this.focusedZone != null ? 1 : this.headCollapseProgress;
-}
+  private effectiveHeadCollapse(): number {
+    // ⚠️ 刷新陷阱：必须读 @State 镜像（headCollapseProgress），不能直接读 controller.progress()。
+    //   ArkUI 依赖收集只订阅 build 中读到的 @State；controller 是普通类，改字段不触发 re-render。
+    //   镜像由 controller.onChange 推动更新（含强制态 setForcedCollapsed 回吐的满折叠值）。
+    return this.headCollapseProgress;
+  }
 
 // 问题4a：head 折叠动画曲线分三态——
 //   聚焦态开关切换走 SPRING_HERO（展/收方向不同）；
 //   滚动吸附走 SPRING_SCROLL（沉稳收尾）；
 //   跟手滚动走 SPRING_HEAD_FOLLOW（responsiveSpringMotion 近 1:1 实时跟随，不抢手感）。
-private headCollapseCurve(): ICurve {
-  if (this.focusedZone != null) {
-    return SPRING_HERO_EXPAND();
+  private headCollapseCurve(): ICurve {
+    // 聚焦态走 hero 展开曲线（与共享元素转场同帧），是本页特有动效，不下沉到通用控制器。
+    if (this.focusedZone != null) {
+      return SPRING_HERO_EXPAND();
+    }
+    return this.headController.curve();
   }
-  return this.headSnapping ? SPRING_SCROLL() : SPRING_HEAD_FOLLOW();
-}
 
   build() {
     Column() {
@@ -982,37 +1005,12 @@ private headCollapseCurve(): ICurve {
     //   跟手阶段严格 1:1 实时赋值、零动画、绝不抢手感；松手吸附交给 onScrollStop。
     //   聚焦态下 head 已由 focusedZone 开关吃满折叠（走 SPRING_HERO），此处跳过避免双驱动打架。
     .onScroll(() => {
-      if (this.focusedZone != null) {
-        return;
-      }
-      const yOffset: number = this.gridScroller.currentOffset().yOffset;
-      const p: number = Math.min(1, Math.max(0, yOffset / HEAD_COLLAPSE_DISTANCE));
-      this.headSnapping = false;
-      this.headCollapseProgress = p;
-      this.onHeadCollapseChange(p, false);
+      this.headController.handleScroll(this.gridScroller);
     })
     // 问题4a：松手 + 惯性结束后的「就近吸附」。对齐 iOS Large Title——绝不让 head 停在半折叠残缺态。
     //   仅在中间态 (0,1) 开区间吸附；已是 0/1 时不做多余动画。吸附用 SPRING_SCROLL（沉稳收尾感）。
     .onScrollStop(() => {
-      if (this.focusedZone != null) {
-        return;
-      }
-      const p: number = this.headCollapseProgress;
-      if (p <= 0 || p >= 1) {
-        return;
-      }
-      const targetProgress: number = p < 0.5 ? 0 : 1;
-      const targetOffset: number = targetProgress * HEAD_COLLAPSE_DISTANCE;
-      this.headSnapping = true;
-      this.gridScroller.scrollTo({
-        xOffset: 0,
-        yOffset: targetOffset,
-        animation: { curve: SPRING_SCROLL() }
-      });
-      this.getUIContext().animateTo({ curve: SPRING_SCROLL() }, () => {
-        this.headCollapseProgress = targetProgress;
-        this.onHeadCollapseChange(targetProgress, true);
-      });
+      this.headController.handleScrollStop(this.gridScroller);
     })
     // 问题3b：底部「逐渐弥散」——linearGradientBlur 糊的是组件自身内容（卡片），
     //   按视口垂直位置渐变：顶部 BOTTOM_DIFFUSE_CLEAR_STOP 以上完全清晰，往下模糊强度线性爬升到底沿满值。
