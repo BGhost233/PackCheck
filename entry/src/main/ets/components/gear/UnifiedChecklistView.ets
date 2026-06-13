@@ -527,6 +527,8 @@ this.computeCellHeight();
         // 单项移动
         this.onMoveItemToZone(this.overlayItem!.id, target);
       }
+      // 问题1：成功落位回执（批量/单项统一一次）
+      this.triggerLandedHaptic();
     }
     // 重置拖拽状态
     this.batchDragIds = [];
@@ -695,6 +697,8 @@ this.computeCellHeight();
     const target = this.hitTestZone(fingerGlobalX, fingerGlobalY);
     if (target !== null && target !== this.overlayItem!.group) {
       this.onMoveItemToZone(this.overlayItem!.id, target);
+      // 问题1：成功落位回执
+      this.triggerLandedHaptic();
     }
     this.getUIContext().animateTo({
       curve: SPRING_GENERAL(),
@@ -760,10 +764,30 @@ this.computeCellHeight();
     }
   }
 
+  // 问题1：拖拽进入新目标格的触觉反馈。
+  //   第一性原理：跨格是拖拽中「有空间吸附意义的离散里程碑」，比勾选(tick)重要——
+  //   tick 太轻会淹没在拖拽手势里，用户感知不到「进新格了」。升级为 soft：
+  //   明确的实体吸附感，又不刺激（拖拽扫过多格时频繁触发也不烦躁）。
+  //   与长按触发拖拽同用 soft，时序不重叠，形成「soft = 与格子发生关系」的一致触觉语义。
   private triggerDropHaptic(): void {
     try {
       vibrator.startVibration(
-        { type: 'preset', effectId: 'haptic.effect.tick', count: 1 },
+        { type: 'preset', effectId: 'haptic.effect.soft', count: 1 },
+        { usage: 'touch' }
+      );
+    } catch (_e) {
+      // 静默降级
+    }
+  }
+
+  // 问题1：拖拽成功落位的回执反馈。
+  //   第一性原理：松手成功移入新格是整个拖拽操作的「完成时刻」，需要一记比过程(soft)
+  //   更明确清脆的「成了」确认——用 sharp 与跨格 soft 分层：soft=途经，sharp=落定。
+  //   仅在确实发生移动（target 有效且非原格）时触发，空落/原地放回不响。
+  private triggerLandedHaptic(): void {
+    try {
+      vibrator.startVibration(
+        { type: 'preset', effectId: 'haptic.effect.sharp', count: 1 },
         { usage: 'touch' }
       );
     } catch (_e) {
