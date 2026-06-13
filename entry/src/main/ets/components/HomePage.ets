@@ -1,5 +1,13 @@
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
 import {
+  checkedCount,
+  progressText,
+  progressTotal,
+  isChecklistDone,
+  startOfDay,
+  checklistDateAt
+} from '../services/ChecklistService';
+import {
   AMBER_ACCENT,
   CARD_BG,
   CARD_BORDER_BOTTOM_COLOR,
@@ -94,7 +102,7 @@ export struct HomePage {
   private onChecklistRenderNonceChange(): void {
     const checklist = this.latestChecklist();
     if (checklist !== undefined) {
-      this.progressNumeratorDisplay = this.checkedCount(checklist);
+      this.progressNumeratorDisplay = checkedCount(checklist);
       this.progressAnimated = true;
     }
   }
@@ -199,7 +207,7 @@ export struct HomePage {
       this.progressAnimated = true;
       return;
     }
-    const target = this.checkedCount(checklist);
+    const target = checkedCount(checklist);
     this.getUIContext().animateTo({
       curve: SPRING_GENERAL(),
       onFinish: (): void => {
@@ -214,13 +222,13 @@ export struct HomePage {
     if (this.checklists.length === 0) {
       return undefined;
     }
-    const today = this.startOfDay(new Date());
+    const today = startOfDay(new Date());
     // 找最近的未来行程（dateAt >= 今天0点），按 dateAt 升序取第一个
     let nearestFuture: TripChecklist | undefined = undefined;
     for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = this.checklistDateAt(this.checklists[i]);
+      const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt >= today) {
-        if (nearestFuture === undefined || dateAt < this.checklistDateAt(nearestFuture)!) {
+        if (nearestFuture === undefined || dateAt < checklistDateAt(nearestFuture)!) {
           nearestFuture = this.checklists[i];
         }
       }
@@ -231,9 +239,9 @@ export struct HomePage {
     // 无未来行程，找最近的历史行程（dateAt < 今天0点），按 dateAt 降序取第一个
     let latestPast: TripChecklist | undefined = undefined;
     for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = this.checklistDateAt(this.checklists[i]);
+      const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt < today) {
-        if (latestPast === undefined || dateAt > this.checklistDateAt(latestPast)!) {
+        if (latestPast === undefined || dateAt > checklistDateAt(latestPast)!) {
           latestPast = this.checklists[i];
         }
       }
@@ -243,42 +251,6 @@ export struct HomePage {
     }
     // 全部无日期，按 createdAt 降序取第一个（checklists 已按 createdAt 降序排列）
     return this.checklists[0];
-  }
-
-  private checkedCount(checklist: TripChecklist): number {
-    let count = 0;
-    for (let index = 0; index < checklist.items.length; index++) {
-      if (checklist.items[index].checked) {
-        count++;
-      }
-    }
-    return count;
-  }
-
-  private progressValue(checklist: TripChecklist): number {
-    return this.checkedCount(checklist);
-  }
-
-  private progressTotal(checklist: TripChecklist): number {
-    return checklist.items.length === 0 ? 1 : checklist.items.length;
-  }
-
-  private progressText(checklist: TripChecklist): string {
-    return this.checkedCount(checklist).toString() + '/' + checklist.items.length.toString();
-  }
-
-  private isChecklistDone(checklist: TripChecklist): boolean {
-    return checklist.items.length > 0 && this.checkedCount(checklist) === checklist.items.length;
-  }
-
-  private activeChecklistCount(): number {
-    let count = 0;
-    for (let index = 0; index < this.checklists.length; index++) {
-      if (!this.isChecklistDone(this.checklists[index])) {
-        count++;
-      }
-    }
-    return count;
   }
 
   private homeStatusText(): string {
@@ -292,53 +264,12 @@ export struct HomePage {
     return '已完成 ' + this.pastTrips().length.toString() + ' 个行程';
   }
 
-  private startOfDay(date: Date): number {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-  }
-
-  private parseTripDateAt(text: string): number | undefined {
-    const value = text.trim();
-    if (value.length === 0) {
-      return undefined;
-    }
-    const yearIndex = value.indexOf('年');
-    let year = new Date().getFullYear();
-    let parseFrom = value;
-    if (yearIndex > 0) {
-      const parsedYear = Number(value.substring(0, yearIndex));
-      if (!Number.isNaN(parsedYear)) {
-        year = parsedYear;
-      }
-      parseFrom = value.substring(yearIndex + 1);
-    }
-    const monthIndex = parseFrom.indexOf('月');
-    const dayIndex = parseFrom.indexOf('日');
-    if (monthIndex > 0 && dayIndex > monthIndex) {
-      const month = Number(parseFrom.substring(0, monthIndex));
-      const day = Number(parseFrom.substring(monthIndex + 1, dayIndex));
-      if (!Number.isNaN(month) && !Number.isNaN(day)) {
-        return new Date(year, month - 1, day).getTime();
-      }
-    }
-    return undefined;
-  }
-
-  private checklistDateAt(checklist: TripChecklist): number | undefined {
-    if (checklist.dateAt !== undefined) {
-      return checklist.dateAt;
-    }
-    if (checklist.date !== undefined) {
-      return this.parseTripDateAt(checklist.date);
-    }
-    return undefined;
-  }
-
   private daysLeft(checklist: TripChecklist): number | undefined {
-    const dateAt = this.checklistDateAt(checklist);
+    const dateAt = checklistDateAt(checklist);
     if (dateAt === undefined) {
       return undefined;
     }
-    return Math.floor((dateAt - this.startOfDay(new Date())) / 86400000);
+    return Math.floor((dateAt - startOfDay(new Date())) / 86400000);
   }
 
   private countdownLead(checklist: TripChecklist): string {
@@ -425,11 +356,11 @@ export struct HomePage {
   }
 
   private rowDateText(item: TripChecklist): string {
-    const dateAt = this.checklistDateAt(item);
+    const dateAt = checklistDateAt(item);
     if (dateAt === undefined) {
       return '日期待定';
     }
-    const dayDiff = Math.floor((dateAt - this.startOfDay(new Date())) / 86400000);
+    const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
     if (dayDiff > 0) {
       return '还有 ' + dayDiff.toString() + ' 天';
     }
@@ -440,11 +371,11 @@ export struct HomePage {
   }
 
   private rowDateColor(item: TripChecklist): string {
-    const dateAt = this.checklistDateAt(item);
+    const dateAt = checklistDateAt(item);
     if (dateAt === undefined) {
       return TEXT_TERTIARY;
     }
-    const dayDiff = Math.floor((dateAt - this.startOfDay(new Date())) / 86400000);
+    const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
     if (dayDiff === 0) {
       return PRIMARY_COLOR;
     }
@@ -459,34 +390,34 @@ export struct HomePage {
   }
 
   private rowDateBold(item: TripChecklist): FontWeight {
-    const dateAt = this.checklistDateAt(item);
+    const dateAt = checklistDateAt(item);
     if (dateAt === undefined) {
       return FontWeight.Normal;
     }
-    const dayDiff = Math.floor((dateAt - this.startOfDay(new Date())) / 86400000);
+    const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
     return dayDiff === 0 ? FontWeight.Bold : FontWeight.Normal;
   }
 
   private futureTrips(): TripChecklist[] {
-    const today = this.startOfDay(new Date());
+    const today = startOfDay(new Date());
     const result: TripChecklist[] = [];
     for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = this.checklistDateAt(this.checklists[i]);
+      const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt >= today) {
         result.push(this.checklists[i]);
       }
     }
     // 按 dateAt 升序排列（最近的在前）
-    result.sort((a: TripChecklist, b: TripChecklist) => this.checklistDateAt(a)! - this.checklistDateAt(b)!);
+    result.sort((a: TripChecklist, b: TripChecklist) => checklistDateAt(a)! - checklistDateAt(b)!);
     return result;
   }
 
   private pastTrips(): TripChecklist[] {
-    const today = this.startOfDay(new Date());
+    const today = startOfDay(new Date());
     const withDate: TripChecklist[] = [];
     const noDate: TripChecklist[] = [];
     for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = this.checklistDateAt(this.checklists[i]);
+      const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt === undefined) {
         noDate.push(this.checklists[i]);
       } else if (dateAt < today) {
@@ -494,7 +425,7 @@ export struct HomePage {
       }
     }
     // 有日期的按 dateAt 降序（最近的在前），无日期的按 createdAt 降序排后面
-    withDate.sort((a: TripChecklist, b: TripChecklist) => this.checklistDateAt(b)! - this.checklistDateAt(a)!);
+    withDate.sort((a: TripChecklist, b: TripChecklist) => checklistDateAt(b)! - checklistDateAt(a)!);
     noDate.sort((a: TripChecklist, b: TripChecklist) => b.createdAt - a.createdAt);
     return [...withDate, ...noDate];
   }
@@ -504,7 +435,7 @@ export struct HomePage {
       return;
     }
     const checklist = this.latestChecklist();
-    if (checklist !== undefined && this.isChecklistDone(checklist) && checklist.items.length > 0) {
+    if (checklist !== undefined && isChecklistDone(checklist) && checklist.items.length > 0) {
       this.wasLatestChecklistDone = true;
       this.heroRingCelebrateScale = 1.35;
       this.ringCelebrateColor = CELEBRATE_GOLD;
@@ -729,7 +660,7 @@ export struct HomePage {
         .strokeWidth(5)
       Progress({
         value: this.progressNumeratorDisplay,
-        total: this.latestChecklist() !== undefined ? this.progressTotal(this.latestChecklist()!) : 1,
+        total: this.latestChecklist() !== undefined ? progressTotal(this.latestChecklist()!) : 1,
         type: ProgressType.Ring
       })
         .width(52)
@@ -791,12 +722,12 @@ export struct HomePage {
 
   // 只取未来行程中最近的一个（dateAt >= 今天）
   private nearestFutureChecklist(): TripChecklist | undefined {
-    const today = this.startOfDay(new Date());
+    const today = startOfDay(new Date());
     let nearest: TripChecklist | undefined = undefined;
     for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = this.checklistDateAt(this.checklists[i]);
+      const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt >= today) {
-        if (nearest === undefined || dateAt < this.checklistDateAt(nearest)!) {
+        if (nearest === undefined || dateAt < checklistDateAt(nearest)!) {
           nearest = this.checklists[i];
         }
       }
@@ -809,7 +740,7 @@ export struct HomePage {
     if (target === undefined) {
       return '';
     }
-    if (target.items.length > 0 && this.checkedCount(target) === target.items.length) {
+    if (target.items.length > 0 && checkedCount(target) === target.items.length) {
       return '再检查一遍';
     }
     return '快速核查';
@@ -984,7 +915,7 @@ export struct HomePage {
           .height(16)
           .backgroundColor(DIVIDER_COLOR)
         Circle({ width: 8, height: 8 })
-          .fill(this.isChecklistDone(item) ? PRIMARY_COLOR : TRANSPARENT)
+          .fill(isChecklistDone(item) ? PRIMARY_COLOR : TRANSPARENT)
           .stroke(PRIMARY_COLOR)
           .strokeWidth(1.5)
         Row()
@@ -1000,7 +931,7 @@ export struct HomePage {
             .fontSize(15)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
-          Text(this.progressText(item))
+          Text(progressText(item))
             .fontSize(12)
             .fontColor(TEXT_TERTIARY)
             .fontFeature(FONT_FEATURE_TNUM)
