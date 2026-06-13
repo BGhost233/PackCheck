@@ -75,7 +75,9 @@ import {
   categoryTabs,
   presetCategories,
   gearById,
-  uniqueGearIds
+  uniqueGearIds,
+  createGear,
+  updateGear
 } from '../services/GearService';
 import {
   addCategory,
@@ -613,17 +615,13 @@ struct Index {
       const item = this.gears[index];
       if (item.id === this.editingGearId) {
         oldPrice = item.price;
-        const edited: GearItem = {
-          id: item.id,
+        const edited = updateGear(item, {
           name: name,
           category: category,
           weight: normalizeNumber(this.gearWeight),
           price: newPrice,
-          note: this.gearNote.trim(),
-          createdAt: item.createdAt,
-          brand: item.brand,
-          acquiredAt: item.acquiredAt
-        };
+          note: this.gearNote.trim()
+        });
         nextGears.push(edited);
         updated = true;
       } else {
@@ -632,15 +630,13 @@ struct Index {
     }
 
     if (!updated) {
-      const created: GearItem = {
-        id: makeId('gear'),
+      const created = createGear({
         name: name,
         category: category,
         weight: normalizeNumber(this.gearWeight),
         price: newPrice,
-        note: this.gearNote.trim(),
-        createdAt: Date.now()
-      };
+        note: this.gearNote.trim()
+      });
       nextGears.unshift(created);
     }
 
@@ -873,18 +869,7 @@ struct Index {
     for (let i = 0; i < this.gears.length; i++) {
       const gear = this.gears[i];
       if (idSet.has(gear.id)) {
-        const updated: GearItem = {
-          id: gear.id,
-          name: gear.name,
-          category: targetGroup,
-          weight: gear.weight,
-          price: gear.price,
-          note: gear.note,
-          createdAt: gear.createdAt,
-          brand: gear.brand,
-          acquiredAt: gear.acquiredAt
-        };
-        nextGears.push(updated);
+        nextGears.push(updateGear(gear, { category: targetGroup }));
       } else {
         nextGears.push(gear);
       }
@@ -1231,14 +1216,7 @@ struct Index {
       return;
     }
 
-    const created: GearItem = {
-      id: makeId('gear'),
-      name: name,
-      category: group,
-      weight: item.weight,
-      price: item.price,
-      createdAt: Date.now()
-    };
+    const created = createGear({ name: name, category: group, weight: item.weight, price: item.price });
     const nextGears: GearItem[] = [created];
     for (let index = 0; index < this.gears.length; index++) {
       nextGears.push(this.gears[index]);
@@ -1502,13 +1480,7 @@ struct Index {
       return;
     }
     const safeCategory = category.trim().length === 0 ? CATEGORY_FALLBACK : category.trim();
-    const created: GearItem = {
-      id: makeId('gear'),
-      name: name,
-      category: safeCategory,
-      weight: weight,
-      createdAt: Date.now()
-    };
+    const created = createGear({ name: name, category: safeCategory, weight: weight });
     // 入库
     const nextGears: GearItem[] = [created].concat(this.gears);
     await this.store.saveGears(nextGears);

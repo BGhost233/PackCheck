@@ -1,4 +1,5 @@
 import { CATEGORY_FALLBACK, GearItem, ChecklistItem, TripChecklist } from '../models/PackModels';
+import { updateGear } from './GearService';
 
 /**
  * 分组标签 CRUD + 全局数据同步逻辑
@@ -68,18 +69,7 @@ export function migrateGearsOnDelete(gears: GearItem[], deletedCategory: string)
   const result: GearItem[] = [];
   for (let i = 0; i < gears.length; i++) {
     if (gears[i].category === deletedCategory) {
-      const updated: GearItem = {
-        id: gears[i].id,
-        name: gears[i].name,
-        category: PROTECTED_CATEGORY,
-        weight: gears[i].weight,
-        price: gears[i].price,
-        note: gears[i].note,
-        createdAt: gears[i].createdAt,
-        brand: gears[i].brand,
-        acquiredAt: gears[i].acquiredAt
-      };
-      result.push(updated);
+      result.push(updateGear(gears[i], { category: PROTECTED_CATEGORY }));
     } else {
       result.push(gears[i]);
     }
@@ -171,18 +161,7 @@ export function renameGearsCategory(gears: GearItem[], oldName: string, newName:
   const result: GearItem[] = [];
   for (let i = 0; i < gears.length; i++) {
     if (gears[i].category === oldName) {
-      const updated: GearItem = {
-        id: gears[i].id,
-        name: gears[i].name,
-        category: newName,
-        weight: gears[i].weight,
-        price: gears[i].price,
-        note: gears[i].note,
-        createdAt: gears[i].createdAt,
-        brand: gears[i].brand,
-        acquiredAt: gears[i].acquiredAt
-      };
-      result.push(updated);
+      result.push(updateGear(gears[i], { category: newName }));
     } else {
       result.push(gears[i]);
     }

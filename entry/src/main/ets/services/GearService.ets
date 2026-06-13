@@ -6,7 +6,7 @@ import {
   GEAR_SORT_VALUE,
   GEAR_SORT_WEIGHT
 } from '../constants/DesignTokens';
-import { CATEGORY_ALL, DEFAULT_CATEGORIES, GearItem } from '../models/PackModels';
+import { CATEGORY_ALL, DEFAULT_CATEGORIES, GearItem, makeId } from '../models/PackModels';
 
 /**
  * 装备相关纯业务逻辑 — 不依赖 UI 上下文
@@ -14,6 +14,58 @@ import { CATEGORY_ALL, DEFAULT_CATEGORIES, GearItem } from '../models/PackModels
 
 export function numberOrZero(value: number | undefined): number {
   return value === undefined ? 0 : value;
+}
+
+// ─── GearItem 工厂 ───────────────────────────────────────────
+
+export interface CreateGearParams {
+  name: string;
+  category: string;
+  weight?: number;
+  price?: number;
+  note?: string;
+  brand?: string;
+  acquiredAt?: number;
+}
+
+/** 新建装备：统一分配 id + createdAt */
+export function createGear(params: CreateGearParams): GearItem {
+  return {
+    id: makeId('gear'),
+    name: params.name,
+    category: params.category,
+    weight: params.weight,
+    price: params.price,
+    note: params.note,
+    createdAt: Date.now(),
+    brand: params.brand,
+    acquiredAt: params.acquiredAt
+  };
+}
+
+export interface UpdateGearFields {
+  name?: string;
+  category?: string;
+  weight?: number;
+  price?: number;
+  note?: string;
+  brand?: string;
+  acquiredAt?: number;
+}
+
+/** 更新装备字段：保留未指定字段 */
+export function updateGear(existing: GearItem, fields: UpdateGearFields): GearItem {
+  return {
+    id: existing.id,
+    name: fields.name !== undefined ? fields.name : existing.name,
+    category: fields.category !== undefined ? fields.category : existing.category,
+    weight: fields.weight !== undefined ? fields.weight : existing.weight,
+    price: fields.price !== undefined ? fields.price : existing.price,
+    note: fields.note !== undefined ? fields.note : existing.note,
+    createdAt: existing.createdAt,
+    brand: fields.brand !== undefined ? fields.brand : existing.brand,
+    acquiredAt: fields.acquiredAt !== undefined ? fields.acquiredAt : existing.acquiredAt
+  };
 }
 
 export function gearValueRatio(item: GearItem): number {
