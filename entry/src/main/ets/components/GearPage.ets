@@ -19,6 +19,7 @@ import { PackStore } from '../services/PackStore';
 import { computeGearTripCount } from '../services/FootprintService';
 import { buildGearTripCountMap } from '../services/FootprintService';
 import { computeFootprint, Footprint, LongestCompanion } from '../services/FootprintService';
+import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice } from '../services/GearService';
 import {
   ARROW_COLOR,
   CARD_BG,
@@ -418,20 +419,9 @@ export struct GearPage {
   onAddGearsToTrip: (gearIds: string[], tripId: string) => void = (gearIds: string[], tripId: string): void => {};
   onAddGearsToNewTrip: (gearIds: string[]) => void = (gearIds: string[]): void => {};
 
-  private numberOrZero(value: number | undefined): number {
-    return value === undefined ? 0 : value;
-  }
-
   // 同行次数实时派生：查预计算 Map，O(1)，避免每次排序/渲染重复遍历
   private gearTripCount(item: GearItem): number {
     return this.gearTripCountMap.get(item.id) ?? 0;
-  }
-
-  private gearValueRatio(item: GearItem): number {
-    if (item.price === undefined || item.weight === undefined || item.weight <= 0) {
-      return 0;
-    }
-    return item.price / item.weight;
   }
 
   private sortedGears(items: GearItem[]): GearItem[] {
@@ -441,16 +431,16 @@ export struct GearPage {
     }
     sorted.sort((left: GearItem, right: GearItem): number => {
       if (this.gearSortMode === GEAR_SORT_PRICE) {
-        return this.numberOrZero(right.price) - this.numberOrZero(left.price);
+        return numberOrZero(right.price) - numberOrZero(left.price);
       }
       if (this.gearSortMode === GEAR_SORT_WEIGHT) {
-        return this.numberOrZero(right.weight) - this.numberOrZero(left.weight);
+        return numberOrZero(right.weight) - numberOrZero(left.weight);
       }
       if (this.gearSortMode === GEAR_SORT_TIME) {
         return right.createdAt - left.createdAt;
       }
       if (this.gearSortMode === GEAR_SORT_VALUE) {
-        return this.gearValueRatio(right) - this.gearValueRatio(left);
+        return gearValueRatio(right) - gearValueRatio(left);
       }
       if (this.gearSortMode === GEAR_SORT_TRIP_COUNT) {
         return this.gearTripCount(right) - this.gearTripCount(left);
@@ -522,25 +512,6 @@ export struct GearPage {
     return this.sortedGears(filtered);
   }
 
-  private gearSortLabel(): string {
-    if (this.gearSortMode === GEAR_SORT_PRICE) {
-      return '按价格';
-    }
-    if (this.gearSortMode === GEAR_SORT_WEIGHT) {
-      return '按重量';
-    }
-    if (this.gearSortMode === GEAR_SORT_TIME) {
-      return '按添加时间';
-    }
-    if (this.gearSortMode === GEAR_SORT_VALUE) {
-      return '按克单价';
-    }
-    if (this.gearSortMode === GEAR_SORT_TRIP_COUNT) {
-      return '按出行次数';
-    }
-    return '按分组';
-  }
-
   private allGearGroups(): string[] {
     const groups: string[] = [];
     for (let i = 0; i < this.gears.length; i++) {
@@ -556,7 +527,7 @@ export struct GearPage {
     const items = this.filteredGears();
     const groups: string[] = [];
     for (let index = 0; index < items.length; index++) {
-      const group = this.gearSortMode === GEAR_SORT_GROUP ? items[index].category : this.gearSortLabel();
+      const group = this.gearSortMode === GEAR_SORT_GROUP ? items[index].category : gearSortLabel(this.gearSortMode);
       if (groups.indexOf(group) < 0) {
         groups.push(group);
       }
@@ -590,22 +561,6 @@ export struct GearPage {
       return items;
     }
     return items.filter((item: GearItem) => item.category === group);
-  }
-
-  private totalGearWeight(): number {
-    let total = 0;
-    for (let index = 0; index < this.gears.length; index++) {
-      total += this.numberOrZero(this.gears[index].weight);
-    }
-    return total;
-  }
-
-  private totalGearPrice(): number {
-    let total = 0;
-    for (let index = 0; index < this.gears.length; index++) {
-      total += this.numberOrZero(this.gears[index].price);
-    }
-    return total;
   }
 
   private formatKg(weightGram: number): string {
@@ -702,8 +657,8 @@ export struct GearPage {
   }
 
   private gearSummaryText(): string {
-    return this.gears.length.toString() + '件 · ' + this.formatKg(this.totalGearWeight()) +
-      ' · ¥' + this.totalGearPrice().toString();
+    return this.gears.length.toString() + '件 · ' + this.formatKg(totalGearWeight(this.gears)) +
+      ' · ¥' + totalGearPrice(this.gears).toString();
   }
 
   private openWeightEditor(): void {
