@@ -592,26 +592,13 @@ export struct HomePage {
     .backgroundColor(PAGE_BG)
   }
 
-  // 渐进式模糊
-  private homeHeaderBlurStyle(): BlurStyle {
+  // 折叠态底部 hairline 分隔线：alpha 随 progress 0→1 浮现（对齐 iOS Large Title）
+  private homeHeaderBorderColor(): string {
     const p = this.scrollProgress();
-    if (p < 0.3) {
-      return BlurStyle.NONE;
-    } else if (p < 0.7) {
-      return BlurStyle.Thin;
-    }
-    return BlurStyle.Regular;
-  }
-
-  private homeHeaderBgColor(): string {
-    const p = this.scrollProgress();
-    if (p < 0.2) {
-      return PAGE_BG;
-    }
-    const t = Math.min(1, (p - 0.2) / 0.8);
-    const alpha = Math.round(t * 0xCC);
+    const t = p < 0.5 ? 0 : Math.min(1, (p - 0.5) * 2);
+    const alpha = Math.round(t * 0xFF);
     const hex = alpha < 16 ? '0' + alpha.toString(16).toUpperCase() : alpha.toString(16).toUpperCase();
-    return '#' + hex + PAGE_BG.substring(1); // PAGE_BG with dynamic alpha
+    return '#' + hex + DIVIDER_COLOR.substring(1); // DIVIDER_COLOR with dynamic alpha
   }
 
   @Builder
@@ -645,8 +632,8 @@ export struct HomePage {
     .height(HOME_HEADER_COLLAPSED)
     .padding({ left: PAGE_PADDING, right: PAGE_PADDING + 4 })
     .alignItems(VerticalAlign.Center)
-    .backgroundColor(this.homeHeaderBgColor())
-    .backgroundBlurStyle(this.homeHeaderBlurStyle())
+    .backgroundColor(PAGE_BG)
+    .border({ width: { bottom: 0.5 }, color: { bottom: this.homeHeaderBorderColor() } })
     .position({ x: 0, y: 0 })
   }
 
