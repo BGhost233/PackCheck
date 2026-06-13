@@ -75,7 +75,6 @@ export function migrateGearsOnDelete(gears: GearItem[], deletedCategory: string)
         weight: gears[i].weight,
         price: gears[i].price,
         note: gears[i].note,
-        tripCount: gears[i].tripCount,
         createdAt: gears[i].createdAt,
         brand: gears[i].brand,
         acquiredAt: gears[i].acquiredAt
@@ -179,7 +178,6 @@ export function renameGearsCategory(gears: GearItem[], oldName: string, newName:
         weight: gears[i].weight,
         price: gears[i].price,
         note: gears[i].note,
-        tripCount: gears[i].tripCount,
         createdAt: gears[i].createdAt,
         brand: gears[i].brand,
         acquiredAt: gears[i].acquiredAt

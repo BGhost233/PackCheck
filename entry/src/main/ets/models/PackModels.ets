@@ -5,7 +5,6 @@ export interface GearItem {
   weight?: number;
   price?: number;
   note?: string;
-  tripCount?: number;
   createdAt: number;
   brand?: string;        // 品牌（packing：辨识/复购参考）
   acquiredAt?: number;   // 入手时间戳（archive：陪伴天数 = now - acquiredAt；与 createdAt 录入时间区分）

@@ -470,7 +470,7 @@ struct Index {
   }
 
   private mostFrequentGearText(): string {
-    return mostFrequentGearText(this.gears);
+    return mostFrequentGearText(this.gears, new Map());
   }
 
   private categoryTabs(): string[] {
@@ -620,7 +620,6 @@ struct Index {
           weight: normalizeNumber(this.gearWeight),
           price: newPrice,
           note: this.gearNote.trim(),
-          tripCount: item.tripCount,
           createdAt: item.createdAt,
           brand: item.brand,
           acquiredAt: item.acquiredAt
@@ -640,7 +639,6 @@ struct Index {
         weight: normalizeNumber(this.gearWeight),
         price: newPrice,
         note: this.gearNote.trim(),
-        tripCount: 0,
         createdAt: Date.now()
       };
       nextGears.unshift(created);
@@ -883,7 +881,6 @@ struct Index {
           price: gear.price,
           note: gear.note,
           createdAt: gear.createdAt,
-          tripCount: gear.tripCount,
           brand: gear.brand,
           acquiredAt: gear.acquiredAt
         };
@@ -1240,7 +1237,6 @@ struct Index {
       category: group,
       weight: item.weight,
       price: item.price,
-      tripCount: 0,
       createdAt: Date.now()
     };
     const nextGears: GearItem[] = [created];
@@ -1511,7 +1507,6 @@ struct Index {
       name: name,
       category: safeCategory,
       weight: weight,
-      tripCount: 0,
       createdAt: Date.now()
     };
     // 入库

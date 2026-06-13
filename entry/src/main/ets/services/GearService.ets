@@ -16,10 +16,6 @@ export function numberOrZero(value: number | undefined): number {
   return value === undefined ? 0 : value;
 }
 
-export function gearTripCount(item: GearItem): number {
-  return item.tripCount === undefined ? 0 : item.tripCount;
-}
-
 export function gearValueRatio(item: GearItem): number {
   if (item.price === undefined || item.weight === undefined || item.weight <= 0) {
     return 0;
@@ -46,7 +42,8 @@ export function sortedGears(items: GearItem[], sortMode: string): GearItem[] {
       return gearValueRatio(right) - gearValueRatio(left);
     }
     if (sortMode === GEAR_SORT_TRIP_COUNT) {
-      return gearTripCount(right) - gearTripCount(left);
+      // trip count 排序由 GearPage 自行处理（查 gearTripCountMap），此处 fallback 为按时间
+      return right.createdAt - left.createdAt;
     }
     if (left.category === right.category) {
       return right.createdAt - left.createdAt;
@@ -216,15 +213,17 @@ export function mostExpensiveGearText(gears: GearItem[]): string {
   return item.name + ' (¥' + item.price.toString() + ')';
 }
 
-export function mostFrequentGearText(gears: GearItem[]): string {
+export function mostFrequentGearText(gears: GearItem[], tripCountMap: Map<string, number>): string {
   let item: GearItem | undefined = undefined;
+  let maxCount = 0;
   for (let index = 0; index < gears.length; index++) {
-    if (gearTripCount(gears[index]) > 0 &&
-      (item === undefined || gearTripCount(gears[index]) > gearTripCount(item))) {
+    const count = tripCountMap.get(gears[index].id) ?? 0;
+    if (count > maxCount) {
+      maxCount = count;
       item = gears[index];
     }
   }
-  return item === undefined ? '暂无' : item.name + ' (×' + gearTripCount(item).toString() + '次)';
+  return item === undefined ? '暂无' : item.name + ' (×' + maxCount.toString() + '次)';
 }
 
 export function formatKg(weightGram: number): string {
