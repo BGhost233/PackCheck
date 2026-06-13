@@ -11,35 +11,7 @@ import {
   CARD_BG,
   PAGE_BG,
   OVERLAY_DIM,
-  SHADOW_MEDIUM,
-  ZONE_HEAD_COLOR,
-  ZONE_UPPER_COLOR,
-  ZONE_LOWER_COLOR,
-  ZONE_FEET_COLOR,
-  ZONE_CARRY_COLOR,
-  ZONE_SLEEP_COLOR,
-  ZONE_MISC_COLOR,
-  ZONE_HEAD_STROKE,
-  ZONE_UPPER_STROKE,
-  ZONE_LOWER_STROKE,
-  ZONE_FEET_STROKE,
-  ZONE_CARRY_STROKE,
-  ZONE_SLEEP_STROKE,
-  ZONE_MISC_STROKE,
-ZONE_HEAD_FILL,
-ZONE_UPPER_FILL,
-ZONE_LOWER_FILL,
-ZONE_FEET_FILL,
-ZONE_CARRY_FILL,
-ZONE_SLEEP_FILL,
-ZONE_MISC_FILL,
-ZONE_HEAD_FOCUS_BG,
-ZONE_UPPER_FOCUS_BG,
-ZONE_LOWER_FOCUS_BG,
-ZONE_FEET_FOCUS_BG,
-ZONE_CARRY_FOCUS_BG,
-ZONE_SLEEP_FOCUS_BG,
-ZONE_MISC_FOCUS_BG
+  SHADOW_MEDIUM
 } from '../../constants/Colors';
 import {
   SPRING_GENERAL,
@@ -59,7 +31,7 @@ import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels'
 import { resolveItemName } from '../../services/ChecklistService';
 import { BodyZone } from '../../constants/GearLoadout';
 import { hapticSoft, hapticSharp } from '../../utils/HapticUtils';
-import { groupByZoneAll, calcProgress, LoadoutProgress } from '../../services/LoadoutService';
+import { groupByZoneAll, calcProgress, LoadoutProgress, zoneColor, zoneStroke, zoneFill, zoneFocusBg } from '../../services/LoadoutService';
 import { ZoneGridCell } from './ZoneGridCell';
 import { FocusedZoneView } from './FocusedZoneView';
 import { LoadoutProgressBar } from './LoadoutProgressBar';
@@ -362,9 +334,9 @@ this.computeCellHeight();
         items: this.itemsForZone(this.focusedZoneRender),
         gears: this.gears,
         renderNonce: this.checklistRenderNonce,
-        zoneColor: this.zoneColor(this.focusedZoneRender),
-        zoneStroke: this.zoneStroke(this.focusedZoneRender),
-        zoneFill: this.zoneFocusBg(this.focusedZoneRender),
+        zoneColor: zoneColor(this.focusedZoneRender),
+        zoneStroke: zoneStroke(this.focusedZoneRender),
+        zoneFill: zoneFocusBg(this.focusedZoneRender),
         active: this.focusedZone != null,
         multiSelectSignal: this.multiSelectSignal,
         multiSelectInitialId: this.multiSelectInitialId,
@@ -889,9 +861,9 @@ this.computeCellHeight();
             zone: zone,
             items: this.itemsForZone(zone),
             gears: this.gears,
-            zoneColor: this.zoneColor(zone),
-            zoneStroke: this.zoneStroke(zone),
-            zoneFill: this.zoneFill(zone),
+            zoneColor: zoneColor(zone),
+            zoneStroke: zoneStroke(zone),
+            zoneFill: zoneFill(zone),
             cellHeight: this.cellHeight,
             isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === zone,
             draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
@@ -929,9 +901,9 @@ this.computeCellHeight();
           zone: BodyZone.Misc,
           items: this.itemsForZone(BodyZone.Misc),
           gears: this.gears,
-          zoneColor: this.zoneColor(BodyZone.Misc),
-          zoneStroke: this.zoneStroke(BodyZone.Misc),
-          zoneFill: this.zoneFill(BodyZone.Misc),
+          zoneColor: zoneColor(BodyZone.Misc),
+          zoneStroke: zoneStroke(BodyZone.Misc),
+          zoneFill: zoneFill(BodyZone.Misc),
           cellHeight: this.cellHeight,
           isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === BodyZone.Misc,
           draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
@@ -1085,60 +1057,4 @@ this.computeCellHeight();
     return this.zoneMapCache.get(zone) ?? [];
   }
 
-  private zoneColor(zone: string): string {
-    switch (zone) {
-      case BodyZone.Head: return ZONE_HEAD_COLOR;
-      case BodyZone.UpperBody: return ZONE_UPPER_COLOR;
-      case BodyZone.LowerBody: return ZONE_LOWER_COLOR;
-      case BodyZone.Feet: return ZONE_FEET_COLOR;
-      case BodyZone.Carry: return ZONE_CARRY_COLOR;
-      case BodyZone.Sleep: return ZONE_SLEEP_COLOR;
-      case BodyZone.Misc: return ZONE_MISC_COLOR;
-      default: return TEXT_SECONDARY;
-    }
-  }
-
-  // B-1：zone → 容器描边色（饱和度分档），透传给 ZoneGridCell / ZoneShell
-  private zoneStroke(zone: string): string {
-    switch (zone) {
-      case BodyZone.Head: return ZONE_HEAD_STROKE;
-      case BodyZone.UpperBody: return ZONE_UPPER_STROKE;
-      case BodyZone.LowerBody: return ZONE_LOWER_STROKE;
-      case BodyZone.Feet: return ZONE_FEET_STROKE;
-      case BodyZone.Carry: return ZONE_CARRY_STROKE;
-      case BodyZone.Sleep: return ZONE_SLEEP_STROKE;
-      case BodyZone.Misc: return ZONE_MISC_STROKE;
-      default: return ZONE_MISC_STROKE;
-    }
-  }
-
-  // zone → 整块淡色填充底（ZONE_*_FILL，便单式色块），透传给 ZoneGridCell / FocusedZoneView
-  private zoneFill(zone: string): string {
-    switch (zone) {
-      case BodyZone.Head: return ZONE_HEAD_FILL;
-      case BodyZone.UpperBody: return ZONE_UPPER_FILL;
-      case BodyZone.LowerBody: return ZONE_LOWER_FILL;
-      case BodyZone.Feet: return ZONE_FEET_FILL;
-      case BodyZone.Carry: return ZONE_CARRY_FILL;
-      case BodyZone.Sleep: return ZONE_SLEEP_FILL;
-      case BodyZone.Misc: return ZONE_MISC_FILL;
-      default: return ZONE_MISC_FILL;
-    }
-  }
-
-  // zone → 聚焦态整块填充底（ZONE_*_FOCUS_BG，近实心「白里掺 8% 彩」）。
-  //   诉求3：聚焦卡片浮在纯羽白遮罩上，若沿用网格的 12% 半透明 FILL，透出羽白会发灰浑浊；
-  //   FOCUS_BG 是不透明实心淡色（白底掺彩算出的 hex），干净不透灰，仿便单聚焦色块质感。
-  private zoneFocusBg(zone: string): string {
-    switch (zone) {
-      case BodyZone.Head: return ZONE_HEAD_FOCUS_BG;
-      case BodyZone.UpperBody: return ZONE_UPPER_FOCUS_BG;
-      case BodyZone.LowerBody: return ZONE_LOWER_FOCUS_BG;
-      case BodyZone.Feet: return ZONE_FEET_FOCUS_BG;
-      case BodyZone.Carry: return ZONE_CARRY_FOCUS_BG;
-      case BodyZone.Sleep: return ZONE_SLEEP_FOCUS_BG;
-      case BodyZone.Misc: return ZONE_MISC_FOCUS_BG;
-      default: return ZONE_MISC_FOCUS_BG;
-    }
-  }
 }

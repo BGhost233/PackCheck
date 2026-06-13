@@ -3,6 +3,14 @@
 
 import { BodyZone, LayerOrder, SlotHint, CATEGORY_SLOT_MAP, slotHintForCategory } from '../constants/GearLoadout';
 import { ChecklistItem, GearItem } from '../models/PackModels';
+import {
+  TEXT_SECONDARY,
+  ZONE_HEAD_COLOR, ZONE_UPPER_COLOR, ZONE_LOWER_COLOR, ZONE_FEET_COLOR, ZONE_CARRY_COLOR, ZONE_SLEEP_COLOR, ZONE_MISC_COLOR,
+  ZONE_HEAD_TINT, ZONE_UPPER_TINT, ZONE_LOWER_TINT, ZONE_FEET_TINT, ZONE_CARRY_TINT, ZONE_SLEEP_TINT, ZONE_MISC_TINT,
+  ZONE_HEAD_FILL, ZONE_UPPER_FILL, ZONE_LOWER_FILL, ZONE_FEET_FILL, ZONE_CARRY_FILL, ZONE_SLEEP_FILL, ZONE_MISC_FILL,
+  ZONE_HEAD_FOCUS_BG, ZONE_UPPER_FOCUS_BG, ZONE_LOWER_FOCUS_BG, ZONE_FEET_FOCUS_BG, ZONE_CARRY_FOCUS_BG, ZONE_SLEEP_FOCUS_BG, ZONE_MISC_FOCUS_BG,
+  ZONE_HEAD_STROKE, ZONE_UPPER_STROKE, ZONE_LOWER_STROKE, ZONE_FEET_STROKE, ZONE_CARRY_STROKE, ZONE_SLEEP_STROKE, ZONE_MISC_STROKE
+} from '../constants/Colors';
 
 // ============================================================
 // 槽位分配
@@ -250,6 +258,70 @@ export function zoneIconName(zone: string): string {
     return 'sys.symbol.square.grid.2x2';
   }
   return 'sys.symbol.questionmark';
+}
+
+// ============================================================
+// Zone 色彩映射（权威实现，UI 层统一调用，禁止在组件内重写 switch）
+// ============================================================
+
+/** Zone → 主题彩色（标题文字 / 强调色）。未知 zone 兜底 TEXT_SECONDARY。 */
+export function zoneColor(zone: string): string {
+  if (zone === BodyZone.Head) { return ZONE_HEAD_COLOR; }
+  if (zone === BodyZone.UpperBody) { return ZONE_UPPER_COLOR; }
+  if (zone === BodyZone.LowerBody) { return ZONE_LOWER_COLOR; }
+  if (zone === BodyZone.Feet) { return ZONE_FEET_COLOR; }
+  if (zone === BodyZone.Carry) { return ZONE_CARRY_COLOR; }
+  if (zone === BodyZone.Sleep) { return ZONE_SLEEP_COLOR; }
+  if (zone === BodyZone.Misc) { return ZONE_MISC_COLOR; }
+  return TEXT_SECONDARY;
+}
+
+/** Zone → 中等透明染色（chip / tint 背景）。未知 zone 兜底 MISC。 */
+export function zoneTint(zone: string): string {
+  if (zone === BodyZone.Head) { return ZONE_HEAD_TINT; }
+  if (zone === BodyZone.UpperBody) { return ZONE_UPPER_TINT; }
+  if (zone === BodyZone.LowerBody) { return ZONE_LOWER_TINT; }
+  if (zone === BodyZone.Feet) { return ZONE_FEET_TINT; }
+  if (zone === BodyZone.Carry) { return ZONE_CARRY_TINT; }
+  if (zone === BodyZone.Sleep) { return ZONE_SLEEP_TINT; }
+  if (zone === BodyZone.Misc) { return ZONE_MISC_TINT; }
+  return ZONE_MISC_TINT;
+}
+
+/** Zone → 整块淡色填充底（便单式色块）。未知 zone 兜底 MISC。 */
+export function zoneFill(zone: string): string {
+  if (zone === BodyZone.Head) { return ZONE_HEAD_FILL; }
+  if (zone === BodyZone.UpperBody) { return ZONE_UPPER_FILL; }
+  if (zone === BodyZone.LowerBody) { return ZONE_LOWER_FILL; }
+  if (zone === BodyZone.Feet) { return ZONE_FEET_FILL; }
+  if (zone === BodyZone.Carry) { return ZONE_CARRY_FILL; }
+  if (zone === BodyZone.Sleep) { return ZONE_SLEEP_FILL; }
+  if (zone === BodyZone.Misc) { return ZONE_MISC_FILL; }
+  return ZONE_MISC_FILL;
+}
+
+/** Zone → 聚焦态不透明实心淡色底（白底掺彩）。未知 zone 兜底 MISC。 */
+export function zoneFocusBg(zone: string): string {
+  if (zone === BodyZone.Head) { return ZONE_HEAD_FOCUS_BG; }
+  if (zone === BodyZone.UpperBody) { return ZONE_UPPER_FOCUS_BG; }
+  if (zone === BodyZone.LowerBody) { return ZONE_LOWER_FOCUS_BG; }
+  if (zone === BodyZone.Feet) { return ZONE_FEET_FOCUS_BG; }
+  if (zone === BodyZone.Carry) { return ZONE_CARRY_FOCUS_BG; }
+  if (zone === BodyZone.Sleep) { return ZONE_SLEEP_FOCUS_BG; }
+  if (zone === BodyZone.Misc) { return ZONE_MISC_FOCUS_BG; }
+  return ZONE_MISC_FOCUS_BG;
+}
+
+/** Zone → 容器描边色（饱和度分档）。未知 zone 兜底 MISC。 */
+export function zoneStroke(zone: string): string {
+  if (zone === BodyZone.Head) { return ZONE_HEAD_STROKE; }
+  if (zone === BodyZone.UpperBody) { return ZONE_UPPER_STROKE; }
+  if (zone === BodyZone.LowerBody) { return ZONE_LOWER_STROKE; }
+  if (zone === BodyZone.Feet) { return ZONE_FEET_STROKE; }
+  if (zone === BodyZone.Carry) { return ZONE_CARRY_STROKE; }
+  if (zone === BodyZone.Sleep) { return ZONE_SLEEP_STROKE; }
+  if (zone === BodyZone.Misc) { return ZONE_MISC_STROKE; }
+  return ZONE_MISC_STROKE;
 }
 
 /** Layer 枚举值 → 中文显示名 */
