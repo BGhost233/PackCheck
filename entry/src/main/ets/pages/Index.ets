@@ -709,6 +709,7 @@ struct Index {
     this.categories = nextCategories;
     this.gears = nextGears;
     this.checklists = nextChecklists;
+    this.checklistRenderNonce++;
   }
 
   private async executeCategoryRename(oldName: string, newName: string): Promise<void> {
@@ -736,6 +737,7 @@ struct Index {
     this.categories = nextCategories;
     this.gears = nextGears;
     this.checklists = nextChecklists;
+    this.checklistRenderNonce++;
     // 如果当前选中的分组被重命名了，同步更新
     if (this.gearCategory === oldName) {
       this.gearCategory = newName;
