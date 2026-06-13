@@ -72,7 +72,7 @@ interface TripCardArea {
 
 @Component
 export struct GearPage {
-  @Prop gears: GearItem[] = [];
+  @Prop @Watch('onGearDataChange') gears: GearItem[] = [];
   @Prop selectedGearCategories: string[] = [CATEGORY_ALL];
   @Prop gearSearchKeyword: string = '';
   @Prop gearSortMode: string = GEAR_SORT_GROUP;
@@ -124,7 +124,7 @@ export struct GearPage {
   @State private dragY: number = 0;
   @State private dragOverTripId: string = '';
   @State private showTripTray: boolean = false;
-  @Prop checklists: TripChecklist[] = [];
+  @Prop @Watch('onGearDataChange') checklists: TripChecklist[] = [];
   private store: PackStore = new PackStore();
   private gearListScroller: Scroller = new Scroller();
   private tripTrayScroller: Scroller = new Scroller();
@@ -132,6 +132,12 @@ export struct GearPage {
   private screenWidth: number = 360; // fallback
   private screenHeight: number = 780;
   private isAlive: boolean = true;
+
+  private onGearDataChange(): void {
+    if (this.isAlive) {
+      this.refreshFootprint();
+    }
+  }
 
   private onSwipeResetNonceChange(): void {
     if (this.swipedGearId !== '') {
