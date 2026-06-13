@@ -118,7 +118,7 @@ export struct TripDetailPage {
   // 各段与各自渲染条件一致：NavBar 恒在；SharedInfo 仅 currentChecklist 有摘要文案时渲染；
   // ProgressBar 仅 items>0 时渲染。避免用硬编码默认值导致反算偏差（review B3）。
   private reservedTop(): number {
-    const NAV_BAR: number = 56;
+    const NAV_BAR: number = 44;
     const SHARED_INFO: number = 28;   // 12 字号文案 + 8 bottom padding
     const PROGRESS_BAR: number = 48;  // 文案行 + 进度条 + 上下 padding
     const trip = this.currentChecklist();
@@ -251,9 +251,9 @@ export struct TripDetailPage {
       })
     }
     .width('100%')
-    .height(this.statusBarHeight + 56)
+    .height(this.statusBarHeight + 44)
     .padding({ left: 12, right: 12, top: this.statusBarHeight })
-    .alignItems(VerticalAlign.Center)
+    .alignItems(VerticalAlign.Bottom)
   }
 
   // E-3：顶部元信息区 = 行程档案标识。轻结构化单行——日期/地点纯文字弱化，

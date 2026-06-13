@@ -10,7 +10,6 @@ import {
   TEXT_SECONDARY,
   CARD_BG,
   PAGE_BG,
-  PAGE_BG_TRANSPARENT,
   OVERLAY_DIM,
   SHADOW_MEDIUM,
   ZONE_HEAD_COLOR,
@@ -85,15 +84,6 @@ const GRID_GUTTER: number = 12;    // 行/列间距
 const FIRST_SCREEN_ROWS: number = 2.8;
 // 反算兜底（无法取得屏高时）。P4：随密度提高同步下调
 const CELL_HEIGHT_FALLBACK: number = 148;
-// 问题3b：底部「逐渐弥散」参数（linearGradientBlur 直接挂在 Grid 上，糊容器自身内容）。
-//   原理：模糊强度沿视口垂直方向连续渐变 → 物理上无硬边。
-// 模糊最大半径（底沿满值）。景深虚化量级，足够把底部卡片柔成「焦外」而不糊成一团。
-const BOTTOM_DIFFUSE_BLUR_RADIUS: number = 16;
-// 清晰停靠点：视口 0~此比例完全清晰，之后模糊强度线性爬升到底沿满值。
-//   0.8 = 仅最底部 20% 视口高度参与弥散，上方阅读区完全不受影响。
-const BOTTOM_DIFFUSE_CLEAR_STOP: number = 0.8;
-// 底部同色渐隐遮罩高度：纯 PAGE_BG 透明→实心，让渐糊的底部卡片继续淡入背景并贯通到安全区。
-const BOTTOM_FADE_HEIGHT: number = 96;
 
 // 问题4a：head 随网格滚动渐进折叠的总位移（vp）。
 //   = SharedInfo(28，TripDetailPage 日期行) + ProgressBar(48，本组件进度条) = 76。
@@ -283,9 +273,6 @@ this.computeCellHeight();
         // P1：空态不再切引导页，统一走网格态——0 件时所有 Zone 走虚线空格子，
         // 用户直接点对应部位空格子加装备（「带格子的核查清单」纲领）。
         this.buildGridState()
-
-        // P4：底部渐隐高斯模糊遮罩，暗示下方还有格子可滑（聚焦态隐藏）。
-        this.buildBottomFade()
 
         // D-4：全屏压暗蒙层。层级在网格之上、聚焦卡片之下，点蒙层收起聚焦。
         this.buildFocusedScrim()
@@ -1012,13 +999,6 @@ this.computeCellHeight();
     .onScrollStop(() => {
       this.headController.handleScrollStop(this.gridScroller);
     })
-    // 问题3b：底部「逐渐弥散」——linearGradientBlur 糊的是组件自身内容（卡片），
-    //   按视口垂直位置渐变：顶部 BOTTOM_DIFFUSE_CLEAR_STOP 以上完全清晰，往下模糊强度线性爬升到底沿满值。
-    //   物理上连续渐变 → 无任何硬边。聚焦态下方已有整网格 .blur，关闭弥散避免双重模糊。
-    .linearGradientBlur(this.focusedZone != null ? 0 : BOTTOM_DIFFUSE_BLUR_RADIUS, {
-      fractionStops: [[0, 0], [0, BOTTOM_DIFFUSE_CLEAR_STOP], [1, 1]],
-      direction: GradientDirection.Bottom
-    })
     // D-4：聚焦时网格虚化 + 极小下沉，制造「退到背后」纵深感（不缩放——网格可滚动，
     //   下行展开时前几行可能已滚出视口，缩放会出现锚点漂移）。随 SPRING_HERO 同帧联动。
     .blur(this.focusedZone != null ? GRID_FOCUS_BLUR : 0)
@@ -1026,29 +1006,6 @@ this.computeCellHeight();
     .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
   }
 
-
-  // ---- 底部同色渐隐遮罩（P4 / 问题3b 配套）----
-  // 分工：模糊弥散由 Grid 自身的 linearGradientBlur 负责（见 buildGridState）；
-  //   本层只负责「渐糊的底部卡片继续淡入纯背景、并贯通到底部安全区」，消除内容与指示条之间的纯白突变段。
-  // 纯 PAGE_BG 透明→实心渐隐：用透明羽白起步（非透明黑，避免中段混出灰）。
-  // expandSafeArea(BOTTOM)：遮罩自身延伸覆盖底部安全区，与已铺底的 PAGE_BG 背景无缝接合 → 沉浸贯通。
-  // hitTestBehavior(None)：不拦截滚动/点击，纯视觉层。聚焦态隐藏。
-  @Builder
-  private buildBottomFade() {
-    Column()
-      .width('100%')
-      .height(BOTTOM_FADE_HEIGHT)
-      .linearGradient({
-        angle: 180,
-        colors: [[PAGE_BG_TRANSPARENT, 0.0], [PAGE_BG_TRANSPARENT, 0.35], [PAGE_BG, 1.0]]
-      })
-      .position({ left: 0, bottom: 0 })
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
-      .hitTestBehavior(HitTestMode.None)
-      .visibility(this.focusedZone == null ? Visibility.Visible : Visibility.Hidden)
-      .opacity(this.appeared ? 1 : 0)
-      .animation({ curve: SPRING_GENERAL(), delay: 150 })
-  }
 
   // ---- Phase 4：自绘浮层 Builder（双阶段：menu / dragging，用 opacity 过渡而非 if 销毁）----
   @Builder

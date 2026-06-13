@@ -14,7 +14,6 @@
 import {
   TEXT_TERTIARY,
   DIVIDER_COLOR,
-  LIGHT_PRIMARY_COLOR,
   ZONE_MISC_COLOR,
   ZONE_MISC_STROKE,
   ZONE_MISC_FILL
@@ -42,8 +41,6 @@ export struct ZoneShell {
   @Prop titleBarHeight: number = 28;
   @Prop titleFontSize: number = FONT_SIZE_BODY_MEDIUM;
 
-  // C-2：拖拽目标格高亮——整块容器叠一层淡绿（仅 backgroundColor 走 SPRING_GENERAL）
-  @Prop contentTinted: boolean = false;
   // 整块容器描边是否显示
   @Prop showContentBorder: boolean = true;
   // B-3 空态降级：整块底色更淡（中性）、描边更细、标题降灰，内容区交给 content 插槽自绘虚线降权框。
@@ -105,10 +102,9 @@ export struct ZoneShell {
     .width('100%')
     .height('100%')
     .alignItems(HorizontalAlign.Center)
-    // 整块淡色填充底：空态降级为更淡中性、拖拽态叠淡绿，否则 zoneFill
-    .backgroundColor(this.contentDashed
-      ? DIVIDER_COLOR
-      : (this.contentTinted ? LIGHT_PRIMARY_COLOR : this.zoneFill))
+    // 整块淡色填充底：空态降级为更淡中性，否则统一 zoneFill（格子本色）。
+    //   拖拽落点高亮不再染绿，仅靠外层描边 + glow 预告，避免内层底色被主题绿覆盖格子本色。
+    .backgroundColor(this.contentDashed ? DIVIDER_COLOR : this.zoneFill)
     .animation({ curve: SPRING_GENERAL() })
     .borderRadius(CARD_RADIUS)
     // 描边：空态更细更浅（降权）；聚焦态 2vp + zoneColor 主题色实色（明确轮廓+实体感）；否则网格态 1vp + 轻 zoneStroke

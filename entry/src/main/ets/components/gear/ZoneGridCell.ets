@@ -120,8 +120,6 @@ export struct ZoneGridCell {
       zoneColor: this.zoneColor,
       zoneStroke: this.zoneStroke,
       zoneFill: this.zoneFill,
-      // C-2：拖拽目标格整块叠淡绿底（与外层绿框+glow 三重反馈）
-      contentTinted: this.isDropTarget,
       // 便单式：整块容器统一承接点击进聚焦（标题不再单独可点）
       contentClickable: true,
       contentPressed: this.contentPressed,
