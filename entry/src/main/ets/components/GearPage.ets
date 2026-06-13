@@ -11,6 +11,7 @@ import {
   CURVE_LINEAR,
   STAGGER_OFFSET_Y, staggerDelay
 } from '../constants/AnimationTokens';
+import { HeadCollapseController } from '../utils/HeadCollapseController';
 import { vibrator } from '@kit.SensorServiceKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
@@ -102,7 +103,10 @@ export struct GearPage {
   @State private fabDragging: boolean = false;
   private fabStartX: number = 0;
   private fabStartY: number = 0;
-  @State private gearScrollOffset: number = 0;
+  // head 折叠进度镜像（0=全展开，1=全折叠）。
+  //   ⚠️ 刷新陷阱：render 必须读此 @State（非 controller.progress()），controller.onChange 推动更新。
+  @State private gearHeadProgress: number = 0;
+  @State private gearHeadSnapping: boolean = false;
   @State private collapsedGearGroups: string[] = [];
   @State private gearGroupExpandTrigger: number = 0;
   @State private categoryOrder: string[] = [];
@@ -133,6 +137,19 @@ export struct GearPage {
   @Prop @Watch('onGearDataChange') checklists: TripChecklist[] = [];
   private store: PackStore = new PackStore();
   private gearListScroller: Scroller = new Scroller();
+
+  // 统一折叠控制器（overlay 范式：header 定高浮在 List 上、靠内部元素变形）。
+  //   只接管「滚动数学」：progress 计算 + 跟手 + 松手就近吸附（补齐原本缺失的 onScrollStop）。
+  //   collapseDistance = EXPANDED-COLLAPSED。锁定态（searchExpanded/multiSelect）的高度/背景/模糊特判均保留在各函数内（是高度自定义视觉，不属于「折叠」语义）。
+  private headController: HeadCollapseController = new HeadCollapseController({
+    collapseDistance: GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED,
+    enableSnap: true,
+    getUIContext: () => this.getUIContext(),
+    onChange: (progress: number, snapping: boolean) => {
+      this.gearHeadSnapping = snapping;
+      this.gearHeadProgress = progress;
+    }
+  });
   private tripTrayScroller: Scroller = new Scroller();
   private trayAutoScrollTimer: number = -1;
   private screenWidth: number = 360; // fallback
@@ -745,12 +762,9 @@ export struct GearPage {
     return Math.min(1, (p - 0.5) * 2);
   }
 
+  // head 折叠进度（0~1）。读 @State 镜像（非 controller.progress()）以触发 ArkUI 依赖收集。
   private gearScrollProgress(): number {
-    const range = GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED;
-    if (range <= 0) {
-      return 0;
-    }
-    return Math.max(0, Math.min(1, this.gearScrollOffset / range));
+    return this.gearHeadProgress;
   }
 
   // 计算目标装备所在分组在 List 中的 index（用于 scrollToIndex）
@@ -891,8 +905,13 @@ export struct GearPage {
           .edgeEffect(EdgeEffect.Spring, { alwaysEnabled: true })
           .enableScrollInteraction(!this.groupDragMode)
           .backgroundColor(TRANSPARENT)
+          // 跟手：progress 严格 1:1 实时映射（零吸附、不抢手感）。
           .onDidScroll(() => {
-            this.gearScrollOffset = this.gearListScroller.currentOffset().yOffset;
+            this.headController.handleScroll(this.gearListScroller);
+          })
+          // 补齐 Large Title 就近吸附：松手惯性停在中间态时吸附到 0/1，绝不留半折叠残缺态。
+          .onScrollStop(() => {
+            this.headController.handleScrollStop(this.gearListScroller);
           })
           .onTouch((event: TouchEvent) => {
             if (event.type === TouchType.Down && this.swipedGearId !== '') {
@@ -1116,7 +1135,8 @@ export struct GearPage {
                 }, () => {
                   this.searchExpanded = true;
                   this.gearListScroller.scrollTo({ xOffset: 0, yOffset: 0 });
-                  this.gearScrollOffset = 0;
+                  this.gearHeadProgress = 0;
+                  this.gearHeadSnapping = false;
                 });
               }
             })
