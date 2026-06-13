@@ -112,6 +112,8 @@ export struct GearPage {
   @State private pressedFilterPill: boolean = false;
   @State private pressedSearchBtn: boolean = false;
   @State private pressedCancelText: boolean = false;
+  @State private pressedDeleteAction: boolean = false;
+  @State private pressedWeightClose: boolean = false;
   @State private listEntered: boolean = false;
 
   // --- 分组拖拽排序 ---
@@ -1813,6 +1815,16 @@ export struct GearPage {
     .margin({ left: 10 })
     .backgroundColor(DANGER_COLOR)
     .borderRadius(12)
+    .scale({ x: this.pressedDeleteAction ? PRESS_SCALE_DOWN : 1.0,
+      y: this.pressedDeleteAction ? PRESS_SCALE_DOWN : 1.0 })
+    .animation({ curve: SPRING_PRESS() })
+    .onTouch((e: TouchEvent) => {
+      if (e.type === TouchType.Down) {
+        this.pressedDeleteAction = true;
+      } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+        this.pressedDeleteAction = false;
+      }
+    })
     .onClick(() => {
       this.onConfirmDeleteGear(item);
     })
@@ -1897,6 +1909,17 @@ export struct GearPage {
           .width(36)
           .height(36)
           .justifyContent(FlexAlign.Center)
+          .borderRadius(18)
+          .scale({ x: this.pressedWeightClose ? PRESS_SCALE_DOWN : 1.0,
+            y: this.pressedWeightClose ? PRESS_SCALE_DOWN : 1.0 })
+          .animation({ curve: SPRING_PRESS() })
+          .onTouch((e: TouchEvent) => {
+            if (e.type === TouchType.Down) {
+              this.pressedWeightClose = true;
+            } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+              this.pressedWeightClose = false;
+            }
+          })
           .onClick(() => {
             this.closeWeightEditor();
           })
