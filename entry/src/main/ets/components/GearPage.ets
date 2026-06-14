@@ -161,6 +161,11 @@ export struct GearPage {
   // 拖拽边缘自动滚动
   private gearAutoScrollTimer: number = -1;
   private gearAutoScrollSpeed: number = 0;
+  // 拖拽 spring-load 自动展开：悬停在折叠分组上一段时间 → 临时展开；路过则收回。
+  //   与持久化折叠偏好 collapsedGearGroups 解耦，落位时再决定转正/收回。
+  private gearHoverGroup: string = '';          // 当前悬停的分组（判悬停目标是否切换）
+  private gearHoverExpandTimer: number = -1;     // 悬停展开计时器
+  @State private gearDragTempExpanded: string[] = []; // 拖拽期临时展开的分组集合
 
   // --- 拖拽到行程 ---
   @State private dragMode: boolean = false;
@@ -672,6 +677,10 @@ export struct GearPage {
   private isGearGroupCollapsed(group: string): boolean {
     // 搜索模式下所有分组强制展开，用户取消搜索后恢复原折叠偏好
     if (this.gearSearchKeyword.trim().length > 0) {
+      return false;
+    }
+    // 拖拽 spring-load 临时展开：复用现有展开渲染链路（含 SPRING 过渡），落位时再清理
+    if (this.gearDragTempExpanded.indexOf(group) >= 0) {
       return false;
     }
     return this.collapsedGearGroups.indexOf(group) >= 0;
@@ -2411,6 +2420,8 @@ export struct GearPage {
       // 不在任何分组内：保持上次目标分类（避免空档抖动）
       return;
     }
+    // 1.5) spring-load 悬停展开管理：悬停目标切换时，处理计时器 + 临时展开收回
+    this.handleGearHover(hitCategory);
     // 2) 在目标分类内按各行中线确定插入索引
     const rows = this.filteredGearsByGroup(hitCategory);
     let insertIdx = rows.length; // 默认插到末尾
@@ -2433,6 +2444,67 @@ export struct GearPage {
     }
   }
 
+  // spring-load 悬停管理：悬停目标变化时重置计时器；悬停在折叠分组上超时则临时展开。
+  //   第一性原理：拖拽时分组是「落点容器」，悬停=意图进入→自动敞开；路过=未停留→保持闭合/收回。
+  private handleGearHover(hitCategory: string): void {
+    if (hitCategory === this.gearHoverGroup) {
+      return; // 悬停目标未变，计时器继续走
+    }
+    // 悬停目标切换：清旧计时器
+    if (this.gearHoverExpandTimer >= 0) {
+      clearTimeout(this.gearHoverExpandTimer);
+      this.gearHoverExpandTimer = -1;
+    }
+    // 离开旧分组：若旧分组是「临时展开」的（非用户偏好展开），路过即收回
+    const prevHover = this.gearHoverGroup;
+    if (prevHover !== '' && this.gearDragTempExpanded.indexOf(prevHover) >= 0) {
+      this.collapseTempGroup(prevHover);
+    }
+    this.gearHoverGroup = hitCategory;
+    // 新悬停分组若处于折叠态：启动 spring-load 计时器，超时临时展开
+    if (this.isGearGroupCollapsed(hitCategory)) {
+      this.gearHoverExpandTimer = setTimeout(() => {
+        this.gearHoverExpandTimer = -1;
+        // 仍悬停在同一分组、且仍是折叠态才展开（避免计时期间已离开）
+        if (this.gearOverlayPhase === 'dragging'
+          && this.gearHoverGroup === hitCategory
+          && this.isGearGroupCollapsed(hitCategory)) {
+          this.expandTempGroup(hitCategory);
+        }
+      }, 500);
+    }
+  }
+
+  // 临时展开某分组（SPRING 丝滑），并触觉提示
+  private expandTempGroup(group: string): void {
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.gearDragTempExpanded = this.gearDragTempExpanded.concat([group]);
+    });
+    hapticTime(20);
+  }
+
+  // 收回某临时展开的分组（SPRING 丝滑）
+  private collapseTempGroup(group: string): void {
+    const idx = this.gearDragTempExpanded.indexOf(group);
+    if (idx < 0) {
+      return;
+    }
+    const next = this.gearDragTempExpanded.slice();
+    next.splice(idx, 1);
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.gearDragTempExpanded = next;
+    });
+  }
+
+  // 清理所有 spring-load 临时展开态（落位/取消时调用）
+  private clearGearHoverState(): void {
+    if (this.gearHoverExpandTimer >= 0) {
+      clearTimeout(this.gearHoverExpandTimer);
+      this.gearHoverExpandTimer = -1;
+    }
+    this.gearHoverGroup = '';
+  }
+
   // Pan 结束：落位 → 重排 + 持久化 → 退出
   //   问题9-B 错帧解耦：先提交重排（optimistic，UI 当帧即时落位），再把 overlay 收起
   //   推迟到下一帧——避免「列表全量重渲染」与「胶囊淡出 animateTo」挤在同一帧造成松手卡顿。
@@ -2444,14 +2516,17 @@ export struct GearPage {
       return;
     }
     let committed = false;
-    if (this.gearOverlayPhase === 'dragging' && this.gearDropCategory !== '' && this.gearDropIndex >= 0) {
-      const next = this.reorderGearsByDrop(dragged, this.gearDropCategory, this.gearDropIndex);
+    const dropCategory = this.gearDropCategory;
+    if (this.gearOverlayPhase === 'dragging' && dropCategory !== '' && this.gearDropIndex >= 0) {
+      const next = this.reorderGearsByDrop(dragged, dropCategory, this.gearDropIndex);
       if (next !== null) {
         this.onReorderGears(next); // optimistic：当帧落位
         hapticTime(30);
         committed = true;
       }
     }
+    // spring-load 收尾：落位分组转正保持展开，其余临时展开收回
+    this.finalizeGearTempExpand(committed ? dropCategory : '');
     if (committed) {
       // 落位帧与收起帧解耦：下一帧再收 overlay，让列表先完成重排渲染
       setTimeout(() => {
@@ -2460,6 +2535,28 @@ export struct GearPage {
     } else {
       this.dismissGearOverlay();
     }
+  }
+
+  // spring-load 收尾：keepGroup 为落位分组——若它是临时展开的，则转正（移出持久化折叠偏好）
+  //   保持展开；其余临时展开的分组全部收回。先转正再清空临时集合，避免落位分组闪一下折叠。
+  private finalizeGearTempExpand(keepGroup: string): void {
+    this.clearGearHoverState();
+    if (this.gearDragTempExpanded.length === 0) {
+      return;
+    }
+    // 落位分组转正：从持久化折叠偏好里移除并落盘
+    if (keepGroup !== '' && this.collapsedGearGroups.indexOf(keepGroup) >= 0) {
+      const idx = this.collapsedGearGroups.indexOf(keepGroup);
+      const nextCollapsed = this.collapsedGearGroups.slice();
+      nextCollapsed.splice(idx, 1);
+      this.collapsedGearGroups = nextCollapsed;
+      this.gearGroupExpandTrigger++;
+      this.persistCollapsedGroups();
+    }
+    // 清空临时集合：落位分组已转正（不再依赖临时态），其余分组随之 SPRING 收回
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.gearDragTempExpanded = [];
+    });
   }
 
   // 核心重排：把 dragged 移到 targetCategory 的 targetIndex 位置，重写该分类内所有 order，
@@ -2517,6 +2614,14 @@ export struct GearPage {
   // 退出 overlay（点菜单项 / 拖拽结束 / 点空白）
   private dismissGearOverlay(): void {
     this.stopGearAutoScroll();
+    // spring-load 兜底：清理悬停计时器；取消路径（未落位）残留的临时展开全部 SPRING 收回。
+    //   落位路径已由 finalizeGearTempExpand 清空，这里 length===0 自然跳过，幂等不冲突。
+    this.clearGearHoverState();
+    if (this.gearDragTempExpanded.length > 0) {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+        this.gearDragTempExpanded = [];
+      });
+    }
     this.getUIContext().animateTo({
       curve: SPRING_GENERAL(),
       onFinish: () => {
