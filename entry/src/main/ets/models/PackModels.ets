@@ -8,6 +8,7 @@ export interface GearItem {
   createdAt: number;
   brand?: string;        // 品牌（packing：辨识/复购参考）
   acquiredAt?: number;   // 入手时间戳（archive：陪伴天数 = now - acquiredAt；与 createdAt 录入时间区分）
+  order?: number;        // 单品手动排序权重（问题9：长按拖动排序）。optional 向后兼容——无 order 的旧数据回退 createdAt 倒序
 }
 
 export interface ChecklistItem {

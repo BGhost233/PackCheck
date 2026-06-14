@@ -2,7 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { display } from '@kit.ArkUI';
 import {
   SPRING_SWIPE_RESET, SPRING_FAB_SNAP, SPRING_GENERAL, SPRING_SEARCH,
-  SPRING_CHEVRON, SPRING_PRESS, SPRING_CEREMONY_FLIP, SPRING_CONTEXT_EXIT,
+  SPRING_CHEVRON, SPRING_PRESS, SPRING_CEREMONY_FLIP,
   SPRING_TRAY_CARD, SPRING_SCROLL,
   DURATION_TICK, DURATION_FAST,
   DURATION_CEREMONY_SHAKE,
@@ -19,12 +19,13 @@ import { PackStore } from '../services/PackStore';
 import { computeGearTripCount } from '../services/FootprintService';
 import { buildGearTripCountMap } from '../services/FootprintService';
 import { computeFootprint, Footprint, LongestCompanion } from '../services/FootprintService';
-import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice } from '../services/GearService';
+import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice, updateGear } from '../services/GearService';
 import {
   ARROW_COLOR,
   CARD_BG,
   CARD_PADDING,
   CHIP_RADIUS,
+  SMALL_CARD_RADIUS,
   DANGER_COLOR,
   DANGER_TINT,
   DISABLED_COLOR,
@@ -127,6 +128,35 @@ export struct GearPage {
   @State private groupDragOffsetY: number = 0;
   @State private groupReorderList: string[] = [];
   private groupCardHeights: Map<string, number> = new Map();
+
+  // --- 问题9：单品长按 → 菜单 → 拖动排序（自绘 overlay 状态机，替代系统 bindContextMenu）---
+  //   范式对齐 UnifiedChecklistView：overlayPhase 状态机（idle→menu→dragging）+ 双坐标系
+  //   （长按锚点全局坐标 longPress* + Pan 累积 offset 推出实时全局坐标，转局部驱动飞行胶囊）。
+  //   menu 态：在锚点处弹自绘菜单（编辑/多选/删除）；手指开始拖动则收菜单进 dragging 态。
+  @State private gearOverlayPhase: string = 'idle'; // 'idle' | 'menu' | 'dragging'
+  @State private gearOverlayItem: GearItem | null = null;
+  @State private gearOverlayVisible: boolean = false; // 入场/退场动画开关（opacity/scale）
+  // 拖拽态：飞行胶囊的局部坐标（相对 overlay 容器原点）+ Pan 累积偏移
+  @State private gearDragCurrentX: number = 0;
+  @State private gearDragCurrentY: number = 0;
+  private gearDragOffsetX: number = 0;
+  private gearDragOffsetY: number = 0;
+  // 长按瞬间手指的全局坐标锚点（Pan offset 在此之上累加得实时全局坐标）
+  private gearLongPressGlobalX: number = 0;
+  private gearLongPressGlobalY: number = 0;
+  // overlay 容器在屏幕中的原点（全局→局部转换用），由根容器 onAreaChange 记录
+  private gearOverlayOriginX: number = 0;
+  private gearOverlayOriginY: number = 0;
+  // 命中目标：拖拽悬停的目标分类 + 目标插入索引（同组/跨组复用）
+  @State private gearDropCategory: string = '';
+  @State private gearDropIndex: number = -1;
+  // 各单品行的全局矩形（命中检测用）：key=item.id → {x,y,w,h}（全局 vp）
+  private gearRowRects: Map<string, TripCardArea> = new Map();
+  // 各分组卡的全局矩形（跨分类落点用）：key=category → {x,y,w,h}
+  private gearGroupRects: Map<string, TripCardArea> = new Map();
+  // 拖拽边缘自动滚动
+  private gearAutoScrollTimer: number = -1;
+  private gearAutoScrollSpeed: number = 0;
 
   // --- 拖拽到行程 ---
   @State private dragMode: boolean = false;
@@ -415,6 +445,8 @@ export struct GearPage {
   onOpenMoveGroupSheet: () => void = (): void => {};
   onAddGearsToTrip: (gearIds: string[], tripId: string) => void = (gearIds: string[], tripId: string): void => {};
   onAddGearsToNewTrip: (gearIds: string[]) => void = (gearIds: string[]): void => {};
+  // 问题9：单品拖拽排序/跨分类移动后，回传全量 gears 由父组件 saveGears + 回写 @Prop
+  onReorderGears: (nextGears: GearItem[]) => void = (nextGears: GearItem[]): void => {};
 
   // 同行次数实时派生：查预计算 Map，O(1)，避免每次排序/渲染重复遍历
   private gearTripCount(item: GearItem): number {
@@ -443,6 +475,19 @@ export struct GearPage {
         return this.gearTripCount(right) - this.gearTripCount(left);
       }
       if (left.category === right.category) {
+        // 问题9：同分类内优先按手动拖动排序权重 order 升序；无 order 的旧数据回退 createdAt 倒序。
+        //   一方有 order 一方无：有 order 的排前（手动整理过的优先稳定在前）。
+        const lo = left.order;
+        const ro = right.order;
+        if (lo !== undefined && ro !== undefined) {
+          return lo - ro;
+        }
+        if (lo !== undefined) {
+          return -1;
+        }
+        if (ro !== undefined) {
+          return 1;
+        }
         return right.createdAt - left.createdAt;
       }
       // 按 categoryOrder 自定义顺序排
@@ -865,6 +910,11 @@ export struct GearPage {
         // 浮动装备堆
         this.DragGearStack()
       }
+
+      // --- 问题9：单品长按 overlay（菜单态 + 拖拽飞行胶囊）---
+      if (this.gearOverlayItem !== null) {
+        this.GearDragOverlay()
+      }
     }
     .width('100%')
     .height('100%')
@@ -873,6 +923,11 @@ export struct GearPage {
     .onAreaChange((_oldArea: Area, newArea: Area) => {
       const newWidth = newArea.width as number;
       const newHeight = newArea.height as number;
+      // 问题9：记录根 Stack 全局原点，供单品拖拽飞行胶囊全局→局部坐标转换
+      if (newArea.globalPosition !== undefined) {
+        this.gearOverlayOriginX = newArea.globalPosition.x as number;
+        this.gearOverlayOriginY = newArea.globalPosition.y as number;
+      }
       if (newWidth > 0 && newHeight > 0 &&
         (Math.abs(newWidth - this.screenWidth) > 1 || Math.abs(newHeight - this.screenHeight) > 1)) {
         const oldWidth = this.screenWidth;
@@ -1243,6 +1298,16 @@ export struct GearPage {
       if (h > 0) {
         this.groupCardHeights.set(group, h);
       }
+      // 记录分组全局矩形：用于跨分类拖拽落点判定
+      if (newArea.globalPosition !== undefined) {
+        this.gearGroupRects.set(group, {
+          id: group,
+          x: newArea.globalPosition.x as number,
+          y: newArea.globalPosition.y as number,
+          w: newArea.width as number,
+          h: newArea.height as number
+        });
+      }
     })
   }
 
@@ -1523,20 +1588,39 @@ export struct GearPage {
       }
       .width('100%')
       .clip(true)
-      .bindContextMenu(this.GearContextMenu(item), ResponseType.LongPress, {
-        preview: this.GearPreviewCard(item),
-        previewAnimationOptions: { scale: [0.92, 1.05] },
-        transition: TransitionEffect.asymmetric(
-          TransitionEffect.scale({ x: 0.9, y: 0.9 })
-            .combine(TransitionEffect.OPACITY)
-            .animation({ curve: SPRING_CEREMONY_FLIP() }),
-          TransitionEffect.scale({ x: 0.95, y: 0.95 })
-            .combine(TransitionEffect.OPACITY)
-            .animation({ curve: SPRING_CONTEXT_EXIT() })
-        ),
-        placement: Placement.Bottom,
-        borderRadius: 20
+      // 拖拽态：原行隐身，由 overlay 飞行胶囊接管视觉
+      .opacity(this.gearOverlayPhase === 'dragging' && this.gearOverlayItem?.id === item.id ? 0 : 1)
+      // 记录该行全局矩形：用于拖拽命中检测（splice 让位 + drop 落点）
+      .onAreaChange((_oldVal: Area, newVal: Area) => {
+        if (newVal.globalPosition !== undefined) {
+          this.gearRowRects.set(item.id, {
+            id: item.id,
+            x: newVal.globalPosition.x as number,
+            y: newVal.globalPosition.y as number,
+            w: newVal.width as number,
+            h: newVal.height as number
+          });
+        }
       })
+      // 长按进入自绘 overlay（menu 态）→ 上滑/下滑切 dragging 态实时跟手
+      .gesture(
+        GestureGroup(GestureMode.Sequence,
+          LongPressGesture({ fingers: 1, repeat: false, duration: 400 })
+            .onAction((event: GestureEvent) => {
+              this.enterGearOverlay(item, event.fingerList[0].globalX, event.fingerList[0].globalY);
+            }),
+          PanGesture({ fingers: 1, distance: 0 })
+            .onActionUpdate((event: GestureEvent) => {
+              this.updateGearDrag(event.offsetX, event.offsetY);
+            })
+            .onActionEnd(() => {
+              this.completeGearDrag();
+            })
+            .onActionCancel(() => {
+              this.dismissGearOverlay();
+            })
+        )
+      )
     }
   }
 
@@ -1595,25 +1679,6 @@ export struct GearPage {
     }
     .width('100%')
     .alignItems(VerticalAlign.Top)
-  }
-
-  @Builder
-  private GearContextMenu(item: GearItem) {
-    Menu() {
-      MenuItem({ content: '编辑', labelInfo: '' })
-        .onClick(() => {
-          this.onOpenEditGear(item);
-        })
-      MenuItem({ content: '多选', labelInfo: '' })
-        .onClick(() => {
-          this.onEnterGearMultiSelect(item.id);
-        })
-      MenuItem({ content: '删除', labelInfo: '' })
-        .contentFontColor(DANGER_COLOR)
-        .onClick(() => {
-          this.onConfirmDeleteGear(item);
-        })
-    }
   }
 
   @Builder
@@ -1949,6 +2014,148 @@ export struct GearPage {
     return '装备';
   }
 
+  // --- 问题9：单品长按 overlay（菜单态 + 拖拽飞行胶囊）---
+  @Builder
+  private GearDragOverlay() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      // 背景遮罩：menu 态点击收起；dragging 态吃掉点击（拖拽中）
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor(OVERLAY_MASK)
+        .backdropBlur(this.gearOverlayPhase === 'dragging' ? 8 : 14)
+        .opacity(this.gearOverlayVisible ? 1 : 0)
+        .animation({ curve: SPRING_GENERAL() })
+        .onClick(() => {
+          if (this.gearOverlayPhase === 'menu') {
+            this.dismissGearOverlay();
+          }
+        })
+
+      // menu 态：被拖项预览卡 + 菜单
+      if (this.gearOverlayPhase === 'menu' && this.gearOverlayItem !== null) {
+        this.GearOverlayMenu(this.gearOverlayItem)
+      }
+
+      // dragging 态：飞行胶囊（跟手）
+      if (this.gearOverlayPhase === 'dragging' && this.gearOverlayItem !== null) {
+        this.GearDragChip(this.gearOverlayItem)
+      }
+    }
+    .width('100%')
+    .height('100%')
+  }
+
+  // menu 态：预览卡 + 编辑/多选/删除 菜单（自绘，替代系统 bindContextMenu）
+  @Builder
+  private GearOverlayMenu(item: GearItem) {
+    Column({ space: 10 }) {
+      // 预览卡（复用既有 GearPreviewCard）
+      this.GearPreviewCard(item)
+      // 菜单
+      Column() {
+        this.GearOverlayMenuItem('编辑', false, () => {
+          this.dismissGearOverlay();
+          this.onOpenEditGear(item);
+        })
+        Divider().strokeWidth(0.5).color(DIVIDER_COLOR)
+        this.GearOverlayMenuItem('多选', false, () => {
+          this.dismissGearOverlay();
+          this.onEnterGearMultiSelect(item.id);
+        })
+        Divider().strokeWidth(0.5).color(DIVIDER_COLOR)
+        this.GearOverlayMenuItem('删除', true, () => {
+          this.dismissGearOverlay();
+          this.onConfirmDeleteGear(item);
+        })
+      }
+      .width('72%')
+      .constraintSize({ maxWidth: 320, minWidth: 240 })
+      .backgroundColor(CARD_BG)
+      .borderRadius(SMALL_CARD_RADIUS)
+      .clip(true)
+      .shadow({ radius: 24, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 8 })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    // 锚点附近垂直定位：以长按局部 Y 为基准，略上移避免被手指遮挡
+    .margin({ top: this.gearOverlayMenuTop() })
+    .scale({
+      x: this.gearOverlayVisible ? 1 : 0.92,
+      y: this.gearOverlayVisible ? 1 : 0.92
+    })
+    .opacity(this.gearOverlayVisible ? 1 : 0)
+    .animation({ curve: SPRING_CEREMONY_FLIP() })
+  }
+
+  // 菜单定位：以长按锚点局部 Y 为中心，clamp 在安全范围，避免溢出屏幕。
+  private gearOverlayMenuTop(): number {
+    const anchorLocalY = this.gearLongPressGlobalY - this.gearOverlayOriginY;
+    // 预览卡+菜单整体约 320vp 高，让锚点落在偏上 1/3 处
+    let top = anchorLocalY - 80;
+    const maxTop = this.screenHeight - 360;
+    if (top > maxTop) {
+      top = maxTop;
+    }
+    if (top < 60) {
+      top = 60;
+    }
+    return top;
+  }
+
+  @Builder
+  private GearOverlayMenuItem(label: string, danger: boolean, onTap: () => void) {
+    Row() {
+      Text(label)
+        .fontSize(15)
+        .fontColor(danger ? DANGER_COLOR : TEXT_MAIN)
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .height(48)
+    .padding({ left: 16, right: 16 })
+    .onClick(() => {
+      onTap();
+    })
+  }
+
+  // dragging 态：飞行胶囊（紧凑名称卡，跟手；用 position 无动画 1:1 跟手）
+  @Builder
+  private GearDragChip(item: GearItem) {
+    Column({ space: 4 }) {
+      Row({ space: 6 }) {
+        Row()
+          .width(3)
+          .height(14)
+          .borderRadius(1.5)
+          .backgroundColor(getGroupColor(this.gearDropCategory.length > 0 ? this.gearDropCategory : item.category))
+        Text(item.name)
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(TEXT_MAIN)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .alignItems(VerticalAlign.Center)
+      // 跨分类移动时显示目标分类
+      if (this.gearDropCategory.length > 0 && this.gearDropCategory !== item.category) {
+        Text('→ ' + this.gearDropCategory)
+          .fontSize(11)
+          .fontColor(PRIMARY_COLOR)
+      }
+    }
+    .constraintSize({ maxWidth: 200 })
+    .padding({ left: 12, right: 12, top: 8, bottom: 8 })
+    .backgroundColor(GLASS_BG_LIGHT)
+    .backdropBlur(20)
+    .borderRadius(12)
+    .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetX: 0, offsetY: 6 })
+    .rotate({ angle: -2 })
+    .scale({ x: 1.04, y: 1.04 })
+    .position({ x: this.gearDragCurrentX - 90, y: this.gearDragCurrentY - 50 })
+    .animation({ duration: DURATION_NONE })
+  }
+
   // ===== 分组拖拽排序 =====
 
   // 记录初始拖拽手指位置和被拖分组在列表中的原始 index
@@ -2051,6 +2258,223 @@ export struct GearPage {
     });
     // 振动确认
     hapticTime(30);
+  }
+
+  // ============ 问题9：单品长按菜单 → 拖动排序（自绘 overlay 状态机）============
+
+  // 长按触发：进入 menu 态，记录手指全局坐标锚点，弹出自绘菜单。
+  //   仅 GROUP 排序态生效（其它排序模式 order 不参与，拖动无意义）；多选/搜索态屏蔽。
+  private enterGearOverlay(item: GearItem, globalX: number, globalY: number): void {
+    if (this.gearSortMode !== GEAR_SORT_GROUP || this.multiSelectMode || this.searchExpanded) {
+      return;
+    }
+    // 长按前若有左滑打开的行，先收回，避免视觉残留
+    if (this.swipedGearId !== '') {
+      this.getUIContext().animateTo({ curve: SPRING_SWIPE_RESET() }, () => {
+        this.swipedGearId = '';
+        this.swipeOffsetX = 0;
+      });
+    }
+    this.gearOverlayItem = item;
+    this.gearOverlayPhase = 'menu';
+    this.gearLongPressGlobalX = globalX;
+    this.gearLongPressGlobalY = globalY;
+    this.gearDragOffsetX = 0;
+    this.gearDragOffsetY = 0;
+    // 胶囊初始局部坐标 = 锚点局部坐标
+    this.gearDragCurrentX = globalX - this.gearOverlayOriginX;
+    this.gearDragCurrentY = globalY - this.gearOverlayOriginY;
+    this.gearDropCategory = item.category;
+    this.gearDropIndex = -1;
+    hapticTime(30);
+    // 入场动画
+    setTimeout(() => {
+      if (!this.isAlive) {
+        return;
+      }
+      this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
+        this.gearOverlayVisible = true;
+      });
+    }, 16);
+  }
+
+  // Pan 更新：menu 态首次移动收菜单进 dragging 态；累加 offset 推实时全局坐标 → 局部驱动胶囊。
+  private updateGearDrag(offsetX: number, offsetY: number): void {
+    if (this.gearOverlayItem === null) {
+      return;
+    }
+    if (this.gearOverlayPhase === 'menu') {
+      // 进入拖拽态：收菜单
+      this.gearOverlayPhase = 'dragging';
+      hapticTime(20);
+    }
+    this.gearDragOffsetX = offsetX;
+    this.gearDragOffsetY = offsetY;
+    const fingerGlobalX = this.gearLongPressGlobalX + offsetX;
+    const fingerGlobalY = this.gearLongPressGlobalY + offsetY;
+    this.gearDragCurrentX = fingerGlobalX - this.gearOverlayOriginX;
+    this.gearDragCurrentY = fingerGlobalY - this.gearOverlayOriginY;
+    // 边缘自动滚动（用局部 Y）
+    this.checkGearAutoScroll(this.gearDragCurrentY);
+    // 命中检测：先判落在哪个分类（跨分类移动），再在该分类内判插入索引
+    this.hitTestGearDrop(fingerGlobalX, fingerGlobalY);
+  }
+
+  // 命中检测：确定 gearDropCategory + gearDropIndex（拖拽悬停目标）
+  private hitTestGearDrop(globalX: number, globalY: number): void {
+    const prevCategory = this.gearDropCategory;
+    const prevIndex = this.gearDropIndex;
+    // 1) 先判落在哪个分组卡区域内 → 目标分类
+    let hitCategory = '';
+    this.gearGroupRects.forEach((rect: TripCardArea, category: string) => {
+      if (globalY >= rect.y && globalY <= rect.y + rect.h) {
+        hitCategory = category;
+      }
+    });
+    if (hitCategory === '') {
+      // 不在任何分组内：保持上次目标分类（避免空档抖动）
+      return;
+    }
+    // 2) 在目标分类内按各行中线确定插入索引
+    const rows = this.filteredGearsByGroup(hitCategory);
+    let insertIdx = rows.length; // 默认插到末尾
+    for (let i = 0; i < rows.length; i++) {
+      const rect = this.gearRowRects.get(rows[i].id);
+      if (rect === undefined) {
+        continue;
+      }
+      const midY = rect.y + rect.h / 2;
+      if (globalY < midY) {
+        insertIdx = i;
+        break;
+      }
+    }
+    this.gearDropCategory = hitCategory;
+    this.gearDropIndex = insertIdx;
+    // 进入新目标格触觉反馈
+    if (hitCategory !== prevCategory || insertIdx !== prevIndex) {
+      hapticTime(15);
+    }
+  }
+
+  // Pan 结束：落位 → 重排 + 持久化 → 退出
+  private completeGearDrag(): void {
+    this.stopGearAutoScroll();
+    const dragged = this.gearOverlayItem;
+    if (dragged === null) {
+      this.dismissGearOverlay();
+      return;
+    }
+    if (this.gearOverlayPhase === 'dragging' && this.gearDropCategory !== '' && this.gearDropIndex >= 0) {
+      const next = this.reorderGearsByDrop(dragged, this.gearDropCategory, this.gearDropIndex);
+      if (next !== null) {
+        this.onReorderGears(next);
+        hapticTime(30);
+      }
+    }
+    this.dismissGearOverlay();
+  }
+
+  // 核心重排：把 dragged 移到 targetCategory 的 targetIndex 位置，重写该分类内所有 order，
+  //   跨分类时同时改 dragged.category。返回全量新 gears（保持其它分类不变）。
+  //   order 策略：目标分类内可见项按落位后的新顺序，从 0 起步连续赋值（稀疏度无所谓，只看相对大小）。
+  private reorderGearsByDrop(dragged: GearItem, targetCategory: string, targetIndex: number): GearItem[] | null {
+    // 目标分类当前可见顺序（已按 order/createdAt 排序）
+    const targetRows = this.filteredGearsByGroup(targetCategory).slice();
+    // 从目标分类移除 dragged（同分类重排时它本就在列表里）
+    const withoutDragged: GearItem[] = [];
+    for (let i = 0; i < targetRows.length; i++) {
+      if (targetRows[i].id !== dragged.id) {
+        withoutDragged.push(targetRows[i]);
+      }
+    }
+    // clamp 插入索引
+    let idx = targetIndex;
+    if (idx > withoutDragged.length) {
+      idx = withoutDragged.length;
+    }
+    if (idx < 0) {
+      idx = 0;
+    }
+    // 构造目标分类的新顺序
+    const draggedNext = updateGear(dragged, { category: targetCategory, order: idx });
+    const orderedTarget: GearItem[] = [];
+    for (let i = 0; i < withoutDragged.length; i++) {
+      orderedTarget.push(withoutDragged[i]);
+    }
+    orderedTarget.splice(idx, 0, draggedNext);
+    // 重写目标分类内连续 order
+    const orderById = new Map<string, GearItem>();
+    for (let i = 0; i < orderedTarget.length; i++) {
+      const reIndexed = updateGear(orderedTarget[i], { order: i });
+      orderById.set(reIndexed.id, reIndexed);
+    }
+    // 合并回全量 gears：目标分类内的项用重排后的，其它原样
+    const result: GearItem[] = [];
+    let changed = false;
+    for (let i = 0; i < this.gears.length; i++) {
+      const g = this.gears[i];
+      const replaced = orderById.get(g.id);
+      if (replaced !== undefined) {
+        result.push(replaced);
+        if (replaced.order !== g.order || replaced.category !== g.category) {
+          changed = true;
+        }
+      } else {
+        result.push(g);
+      }
+    }
+    return changed ? result : null;
+  }
+
+  // 退出 overlay（点菜单项 / 拖拽结束 / 点空白）
+  private dismissGearOverlay(): void {
+    this.stopGearAutoScroll();
+    this.getUIContext().animateTo({
+      curve: SPRING_GENERAL(),
+      onFinish: () => {
+        this.gearOverlayItem = null;
+        this.gearOverlayPhase = 'idle';
+        this.gearDragOffsetX = 0;
+        this.gearDragOffsetY = 0;
+        this.gearDropCategory = '';
+        this.gearDropIndex = -1;
+      }
+    }, () => {
+      this.gearOverlayVisible = false;
+    });
+  }
+
+  // 拖拽边缘自动滚动（局部 Y 命中顶部/底部热区）
+  private checkGearAutoScroll(localY: number): void {
+    const edge = 90;
+    const h = this.screenHeight;
+    if (localY < edge) {
+      this.gearAutoScrollSpeed = -((edge - localY) / edge) * 12;
+      this.startGearAutoScroll();
+    } else if (localY > h - edge) {
+      this.gearAutoScrollSpeed = ((localY - (h - edge)) / edge) * 12;
+      this.startGearAutoScroll();
+    } else {
+      this.stopGearAutoScroll();
+    }
+  }
+
+  private startGearAutoScroll(): void {
+    if (this.gearAutoScrollTimer >= 0) {
+      return;
+    }
+    this.gearAutoScrollTimer = setInterval(() => {
+      this.gearListScroller.scrollBy(0, this.gearAutoScrollSpeed);
+    }, 16);
+  }
+
+  private stopGearAutoScroll(): void {
+    if (this.gearAutoScrollTimer >= 0) {
+      clearInterval(this.gearAutoScrollTimer);
+      this.gearAutoScrollTimer = -1;
+      this.gearAutoScrollSpeed = 0;
+    }
   }
 
   @Builder

@@ -28,7 +28,7 @@ export interface CreateGearParams {
   acquiredAt?: number;
 }
 
-/** 新建装备：统一分配 id + createdAt */
+/** 新建装备：统一分配 id + createdAt（order 留空，由排序回退 createdAt 倒序自然定位） */
 export function createGear(params: CreateGearParams): GearItem {
   return {
     id: makeId('gear'),
@@ -51,9 +51,10 @@ export interface UpdateGearFields {
   note?: string;
   brand?: string;
   acquiredAt?: number;
+  order?: number; // 问题9：手动拖动排序权重；不传则原样保留
 }
 
-/** 更新装备字段：保留未指定字段 */
+/** 更新装备字段：保留未指定字段（含 order——必须透传，否则编辑/改分组会清空手动排序） */
 export function updateGear(existing: GearItem, fields: UpdateGearFields): GearItem {
   return {
     id: existing.id,
@@ -64,7 +65,8 @@ export function updateGear(existing: GearItem, fields: UpdateGearFields): GearIt
     note: fields.note !== undefined ? fields.note : existing.note,
     createdAt: existing.createdAt,
     brand: fields.brand !== undefined ? fields.brand : existing.brand,
-    acquiredAt: fields.acquiredAt !== undefined ? fields.acquiredAt : existing.acquiredAt
+    acquiredAt: fields.acquiredAt !== undefined ? fields.acquiredAt : existing.acquiredAt,
+    order: fields.order !== undefined ? fields.order : existing.order
   };
 }
 

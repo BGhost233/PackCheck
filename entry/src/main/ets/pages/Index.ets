@@ -915,6 +915,13 @@ struct Index {
     this.cancelGearMultiSelect();
   }
 
+  // 问题9：单品拖拽排序/跨分类移动落位——GearPage 已算好全量 nextGears，这里只负责持久化 + 回写
+  private async reorderGears(nextGears: GearItem[]): Promise<void> {
+    await this.store.saveGears(nextGears);
+    this.gears = nextGears;
+    this.checklistRenderNonce++;
+  }
+
   private toggleGearExpanded(id: string): void {
     this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
       this.expandedGearId = this.expandedGearId === id ? '' : id;
@@ -2323,6 +2330,9 @@ struct Index {
                 },
                 onAddGearsToNewTrip: (gearIds: string[]) => {
                   this.openGenerateTripSheet();
+                },
+                onReorderGears: (nextGears: GearItem[]) => {
+                  this.reorderGears(nextGears);
                 }
               });
             }
