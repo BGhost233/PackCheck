@@ -47,6 +47,12 @@ export struct ZoneGridCell {
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
   @Prop zoneFill: string = ZONE_MISC_FILL;
   @Prop cellHeight: number = 160;
+  // 问题3 修复：勾选只改某 item 的 checked，items 数组引用变了但本组件 @Prop items 是值拷贝，
+  //   父层 ForEach key（zone+数量）不变 → 本组件节点不重建 → @Prop 不重新下发 → 视觉不刷新。
+  //   父层每次勾选自增 checklistRenderNonce 透传进来，@Watch 后自增 itemsVersion，
+  //   内层 ChecklistRow 的 ForEach key 拼上 itemsVersion → 勾选即重建受影响行，立即刷新。
+  @Prop @Watch('onRenderNonceChange') renderNonce: number = 0;
+  @State private itemsVersion: number = 0;
 
   // 回调（Phase 2/3 接入）
   onTapTitle: (zone: string) => void = () => {};
@@ -77,6 +83,11 @@ export struct ZoneGridCell {
 
   private onGearsChange(): void {
     this.gearIndex = buildGearIndex(this.gears);
+  }
+
+  // 问题3：父层勾选信号变化 → 自增 itemsVersion，驱动内层 ChecklistRow ForEach key 变更重建
+  private onRenderNonceChange(): void {
+    this.itemsVersion++;
   }
 
   build() {
@@ -209,10 +220,13 @@ export struct ZoneGridCell {
             )
           )
         }
-        // 问题3 状态不刷新根因修复：key 必须包含 checked。原 key 仅 item.id——勾选只改 checked 字段、
-        //   id 不变 → ForEach diff 认为节点未变不更新 → ChecklistRow 的 @Prop item 不重新下发，
-        //   视觉不刷新，需退出页面重建整棵树才更新。拼上 checked 后勾选即重建该行，立即刷新。
-      }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
+        // 问题3 状态不刷新根因修复：key 必须包含 checked + itemsVersion。
+        //   仅 item.id：勾选只改 checked、id 不变 → ForEach diff 认为节点未变不更新。
+        //   拼 checked：本组件若重建可即时反映；但父层 grid ForEach key（zone+数量）不变时本组件根本不重建，
+        //   @Prop items 值拷贝拿不到新 checked → 拼 checked 也无从生效。
+        //   再拼 itemsVersion（由父层 renderNonce @Watch 自增驱动）：父层每次勾选都让本组件内层 key 变更，
+        //   强制重建受影响行，彻底闭环——无需退出重进即可实时刷新。
+      }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0') + '_' + this.itemsVersion.toString())
 
       // 超过 N 件：折叠提示行
       if (this.items.length > MAX_PREVIEW_ITEMS) {

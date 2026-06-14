@@ -915,11 +915,22 @@ struct Index {
     this.cancelGearMultiSelect();
   }
 
-  // 问题9：单品拖拽排序/跨分类移动落位——GearPage 已算好全量 nextGears，这里只负责持久化 + 回写
-  private async reorderGears(nextGears: GearItem[]): Promise<void> {
-    await this.store.saveGears(nextGears);
+  // 问题9-B：单品拖拽落位——optimistic update。
+  //   第一性原理：松手 = 视觉即时落位（同步当帧），持久化 = 后台事务。
+  //   先同步回写 this.gears 让 UI 立即落位，saveGears 不 await（fire-and-forget 后台跑），
+  //   避免 await 推迟 setState 造成松手卡顿。
+  private reorderGears(nextGears: GearItem[]): void {
     this.gears = nextGears;
     this.checklistRenderNonce++;
+    // 持久化后台异步进行，不阻塞视觉落位
+    this.persistGearsInBackground(nextGears);
+  }
+
+  // 后台持久化（fire-and-forget）：不阻塞 UI 落位帧，错误仅记录不影响视觉
+  private persistGearsInBackground(nextGears: GearItem[]): void {
+    this.store.saveGears(nextGears).catch((err: Error) => {
+      console.error('saveGears failed: ' + err.message);
+    });
   }
 
   private toggleGearExpanded(id: string): void {

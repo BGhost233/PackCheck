@@ -854,6 +854,7 @@ this.computeCellHeight();
             zoneStroke: zoneStroke(zone),
             zoneFill: zoneFill(zone),
             cellHeight: this.cellHeight,
+            renderNonce: this.checklistRenderNonce,
             isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === zone,
             draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
             onTapTitle: (z: string) => { this.openFocus(z); },
@@ -882,7 +883,10 @@ this.computeCellHeight();
           const pos = n.globalPosition as Record<string, number>;
           this.zoneRects.set(zone, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
         })
-      }, (zone: string) => zone + '_' + this.itemsForZone(zone).length.toString())
+        // 问题3 根治：key 拼 checklistRenderNonce。原 key 仅「zone+数量」，勾选只改 checked、数量不变
+        //   → key 不变 → ForEach 复用旧 ZoneGridCell 实例且不重新求值构造参数 → 新 items 喂不进去。
+        //   拼 nonce（每次勾选自增）后，key 变更触发子组件构造参数重新求值，新 items 经 @Prop 下发刷新。
+      }, (zone: string) => zone + '_' + this.itemsForZone(zone).length.toString() + '_' + this.checklistRenderNonce.toString())
 
       // 杂项格跨 2 列（spec §2.1.2 F-5），单独渲染在末尾
       GridItem() {
@@ -894,6 +898,7 @@ this.computeCellHeight();
           zoneStroke: zoneStroke(BodyZone.Misc),
           zoneFill: zoneFill(BodyZone.Misc),
           cellHeight: this.cellHeight,
+          renderNonce: this.checklistRenderNonce,
           isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === BodyZone.Misc,
           draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
           onTapTitle: (z: string) => { this.openFocus(z); },

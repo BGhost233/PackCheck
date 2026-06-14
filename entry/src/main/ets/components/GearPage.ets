@@ -77,6 +77,9 @@ interface TripCardArea {
   h: number;
 }
 
+// 折叠态单品行高（44 content + 4*2 padding），拖拽让位平移量与命中检测共用
+const GEAR_ROW_HEIGHT: number = 52;
+
 @Component
 export struct GearPage {
   @Prop @Watch('onGearDataChange') gears: GearItem[] = [];
@@ -604,6 +607,51 @@ export struct GearPage {
       return items;
     }
     return items.filter((item: GearItem) => item.category === group);
+  }
+
+  // 问题9-A 避让：把「被拖项留下的透明洞」视觉迁移到插入点。
+  //   第一性原理：插到这里，洞与插入点之间的东西自动腾位填洞/让缝。
+  //   坐标系与 hitTestGearDrop 完全一致——均基于「含被拖项的完整分组列表」full index。
+  //   被拖项在 srcIdx，落点 dropIndex（插入索引）：
+  //     - 向下拖（dropIndex > srcIdx）：(srcIdx, dropIndex) 区间内的行上移一行高，
+  //       原洞被填、缝自然出现在 dropIndex-1 槽。
+  //     - 向上拖（dropIndex < srcIdx）：[dropIndex, srcIdx) 区间内的行下移一行高，
+  //       缝出现在 dropIndex 槽。
+  private gearRowShiftY(item: GearItem): number {
+    if (this.gearOverlayPhase !== 'dragging') {
+      return 0;
+    }
+    if (this.gearDropCategory === '' || this.gearDropIndex < 0) {
+      return 0;
+    }
+    if (item.category !== this.gearDropCategory) {
+      return 0;
+    }
+    const draggingId: string = this.gearOverlayItem !== null ? this.gearOverlayItem.id : '';
+    if (item.id === draggingId) {
+      return 0;
+    }
+    // 含被拖项的完整分组列表（与 hitTest 同坐标系）
+    const rows: GearItem[] = this.filteredGearsByGroup(this.gearDropCategory);
+    const srcIdx: number = rows.findIndex((g: GearItem) => g.id === draggingId);
+    const myIdx: number = rows.findIndex((g: GearItem) => g.id === item.id);
+    if (myIdx < 0) {
+      return 0;
+    }
+    const dropIdx: number = this.gearDropIndex;
+    if (srcIdx < 0) {
+      // 被拖项不在本分类（跨分类拖入）：落点及之后的行整体下移腾缝
+      return myIdx >= dropIdx ? GEAR_ROW_HEIGHT : 0;
+    }
+    if (dropIdx > srcIdx) {
+      // 向下：原洞之下、落点之前的行上移填洞
+      return (myIdx > srcIdx && myIdx < dropIdx) ? -GEAR_ROW_HEIGHT : 0;
+    }
+    if (dropIdx < srcIdx) {
+      // 向上：落点及之后、原洞之前的行下移让缝
+      return (myIdx >= dropIdx && myIdx < srcIdx) ? GEAR_ROW_HEIGHT : 0;
+    }
+    return 0;
   }
 
   private formatKg(weightGram: number): string {
@@ -1589,10 +1637,19 @@ export struct GearPage {
       }
       .width('100%')
       .clip(true)
-      // 拖拽态：原行隐身，由 overlay 飞行胶囊接管视觉
+      // 拖拽态：原行隐身（透明洞占位），由 overlay 飞行胶囊接管视觉
       .opacity(this.gearOverlayPhase === 'dragging' && this.gearOverlayItem?.id === item.id ? 0 : 1)
+      // 问题9-A 让位：被拖项留下的透明洞「视觉迁移」到插入点——
+      //   洞与插入点之间的兄弟行 SPRING 平移一行高，把洞推到落点位置。
+      .translate({ y: this.gearRowShiftY(item) })
+      .animation({ curve: SPRING_GENERAL() })
       // 记录该行全局矩形：用于拖拽命中检测（splice 让位 + drop 落点）
+      //   拖拽态冻结：让位平移会改变 onAreaChange 上报的 globalPosition，若此时更新
+      //   会让命中目标随让位漂移形成反馈回路，故仅在静止态采集 rect。
       .onAreaChange((_oldVal: Area, newVal: Area) => {
+        if (this.gearOverlayPhase === 'dragging') {
+          return;
+        }
         if (newVal.globalPosition !== undefined) {
           this.gearRowRects.set(item.id, {
             id: item.id,
@@ -2377,6 +2434,8 @@ export struct GearPage {
   }
 
   // Pan 结束：落位 → 重排 + 持久化 → 退出
+  //   问题9-B 错帧解耦：先提交重排（optimistic，UI 当帧即时落位），再把 overlay 收起
+  //   推迟到下一帧——避免「列表全量重渲染」与「胶囊淡出 animateTo」挤在同一帧造成松手卡顿。
   private completeGearDrag(): void {
     this.stopGearAutoScroll();
     const dragged = this.gearOverlayItem;
@@ -2384,14 +2443,23 @@ export struct GearPage {
       this.dismissGearOverlay();
       return;
     }
+    let committed = false;
     if (this.gearOverlayPhase === 'dragging' && this.gearDropCategory !== '' && this.gearDropIndex >= 0) {
       const next = this.reorderGearsByDrop(dragged, this.gearDropCategory, this.gearDropIndex);
       if (next !== null) {
-        this.onReorderGears(next);
+        this.onReorderGears(next); // optimistic：当帧落位
         hapticTime(30);
+        committed = true;
       }
     }
-    this.dismissGearOverlay();
+    if (committed) {
+      // 落位帧与收起帧解耦：下一帧再收 overlay，让列表先完成重排渲染
+      setTimeout(() => {
+        this.dismissGearOverlay();
+      }, 0);
+    } else {
+      this.dismissGearOverlay();
+    }
   }
 
   // 核心重排：把 dragged 移到 targetCategory 的 targetIndex 位置，重写该分类内所有 order，
