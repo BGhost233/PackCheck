@@ -926,6 +926,9 @@ this.computeCellHeight();
     .padding({ left: GRID_PADDING, right: GRID_PADDING, top: 8, bottom: 100 })
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring)
+    // 问题4：格子总数固定且少（6 zone + 杂项 = 7 个）。Grid 默认懒加载会虚拟化回收屏幕外 GridItem，
+    //   导致滚动到某位置时末行格子「消失」。设足量 cachedCount 全量驻留，杜绝回收，零副作用。
+    .cachedCount(8)
     // B2：拖拽期间锁定 Grid 滚动，防止边拖边滚导致落点偏移
     .enableScrollInteraction(this.overlayPhase !== 'dragging')
     // 问题4a：head 随网格滚动渐进折叠。第一性原理——折叠程度 = 滚动意图的实时映射（连续量，非开关）。
