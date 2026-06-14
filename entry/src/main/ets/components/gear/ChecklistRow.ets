@@ -64,8 +64,8 @@ export struct ChecklistRow {
     this.lastChecked = this.item.checked;
     const target: number = this.item.checked ? 1.0 : 0;
     if (this.checkScale !== target) {
-      // 勾选触觉反馈（轻档 tick）
-      hapticTick();
+      // 问题3：触觉已前移到「按下即响」（onTouch Down），此处不再触发，避免双响。
+      //   第一性原理——触感应在物理接触瞬间反馈，而非等状态翻转完成才慢半拍。
       this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
         this.checkScale = target;
       });
@@ -112,6 +112,8 @@ export struct ChecklistRow {
         }
         if (e.type === TouchType.Down) {
           this.pressed = true;
+          // 问题3：网格态 check 圆圈按下即触觉反馈（按下即响，对齐 Apple 按钮触感）
+          hapticTick();
         } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
           this.pressed = false;
         }
@@ -155,6 +157,10 @@ export struct ChecklistRow {
     .onTouch((e: TouchEvent) => {
       if (e.type === TouchType.Down) {
         this.pressed = true;
+        // 问题3：聚焦态整行点击即勾选，故整行按下即触觉反馈（仅非双热区，hotzone 态整行 Down 是进聚焦按压不响勾选触感）
+        if (!this.checkOnlyHotzone) {
+          hapticTick();
+        }
       } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
         this.pressed = false;
       }
