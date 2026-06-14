@@ -713,7 +713,14 @@ export struct GearPage {
     const collapseRange = GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED;
     // 每个装备行约 52vp (44 content + 4*2 padding)，分组标题 28vp + 卡片间距 16vp
     const groups = this.filteredGearGroups();
-    const estimatedContentHeight = this.filteredGears().length * 52 + groups.length * 44;
+    // Bug1 修复：只计算可见（未折叠）分组中的装备数量
+    let visibleItemCount = 0;
+    for (let g = 0; g < groups.length; g++) {
+      if (!this.isGearGroupCollapsed(groups[g])) {
+        visibleItemCount += this.filteredGearsByGroup(groups[g]).length;
+      }
+    }
+    const estimatedContentHeight = visibleItemCount * 52 + groups.length * 44;
     // 如果内容自身足够多，不需要额外空间来触发折叠
     if (estimatedContentHeight > collapseRange) {
       return 80; // 仅 TabBar 避让

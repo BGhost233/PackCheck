@@ -333,7 +333,6 @@ this.computeCellHeight();
         zone: this.focusedZoneRender,
         items: this.itemsForZone(this.focusedZoneRender),
         gears: this.gears,
-        renderNonce: this.checklistRenderNonce,
         zoneColor: zoneColor(this.focusedZoneRender),
         zoneStroke: zoneStroke(this.focusedZoneRender),
         zoneFill: zoneFocusBg(this.focusedZoneRender),
@@ -876,7 +875,7 @@ this.computeCellHeight();
           const pos = n.globalPosition as Record<string, number>;
           this.zoneRects.set(zone, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
         })
-      }, (zone: string) => zone + '_' + this.itemsForZone(zone).length.toString() + '_' + this.checklistRenderNonce.toString())
+      }, (zone: string) => zone + '_' + this.itemsForZone(zone).length.toString())
 
       // 杂项格跨 2 列（spec §2.1.2 F-5），单独渲染在末尾
       GridItem() {

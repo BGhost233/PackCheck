@@ -46,8 +46,6 @@ export struct FocusedZoneView {
   @Prop @Watch('onGearsChange') gears: GearItem[] = [];
   // 性能：gearId → GearItem 索引，渲染热路径 O(1) 反查，替代 ForEach 每行线性扫描
   @State private gearIndex: Map<string, GearItem> = new Map();
-  // 渲染 nonce：gear 编辑后父层 nonce++ 强制 ForEach 重建（修复 #9 编辑不即时更新）
-  @Prop renderNonce: number = 0;
   @Prop zoneColor: string = TEXT_SECONDARY;
   // ZoneShell 外壳需要的描边色 + 整块淡色填充底，由父层透传（与网格态用同一 helper）
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
@@ -102,10 +100,24 @@ export struct FocusedZoneView {
   @State private reorderDragY: number = 0; // 拖拽项的 Y 偏移量
   // Bug2 同类修复：长按触发后抑制紧随的 onClick（弹详情 Sheet / toggleSelection）
   @State private longPressTriggered: boolean = false;
+  // Bug3a/4/5 修复：子元素交互（check/add/longpress/tapRow/checkbox）时抑制 ZoneShell onTouch 触发的 onClose。
+  //   ArkUI onTouch 不被子 onClick 消费，onTouch Up 先于子 onClick 触发。
+  //   方案：onTapContent 用 setTimeout(0) 延迟执行，子 onClick 同帧内设置此标记阻止关闭。
+  //   统一用 armSuppressClose() 设置 + 100ms 兜底重置，防止 onTapContent 未触发时标记泄漏。
+  private suppressClose: boolean = false;
+
+  // 统一设置 suppressClose 并注册兜底重置（100ms 足够覆盖同帧事件分发，又不会泄漏）
+  private armSuppressClose(): void {
+    this.suppressClose = true;
+    setTimeout(() => { this.suppressClose = false; }, 100);
+  }
 
   // gears 变化时刷新索引缓存（常驻树组件不能用 aboutToAppear，靠 @Watch 驱动）
+  // gearVersion 递增驱动 ForEach key 变化，确保 gear 改名/编辑后列表刷新显示名
+  @State private gearVersion: number = 0;
   onGearsChange(): void {
     this.gearIndex = buildGearIndex(this.gears);
+    this.gearVersion++;
   }
 
   // active false→true：重置后下一帧验入场；true→false：重置供下次重放
@@ -172,7 +184,16 @@ export struct FocusedZoneView {
       contentClickable: true,
       // 问题6：聚焦态走「原地静止」判定——上下滑动列表空白区不再误触发收起，仅原地轻点才返回。
       tapNeedsStationary: true,
-      onTapContent: (_z: string) => { this.onClose(); },
+      onTapContent: (_z: string) => {
+        // Bug3a/4/5：延迟到下一微任务执行，让同帧内子组件 onClick 有机会设置 suppressClose
+        setTimeout(() => {
+          if (this.suppressClose) {
+            this.suppressClose = false;
+            return;
+          }
+          this.onClose();
+        }, 0);
+      },
       // D-2：逐项核查本区按钮在 titleTrailing 插槽中
       titleTrailing: () => { this.buildTrailing(); },
       content: () => { this.buildContent() }
@@ -211,6 +232,8 @@ export struct FocusedZoneView {
                     .height(22)
                     .margin({ right: 12 })
                     .onChange((checked: boolean) => {
+                      // Bug3a 补全：多选 checkbox 点击也需抑制 ZoneShell onTouch 触发的 onClose
+                      this.armSuppressClose();
                       if (checked) {
                         const next = new Set<string>(this.selectedIds);
                         next.add(item.id);
@@ -236,15 +259,23 @@ export struct FocusedZoneView {
                     checkSize: 28,
                     fontSize: FONT_SIZE_BODY_LARGE,
                     checkOnlyHotzone: true,
-                    onToggleCheck: this.isMultiSelectMode
-                      ? (id: string) => { this.toggleSelection(id); }
-                      : this.onToggleCheck,
+                    onToggleCheck: (id: string) => {
+                      // Bug3a：check 圆圈点击时抑制 ZoneShell onTouch 触发的 onClose
+                      this.armSuppressClose();
+                      if (this.isMultiSelectMode) {
+                        this.toggleSelection(id);
+                      } else {
+                        this.onToggleCheck(id);
+                      }
+                    },
                     onTapRow: () => {
                       // Bug2 同类修复：长按刚触发后抑制紧随的 tap
                       if (this.longPressTriggered) {
                         this.longPressTriggered = false;
                         return;
                       }
+                      // Bug3a 补全：点装备名/整行也需抑制 ZoneShell onTouch 触发的 onClose
+                      this.armSuppressClose();
                       if (this.isMultiSelectMode) {
                         this.toggleSelection(item.id);
                       } else {
@@ -332,7 +363,7 @@ export struct FocusedZoneView {
               .combine(TransitionEffect.scale({ x: 0.85, y: 0.85 }).animation({ curve: SPRING_GENERAL() }))
               .combine(TransitionEffect.opacity(0).animation({ curve: SPRING_GENERAL() }))
           ))
-        }, (item: ChecklistItem) => item.id + '_' + this.renderNonce.toString())
+        }, (item: ChecklistItem) => item.id + '_' + this.gearVersion.toString())
       }
       .width('100%')
       .layoutWeight(1)
@@ -397,6 +428,8 @@ export struct FocusedZoneView {
       }
     })
     .onClick(() => {
+      // Bug4：添加按钮点击时抑制 ZoneShell onTouch 触发的 onClose
+      this.armSuppressClose();
       this.onTapEmpty(this.zone);
     })
   }
@@ -408,6 +441,8 @@ export struct FocusedZoneView {
   private handleLongPress(item: ChecklistItem): void {
     // 触觉反馈（轻档）
     hapticSoft();
+    // Bug5：长按触发时抑制松手后 ZoneShell onTouch Up 触发的 onClose
+    this.armSuppressClose();
     // Bug2 同类修复：标记长按已触发，抑制松手后的 onClick（多选/非多选均需）
     this.longPressTriggered = true;
     setTimeout(() => { this.longPressTriggered = false; }, 500);
@@ -602,6 +637,7 @@ export struct FocusedZoneView {
       }
     })
     .onClick(() => {
+      this.armSuppressClose();
       this.onReviewZone(this.zone);
     })
   }
@@ -633,6 +669,7 @@ export struct FocusedZoneView {
           else if (e.type === TouchType.Up || e.type === TouchType.Cancel) { this.selectAllBtnPressed = false; }
         })
         .onClick(() => {
+          this.armSuppressClose();
           if (this.selectedIds.size === this.items.length) {
             this.selectedIds = new Set();
           } else {
@@ -652,6 +689,7 @@ export struct FocusedZoneView {
           else if (e.type === TouchType.Up || e.type === TouchType.Cancel) { this.moveBtnPressed = false; }
         })
         .onClick(() => {
+          this.armSuppressClose();
           if (this.selectedIds.size > 0) {
             const ids: string[] = Array.from(this.selectedIds);
             this.onRequestBatchMoveSheet(ids);
@@ -670,6 +708,7 @@ export struct FocusedZoneView {
           else if (e.type === TouchType.Up || e.type === TouchType.Cancel) { this.cancelBtnPressed = false; }
         })
         .onClick(() => {
+          this.armSuppressClose();
           this.exitMultiSelectMode();
         })
     }
