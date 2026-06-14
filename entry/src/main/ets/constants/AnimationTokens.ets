@@ -52,6 +52,8 @@ export const SPRING_TAB_ICON = (): ICurve => curves.springMotion(0.28, 0.82);
 export const CURVE_DECELERATE: Curve = Curve.EaseOut;
 export const CURVE_STANDARD: ICurve = curves.cubicBezierCurve(0.4, 0.0, 0.2, 1.0);
 export const CURVE_LINEAR: Curve = Curve.Linear;
+// 呼吸脉动专用：对称 ease-in-out，缓入缓出，用于标题光泽/微光呼吸（无位移、纯明暗）
+export const CURVE_BREATH: ICurve = curves.cubicBezierCurve(0.4, 0.0, 0.6, 1.0);
 
 // 长按浮层/菜单专用（spec D-3：浮层弹出/菜单快速出现，无弹性诉求）
 export const SHARP_SNAP: Curve = Curve.Sharp;
@@ -89,6 +91,8 @@ export const DURATION_CEREMONY_OVERLAY: number = 300;
 export const DURATION_CEREMONY_SHINE: number = 400;
 export const DURATION_CHART_DRAW: number = 1200;
 export const DURATION_CEREMONY_SHIMMER: number = 1200;
+// 标题光泽呼吸单程时长（明→暗 或 暗→明 半程），整周期约 2 倍
+export const DURATION_TITLE_BREATH: number = 1400;
 
 // ============================================================
 // 错落入场

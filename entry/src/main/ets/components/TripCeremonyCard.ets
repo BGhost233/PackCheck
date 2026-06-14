@@ -2,7 +2,8 @@ import {
   SPRING_CEREMONY_FLIP, SPRING_CEREMONY_DISMISS, SPRING_PRESS,
   SPRING_COUNTER, SPRING_GENERAL, SPRING_FAB_SNAP, SPRING_SCROLL,
   DURATION_CEREMONY_SHINE, DURATION_CEREMONY_SHIMMER,
-  CURVE_STANDARD
+  DURATION_TITLE_BREATH,
+  CURVE_STANDARD, CURVE_BREATH
 } from '../constants/AnimationTokens';
 import { hapticPreset } from '../utils/HapticUtils';
 import { inputMethod } from '@kit.IMEKit';
@@ -24,9 +25,7 @@ import {
   TEXT_SECONDARY,
   TRANSPARENT,
   WHITE,
-  WHITE_TRANSPARENT,
-  SHIMMER_WHITE_FAINT,
-  SHIMMER_GREEN_GLOSS
+  WHITE_TRANSPARENT
 } from '../constants/Colors';
 import { CHIP_RADIUS } from '../constants/Layout';
 
@@ -62,10 +61,9 @@ export struct TripCeremonyCard {
   @State private contentStep: number = 0;
   
 
-  // === 标题 shimmer ===
-  @State private titleShimmerX: number = -60;
-  private titleShimmerTimer: number = -1;
-  private titleRowWidth: number = 200;
+  // === 标题光泽呼吸（深色文字表面流过主题绿光泽的明暗脉动，无位移色块）===
+  @State private titleGlow: number = 0;
+  private titleGlowTimer: number = -1;
 
   // === 输入框抖动 ===
   @State private titleShakeX: number = 0;
@@ -247,24 +245,28 @@ return this.trackWidth - this.SLIDER_WIDTH;
   // ============================================================
   private startTitleShimmer(): void {
     if (this.isSlideComplete) return;
-    const endX = this.titleRowWidth + 60;
-    this.titleShimmerX = -60;
+    // 半程：暗(0) → 亮(0.55)，到顶后回落，形成对称呼吸
+    const goingUp = this.titleGlow < 0.275;
     this.getUIContext().animateTo({
-      duration: DURATION_CEREMONY_SHIMMER,
-      curve: CURVE_STANDARD
+      duration: DURATION_TITLE_BREATH,
+      curve: CURVE_BREATH
     }, () => {
-      this.titleShimmerX = endX;
+      this.titleGlow = goingUp ? 0.55 : 0;
     });
-    this.titleShimmerTimer = setTimeout(() => {
+    this.titleGlowTimer = setTimeout(() => {
       this.startTitleShimmer();
-    }, 3000) as number;
+    }, DURATION_TITLE_BREATH) as number;
   }
 
   private stopTitleShimmer(): void {
-    if (this.titleShimmerTimer !== -1) {
-      clearTimeout(this.titleShimmerTimer);
-      this.titleShimmerTimer = -1;
+    if (this.titleGlowTimer !== -1) {
+      clearTimeout(this.titleGlowTimer);
+      this.titleGlowTimer = -1;
     }
+    // 收场归零，避免静止态停在高亮（避坑 #17 静止态中性值）
+    this.getUIContext().animateTo({ duration: DURATION_TITLE_BREATH, curve: CURVE_BREATH }, () => {
+      this.titleGlow = 0;
+    });
   }
 
   // ============================================================
@@ -932,24 +934,20 @@ return this.trackWidth - this.SLIDER_WIDTH;
   @Builder
   private CeremonyCardFront() {
     Column() {
-      // 情绪化标题（圆点 + 文字 + shimmer）
+      // 情绪化标题（圆点 + 文字）：底层常驻深色，叠加层主题绿光泽随 titleGlow 呼吸
       Stack() {
+        // 底层：常驻深色文字
         Row({ space: 0 }) {
-          // 左侧圆点组
           Circle({ width: 6, height: 6 })
             .fill(PRIMARY_COLOR)
           Circle({ width: 4, height: 4 })
             .fill(PRIMARY_FILL_SUBTLE)
             .margin({ left: 4 })
-
-          // 标题文字
           Text('新的冒险即将开始')
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .margin({ left: 10, right: 10 })
-
-          // 右侧圆点组
           Circle({ width: 4, height: 4 })
             .fill(PRIMARY_FILL_SUBTLE)
           Circle({ width: 6, height: 6 })
@@ -957,22 +955,28 @@ return this.trackWidth - this.SLIDER_WIDTH;
             .margin({ left: 4 })
         }
         .alignItems(VerticalAlign.Center)
-        .onAreaChange((_oldValue: Area, newValue: Area) => {
-          this.titleRowWidth = newValue.width as number;
-        })
 
-        // shimmer 高光条（斜切光带 + 微绿光泽）
-        Row()
-          .width(60)
-          .height('200%')
-          .linearGradient({
-            angle: 75,
-            colors: [[TRANSPARENT, 0.0], [SHIMMER_WHITE_FAINT, 0.25], [SHIMMER_GREEN_GLOSS, 0.5], [SHIMMER_WHITE_FAINT, 0.75], [TRANSPARENT, 1.0]]
-          })
-          .translate({ x: this.titleShimmerX })
+        // 叠加层：主题绿光泽，opacity 随 titleGlow 呼吸（深色文字表面流过一层绿光泽）
+        Row({ space: 0 }) {
+          Circle({ width: 6, height: 6 })
+            .fill(PRIMARY_COLOR)
+          Circle({ width: 4, height: 4 })
+            .fill(PRIMARY_COLOR)
+            .margin({ left: 4 })
+          Text('新的冒险即将开始')
+            .fontSize(14)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(PRIMARY_COLOR)
+            .margin({ left: 10, right: 10 })
+          Circle({ width: 4, height: 4 })
+            .fill(PRIMARY_COLOR)
+          Circle({ width: 6, height: 6 })
+            .fill(PRIMARY_COLOR)
+            .margin({ left: 4 })
+        }
+        .alignItems(VerticalAlign.Center)
+        .opacity(this.titleGlow)
       }
-      .height(20)
-      .clip(true)
       .opacity(this.contentStep >= 1 ? 1 : 0)
       .translate({ y: this.contentStep >= 1 ? 0 : 6 })
       .margin({ top: 24, bottom: 20 })
