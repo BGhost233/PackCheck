@@ -17,8 +17,10 @@ import {
 import {
   SPRING_PRESS,
   SPRING_GENERAL,
+  SPRING_PANEL_EXIT,
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST,
+  PANEL_SCALE_START,
   STAGGER_OFFSET_Y
 } from '../constants/AnimationTokens';
 
@@ -42,6 +44,12 @@ export struct ReviewPage {
   @State private exitBtnPressed: boolean = false;
   @State private backBtnPressed: boolean = false;
   @State private pageEntered: boolean = false;
+  // 卡片横移本地接管：拖动跟手 / 飞出 / 弹回 全部走本地 state，确保 animateTo 能驱动动画
+  // （reviewDragX 为父 @Prop 单向下发，子组件 animateTo 无法捕获其变化为动画，故本地接管）
+  @State private dragX: number = 0;
+  @State private isFlying: boolean = false;
+  // 卡片入场：当前卡从背后位置弹入（每次换牌触发一次）
+  @State private cardEntered: boolean = true;
 
   aboutToAppear(): void {
     setTimeout(() => {
@@ -96,6 +104,58 @@ export struct ReviewPage {
   private currentReviewItemGroup(): string {
     const item = this.currentReviewItem();
     return item === undefined ? '' : item.group;
+  }
+
+  // 当前卡片的有效横移：本地 dragX 统一承载（拖动跟手 / 飞出 / 弹回）
+  private cardOffsetX(): number {
+    return this.dragX;
+  }
+
+  // 跟手倾斜角（捏角滑动的物理直觉），克制系数；飞出时角度更大
+  private cardRotation(): number {
+    return this.cardOffsetX() * 0.04;
+  }
+
+  // 拖越远越淡（封顶 0.3），飞出时彻底淡出
+  private cardOpacity(): number {
+    if (this.isFlying) return 0;
+    const d = Math.abs(this.cardOffsetX());
+    return 1 - Math.min(d / 600, 0.3);
+  }
+
+  // 背后预览卡的缩放：随当前卡拖动距离从 0.94 趋近 1.0（下一张顶上来）
+  private backCardScale(): number {
+    const d = Math.min(Math.abs(this.cardOffsetX()), 160);
+    return 0.94 + (d / 160) * 0.06;
+  }
+
+  // 背后预览卡的透明度：随拖动渐显
+  private backCardOpacity(): number {
+    const d = Math.min(Math.abs(this.cardOffsetX()), 160);
+    return 0.5 + (d / 160) * 0.5;
+  }
+
+  // 松手判定：过阈值则让卡片飞出屏幕，动画结束再回调父组件换牌
+  private flingCard(checked: boolean): void {
+    const dir = checked ? 1 : -1;
+    this.isFlying = true;
+    this.getUIContext().animateTo({ curve: SPRING_PANEL_EXIT() }, () => {
+      this.dragX = dir * 700;
+    });
+    // 飞出动画推进到位后换下一张；新卡从背后位置入场
+    setTimeout(() => {
+      this.cardEntered = false;
+      this.onMarkReviewItem(checked);
+      this.onUpdateDragX(0);
+      this.dragX = 0;
+      this.isFlying = false;
+      // 下一帧让新卡从背后弹入
+      setTimeout(() => {
+        this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+          this.cardEntered = true;
+        });
+      }, 16);
+    }, 260);
   }
 
   private checkedCount(checklist: TripChecklist): number {
@@ -182,39 +242,67 @@ export struct ReviewPage {
   @Builder
   private Card() {
     if (this.currentReviewItem() !== undefined) {
-      Column({ space: 18 }) {
-        Text(this.currentReviewItemName())
-          .fontSize(24)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-          .textAlign(TextAlign.Center)
-        Text(this.currentReviewItemGroup())
-          .fontSize(12)
-          .fontColor(TEXT_TERTIARY)
+      // 卡片堆叠：底层背后预览卡（随拖动上浮放大）+ 顶层当前卡（跟手倾斜，松手飞出）
+      Stack() {
+        // 背后预览卡（占位纵深，无内容，随拖动趋近顶层）
+        Column()
+          .width('78%')
+          .height(240)
+          .backgroundColor(CARD_BG)
+          .borderRadius(20)
+          .shadow({ radius: 12, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 4 })
+          .scale({ x: this.backCardScale(), y: this.backCardScale() })
+          .opacity(this.backCardOpacity())
+
+        // 顶层当前卡
+        Column({ space: 18 }) {
+          Text(this.currentReviewItemName())
+            .fontSize(24)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(TEXT_MAIN)
+            .textAlign(TextAlign.Center)
+          Text(this.currentReviewItemGroup())
+            .fontSize(12)
+            .fontColor(TEXT_TERTIARY)
+        }
+        .width('78%')
+        .height(240)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .backgroundColor(CARD_BG)
+        .borderRadius(20)
+        .shadow({ radius: 18, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 8 })
+        .translate({ x: this.cardOffsetX(), y: 0 })
+        .rotate({ angle: this.cardRotation() })
+        .opacity(this.cardEntered ? this.cardOpacity() : 0)
+        .scale({ x: this.cardEntered ? 1 : PANEL_SCALE_START, y: this.cardEntered ? 1 : PANEL_SCALE_START })
+        .gesture(
+          PanGesture({ direction: PanDirection.Horizontal })
+            .onActionUpdate((event: GestureEvent) => {
+              if (this.isFlying) return;
+              this.dragX = event.offsetX;        // 本地跟手（无动画）
+              this.onUpdateDragX(event.offsetX); // 同步父侧（兼容）
+            })
+            .onActionEnd((event: GestureEvent) => {
+              if (this.isFlying) return;
+              const offset = event.offsetX;
+              if (offset > 80) {
+                this.flingCard(true);
+              } else if (offset < -80) {
+                this.flingCard(false);
+              } else {
+                // 未过阈值：Spring 弹回原位
+                this.onUpdateDragX(0);
+                this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+                  this.dragX = 0;
+                });
+              }
+            })
+        )
       }
-      .width('78%')
+      .width('100%')
       .height(240)
-      .justifyContent(FlexAlign.Center)
-      .alignItems(HorizontalAlign.Center)
-      .backgroundColor(CARD_BG)
-      .borderRadius(20)
-      .shadow({ radius: 18, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 8 })
-      .translate({ x: this.reviewDragX, y: 0 })
-      .gesture(
-        PanGesture({ direction: PanDirection.Horizontal })
-          .onActionUpdate((event: GestureEvent) => {
-            this.onUpdateDragX(event.offsetX);
-          })
-          .onActionEnd((event: GestureEvent) => {
-            const offset = event.offsetX;
-            this.onUpdateDragX(0);
-            if (offset > 80) {
-              this.onMarkReviewItem(true);
-            } else if (offset < -80) {
-              this.onMarkReviewItem(false);
-            }
-          })
-      )
+      .alignContent(Alignment.Center)
       Text((this.reviewIndex + 1).toString() + ' / ' + this.currentChecklistItemCount().toString())
         .fontSize(14)
         .fontColor(TEXT_TERTIARY)
@@ -238,7 +326,8 @@ export struct ReviewPage {
             }
           })
           .onClick(() => {
-            this.onMarkReviewItem(false);
+            if (this.isFlying) return;
+            this.flingCard(false);
           })
         Button('已带')
           .height(44)
@@ -257,7 +346,8 @@ export struct ReviewPage {
             }
           })
           .onClick(() => {
-            this.onMarkReviewItem(true);
+            if (this.isFlying) return;
+            this.flingCard(true);
           })
       }
       Button('退出核查模式')
