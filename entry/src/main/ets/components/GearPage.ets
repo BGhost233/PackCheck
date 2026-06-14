@@ -3,7 +3,7 @@ import { display } from '@kit.ArkUI';
 import {
   SPRING_SWIPE_RESET, SPRING_FAB_SNAP, SPRING_GENERAL, SPRING_SEARCH,
   SPRING_CHEVRON, SPRING_PRESS, SPRING_CEREMONY_FLIP,
-  SPRING_TRAY_CARD, SPRING_SCROLL,
+  SPRING_TRAY_CARD, SPRING_SCROLL, SPRING_REORDER,
   EASE_FADE, DURATION_OVERLAY_FADE,
   DURATION_TICK, DURATION_FAST,
   DURATION_CEREMONY_SHAKE,
@@ -166,6 +166,8 @@ export struct GearPage {
   private gearHoverGroup: string = '';          // 当前悬停的分组（判悬停目标是否切换）
   private gearHoverExpandTimer: number = -1;     // 悬停展开计时器
   @State private gearDragTempExpanded: string[] = []; // 拖拽期临时展开的分组集合
+  // 菜单实测高度（onAreaChange 动态采集，用于底部边界检测 + 翻转弹出）
+  private gearMenuMeasuredHeight: number = 320;
 
   // --- 拖拽到行程 ---
   @State private dragMode: boolean = false;
@@ -1651,7 +1653,7 @@ export struct GearPage {
       // 问题9-A 让位：被拖项留下的透明洞「视觉迁移」到插入点——
       //   洞与插入点之间的兄弟行 SPRING 平移一行高，把洞推到落点位置。
       .translate({ y: this.gearRowShiftY(item) })
-      .animation({ curve: SPRING_GENERAL() })
+      .animation({ curve: SPRING_REORDER() })
       // 记录该行全局矩形：用于拖拽命中检测（splice 让位 + drop 落点）
       //   拖拽态冻结：让位平移会改变 onAreaChange 上报的 globalPosition，若此时更新
       //   会让命中目标随让位漂移形成反馈回路，故仅在静止态采集 rect。
@@ -2150,7 +2152,14 @@ export struct GearPage {
     }
     .width('100%')
     .alignItems(HorizontalAlign.Center)
-    // 锚点附近垂直定位：以长按局部 Y 为基准，略上移避免被手指遮挡
+    // 动态采集菜单实际高度，用于底部翻转判断
+    .onAreaChange((_old: Area, newArea: Area) => {
+      const h = newArea.height as number;
+      if (h > 0) {
+        this.gearMenuMeasuredHeight = h;
+      }
+    })
+    // 锚点附近垂直定位：以长按局部 Y 为基准，底部不足时翻转到上方
     .margin({ top: this.gearOverlayMenuTop() })
     // 常驻渲染，仅 menu 阶段可见；进入 dragging 时随胶囊交叉淡出
     .scale({
@@ -2162,19 +2171,34 @@ export struct GearPage {
     .hitTestBehavior(this.gearOverlayPhase === 'menu' ? HitTestMode.Default : HitTestMode.None)
   }
 
-  // 菜单定位：以长按锚点局部 Y 为中心，clamp 在安全范围，避免溢出屏幕。
+  // 菜单定位：以长按锚点为基准，底部空间不足时翻转到锚点上方弹出。
   private gearOverlayMenuTop(): number {
     const anchorLocalY = this.gearLongPressGlobalY - this.gearOverlayOriginY;
-    // 预览卡+菜单整体约 320vp 高，让锚点落在偏上 1/3 处
-    let top = anchorLocalY - 80;
-    const maxTop = this.screenHeight - 360;
-    if (top > maxTop) {
-      top = maxTop;
+    const menuH = this.gearMenuMeasuredHeight; // onAreaChange 动态采集
+    const tabBarReserve = 84; // TabBar 56vp + 底部安全距离 28vp
+    const topSafe = 60; // 顶部安全距离（状态栏 + 余量）
+    const availableBelow = this.screenHeight - anchorLocalY - tabBarReserve;
+
+    if (availableBelow >= menuH) {
+      // 正常向下：锚点略上移 20vp，避免被手指遮挡
+      let top = anchorLocalY - 20;
+      // clamp 底部：菜单底边不超出安全区
+      const maxTop = this.screenHeight - tabBarReserve - menuH;
+      if (top > maxTop) {
+        top = maxTop;
+      }
+      if (top < topSafe) {
+        top = topSafe;
+      }
+      return top;
+    } else {
+      // 翻转到上方：菜单底边对齐锚点位置（锚点上方 20vp 余量）
+      let top = anchorLocalY - menuH - 20;
+      if (top < topSafe) {
+        top = topSafe;
+      }
+      return top;
     }
-    if (top < 60) {
-      top = 60;
-    }
-    return top;
   }
 
   @Builder
@@ -2506,8 +2530,8 @@ export struct GearPage {
   }
 
   // Pan 结束：落位 → 重排 + 持久化 → 退出
-  //   问题9-B 错帧解耦：先提交重排（optimistic，UI 当帧即时落位），再把 overlay 收起
-  //   推迟到下一帧——避免「列表全量重渲染」与「胶囊淡出 animateTo」挤在同一帧造成松手卡顿。
+  //   时序关键：先清 drop 状态（让 gearRowShiftY 对所有行归零），再提交重排，
+  //   最后异帧收 overlay。避免「重排渲染时行仍处于让位偏移、再弹回原位」的二次跳动。
   private completeGearDrag(): void {
     this.stopGearAutoScroll();
     const dragged = this.gearOverlayItem;
@@ -2517,8 +2541,13 @@ export struct GearPage {
     }
     let committed = false;
     const dropCategory = this.gearDropCategory;
-    if (this.gearOverlayPhase === 'dragging' && dropCategory !== '' && this.gearDropIndex >= 0) {
-      const next = this.reorderGearsByDrop(dragged, dropCategory, this.gearDropIndex);
+    const dropIndex = this.gearDropIndex;
+    if (this.gearOverlayPhase === 'dragging' && dropCategory !== '' && dropIndex >= 0) {
+      // 先清让位状态：gearRowShiftY 对所有行返回 0，列表渲染时行在自然位置
+      this.gearOverlayPhase = 'idle';
+      this.gearDropCategory = '';
+      this.gearDropIndex = -1;
+      const next = this.reorderGearsByDrop(dragged, dropCategory, dropIndex);
       if (next !== null) {
         this.onReorderGears(next); // optimistic：当帧落位
         hapticTime(30);

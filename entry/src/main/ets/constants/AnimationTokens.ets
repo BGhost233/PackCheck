@@ -37,6 +37,9 @@ export const SPRING_FILTER_RELEASE = (): ICurve => curves.springMotion(0.22, 0.6
 export const SPRING_CEREMONY_FLIP = (): ICurve => curves.springMotion(0.35, 0.78);
 export const SPRING_CEREMONY_DISMISS = (): ICurve => curves.springMotion(0.25, 0.8);
 
+// 拖拽避让（快速到位、微弹性，对齐 iOS drag reorder 手感）
+export const SPRING_REORDER = (): ICurve => curves.springMotion(0.25, 0.85);
+
 // 上下文菜单/托盘卡片
 export const SPRING_CONTEXT_EXIT = (): ICurve => curves.springMotion(0.28, 0.85);
 export const SPRING_TRAY_CARD = (): ICurve => curves.springMotion(0.28, 0.72);

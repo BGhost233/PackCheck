@@ -363,7 +363,8 @@ export struct FocusedZoneView {
               .combine(TransitionEffect.scale({ x: 0.85, y: 0.85 }).animation({ curve: SPRING_GENERAL() }))
               .combine(TransitionEffect.opacity(0).animation({ curve: SPRING_GENERAL() }))
           ))
-        }, (item: ChecklistItem) => item.id + '_' + this.gearVersion.toString())
+        // key 拼入 checked：勾选后 key 变 → ForEach 重建该行 → ChecklistRow @Prop 拿到新 checked 值
+        }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0') + '_' + this.gearVersion.toString())
       }
       .width('100%')
       .layoutWeight(1)

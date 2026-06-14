@@ -879,6 +879,10 @@ this.computeCellHeight();
           curve: SPRING_GENERAL(),
           delay: staggerDelay(index)
         })
+        // 闪烁修复：抑制 ForEach key 变更导致 GridItem 销毁重建时的默认入场/退场过渡，
+        //   新旧节点在同一帧内原地替换，无淡入淡出间隙 → 消除视觉闪烁。
+        //   首次入场动画由 appeared(false→1) 的 animateTo 驱动 opacity/translate，不受 transition 影响。
+        .transition(TransitionEffect.IDENTITY)
         .onAreaChange((_o: Area, n: Area) => {
           const pos = n.globalPosition as Record<string, number>;
           this.zoneRects.set(zone, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
@@ -925,6 +929,8 @@ this.computeCellHeight();
         curve: SPRING_GENERAL(),
         delay: staggerDelay(GRID_SINGLE_ZONES.length)
       })
+      // 闪烁修复：同上，抑制 nonce key 变更导致的重建视觉闪烁
+      .transition(TransitionEffect.IDENTITY)
       .onAreaChange((_o: Area, n: Area) => {
         const pos = n.globalPosition as Record<string, number>;
         this.zoneRects.set(BodyZone.Misc, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
