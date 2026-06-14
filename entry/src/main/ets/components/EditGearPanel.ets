@@ -19,7 +19,18 @@ import {
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST
 } from '../constants/AnimationTokens';
+import {
+  ITEM_GAP,
+  CARD_PADDING,
+  CARD_RADIUS,
+  SMALL_CARD_RADIUS
+} from '../constants/Layout';
 import { CategoryTagGroup } from './CategoryTagGroup';
+
+// 问题10：紧凑高密度面板——单行输入框降至 40vp（Apple 表单单行标准），
+//   字段竖排间距收紧至 ITEM_GAP，面板内边距收至 CARD_PADDING，消除松散大文本框观感。
+const FIELD_HEIGHT: number = 40;
+const SUB_GAP: number = 6;
 
 @Component
 export struct EditGearPanel {
@@ -84,10 +95,10 @@ export struct EditGearPanel {
           this.handleClose();
         })
 
-      Column({ space: 16 }) {
+      Column({ space: ITEM_GAP }) {
         Row() {
           Text('编辑装备')
-            .fontSize(18)
+            .fontSize(17)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
           Blank()
@@ -119,12 +130,12 @@ export struct EditGearPanel {
         // 装备名称
         TextInput({ placeholder: '装备名称（必填）', text: this.gearName })
           .type(InputType.Normal)
-          .height(48)
+          .height(FIELD_HEIGHT)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
-          .borderRadius(12)
+          .borderRadius(SMALL_CARD_RADIUS)
           .padding({ left: 12, right: 12 })
           .onChange((value: string) => {
             this.onNameChange(value);
@@ -134,6 +145,7 @@ export struct EditGearPanel {
           .fontSize(12)
           .fontColor(TEXT_SECONDARY)
           .width('100%')
+          .margin({ top: -SUB_GAP })
 
         // 分组标签 (可滚动)
         Scroll() {
@@ -163,7 +175,7 @@ export struct EditGearPanel {
         .edgeEffect(EdgeEffect.Spring)
 
         // 重量 + 价格
-        Row({ space: 12 }) {
+        Row({ space: ITEM_GAP }) {
           this.MetricInput('重量', this.gearWeight, 'g', (value: string) => {
             this.onWeightChange(value);
           })
@@ -176,12 +188,12 @@ export struct EditGearPanel {
         // 备注
         TextInput({ placeholder: '备注（一行，可选）', text: this.gearNote })
           .type(InputType.Normal)
-          .height(48)
+          .height(FIELD_HEIGHT)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
-          .borderRadius(12)
+          .borderRadius(SMALL_CARD_RADIUS)
           .padding({ left: 12, right: 12 })
           .onChange((value: string) => {
             this.onNoteChange(value);
@@ -195,13 +207,15 @@ export struct EditGearPanel {
         }
 
         Button('保存修改')
-          .height(48)
-          .fontSize(14)
+          .height(44)
+          .fontSize(15)
+          .fontWeight(FontWeight.Medium)
           .fontColor(WHITE)
           .backgroundColor(this.gearName.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
           .width('100%')
           .enabled(this.gearName.trim().length > 0)
-          .borderRadius(12)
+          .borderRadius(SMALL_CARD_RADIUS)
+          .margin({ top: SUB_GAP })
           .scale({ x: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
             y: this.buttonPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
           .animation({ curve: SPRING_PRESS() })
@@ -217,9 +231,9 @@ export struct EditGearPanel {
           })
       }
       .width('85%')
-      .padding({ left: 24, right: 24, top: 24, bottom: 24 })
+      .padding({ left: CARD_PADDING, right: CARD_PADDING, top: CARD_PADDING, bottom: CARD_PADDING })
       .backgroundColor(WHITE)
-      .borderRadius(24)
+      .borderRadius(CARD_RADIUS)
       .shadow({ radius: 24, color: SHADOW_LIGHT, offsetX: 0, offsetY: 8 })
       .scale({ x: this.panelScale, y: this.panelScale })
       .opacity(this.panelOpacity)
@@ -230,12 +244,12 @@ export struct EditGearPanel {
 
   @Builder
   private MetricInput(label: string, textValue: string, unit: string, onValueChange: (value: string) => void) {
-    Column({ space: 6 }) {
+    Column({ space: SUB_GAP }) {
       Text(label)
         .fontSize(12)
         .fontColor(TEXT_SECONDARY)
         .width('100%')
-      Row({ space: 6 }) {
+      Row({ space: SUB_GAP }) {
         TextInput({ placeholder: '可选', text: textValue })
           .type(InputType.Number)
           .fontSize(14)
@@ -250,10 +264,10 @@ export struct EditGearPanel {
           .fontSize(13)
           .fontColor(TEXT_SECONDARY)
       }
-      .height(48)
+      .height(FIELD_HEIGHT)
       .padding({ left: 12, right: 12 })
       .backgroundColor(PAGE_BG)
-      .borderRadius(12)
+      .borderRadius(SMALL_CARD_RADIUS)
     }
     .layoutWeight(1)
   }
