@@ -3,7 +3,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 
 import { sensor } from '@kit.SensorServiceKit';
-import { hapticTime } from '../utils/HapticUtils';
+import { hapticTime, hapticStrong } from '../utils/HapticUtils';
 import { HdsTabs, HdsTabsController, hdsMaterial, HdsNavigation } from '@kit.UIDesignKit';
 import { GearPage } from '../components/GearPage';
 import { HomePage } from '../components/HomePage';
@@ -19,8 +19,8 @@ import {
   DANGER_COLOR,
   DIVIDER_COLOR,
   GEAR_SORT_GROUP,
+  GLASS_BG_HEAVY,
   GROUP_HEADER_BG,
-  LIGHT_PRIMARY_COLOR,
   OVERLAY_MASK,
   PAGE_BG,
   PRIMARY_COLOR,
@@ -1938,12 +1938,12 @@ struct Index {
   }
 
   private showAchievement(): void {
+    // 克制高级：仅一条轻量胶囊提示，不阻断、不遮挡、快速自消失；去掉冗余系统 toast
     this.showCompletionToast = true;
-    this.showToastMessage('全部就绪，出发吧！', 2000);
-    this.triggerLightVibration();
+    hapticStrong();
     setTimeout(() => {
       this.showCompletionToast = false;
-    }, 2000);
+    }, 1600);
   }
 
   private showToastMessage(message: string, duration: number = 1500): void {
@@ -2694,28 +2694,32 @@ struct Index {
 
   @Builder
   private CompletionToast() {
+    // 克制高级：无 emoji 的白毛玻璃胶囊，轻量上移、Spring 进出，不阻断不遮挡内容
     Column() {
-      Row() {
-        Text('🎉 全部打包完成！出发吧！')
-          .fontSize(15)
-          .fontWeight(FontWeight.Bold)
+      Row({ space: 6 }) {
+        Circle({ width: 7, height: 7 })
+          .fill(PRIMARY_COLOR)
+        Text('全部就绪，出发吧')
+          .fontSize(14)
+          .fontWeight(FontWeight.Medium)
           .fontColor(PRIMARY_COLOR)
       }
-      .width('90%')
-      .height(48)
-      .justifyContent(FlexAlign.Center)
-      .backgroundColor(LIGHT_PRIMARY_COLOR)
-      .borderRadius(24)
-      .shadow({ radius: 8, color: PRIMARY_SHADOW_LIGHT, offsetX: 0, offsetY: 2 })
+      .padding({ left: 18, right: 18, top: 10, bottom: 10 })
+      .backgroundColor(GLASS_BG_HEAVY)
+      .backdropBlur(20)
+      .borderRadius(20)
+      .shadow({ radius: 16, color: PRIMARY_SHADOW_LIGHT, offsetX: 0, offsetY: 4 })
       .transition(TransitionEffect.OPACITY
-        .combine(TransitionEffect.translate({ y: -20 }))
+        .combine(TransitionEffect.translate({ y: -12 }))
         .combine(TransitionEffect.scale({ x: PANEL_SCALE_START, y: PANEL_SCALE_START }))
+        .animation({ curve: SPRING_PANEL_ENTER() })
       )
     }
     .width('100%')
     .height('100%')
-    .padding({ top: 78 })
+    .padding({ top: 64 })
     .alignItems(HorizontalAlign.Center)
+    .hitTestBehavior(HitTestMode.None)
   }
 
   @Builder
