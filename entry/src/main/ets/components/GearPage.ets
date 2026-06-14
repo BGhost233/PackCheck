@@ -4,6 +4,7 @@ import {
   SPRING_SWIPE_RESET, SPRING_FAB_SNAP, SPRING_GENERAL, SPRING_SEARCH,
   SPRING_CHEVRON, SPRING_PRESS, SPRING_CEREMONY_FLIP,
   SPRING_TRAY_CARD, SPRING_SCROLL,
+  EASE_FADE, DURATION_OVERLAY_FADE,
   DURATION_TICK, DURATION_FAST,
   DURATION_CEREMONY_SHAKE,
   DURATION_NONE,
@@ -1609,7 +1610,7 @@ export struct GearPage {
             .onAction((event: GestureEvent) => {
               this.enterGearOverlay(item, event.fingerList[0].globalX, event.fingerList[0].globalY);
             }),
-          PanGesture({ fingers: 1, distance: 0 })
+          PanGesture({ fingers: 1, distance: 5 })
             .onActionUpdate((event: GestureEvent) => {
               this.updateGearDrag(event.offsetX, event.offsetY);
             })
@@ -2018,32 +2019,37 @@ export struct GearPage {
   @Builder
   private GearDragOverlay() {
     Stack({ alignContent: Alignment.TopStart }) {
-      // 背景遮罩：menu 态点击收起；dragging 态吃掉点击（拖拽中）
+      // 背景遮罩：仅 menu 态压暗可点击关闭；dragging 态完全淡出，消除全页压灰中间态
+      // （对齐 UnifiedChecklistView：不用 backdropBlur，dragging 时背景不变深）
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor(OVERLAY_MASK)
-        .backdropBlur(this.gearOverlayPhase === 'dragging' ? 8 : 14)
-        .opacity(this.gearOverlayVisible ? 1 : 0)
-        .animation({ curve: SPRING_GENERAL() })
+        .backgroundColor(OVERLAY_DIM)
+        .opacity(this.gearOverlayPhase === 'menu' && this.gearOverlayVisible ? 1 : 0)
+        .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
         .onClick(() => {
-          if (this.gearOverlayPhase === 'menu') {
+          if (this.gearOverlayPhase !== 'dragging') {
             this.dismissGearOverlay();
           }
         })
 
-      // menu 态：被拖项预览卡 + 菜单
-      if (this.gearOverlayPhase === 'menu' && this.gearOverlayItem !== null) {
+      // menu 态：预览卡 + 菜单——常驻渲染，opacity 控制可见性（不用 if 硬切销毁）
+      if (this.gearOverlayItem !== null) {
         this.GearOverlayMenu(this.gearOverlayItem)
       }
 
-      // dragging 态：飞行胶囊（跟手）
-      if (this.gearOverlayPhase === 'dragging' && this.gearOverlayItem !== null) {
+      // dragging 态：飞行胶囊（跟手）——常驻渲染，opacity 控制可见性
+      if (this.gearOverlayItem !== null) {
         this.GearDragChip(this.gearOverlayItem)
       }
     }
     .width('100%')
     .height('100%')
+    // 仅 menu 可见阶段拦截触摸（遮罩点击关闭）；idle/dragging 一律穿透
+    .hitTestBehavior(
+      this.gearOverlayPhase === 'menu' && this.gearOverlayVisible
+        ? HitTestMode.Default
+        : HitTestMode.None)
   }
 
   // menu 态：预览卡 + 编辑/多选/删除 菜单（自绘，替代系统 bindContextMenu）
@@ -2080,12 +2086,14 @@ export struct GearPage {
     .alignItems(HorizontalAlign.Center)
     // 锚点附近垂直定位：以长按局部 Y 为基准，略上移避免被手指遮挡
     .margin({ top: this.gearOverlayMenuTop() })
+    // 常驻渲染，仅 menu 阶段可见；进入 dragging 时随胶囊交叉淡出
     .scale({
-      x: this.gearOverlayVisible ? 1 : 0.92,
-      y: this.gearOverlayVisible ? 1 : 0.92
+      x: this.gearOverlayPhase === 'menu' && this.gearOverlayVisible ? 1 : 0.92,
+      y: this.gearOverlayPhase === 'menu' && this.gearOverlayVisible ? 1 : 0.92
     })
-    .opacity(this.gearOverlayVisible ? 1 : 0)
+    .opacity(this.gearOverlayPhase === 'menu' && this.gearOverlayVisible ? 1 : 0)
     .animation({ curve: SPRING_CEREMONY_FLIP() })
+    .hitTestBehavior(this.gearOverlayPhase === 'menu' ? HitTestMode.Default : HitTestMode.None)
   }
 
   // 菜单定位：以长按锚点局部 Y 为中心，clamp 在安全范围，避免溢出屏幕。
@@ -2146,14 +2154,25 @@ export struct GearPage {
     }
     .constraintSize({ maxWidth: 200 })
     .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-    .backgroundColor(GLASS_BG_LIGHT)
-    .backdropBlur(20)
+    // 实色卡 + 阴影（对齐 UnifiedChecklistView 范式，去毛玻璃叠半透明产生的灰雾脏阴影）
+    .backgroundColor(CARD_BG)
     .borderRadius(12)
-    .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetX: 0, offsetY: 6 })
-    .rotate({ angle: -2 })
-    .scale({ x: 1.04, y: 1.04 })
+    .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetX: 0, offsetY: 8 })
+    // position 消费局部坐标 1:1 跟手（无动画）
     .position({ x: this.gearDragCurrentX - 90, y: this.gearDragCurrentY - 50 })
     .animation({ duration: DURATION_NONE })
+    // 进入 dragging 时浮起放大 + 微倾斜，弹性曲线属性级承接
+    .scale({
+      x: this.gearOverlayPhase === 'dragging' ? 1.04 : 0.9,
+      y: this.gearOverlayPhase === 'dragging' ? 1.04 : 0.9
+    })
+    .animation({ curve: SPRING_PRESS() })
+    .rotate({ angle: this.gearOverlayPhase === 'dragging' ? -2 : 0 })
+    .animation({ curve: SPRING_PRESS() })
+    // 常驻渲染，仅 dragging 阶段可见
+    .opacity(this.gearOverlayPhase === 'dragging' ? 1 : 0)
+    .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
+    .hitTestBehavior(HitTestMode.None)
   }
 
   // ===== 分组拖拽排序 =====
