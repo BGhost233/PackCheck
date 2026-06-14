@@ -21,7 +21,7 @@ import {
 } from '../../constants/Typography';
 import { SPRING_PRESS, PRESS_SCALE_DOWN, PRESS_SCALE_REST } from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';
-import { hapticTick } from '../../utils/HapticUtils';
+import { hapticTime } from '../../utils/HapticUtils';
 
 @Component
 export struct ChecklistRow {
@@ -112,8 +112,9 @@ export struct ChecklistRow {
         }
         if (e.type === TouchType.Down) {
           this.pressed = true;
-          // 问题3：网格态 check 圆圈按下即触觉反馈（按下即响，对齐 Apple 按钮触感）
-          hapticTick();
+          // 问题3：网格态 check 圆圈按下即触觉反馈（按下即响，对齐 Apple 按钮触感）。
+          //   改用 hapticTime(time 型自定义时长)——hapticPreset(tick) 在多数真机不支持被静默吞，无触感。
+          hapticTime(15);
         } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
           this.pressed = false;
         }
@@ -157,9 +158,10 @@ export struct ChecklistRow {
     .onTouch((e: TouchEvent) => {
       if (e.type === TouchType.Down) {
         this.pressed = true;
-        // 问题3：聚焦态整行点击即勾选，故整行按下即触觉反馈（仅非双热区，hotzone 态整行 Down 是进聚焦按压不响勾选触感）
+        // 问题3：聚焦态整行点击即勾选，故整行按下即触觉反馈（仅非双热区，hotzone 态整行 Down 是进聚焦按压不响勾选触感）。
+        //   改用 hapticTime(time 型)——hapticPreset(tick) 真机多不支持被静默吞，无触感。
         if (!this.checkOnlyHotzone) {
-          hapticTick();
+          hapticTime(15);
         }
       } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
         this.pressed = false;

@@ -209,7 +209,10 @@ export struct ZoneGridCell {
             )
           )
         }
-      }, (item: ChecklistItem) => item.id)
+        // 问题3 状态不刷新根因修复：key 必须包含 checked。原 key 仅 item.id——勾选只改 checked 字段、
+        //   id 不变 → ForEach diff 认为节点未变不更新 → ChecklistRow 的 @Prop item 不重新下发，
+        //   视觉不刷新，需退出页面重建整棵树才更新。拼上 checked 后勾选即重建该行，立即刷新。
+      }, (item: ChecklistItem) => item.id + '_' + (item.checked ? '1' : '0'))
 
       // 超过 N 件：折叠提示行
       if (this.items.length > MAX_PREVIEW_ITEMS) {

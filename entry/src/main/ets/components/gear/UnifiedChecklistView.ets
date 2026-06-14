@@ -835,7 +835,14 @@ this.computeCellHeight();
 
   @Builder
   private buildGridState() {
-    Grid(this.gridScroller) {
+    // 问题4 根因修复：原 Grid 自身滚动 + cachedCount(8) 仍在真机出现「底部格子未完全遮挡就消失」。
+    //   根因不是 cachedCount 数量不足，而是 Grid 懒加载对【跨列 GridItem（杂项 columnStart/End）】的
+    //   保活不可靠——整行滚到视口外时缓存计数不一定覆盖它，被回收即消失。
+    //   彻底根治：外层 Scroll 承载滚动，内层 Grid 设为非滚动（内容自然高度撑开），
+    //   Grid 不滚动即不触发任何虚拟化回收 → 全部 GridItem 常驻，零消失。
+    //   head 折叠的 onScroll/onScrollStop、拖拽锁滚动、edgeEffect 全部迁到外层 Scroll。
+    Scroll(this.gridScroller) {
+    Grid() {
       // 前 6 个 zone 走双列自动布局
       ForEach(GRID_SINGLE_ZONES, (zone: string, index: number) => {
         GridItem() {
@@ -922,31 +929,32 @@ this.computeCellHeight();
     .columnsGap(GRID_GUTTER)
     .rowsGap(GRID_GUTTER)
     .width('100%')
+    // 问题4：Grid 高度自适应内容（非 '100%'）——作为 Scroll 的子节点按真实内容高度撑开，
+    //   全部 GridItem 一次性布局、不进虚拟化，彻底杜绝跨列格子被回收消失。
+    .height('auto')
+    // D-4：聚焦时网格虚化 + 极小下沉，制造「退到背后」纵深感。随 SPRING_HERO 同帧联动。
+    .blur(this.focusedZone != null ? GRID_FOCUS_BLUR : 0)
+    .translate({ y: this.focusedZone != null ? GRID_FOCUS_SINK_Y : 0 })
+    .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
+    }
+    .width('100%')
     .height('100%')
     .padding({ left: GRID_PADDING, right: GRID_PADDING, top: 8, bottom: 100 })
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring)
-    // 问题4：格子总数固定且少（6 zone + 杂项 = 7 个）。Grid 默认懒加载会虚拟化回收屏幕外 GridItem，
-    //   导致滚动到某位置时末行格子「消失」。设足量 cachedCount 全量驻留，杜绝回收，零副作用。
-    .cachedCount(8)
-    // B2：拖拽期间锁定 Grid 滚动，防止边拖边滚导致落点偏移
+    .align(Alignment.Top)
+    // B2：拖拽期间锁定滚动，防止边拖边滚导致落点偏移
     .enableScrollInteraction(this.overlayPhase !== 'dragging')
-    // 问题4a：head 随网格滚动渐进折叠。第一性原理——折叠程度 = 滚动意图的实时映射（连续量，非开关）。
+    // 问题4a：head 随滚动渐进折叠。折叠程度 = 滚动意图的实时映射（连续量，非开关）。
     //   跟手阶段严格 1:1 实时赋值、零动画、绝不抢手感；松手吸附交给 onScrollStop。
-    //   聚焦态下 head 已由 focusedZone 开关吃满折叠（走 SPRING_HERO），此处跳过避免双驱动打架。
-    .onScroll(() => {
+    //   聚焦态下 head 已由 focusedZone 开关吃满折叠（走 SPRING_HERO），此处由控制器内部跳过避免双驱动打架。
+    .onDidScroll(() => {
       this.headController.handleScroll(this.gridScroller);
     })
     // 问题4a：松手 + 惯性结束后的「就近吸附」。对齐 iOS Large Title——绝不让 head 停在半折叠残缺态。
-    //   仅在中间态 (0,1) 开区间吸附；已是 0/1 时不做多余动画。吸附用 SPRING_SCROLL（沉稳收尾感）。
     .onScrollStop(() => {
       this.headController.handleScrollStop(this.gridScroller);
     })
-    // D-4：聚焦时网格虚化 + 极小下沉，制造「退到背后」纵深感（不缩放——网格可滚动，
-    //   下行展开时前几行可能已滚出视口，缩放会出现锚点漂移）。随 SPRING_HERO 同帧联动。
-    .blur(this.focusedZone != null ? GRID_FOCUS_BLUR : 0)
-    .translate({ y: this.focusedZone != null ? GRID_FOCUS_SINK_Y : 0 })
-    .animation({ curve: this.focusedZone != null ? SPRING_HERO_EXPAND() : SPRING_HERO_COLLAPSE() })
   }
 
 
