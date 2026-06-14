@@ -39,6 +39,8 @@
 - GearPage 左滑删除与展开详情互斥：展开态禁止左滑手势（`onActionUpdate`/`onActionEnd` 中 `if (expandedGearId === item.id) return`），删除按钮固定 52vp 高度匹配折叠态行高
 - 多选拖拽 vs 点击共存：PanGesture distance 从 0 改为 5，让轻点正常走 onClick（toggle 选中），只有真正拖动才激活 Pan
 - 分组折叠/展开动画：`animateTo(springMotion(0.35, 0.8))` 包裹 state 赋值 + 内容 Column 加 `.transition(TransitionEffect.OPACITY.combine(translate({y:-6})))` 实现丝滑进退场
+- **装备库单品拖拽避让设计（问题9-A，v0.7.7）**：被拖项 `opacity(0)` 留透明洞，`gearRowShiftY(item)` 按「含被拖项的完整分组列表」full index 算兄弟行 translateY 把洞「视觉迁移」到插入点（向下拖洞与落点间行上移填洞、向上拖落点到洞间行下移让缝、跨分类拖入落点及之后整体下移），全程 SPRING_GENERAL。模块常量 `GEAR_ROW_HEIGHT=52`（44 content + 4×2 padding）让位量与命中检测共用。**关键**：让位计算与 `hitTestGearDrop` 必须基于同一坐标系（含被拖项完整列表），否则洞迁移与命中点对不上
+- **装备库拖拽 spring-load 悬停自动展开设计（v0.7.7）**：拖到折叠分组悬停 500ms 自动展开（参考 iOS 文件 App 拖入文件夹）。「拖拽期临时展开集合」`gearDragTempExpanded` 与持久化折叠偏好 `collapsedGearGroups` 解耦，`isGearGroupCollapsed` 把临时展开视为不折叠复用现有 SPRING 展开链路。悬停目标切换清旧计时器 + SPRING 收回旧临时展开（路过即收）。落位转正：先移出 `collapsedGearGroups` 并持久化、**再**清空临时集合（顺序反了会瞬间闪折叠）。dismissGearOverlay/cancel 路径兜底全收，幂等
 - 行程托盘动态滚速：边缘区域 100vp，二次曲线加速 `speed = minSpeed + (maxSpeed - minSpeed) * t²`（min=2, max=12），手感自然。Timer 每次回调读 mutable field `trayScrollSpeed`，无需重启 timer 即可变速
 - 行程托盘尺寸优化：位置从 screenHeight-200 → screenHeight-240，卡片从 100×80 → 88×68，间距 12→10，容纳更多行程
 
@@ -87,7 +89,7 @@
 - **结构防腐铁律已成文**（2026-06-14）：DEVELOPMENT_STANDARDS 第八章 + CLAUDE.md 会话启动第一动作。新增代码前必须 grep-before-add（先查全仓有无同名/同义实现再写）；判死代码看可达性（入口无调用点 → 整链不可达 → 可删）；拆分看阈值（>300行/>10 @State/>8 props/>60行方法），但动画状态机、geometryTransition 两端、拖拽浮层、Index 容器、内联 @Builder **不拆**
 - **targetWeightGram/WeightTargetEditor 死代码已清理**（commit `63f079a`）：openWeightEditor 无调用点 → showWeightEditor 永 false → 整套不可达。跨 GearPage/Index/PackStore 删除，PackStore 的 KEY_GEAR_TARGET_WEIGHT 从未被真实写入（无孤儿数据）。WeightGauge.ets 是全仓无实例化的孤立组件，其 targetWeight prop 与本链路无关
 
-## ArkUI 避坑清单（实战总结，共 46 条）
+## ArkUI 避坑清单（实战总结，共 48 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -142,6 +144,10 @@
 45. **`GestureGroup(Sequence, LongPress+Pan)` 不阻止子节点 onClick 触发** — 当 `GestureGroup(GestureMode.Sequence, LongPressGesture, PanGesture)` 绑在 wrapper Column 上时，LongPress `onAction` 触发后松手，子节点（如 ChecklistRow）的 `.onClick()` 仍会在 touchUp 时触发——ArkUI 的 Sequence 手势完成不消费后续 click 事件。**后果**：长按弹菜单后松手，同时触发行展开/收起（onClick），造成双重响应。**解法**：在 wrapper 上维护 `@State longPressTriggered: boolean = false`，LongPress `onAction` 中置 true + `setTimeout(() => { this.longPressTriggered = false }, 500)` 延迟重置；所有 onClick 回调（`onTapContent`/`onTapRow`）入口处 `if (this.longPressTriggered) return` 短路。**注意**：flag 赋值必须在任何 early return（如 `if (isMultiSelectMode) return`）**之前**，否则特定模式下长按仍会穿透触发 onClick
 
 46. **普通 class 改字段不触发 ArkUI re-render（控制器必配 @State 镜像）** — ArkUI 的依赖收集只订阅 `build()` 中读到的 `@State`/`@Link` 等装饰器状态。把状态放到一个**普通 class 实例**里（如 `HeadCollapseController` 的 `scrollProgress` 字段），改它**不会**触发任何 re-render——即使 build 里调了 `controller.progress()`。**后果**：滚动变了但 head 不动（画面定格）。**解法**：页面持一个 `@State progress` 镜像，控制器通过 `onChange(progress, snapping)` 回调推动页面 `this.headProgress = progress`（这才是装饰器赋值、触发刷新）；渲染处一律读 `this.headProgress` 镜像，**绝不**直接读 `controller.progress()`。**配套**：控制器无 `getUIContext()`，`animateTo` 需的 `UIContext` 必须由页面经 config 注入（`getUIContext: () => this.getUIContext()`）。适用于任何「逻辑抽到普通 class 但要驱动 UI」的场景
+
+47. **拖拽避让用 translate 模拟时必须冻结 rect 采集（防反馈回路）** — 拖拽排序做兄弟项让位动画（被拖项 `opacity(0)` 留洞 + 兄弟行 `.translate({y})` 平移填洞）时，若被平移的节点同时挂了 `onAreaChange` 采集 `globalPosition` 喂给命中检测，会形成致命反馈回路：让位平移 → globalPosition 漂移 → 命中检测读到漂移后的 rect → 重算落点 → 让位量再变 → 抖动/命中目标乱跳。**解法**：`onAreaChange` 回调在拖拽态（`gearOverlayPhase === 'dragging'`）直接 `return` 冻结采集，整个拖拽过程命中检测基于「拖拽开始前冻结的 rect 集合」。**配套**：让位计算（`gearRowShiftY`）与命中检测（`hitTestGearDrop`）必须基于**同一坐标系**——统一用「含被拖项的完整列表」full index，不能一个用剔除后列表一个用完整列表，否则洞的视觉位置与命中插入点对不上
+
+48. **拖拽落位卡顿 = await 持久化阻塞视觉帧（optimistic + 错帧解耦）** — 拖拽松手落位若在重排函数里 `await store.saveGears()` 再 setState，持久化 I/O 会阻塞落位动画帧造成明显卡顿。**解法 optimistic update**：UI 先同步 setState 落位（`this.gears = next; this.renderNonce++`），持久化抽独立方法 fire-and-forget 后台跑——`private persistInBackground(next) { this.store.save(next).catch(e => console.error(...)) }`，**不 await**（floating promise 必须 `.catch()` 显式处理否则 ArkTS 警告）。**配套错帧解耦**：落位帧（reorder 重渲染）与覆盖层收起帧（chip 淡出 `animateTo`）若同帧触发仍会叠加卡顿，用 `setTimeout(() => this.dismissOverlay(), 0)` 把收起推到下一帧
 
 ### 补充验证结论
 

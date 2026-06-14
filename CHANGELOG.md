@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.7.7 (2026-06-14)
+
+装备库单品拖拽真机回归 + 跨分组 spring-load 悬停展开。围绕「拖拽时兄弟项不避让 / 松手卡顿 / 目标分组折叠时无法落入」三个观感问题，从第一性原理重做避让动画、落位性能与悬停展开，全程 SPRING。
+
+**问题 9-A — 拖拽避让丝滑让位**
+
+- **被拖项留透明洞 + 兄弟行平移填洞**：拖动装备移动时其它装备原地不动、毫无避让感。第一性原理——拖拽的本质是「这一项要插到那个缝里」，兄弟项应实时让出落点。做法：被拖项 `opacity(0)` 留洞，新增 `gearRowShiftY(item)` 按「含被拖项的完整分组列表」算每个兄弟行的 `translateY`（向下拖：洞与落点间的行上移 `-GEAR_ROW_HEIGHT` 填洞；向上拖：落点到洞间的行下移让缝；跨分类拖入：落点及之后的行整体下移），把洞「视觉迁移」到插入点，全程 `SPRING_GENERAL`
+- **新增模块常量 `GEAR_ROW_HEIGHT = 52`**（折叠态行高 44 content + 4×2 padding），让位平移量与命中检测共用，禁硬编码
+- **拖拽态冻结 rect 采集（防反馈回路）**：避让平移会改变 `onAreaChange` 上报的 `globalPosition`，污染 `gearRowRects` 致命中目标漂移。`onAreaChange` 在 `gearOverlayPhase === 'dragging'` 时直接 return 冻结采集，命中检测与让位计算均基于冻结的完整列表 full index，坐标系一致
+
+**问题 9-B — 松手 optimistic 落位去卡顿**
+
+- **乐观更新解阻塞**：拖动松手后严重卡顿。根因——落位 `reorderGears` 内 `await store.saveGears()` 阻塞了视觉帧。改为 optimistic update：UI 先同步 `setState` 落位（`this.gears = nextGears` + `checklistRenderNonce++`），持久化抽 `persistGearsInBackground` 用 `.catch()` fire-and-forget 后台跑，不 await 阻塞
+- **错帧解耦**：落位帧（reorder 重渲染）与 overlay 收起帧（chip 淡出 `animateTo`）用 `setTimeout(0)` 推迟到下一帧，避免同帧叠加卡顿
+
+**跨分组 spring-load 悬停自动展开**
+
+- **iOS 风格悬停展开**：拖装备到折叠分组时无法落入。第一性原理——参考 iOS 文件 App 拖到文件夹悬停自动展开。做法：拖拽命中折叠分组时启 500ms 悬停计时器，超时把该分组加入「拖拽期临时展开集合」`gearDragTempExpanded`，与持久化折叠偏好 `collapsedGearGroups` **解耦**；`isGearGroupCollapsed` 把临时展开视为不折叠，复用现有 `SPRING_GENERAL` 展开链路
+- **路过收回 / 落位转正**：悬停目标切换时清旧计时器、SPRING 收回旧临时展开（路过即收）；落位到临时展开的分组时「转正」——先把它移出 `collapsedGearGroups` 并持久化、再清空临时集合（顺序关键，反了会瞬间闪折叠），用户选定「A. 转正保持展开」
+
+> 拖拽避让让位 + rect 冻结防反馈回路沉淀至 MEMORY.md 避坑 #47；optimistic 落位 + 错帧解耦沉淀至避坑 #48。
+
 ## v0.7.6 (2026-06-14)
 
 行程详情页顶部体验收口 + 全屏沉浸。围绕「navbar 无效空白 / 元素错位 / 折叠时上半身死板不动」三个观感问题，从第一性原理重做 navbar 布局与折叠联动，并清掉一处弱视效。

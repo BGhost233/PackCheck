@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.7.6
+## 当前版本：v0.7.7
 
 ### 已实现功能
 
@@ -152,7 +152,8 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.7.3 | ✅ 已完成 | 数据一致性修复 + 按压反馈补全 |
 | v0.7.4 | ✅ 已完成 | 行程详情页格子交互三 Bug 修复（白底/长按穿透/菜单关闭） |
 | v0.7.5 | ✅ 已完成 | 顶部折叠交互统一（对齐 iOS Large Title：跟手 1:1 + 松手就近吸附）+ HeadCollapseController 控制器封装 |
-| v0.7.6 | ✅ 当前 | 行程详情页顶部体验收口（navbar 三元素居中对齐 + 删…菜单换核查图标 + 标题随折叠呼吸）+ 全屏沉浸 |
+| v0.7.6 | ✅ 已完成 | 行程详情页顶部体验收口（navbar 三元素居中对齐 + 删…菜单换核查图标 + 标题随折叠呼吸）+ 全屏沉浸 |
+| v0.7.7 | ✅ 当前 | 装备库单品拖拽真机回归（拖拽避让丝滑让位 + 松手 optimistic 落位去卡顿 + 跨分组 spring-load 悬停自动展开） |
 | v0.8.0 | 📋 中期 | GearPage 组件瘦身（FabController/DragToTripOverlay/GroupDragController 提取） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 
