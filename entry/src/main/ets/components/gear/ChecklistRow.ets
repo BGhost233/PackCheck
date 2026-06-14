@@ -12,6 +12,7 @@ import {
   CARD_BG,
   TEXT_MAIN,
   PLACEHOLDER_COLOR,
+  PRIMARY_STROKE_GHOST,
   TRANSPARENT
 } from '../../constants/Colors';
 import {
@@ -140,8 +141,12 @@ export struct ChecklistRow {
     .opacity(this.item.checked ? 0.5 : 1.0)
     .animation({ curve: SPRING_PRESS() })
     // 整行按压反馈：所有模式下均生效（对齐 GearPage 装备库体验）
-    // 默认透明融入父容器淡色底（消除白色矩形割裂），按压态半透明白提示反馈
-    .backgroundColor(this.pressed ? '#33000000' : TRANSPARENT)
+    // 问题1 修复：原 #33000000 半透明黑 + Row 无圆角 = 直角深灰矩形，割裂难看。
+    //   第一性原理——按压反馈本质是「这块区域被我按住了」，应是柔和贴合内容的高亮而非生硬深块。
+    //   改用 PRIMARY_STROKE_GHOST（极淡主题绿 alpha 4%）+ borderRadius 10，对齐 Apple 列表按压的
+    //   圆角柔和高亮，同时呼应山野绿主题。静止态保持 TRANSPARENT（避坑 #17 静止态中性值）。
+    .backgroundColor(this.pressed ? PRIMARY_STROKE_GHOST : TRANSPARENT)
+    .borderRadius(10)
     .scale({
       x: this.pressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
       y: this.pressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST
