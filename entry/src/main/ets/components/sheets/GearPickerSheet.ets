@@ -203,6 +203,7 @@ export struct GearPickerSheet {
             }
             .layoutWeight(1)
             .scrollBar(BarState.Off)
+            .edgeEffect(EdgeEffect.Spring)
             .margin({ top: 8 })
           }
         }
@@ -376,6 +377,7 @@ export struct GearPickerSheet {
       }
       .layoutWeight(1)
       .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
 
       // 底部固定按钮
       Button(this.tempSaveToLibrary ? '入库并添加' : '添加到' + zoneDisplayName(this.tempZone))
@@ -511,7 +513,7 @@ export struct GearPickerSheet {
       }
     }
     .width('100%')
-    .padding({ left: 24, right: 12, top: 10, bottom: 10 })
+    .padding({ left: 24, right: 12, top: 8, bottom: 8 })
     .borderRadius(12)
     .scale({ x: this.pressedGearRowId === gear.id ? PRESS_SCALE_DOWN : 1.0,
       y: this.pressedGearRowId === gear.id ? PRESS_SCALE_DOWN : 1.0 })
