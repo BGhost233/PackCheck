@@ -54,8 +54,8 @@ const GRID_PADDING: number = 16;   // 左右页边距
 const GRID_GUTTER: number = 12;    // 行/列间距
 // P4：首屏暗示密度提高到 2.8 行（2 行完整 + 0.8 行露头），单格更矮、底部留出下滑暗示
 const FIRST_SCREEN_ROWS: number = 2.8;
-// 反算兜底（无法取得屏高时）。P4：随密度提高同步下调
-const CELL_HEIGHT_FALLBACK: number = 148;
+// 反算兜底（无法取得屏高时）。问题5：上调至 196 保证兜底态也能容纳 5 行预览（标题28+5×32=188，留余量）
+const CELL_HEIGHT_FALLBACK: number = 196;
 
 // 问题4a：head 随网格滚动渐进折叠的总位移（vp）。
 //   = SharedInfo(28，TripDetailPage 日期行) + ProgressBar(48，本组件进度条) = 76。
