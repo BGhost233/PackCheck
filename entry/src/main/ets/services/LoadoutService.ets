@@ -29,27 +29,42 @@ export function assignSlot(gear: GearItem): SlotHint {
 // 分组
 // ============================================================
 
-/** 按 Zone 分组（跳过空 Zone），返回有序 Map */
+/** 按 Zone 分组（跳过空 Zone），返回有序 Map。单次遍历 O(N)。 */
 export function groupByZone(items: ChecklistItem[]): Map<string, ChecklistItem[]> {
-  const map = new Map<string, ChecklistItem[]>();
-  // 按固定顺序初始化（保证遍历顺序）
+  // 先单次遍历分桶到临时 map
+  const buckets = new Map<string, ChecklistItem[]>();
   const zoneOrder: string[] = [
     BodyZone.Head, BodyZone.UpperBody, BodyZone.LowerBody,
     BodyZone.Feet, BodyZone.Carry, BodyZone.Sleep, BodyZone.Misc
   ];
   for (const zone of zoneOrder) {
-    const zoneItems = items.filter((item) => inferZoneFromGroup(item.group) === zone);
-    if (zoneItems.length > 0) {
-      map.set(zone, zoneItems);
+    buckets.set(zone, []);
+  }
+  for (let i = 0; i < items.length; i++) {
+    const zone = inferZoneFromGroup(items[i].group);
+    const bucket = buckets.get(zone);
+    if (bucket !== undefined) {
+      bucket.push(items[i]);
+    } else {
+      buckets.get(BodyZone.Misc)!.push(items[i]);
     }
   }
-  return map;
+  // 按固定顺序构建结果 map，跳过空 zone
+  const result = new Map<string, ChecklistItem[]>();
+  for (const zone of zoneOrder) {
+    const bucket = buckets.get(zone)!;
+    if (bucket.length > 0) {
+      result.set(zone, bucket);
+    }
+  }
+  return result;
 }
 
 /**
  * 按 Zone 分组，始终返回全部 7 个 Zone（含空数组）。
  * 统一清单视图（网格态）用：7 格子始终可见，空 Zone 渲染空态虚线格。
  * 顺序固定为人体从上到下（杂项末尾）。spec §4.4。
+ * 性能优化：单次遍历 O(N) 代替原 7×filter O(7N)。
  */
 export function groupByZoneAll(items: ChecklistItem[]): Map<string, ChecklistItem[]> {
   const map = new Map<string, ChecklistItem[]>();
@@ -57,9 +72,20 @@ export function groupByZoneAll(items: ChecklistItem[]): Map<string, ChecklistIte
     BodyZone.Head, BodyZone.UpperBody, BodyZone.LowerBody,
     BodyZone.Feet, BodyZone.Carry, BodyZone.Sleep, BodyZone.Misc
   ];
+  // 预初始化全部 zone 为空数组（保证遍历顺序 = 插入顺序）
   for (const zone of zoneOrder) {
-    const zoneItems = items.filter((item) => inferZoneFromGroup(item.group) === zone);
-    map.set(zone, zoneItems);
+    map.set(zone, []);
+  }
+  // 单次遍历分桶
+  for (let i = 0; i < items.length; i++) {
+    const zone = inferZoneFromGroup(items[i].group);
+    const bucket = map.get(zone);
+    if (bucket !== undefined) {
+      bucket.push(items[i]);
+    } else {
+      // 未知 zone 归入 Misc
+      map.get(BodyZone.Misc)!.push(items[i]);
+    }
   }
   return map;
 }

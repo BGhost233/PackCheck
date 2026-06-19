@@ -83,9 +83,9 @@ const GEAR_ROW_HEIGHT: number = 52;
 @Component
 export struct GearPage {
   @Prop @Watch('onGearDataChange') gears: GearItem[] = [];
-  @Prop selectedGearCategories: string[] = [CATEGORY_ALL];
-  @Prop gearSearchKeyword: string = '';
-  @Prop gearSortMode: string = GEAR_SORT_GROUP;
+  @Prop @Watch('onFilterSortChange') selectedGearCategories: string[] = [CATEGORY_ALL];
+  @Prop @Watch('onFilterSortChange') gearSearchKeyword: string = '';
+  @Prop @Watch('onFilterSortChange') gearSortMode: string = GEAR_SORT_GROUP;
   @Prop expandedGearId: string = '';
   @Prop multiSelectMode: boolean = false;
   @Prop selectedMultiGearIds: string[] = [];
@@ -116,7 +116,7 @@ export struct GearPage {
   @State private gearHeadSnapping: boolean = false;
   @State private collapsedGearGroups: string[] = [];
   @State private gearGroupExpandTrigger: number = 0;
-  @State private categoryOrder: string[] = [];
+  @State @Watch('onFilterSortChange') private categoryOrder: string[] = [];
 
     @State private pressedGroupId: string = '';
   @State private pressedSortBtn: boolean = false;
@@ -161,6 +161,9 @@ export struct GearPage {
   // 拖拽边缘自动滚动
   private gearAutoScrollTimer: number = -1;
   private gearAutoScrollSpeed: number = 0;
+  // 性能优化：拖拽期 item.id → index 查表（gearRowShiftY 热路径，避免 O(N) findIndex）
+  private dragItemIndexMap: Map<string, number> = new Map();
+  private dragSrcIdx: number = -1;
   // 拖拽 spring-load 自动展开：悬停在折叠分组上一段时间 → 临时展开；路过则收回。
   //   与持久化折叠偏好 collapsedGearGroups 解耦，落位时再决定转正/收回。
   private gearHoverGroup: string = '';          // 当前悬停的分组（判悬停目标是否切换）
@@ -197,10 +200,89 @@ export struct GearPage {
   private screenHeight: number = 780;
   private isAlive: boolean = true;
 
+  // ---- 性能缓存：filteredGears / groups / byGroup 一帧只算一次 ----
+  private cachedFilteredGears: GearItem[] = [];
+  private cachedGearGroups: string[] = [];
+  private cachedGearsByGroup: Map<string, GearItem[]> = new Map();
+
   private onGearDataChange(): void {
     if (this.isAlive) {
       this.refreshFootprint();
+      this.rebuildGearCache();
     }
+  }
+
+  private onFilterSortChange(): void {
+    if (this.isAlive) {
+      this.rebuildGearCache();
+    }
+  }
+
+  /** 一次性计算 filtered → sorted → 分组，结果写入缓存供 build 读取 */
+  private rebuildGearCache(): void {
+    // 1. 筛选 + 排序
+    const filtered: GearItem[] = [];
+    const keyword = this.gearSearchKeyword.trim().toLowerCase();
+    const activeCategories = this.activeCategories();
+    const showAllCategories = activeCategories.indexOf(CATEGORY_ALL) >= 0;
+    for (let index = 0; index < this.gears.length; index++) {
+      const item = this.gears[index];
+      const note = item.note === undefined ? '' : item.note;
+      const categoryMatched = showAllCategories || activeCategories.indexOf(item.category) >= 0;
+      const keywordMatched = keyword.length === 0 ||
+        item.name.toLowerCase().indexOf(keyword) >= 0 ||
+        item.category.toLowerCase().indexOf(keyword) >= 0 ||
+        note.toLowerCase().indexOf(keyword) >= 0;
+      if (categoryMatched && keywordMatched) {
+        filtered.push(item);
+      }
+    }
+    this.cachedFilteredGears = this.sortedGears(filtered);
+
+    // 2. 分组列表
+    const groups: string[] = [];
+    for (let index = 0; index < this.cachedFilteredGears.length; index++) {
+      const group = this.gearSortMode === GEAR_SORT_GROUP
+        ? this.cachedFilteredGears[index].category
+        : gearSortLabel(this.gearSortMode);
+      if (groups.indexOf(group) < 0) {
+        groups.push(group);
+      }
+    }
+    if (this.gearSortMode === GEAR_SORT_GROUP && this.categoryOrder.length > 0) {
+      groups.sort((a: string, b: string): number => {
+        const ai = this.categoryOrder.indexOf(a);
+        const bi = this.categoryOrder.indexOf(b);
+        const aIdx = ai >= 0 ? ai : 9999;
+        const bIdx = bi >= 0 ? bi : 9999;
+        if (aIdx !== bIdx) {
+          return aIdx - bIdx;
+        }
+        return a.localeCompare(b);
+      });
+    }
+    this.cachedGearGroups = groups;
+
+    // 3. 按分组分桶
+    const byGroup = new Map<string, GearItem[]>();
+    if (this.gearSortMode !== GEAR_SORT_GROUP) {
+      // 非分组模式：只有一个虚拟组，所有 items 在同一桶
+      for (let i = 0; i < groups.length; i++) {
+        byGroup.set(groups[i], this.cachedFilteredGears);
+      }
+    } else {
+      for (let i = 0; i < groups.length; i++) {
+        byGroup.set(groups[i], []);
+      }
+      for (let i = 0; i < this.cachedFilteredGears.length; i++) {
+        const cat = this.cachedFilteredGears[i].category;
+        const bucket = byGroup.get(cat);
+        if (bucket !== undefined) {
+          bucket.push(this.cachedFilteredGears[i]);
+        }
+      }
+    }
+    this.cachedGearsByGroup = byGroup;
   }
 
   private onSwipeResetNonceChange(): void {
@@ -230,6 +312,8 @@ export struct GearPage {
     // 恢复折叠状态 + 分组顺序
     this.loadCollapsedGroups();
     this.loadCategoryOrder();
+    // 性能优化：初始构建缓存
+    this.rebuildGearCache();
     // 触发列表错落入场
     setTimeout(() => {
       this.listEntered = true;
@@ -545,24 +629,9 @@ export struct GearPage {
     return categories.length.toString() + '个分组';
   }
 
+  /** 返回缓存的筛选+排序结果（rebuildGearCache 预算）。O(1) 读取。 */
   private filteredGears(): GearItem[] {
-    const filtered: GearItem[] = [];
-    const keyword = this.gearSearchKeyword.trim().toLowerCase();
-    const activeCategories = this.activeCategories();
-    const showAllCategories = activeCategories.indexOf(CATEGORY_ALL) >= 0;
-    for (let index = 0; index < this.gears.length; index++) {
-      const item = this.gears[index];
-      const note = item.note === undefined ? '' : item.note;
-      const categoryMatched = showAllCategories || activeCategories.indexOf(item.category) >= 0;
-      const keywordMatched = keyword.length === 0 ||
-        item.name.toLowerCase().indexOf(keyword) >= 0 ||
-        item.category.toLowerCase().indexOf(keyword) >= 0 ||
-        note.toLowerCase().indexOf(keyword) >= 0;
-      if (categoryMatched && keywordMatched) {
-        filtered.push(item);
-      }
-    }
-    return this.sortedGears(filtered);
+    return this.cachedFilteredGears;
   }
 
   private allGearGroups(): string[] {
@@ -576,29 +645,9 @@ export struct GearPage {
     return groups;
   }
 
+  /** 返回缓存的分组列表（rebuildGearCache 预算）。O(1) 读取。 */
   private filteredGearGroups(): string[] {
-    const items = this.filteredGears();
-    const groups: string[] = [];
-    for (let index = 0; index < items.length; index++) {
-      const group = this.gearSortMode === GEAR_SORT_GROUP ? items[index].category : gearSortLabel(this.gearSortMode);
-      if (groups.indexOf(group) < 0) {
-        groups.push(group);
-      }
-    }
-    // 按 categoryOrder 排序
-    if (this.gearSortMode === GEAR_SORT_GROUP && this.categoryOrder.length > 0) {
-      groups.sort((a: string, b: string): number => {
-        const ai = this.categoryOrder.indexOf(a);
-        const bi = this.categoryOrder.indexOf(b);
-        const aIdx = ai >= 0 ? ai : 9999;
-        const bIdx = bi >= 0 ? bi : 9999;
-        if (aIdx !== bIdx) {
-          return aIdx - bIdx;
-        }
-        return a.localeCompare(b);
-      });
-    }
-    return groups;
+    return this.cachedGearGroups;
   }
 
   private displayGearGroups(): string[] {
@@ -608,12 +657,24 @@ export struct GearPage {
     return this.filteredGearGroups();
   }
 
+  /** 返回缓存的分组 items（rebuildGearCache 预算）。O(1) Map 查表。 */
   private filteredGearsByGroup(group: string): GearItem[] {
-    const items = this.filteredGears();
-    if (this.gearSortMode !== GEAR_SORT_GROUP) {
-      return items;
+    return this.cachedGearsByGroup.get(group) ?? this.cachedFilteredGears;
+  }
+
+  /** 构建拖拽目标分类的 id→index 映射，进入 dragging 态及跨分类切换时调用 */
+  private rebuildDragIndexMap(): void {
+    this.dragItemIndexMap.clear();
+    if (this.gearOverlayItem === null) {
+      this.dragSrcIdx = -1;
+      return;
     }
-    return items.filter((item: GearItem) => item.category === group);
+    const category = this.gearOverlayItem.category;
+    const rows = this.filteredGearsByGroup(category);
+    for (let i = 0; i < rows.length; i++) {
+      this.dragItemIndexMap.set(rows[i].id, i);
+    }
+    this.dragSrcIdx = this.dragItemIndexMap.get(this.gearOverlayItem.id) ?? -1;
   }
 
   // 问题9-A 避让：把「被拖项留下的透明洞」视觉迁移到插入点。
@@ -638,13 +699,12 @@ export struct GearPage {
     if (item.id === draggingId) {
       return 0;
     }
-    // 含被拖项的完整分组列表（与 hitTest 同坐标系）
-    const rows: GearItem[] = this.filteredGearsByGroup(this.gearDropCategory);
-    const srcIdx: number = rows.findIndex((g: GearItem) => g.id === draggingId);
-    const myIdx: number = rows.findIndex((g: GearItem) => g.id === item.id);
+    // 性能优化：O(1) 查表替代 O(N) findIndex
+    const myIdx = this.dragItemIndexMap.get(item.id) ?? -1;
     if (myIdx < 0) {
       return 0;
     }
+    const srcIdx = this.dragSrcIdx;
     const dropIdx: number = this.gearDropIndex;
     if (srcIdx < 0) {
       // 被拖项不在本分类（跨分类拖入）：落点及之后的行整体下移腾缝
@@ -2416,6 +2476,8 @@ export struct GearPage {
       // 进入拖拽态：收菜单
       this.gearOverlayPhase = 'dragging';
       hapticTime(20);
+      // 性能优化：预构建当前分组的 id→index 映射，gearRowShiftY O(1) 查表
+      this.rebuildDragIndexMap();
     }
     this.gearDragOffsetX = offsetX;
     this.gearDragOffsetY = offsetY;
@@ -2462,6 +2524,16 @@ export struct GearPage {
     }
     this.gearDropCategory = hitCategory;
     this.gearDropIndex = insertIdx;
+    // 性能优化：跨分类切换时重建 id→index 映射
+    if (hitCategory !== prevCategory) {
+      this.dragItemIndexMap.clear();
+      for (let i = 0; i < rows.length; i++) {
+        this.dragItemIndexMap.set(rows[i].id, i);
+      }
+      // 跨分类时被拖项不在目标分类，srcIdx = -1
+      const draggingId = this.gearOverlayItem !== null ? this.gearOverlayItem.id : '';
+      this.dragSrcIdx = this.dragItemIndexMap.get(draggingId) ?? -1;
+    }
     // 进入新目标格触觉反馈
     if (hitCategory !== prevCategory || insertIdx !== prevIndex) {
       hapticTime(15);

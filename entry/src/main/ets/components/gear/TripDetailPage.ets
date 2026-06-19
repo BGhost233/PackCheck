@@ -34,9 +34,9 @@ interface MetaSegment {
 @Component
 export struct TripDetailPage {
   // 数据 (从 Index.ets 透传)
-  @Prop checklists: TripChecklist[] = [];
+  @Prop @Watch('onTripDataChange') checklists: TripChecklist[] = [];
   @Prop gears: GearItem[] = [];
-  @Prop selectedChecklistId: string = '';
+  @Prop @Watch('onTripDataChange') selectedChecklistId: string = '';
   @Prop collapsedGroups: string[] = [];
   @Prop highlightedItemId: string = '';
   @Prop checklistRenderNonce: number = 0;
@@ -58,6 +58,11 @@ export struct TripDetailPage {
   @State private headSnapping: boolean = false;
   // 全屏沉浸：状态栏高度由 EntryAbility/Index 通过 AppStorage 全局下发，navbar 顶部据此避让。
   @StorageProp('statusBarHeight') statusBarHeight: number = 0;
+
+  // 性能缓存：currentChecklist 和 metaSegments 一帧内被多处读取，
+  // 缓存避免重复线性扫描和数组构造。@Watch 触发刷新。
+  private cachedTrip: TripChecklist | undefined = undefined;
+  private cachedMetaSegments: MetaSegment[] = [];
 
   // ChecklistDetail callbacks (透传)
   onReturnHome: () => void = () => {};
@@ -90,6 +95,47 @@ export struct TripDetailPage {
   // #1：多选批量移动请求（弹出 Zone 选择面板）
   onRequestBatchMoveSheet: (itemIds: string[]) => void = () => {};
 
+  aboutToAppear(): void {
+    this.refreshTripCache();
+  }
+
+  // 性能优化：数据变化时刷新缓存
+  private onTripDataChange(): void {
+    this.refreshTripCache();
+  }
+
+  private refreshTripCache(): void {
+    // 缓存 currentChecklist
+    this.cachedTrip = undefined;
+    for (let i = 0; i < this.checklists.length; i++) {
+      if (this.checklists[i].id === this.selectedChecklistId) {
+        this.cachedTrip = this.checklists[i];
+        break;
+      }
+    }
+    // 缓存 metaSegments
+    const segs: MetaSegment[] = [];
+    const trip = this.cachedTrip;
+    if (trip !== undefined) {
+      if (trip.date !== undefined && trip.date.length > 0) {
+        segs.push({ text: trip.date, kind: 'plain', showPeak: false });
+      }
+      if (trip.destination !== undefined && trip.destination.length > 0) {
+        segs.push({ text: trip.destination, kind: 'plain', showPeak: false });
+      }
+      if (trip.distanceKm !== undefined && trip.distanceKm > 0) {
+        segs.push({ text: trip.distanceKm.toString() + 'km', kind: 'data', showPeak: false });
+      }
+      if (trip.maxAltitude !== undefined && trip.maxAltitude > 0) {
+        segs.push({ text: trip.maxAltitude.toString() + 'm', kind: 'data', showPeak: true });
+      }
+      if (trip.durationHours !== undefined && trip.durationHours > 0) {
+        segs.push({ text: trip.durationHours.toString() + 'h', kind: 'data', showPeak: false });
+      }
+    }
+    this.cachedMetaSegments = segs;
+  }
+
   // 问题4a：有效折叠程度 = 聚焦态与滚动态取「更折叠」者。聚焦时日期行必须全收（让位给聚焦卡片）。
   private effectiveHeadCollapse(): number {
     return this.focusedZone != null ? 1 : this.headCollapseProgress;
@@ -115,13 +161,9 @@ export struct TripDetailPage {
     return 4 * (1 - this.effectiveHeadCollapse());
   }
 
+  /** 返回缓存的当前行程（refreshTripCache 预算）。O(1)。 */
   private currentChecklist(): TripChecklist | undefined {
-    for (let i = 0; i < this.checklists.length; i++) {
-      if (this.checklists[i].id === this.selectedChecklistId) {
-        return this.checklists[i];
-      }
-    }
-    return undefined;
+    return this.cachedTrip;
   }
 
   // 顶部已占高度（NavBar + SharedInfo + ProgressBar），用于 UnifiedChecklistView 首屏 cell 高度反算。
@@ -309,28 +351,8 @@ export struct TripDetailPage {
     }
   }
 
-  // E-3：把行程参数拆成结构化段，供 buildSharedInfo 分段着色 + reservedTop 判断高度。
+  /** 返回缓存的元信息段（refreshTripCache 预算）。O(1) 引用不变。 */
   private metaSegments(): MetaSegment[] {
-    const trip = this.currentChecklist();
-    const segs: MetaSegment[] = [];
-    if (trip === undefined) {
-      return segs;
-    }
-    if (trip.date !== undefined && trip.date.length > 0) {
-      segs.push({ text: trip.date, kind: 'plain', showPeak: false });
-    }
-    if (trip.destination !== undefined && trip.destination.length > 0) {
-      segs.push({ text: trip.destination, kind: 'plain', showPeak: false });
-    }
-    if (trip.distanceKm !== undefined && trip.distanceKm > 0) {
-      segs.push({ text: trip.distanceKm.toString() + 'km', kind: 'data', showPeak: false });
-    }
-    if (trip.maxAltitude !== undefined && trip.maxAltitude > 0) {
-      segs.push({ text: trip.maxAltitude.toString() + 'm', kind: 'data', showPeak: true });
-    }
-    if (trip.durationHours !== undefined && trip.durationHours > 0) {
-      segs.push({ text: trip.durationHours.toString() + 'h', kind: 'data', showPeak: false });
-    }
-    return segs;
+    return this.cachedMetaSegments;
   }
 }

@@ -11,7 +11,15 @@
   node "/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw.js" assembleApp --no-daemon 2>&1 | grep -E "ERROR|BUILD"
   ```
   用 DevEco-Studio 内置的 hvigor + node + SDK，必须导出 `DEVECO_SDK_HOME`。`grep -E "ERROR|BUILD"` 过滤出关键行。任务名 `assembleApp` 对当前工程**有效**（与 CLAUDE.md 铁律2 一致，已多次 BUILD SUCCESSFUL）。
-  （历史备注：曾尝试 `assembleHap --mode module -p product=default`，亦可，但统一以 `assembleApp` 为准。旧 Desktop 路径已弃用。）
+  （历史备注：曾尝试 `assembleHap --mode module -p product=default`，亦可，但统一以 `assembleApp` 为准。）
+- **备用命令行构建**（DevEco Studio 未安装时）：
+  ```bash
+  cd /Users/bghost233/Documents/PackCheck && \
+  export DEVECO_SDK_HOME="/Users/bghost233/Desktop/harmonyOS/command-line-tools/sdk" && \
+  export PATH="/Users/bghost233/Desktop/harmonyOS/command-line-tools/tool/node/bin:$PATH" && \
+  node "/Users/bghost233/Desktop/harmonyOS/command-line-tools/hvigor/bin/hvigorw.js" assembleApp --no-daemon 2>&1 | grep -E "ERROR|BUILD"
+  ```
+  Desktop 路径为独立 command-line-tools 安装，SDK 路径比 DevEco-Studio 多一层 `command-line-tools/sdk`。两套均验证 BUILD SUCCESSFUL。
 - **先出方案再动手**：任何需求先输出理解+方案+理由，确认后才写代码。
 
 ## 设计决策
@@ -170,10 +178,22 @@
 
 ## 数据一致性模式（2026-06-13）
 
-- **checklistRenderNonce 强制刷新**：任何修改装备属性（名称/分类等）的操作，执行后必须 `checklistRenderNonce++` 强制 ForEach 重建。ForEach key 拼入 nonce：`zone + '_' + length + '_' + nonce`。覆盖路径：batchDeleteGears / batchMoveGroup / executeCategoryDelete / executeCategoryRename / updateGear / createGear（后两者经 GearPickerSheet 关闭后已由其他 nonce 链路覆盖）
+- **checklistRenderNonce 强制刷新**：任何修改装备属性（名称/分类等）的操作，执行后必须 `checklistRenderNonce++` 强制 @Watch 重算缓存。覆盖路径：batchDeleteGears / batchMoveGroup / executeCategoryDelete / executeCategoryRename / updateGear / createGear（后两者经 GearPickerSheet 关闭后已由其他 nonce 链路覆盖）。**注**：v0.7.7-perf 后 ForEach key 已改为 `zoneKey(zone)` 内容哈希（不再直接拼 nonce），但 nonce++ 仍触发 @Watch → 重算 zoneKey → 精确重建变化 zone
 - **resolveItemName 实时查找**：ChecklistItem 只存 `fromGearId`，显示名称优先从 gears 数组按 id 查找当前值，找不到才 fallback 到 item.name 快照。确保装备改名后清单即时反映
 - **PRESS_SCALE_DOWN 全局按压常量**：AnimationTokens 导出 `PRESS_SCALE_DOWN = 0.96`，所有可点击元素按压缩放统一引用此常量 + `SPRING_PRESS()` 曲线。FAB 和底部 Tab bar 例外（有独立反馈机制）
 - **forceFlush() 页面退出持久化**：NavDestination `.onBackPressed()` / `.onDisAppear()` 中调 `PackStore.forceFlush()` 确保编辑数据不丢
+
+## 性能优化模式（2026-06-14）
+
+> 全面性能优化完成（8 步），改动 6 文件，构建验证通过。详见 `docs/PERF_OPTIMIZATION_PLAN.md`。
+
+- **cache-on-@Watch 范式**：build 中被多次调用的计算方法（getter），改为 `@State cachedXxx` + `@Watch` 在数据源变化时一次性算好，build 中 O(1) 读缓存。已落地：GearPage（`rebuildGearCache` 缓存 filteredGears/groups/byGroup）、TripDetailPage（`cachedTrip`/`cachedMetaSegments`）。**注意**：缓存字段用 `private` + `@State`，方法返回改为直接返回缓存值
+- **父级构建 + @Prop 下发去冗余**：同一索引/映射在多个子组件中独立构建时，提升到父组件一次构建、`@Prop` 下发。已落地：`UnifiedChecklistView` 构建 `gearIndexMap: Map<string, GearItem>`，下发给 7× `ZoneGridCell` + 1× `FocusedZoneView`，消除 8→1 次 `buildGearIndex` 重复遍历
+- **ForEach key 内容哈希化（zoneKey）**：ForEach key 从全局 nonce（导致所有格子重建）改为 zone 维度的内容哈希 `zone + '_' + length + checkedBits`（如 `"Head_3_101"`），只有真正变化的 zone 触发 diff 重建。已落地：`UnifiedChecklistView.zoneKey(zone)`
+- **拖拽索引预算 O(1) 查表**：拖拽开始时预算 `dragItemIndexMap: Map<string, number>`，`gearRowShiftY` 中 O(1) 取 index 替代 O(N) `findIndex`。已落地：`GearPage`
+- **`display.getDefaultDisplaySync()` 一次性缓存**：IPC 跨进程调用从每帧重复改为 `aboutToAppear` 一次性缓存 `screenWidthVp`/`screenHeightVp`。已落地：`UnifiedChecklistView`
+- **`groupByZoneAll` 单次遍历分桶**：从 7×`.filter()` 的 O(7N) 改为预初始化 Map + 单次遍历分桶 O(N)。已落地：`services/LoadoutService.ets`
+- **⚠️ checklistRenderNonce 与 zoneKey 共存**：zoneKey 精确化后 nonce 仍保留（数据一致性模式中 5 条 mutation 路径仍递增 nonce），但 ForEach key 不再拼 nonce，改为读 zone 内容哈希——两者不冲突（nonce 递增触发 @Watch → 重算 zoneKey → 仅变化 zone 的 key 变了 → 精确重建）
 
 ## 已知限制
 

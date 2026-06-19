@@ -23,7 +23,6 @@ import { BodyZone } from '../../constants/GearLoadout';
 import { zoneDisplayName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
 import { resolveItemNameByIndex } from '../../services/ChecklistService';
-import { buildGearIndex } from '../../services/GearService';
 import { ZoneShell } from './ZoneShell';
 import { hapticSoft } from '../../utils/HapticUtils';
 
@@ -39,9 +38,9 @@ export struct ZoneGridCell {
   @Prop zone: string = BodyZone.Misc;
   @Prop items: ChecklistItem[] = [];
   // 「实时引用」模型：传入装备库用于 resolve item 展示名
-  @Prop @Watch('onGearsChange') gears: GearItem[] = [];
-  // 性能：gearId → GearItem 索引，渲染热路径 O(1) 反查替代 resolveItemName 的线性扫描
-  @State private gearIndex: Map<string, GearItem> = new Map();
+  @Prop gears: GearItem[] = [];
+  // 性能：父层预构建的 gearId → GearItem 索引，渲染热路径 O(1) 反查
+  @Prop gearIndex: Map<string, GearItem> = new Map();
   @Prop zoneColor: string = ZONE_MISC_COLOR;
   // 容器描边色 + 整块淡色填充底（由父层 zoneStroke/zoneFill helper 传入）
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
@@ -76,14 +75,6 @@ export struct ZoneGridCell {
   @State private contentPressed: boolean = false;
   // Bug2 fix：长按触发后抑制紧随的 onClick（进聚焦），防止长按松手同时进入展开态
   @State private longPressTriggered: boolean = false;
-
-  aboutToAppear(): void {
-    this.gearIndex = buildGearIndex(this.gears);
-  }
-
-  private onGearsChange(): void {
-    this.gearIndex = buildGearIndex(this.gears);
-  }
 
   // 问题3：父层勾选信号变化 → 自增 itemsVersion，驱动内层 ChecklistRow ForEach key 变更重建
   private onRenderNonceChange(): void {

@@ -36,7 +36,6 @@ import { zoneDisplayName } from '../../services/LoadoutService';
 import { ChecklistRow } from './ChecklistRow';
 import { ZoneShell } from './ZoneShell';
 import { resolveItemNameByIndex } from '../../services/ChecklistService';
-import { buildGearIndex } from '../../services/GearService';
 
 @Component
 export struct FocusedZoneView {
@@ -44,8 +43,8 @@ export struct FocusedZoneView {
   @Prop items: ChecklistItem[] = [];
   // 问题4c：装备库全量，用于 fromGearId 反查品类/备注/品牌等详情
   @Prop @Watch('onGearsChange') gears: GearItem[] = [];
-  // 性能：gearId → GearItem 索引，渲染热路径 O(1) 反查，替代 ForEach 每行线性扫描
-  @State private gearIndex: Map<string, GearItem> = new Map();
+  // 性能：父层预构建的 gearId → GearItem 索引，渲染热路径 O(1) 反查
+  @Prop gearIndex: Map<string, GearItem> = new Map();
   @Prop zoneColor: string = TEXT_SECONDARY;
   // ZoneShell 外壳需要的描边色 + 整块淡色填充底，由父层透传（与网格态用同一 helper）
   @Prop zoneStroke: string = ZONE_MISC_STROKE;
@@ -112,21 +111,15 @@ export struct FocusedZoneView {
     setTimeout(() => { this.suppressClose = false; }, 100);
   }
 
-  // gears 变化时刷新索引缓存（常驻树组件不能用 aboutToAppear，靠 @Watch 驱动）
   // gearVersion 递增驱动 ForEach key 变化，确保 gear 改名/编辑后列表刷新显示名
   @State private gearVersion: number = 0;
   onGearsChange(): void {
-    this.gearIndex = buildGearIndex(this.gears);
     this.gearVersion++;
   }
 
   // active false→true：重置后下一帧验入场；true→false：重置供下次重放
   onActiveChange(): void {
     if (this.active) {
-      // 兜底：首次聚焦时确保索引就绪（gears 可能在构造后才到位）
-      if (this.gearIndex.size !== this.gears.length) {
-        this.gearIndex = buildGearIndex(this.gears);
-      }
       this.listAppeared = false;
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.listAppeared = true;

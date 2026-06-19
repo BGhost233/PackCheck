@@ -29,6 +29,7 @@ import {
 } from '../../constants/AnimationTokens';
 import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
 import { resolveItemName } from '../../services/ChecklistService';
+import { buildGearIndex } from '../../services/GearService';
 import { BodyZone } from '../../constants/GearLoadout';
 import { hapticSoft, hapticSharp } from '../../utils/HapticUtils';
 import { groupByZoneAll, calcProgress, LoadoutProgress, zoneColor, zoneStroke, zoneFill, zoneFocusBg, hitTestZoneRect } from '../../services/LoadoutService';
@@ -67,7 +68,7 @@ const HEAD_COLLAPSE_DISTANCE: number = 76;
 @Component
 export struct UnifiedChecklistView {
   @Prop @Watch('onTripChange') trip: TripChecklist = { id: '', title: '', items: [], createdAt: 0 };
-  @Prop gears: GearItem[] = [];
+  @Prop @Watch('onGearsChange') gears: GearItem[] = [];
 @Prop checklistRenderNonce: number = 0;
 // 顶部已占高度（NavBar + SharedInfo + ProgressBar），用于首屏 cell 高度反算
 // @Watch：aboutToAppear 时父层 build 可能尚未传入实算值，prop 后续更新需重算 cell 高度（review B3）
@@ -154,6 +155,15 @@ export struct UnifiedChecklistView {
   // 因此「gears 数据变化但 trip 引用不变」（如装备库重命名 gear）不会、也无需刷新本缓存。
   private zoneMapCache: Map<string, ChecklistItem[]> = new Map();
 
+  // 性能优化：缓存屏幕尺寸（display.getDefaultDisplaySync() 是 IPC 跨进程调用，
+  // 在拖拽 Pan 每帧调用会累积延迟吃掉帧预算）。aboutToAppear 时一次性取值。
+  private cachedScreenWidthVp: number = 0;
+  private cachedScreenHeightVp: number = 0;
+
+  // 性能优化：父级一次性构建 gearIndex，@Prop 下发给 7×ZoneGridCell + 1×FocusedZoneView，
+  // 避免 8 个子组件各自独立 buildGearIndex 的 O(8N) 冗余遍历。
+  @State private gearIndexMap: Map<string, GearItem> = new Map();
+
   // 问题4a：统一折叠控制器。实例放本组件（持有 gridScroller）。
   //   onChange 把 progress 同时写回本组件 @State 镜像（驱动 ProgressBar 折叠）与父层（驱动 SharedInfo 折叠）。
   private headController: HeadCollapseController = new HeadCollapseController({
@@ -173,7 +183,17 @@ export struct UnifiedChecklistView {
   }
 
   aboutToAppear() {
+    // 性能优化：一次性缓存屏幕尺寸，避免后续拖拽热路径反复 IPC
+    try {
+      const di = display.getDefaultDisplaySync();
+      this.cachedScreenWidthVp = this.getUIContext().px2vp(di.width);
+      this.cachedScreenHeightVp = this.getUIContext().px2vp(di.height);
+    } catch (_e) {
+      this.cachedScreenWidthVp = 360; // 兜底（常见手机宽度）
+      this.cachedScreenHeightVp = 780;
+    }
     this.refreshCache();
+    this.gearIndexMap = buildGearIndex(this.gears);
     this.computeCellHeight();
     this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
       this.appeared = true;
@@ -191,6 +211,10 @@ export struct UnifiedChecklistView {
 
 onTripChange(): void {
 this.refreshCache();
+}
+
+onGearsChange(): void {
+  this.gearIndexMap = buildGearIndex(this.gears);
 }
 
 onReservedTopChange(): void {
@@ -333,6 +357,7 @@ this.computeCellHeight();
         zone: this.focusedZoneRender,
         items: this.itemsForZone(this.focusedZoneRender),
         gears: this.gears,
+        gearIndex: this.gearIndexMap,
         zoneColor: zoneColor(this.focusedZoneRender),
         zoneStroke: zoneStroke(this.focusedZoneRender),
         zoneFill: zoneFocusBg(this.focusedZoneRender),
@@ -429,16 +454,8 @@ this.computeCellHeight();
     this.overlayVisible = true;
     this.dropTargetZone = null;
     // 胶囊初始位置：屏幕中央偏上（后续由 Pan 差值跟手修正）
-    try {
-      const di = display.getDefaultDisplaySync();
-      const screenW = this.getUIContext().px2vp(di.width);
-      const screenH = this.getUIContext().px2vp(di.height);
-      this.dragCurrentX = screenW / 2 - this.overlayOriginX;
-      this.dragCurrentY = screenH / 3 - this.overlayOriginY;
-    } catch (_e) {
-      this.dragCurrentX = 180;
-      this.dragCurrentY = 250;
-    }
+    this.dragCurrentX = this.cachedScreenWidthVp / 2 - this.overlayOriginX;
+    this.dragCurrentY = this.cachedScreenHeightVp / 3 - this.overlayOriginY;
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
     // 2. 收缩聚焦态（geometryTransition 动画）
@@ -466,16 +483,8 @@ this.computeCellHeight();
     this.overlayVisible = true;
     this.dropTargetZone = null;
     // 胶囊初始位置：屏幕中央偏上
-    try {
-      const di = display.getDefaultDisplaySync();
-      const screenW = this.getUIContext().px2vp(di.width);
-      const screenH = this.getUIContext().px2vp(di.height);
-      this.dragCurrentX = screenW / 2 - this.overlayOriginX;
-      this.dragCurrentY = screenH / 3 - this.overlayOriginY;
-    } catch (_e) {
-      this.dragCurrentX = 180;
-      this.dragCurrentY = 250;
-    }
+    this.dragCurrentX = this.cachedScreenWidthVp / 2 - this.overlayOriginX;
+    this.dragCurrentY = this.cachedScreenHeightVp / 3 - this.overlayOriginY;
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
     // 收缩聚焦态
@@ -494,16 +503,8 @@ this.computeCellHeight();
     // 用 Pan 偏移差值（相对边缘触发时）更新胶囊位置
     const deltaX = offsetX - this.edgeDragBaseOffsetX;
     const deltaY = offsetY - this.edgeDragBaseOffsetY;
-    try {
-      const di = display.getDefaultDisplaySync();
-      const screenW = this.getUIContext().px2vp(di.width);
-      const screenH = this.getUIContext().px2vp(di.height);
-      this.dragCurrentX = screenW / 2 - this.overlayOriginX + deltaX;
-      this.dragCurrentY = screenH / 3 - this.overlayOriginY + deltaY;
-    } catch (_e) {
-      this.dragCurrentX = 180 + deltaX;
-      this.dragCurrentY = 250 + deltaY;
-    }
+    this.dragCurrentX = this.cachedScreenWidthVp / 2 - this.overlayOriginX + deltaX;
+    this.dragCurrentY = this.cachedScreenHeightVp / 3 - this.overlayOriginY + deltaY;
     // 命中判定（用胶囊中心的全局坐标）
     const fingerGlobalX = this.dragCurrentX + this.overlayOriginX;
     const fingerGlobalY = this.dragCurrentY + this.overlayOriginY;
@@ -522,18 +523,8 @@ this.computeCellHeight();
     // 最终命中判定
     const deltaX = offsetX - this.edgeDragBaseOffsetX;
     const deltaY = offsetY - this.edgeDragBaseOffsetY;
-    let fingerGlobalX: number;
-    let fingerGlobalY: number;
-    try {
-      const di = display.getDefaultDisplaySync();
-      const screenW = this.getUIContext().px2vp(di.width);
-      const screenH = this.getUIContext().px2vp(di.height);
-      fingerGlobalX = screenW / 2 + deltaX;
-      fingerGlobalY = screenH / 3 + deltaY;
-    } catch (_e) {
-      fingerGlobalX = 180 + this.overlayOriginX + deltaX;
-      fingerGlobalY = 250 + this.overlayOriginY + deltaY;
-    }
+    const fingerGlobalX = this.cachedScreenWidthVp / 2 + deltaX;
+    const fingerGlobalY = this.cachedScreenHeightVp / 3 + deltaY;
     const target = this.hitTestZone(fingerGlobalX, fingerGlobalY);
     if (target !== null && target !== this.overlayItem!.group) {
       if (this.batchDragIds.length > 0) {
@@ -817,18 +808,14 @@ this.computeCellHeight();
   // 首屏 2×2.5 密度反算单格高度：(可视高 - 半行gutter冗余) / 2.5 行，扣去行间距
   // spec §2.1.2：用 2.5 行 ≈ 可视高度 反算，保证各机型一致暗示效果
   private computeCellHeight(): void {
-    try {
-      const di = display.getDefaultDisplaySync();
-      const screenHeightVp = this.getUIContext().px2vp(di.height);
-      const visibleHeight = screenHeightVp - this.reservedTopHeight;
-      // 2.5 行 + 2 个完整 gutter（首屏可见 2 整行需 2 段间距）
-      const usable = visibleHeight - GRID_GUTTER * FIRST_SCREEN_ROWS;
-      const h = usable / FIRST_SCREEN_ROWS;
-      if (h > 80 && h < 400) {
-        this.cellHeight = h;
-      }
-    } catch (e) {
-      // 取屏失败 → 用兜底高度
+    const screenHeightVp = this.cachedScreenHeightVp > 0 ? this.cachedScreenHeightVp : 780;
+    const visibleHeight = screenHeightVp - this.reservedTopHeight;
+    // 2.5 行 + 2 个完整 gutter（首屏可见 2 整行需 2 段间距）
+    const usable = visibleHeight - GRID_GUTTER * FIRST_SCREEN_ROWS;
+    const h = usable / FIRST_SCREEN_ROWS;
+    if (h > 80 && h < 400) {
+      this.cellHeight = h;
+    } else {
       this.cellHeight = CELL_HEIGHT_FALLBACK;
     }
   }
@@ -846,17 +833,18 @@ this.computeCellHeight();
       // 前 6 个 zone 走双列自动布局
       ForEach(GRID_SINGLE_ZONES, (zone: string, index: number) => {
         GridItem() {
-          ZoneGridCell({
-            zone: zone,
-            items: this.itemsForZone(zone),
-            gears: this.gears,
-            zoneColor: zoneColor(zone),
-            zoneStroke: zoneStroke(zone),
-            zoneFill: zoneFill(zone),
-            cellHeight: this.cellHeight,
-            renderNonce: this.checklistRenderNonce,
-            isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === zone,
-            draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
+      ZoneGridCell({
+        zone: zone,
+        items: this.itemsForZone(zone),
+        gears: this.gears,
+        gearIndex: this.gearIndexMap,
+        zoneColor: zoneColor(zone),
+        zoneStroke: zoneStroke(zone),
+        zoneFill: zoneFill(zone),
+        cellHeight: this.cellHeight,
+        renderNonce: this.checklistRenderNonce,
+        isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === zone,
+        draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
             onTapTitle: (z: string) => { this.openFocus(z); },
             onTapEmpty: (z: string) => { this.onOpenPicker(z); },
             onTapAdd: (z: string) => { this.onOpenPicker(z); },
@@ -887,24 +875,23 @@ this.computeCellHeight();
           const pos = n.globalPosition as Record<string, number>;
           this.zoneRects.set(zone, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
         })
-        // 问题3 根治：key 拼 checklistRenderNonce。原 key 仅「zone+数量」，勾选只改 checked、数量不变
-        //   → key 不变 → ForEach 复用旧 ZoneGridCell 实例且不重新求值构造参数 → 新 items 喂不进去。
-        //   拼 nonce（每次勾选自增）后，key 变更触发子组件构造参数重新求值，新 items 经 @Prop 下发刷新。
-      }, (zone: string) => zone + '_' + this.itemsForZone(zone).length.toString() + '_' + this.checklistRenderNonce.toString())
+// 优化 8：精确 key — 仅当某 zone 的 checked 状态串真正变化时才重建该格，其余 zone 保持复用
+}, (zone: string) => this.zoneKey(zone))
 
       // 杂项格跨 2 列（spec §2.1.2 F-5），单独渲染在末尾
       GridItem() {
-        ZoneGridCell({
-          zone: BodyZone.Misc,
-          items: this.itemsForZone(BodyZone.Misc),
-          gears: this.gears,
-          zoneColor: zoneColor(BodyZone.Misc),
-          zoneStroke: zoneStroke(BodyZone.Misc),
-          zoneFill: zoneFill(BodyZone.Misc),
-          cellHeight: this.cellHeight,
-          renderNonce: this.checklistRenderNonce,
-          isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === BodyZone.Misc,
-          draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
+      ZoneGridCell({
+        zone: BodyZone.Misc,
+        items: this.itemsForZone(BodyZone.Misc),
+        gears: this.gears,
+        gearIndex: this.gearIndexMap,
+        zoneColor: zoneColor(BodyZone.Misc),
+        zoneStroke: zoneStroke(BodyZone.Misc),
+        zoneFill: zoneFill(BodyZone.Misc),
+        cellHeight: this.cellHeight,
+        renderNonce: this.checklistRenderNonce,
+        isDropTarget: this.overlayPhase === 'dragging' && this.dropTargetZone === BodyZone.Misc,
+        draggingItemId: this.overlayPhase === 'dragging' ? (this.overlayItem?.id ?? '') : '',
           onTapTitle: (z: string) => { this.openFocus(z); },
           onTapEmpty: (z: string) => { this.onOpenPicker(z); },
           onTapAdd: (z: string) => { this.onOpenPicker(z); },
@@ -1061,4 +1048,13 @@ this.computeCellHeight();
     return this.zoneMapCache.get(zone) ?? [];
   }
 
+  // 优化 8：精确 ForEach key — 只有 checked 状态真正变化的 zone 才触发重建
+  private zoneKey(zone: string): string {
+    const items = this.itemsForZone(zone);
+    let key = zone + '_' + items.length.toString();
+    for (let i = 0; i < items.length; i++) {
+      key += items[i].checked ? '1' : '0';
+    }
+    return key;
+  }
 }
