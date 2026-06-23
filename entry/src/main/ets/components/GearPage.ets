@@ -167,6 +167,8 @@ export struct GearPage {
   // 拖拽边缘自动滚动
   private gearAutoScrollTimer: number = -1;
   private gearAutoScrollSpeed: number = 0;
+  // 匿名 setTimeout 数组（listEntered/scrollToExpandedGear/enterGearOverlay/completeGearDrag）
+  private timerIds: number[] = [];
   // 性能优化：拖拽期 item.id → index 查表（gearRowShiftY 热路径，避免 O(N) findIndex）
   private dragItemIndexMap: Map<string, number> = new Map();
   private dragSrcIdx: number = -1;
@@ -321,9 +323,11 @@ export struct GearPage {
     // 性能优化：初始构建缓存
     this.rebuildGearCache();
     // 触发列表错落入场
-    setTimeout(() => {
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.listEntered = true;
-    }, 20);
+    }, 20) as number;
+    this.timerIds.push(id);
   }
 
   // 人生足迹聚合
@@ -341,6 +345,11 @@ export struct GearPage {
       clearTimeout(this.gearHoverExpandTimer);
       this.gearHoverExpandTimer = -1;
     }
+    // 清理所有匿名 setTimeout
+    for (let i = 0; i < this.timerIds.length; i++) {
+      clearTimeout(this.timerIds[i]);
+    }
+    this.timerIds = [];
     // 退出拖拽态：清理可能残留的拖拽动画状态
     if (this.dragMode) {
       this.dragMode = false;
@@ -876,12 +885,14 @@ export struct GearPage {
 
   // 展开详情后滚动到该装备居中显示
   private scrollToExpandedGear(id: string): void {
-    setTimeout(() => {
+    let timerId = setTimeout(() => {
+      if (!this.isAlive) { return; }
       const idx = this.gearListIndex(id);
       if (idx >= 0) {
         this.gearListScroller.scrollToIndex(idx, true, ScrollAlign.CENTER);
       }
-    }, 50);
+    }, 50) as number;
+    this.timerIds.push(timerId);
   }
 
   // 动态底部 spacer：确保内容少时仍可折叠 header，内容多时仅保留 TabBar 避让
@@ -2468,14 +2479,15 @@ export struct GearPage {
     this.gearDropIndex = -1;
     hapticTime(30);
     // 入场动画
-    setTimeout(() => {
+    let id = setTimeout(() => {
       if (!this.isAlive) {
         return;
       }
       this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
         this.gearOverlayVisible = true;
       });
-    }, 16);
+    }, 16) as number;
+    this.timerIds.push(id);
   }
 
   // Pan 更新：menu 态首次移动收菜单进 dragging 态；累加 offset 推实时全局坐标 → 局部驱动胶囊。
@@ -2641,9 +2653,11 @@ export struct GearPage {
     this.finalizeGearTempExpand(committed ? dropCategory : '');
     if (committed) {
       // 落位帧与收起帧解耦：下一帧再收 overlay，让列表先完成重排渲染
-      setTimeout(() => {
+      let id = setTimeout(() => {
+        if (!this.isAlive) { return; }
         this.dismissGearOverlay();
-      }, 0);
+      }, 0) as number;
+      this.timerIds.push(id);
     } else {
       this.dismissGearOverlay();
     }

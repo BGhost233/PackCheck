@@ -62,6 +62,17 @@ export struct GearDetailSheet {
   // 编辑按钮按压
   @State private editBtnPressed: boolean = false;
   @State private removeBtnPressed: boolean = false;
+  // timer 清理
+  private timerIds: number[] = [];
+  private isAlive: boolean = true;
+
+  aboutToDisappear(): void {
+    this.isAlive = false;
+    for (let i = 0; i < this.timerIds.length; i++) {
+      clearTimeout(this.timerIds[i]);
+    }
+    this.timerIds = [];
+  }
 
   onVisibleChange(): void {
     if (this.visible) {
@@ -80,11 +91,13 @@ export struct GearDetailSheet {
       this.maskOpacity = 1;
     });
     // 内容错落入场（延迟 150ms）
-    setTimeout(() => {
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.contentAppeared = true;
       });
-    }, 150);
+    }, 150) as number;
+    this.timerIds.push(id);
   }
 
   private hide(): void {

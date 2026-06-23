@@ -75,6 +75,17 @@ export struct ZoneGridCell {
   @State private contentPressed: boolean = false;
   // Bug2 fix：长按触发后抑制紧随的 onClick（进聚焦），防止长按松手同时进入展开态
   @State private longPressTriggered: boolean = false;
+  // timer 清理：longPressTriggered 安全兜底定时器
+  private timerIds: number[] = [];
+  private isAlive: boolean = true;
+
+  aboutToDisappear(): void {
+    this.isAlive = false;
+    for (let i = 0; i < this.timerIds.length; i++) {
+      clearTimeout(this.timerIds[i]);
+    }
+    this.timerIds = [];
+  }
 
   // 问题3：父层勾选信号变化 → 自增 itemsVersion，驱动内层 ChecklistRow ForEach key 变更重建
   private onRenderNonceChange(): void {
@@ -199,7 +210,11 @@ export struct ZoneGridCell {
                   const finger = event.fingerList[0];
                   this.onLongPressItem(item, finger.globalX, finger.globalY);
                   // 安全兜底：500ms 后自动重置，防止极端情况永久阻塞
-                  setTimeout(() => { this.longPressTriggered = false; }, 500);
+                  let id = setTimeout(() => {
+                    if (!this.isAlive) { return; }
+                    this.longPressTriggered = false;
+                  }, 500) as number;
+                  this.timerIds.push(id);
                 }),
               PanGesture({ fingers: 1, direction: PanDirection.All, distance: 5 })
                 .onActionUpdate((event: GestureEvent) => {

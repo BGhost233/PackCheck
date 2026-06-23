@@ -19,16 +19,25 @@ export struct LoadoutProgressBar {
   @State private celebrateScale: number = 1.0;
   @State private barWidth: number = 0;
   private counterTimerId: number = -1;
+  // celebrate 延迟恢复 timer
+  private celebrateTimerId: number = -1;
+  private isAlive: boolean = true;
 
   aboutToAppear(): void {
     this.displayChecked = this.checked;
   }
 
   aboutToDisappear(): void {
+    this.isAlive = false;
     // 组件销毁时清除 setInterval，防止僵尸 timer
     if (this.counterTimerId >= 0) {
       clearInterval(this.counterTimerId);
       this.counterTimerId = -1;
+    }
+    // 清理 celebrate 回弹 timer
+    if (this.celebrateTimerId >= 0) {
+      clearTimeout(this.celebrateTimerId);
+      this.celebrateTimerId = -1;
     }
   }
 
@@ -132,9 +141,11 @@ export struct LoadoutProgressBar {
         // 100% 庆祝弹动
         if (this.isComplete()) {
           this.celebrateScale = 1.04;
-          setTimeout(() => {
+          this.celebrateTimerId = setTimeout(() => {
+            if (!this.isAlive) { return; }
             this.celebrateScale = 1.0;
-          }, 200);
+            this.celebrateTimerId = -1;
+          }, 200) as number;
         }
       }
     }, 16);

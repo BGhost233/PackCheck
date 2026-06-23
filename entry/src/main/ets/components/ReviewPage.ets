@@ -51,10 +51,24 @@ export struct ReviewPage {
   // 卡片入场：当前卡从背后位置弹入（每次换牌触发一次）
   @State private cardEntered: boolean = true;
 
+  // timer 清理：所有延迟操作归入此数组，aboutToDisappear 遍历清
+  private timerIds: number[] = [];
+  private isAlive: boolean = true;
+
   aboutToAppear(): void {
-    setTimeout(() => {
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.pageEntered = true;
-    }, 20);
+    }, 20) as number;
+    this.timerIds.push(id);
+  }
+
+  aboutToDisappear(): void {
+    this.isAlive = false;
+    for (let i = 0; i < this.timerIds.length; i++) {
+      clearTimeout(this.timerIds[i]);
+    }
+    this.timerIds = [];
   }
 
   private currentChecklist(): TripChecklist | undefined {
@@ -143,19 +157,23 @@ export struct ReviewPage {
       this.dragX = dir * 700;
     });
     // 飞出动画推进到位后换下一张；新卡从背后位置入场
-    setTimeout(() => {
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.cardEntered = false;
       this.onMarkReviewItem(checked);
       this.onUpdateDragX(0);
       this.dragX = 0;
       this.isFlying = false;
       // 下一帧让新卡从背后弹入
-      setTimeout(() => {
+      let innerId = setTimeout(() => {
+        if (!this.isAlive) { return; }
         this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
           this.cardEntered = true;
         });
-      }, 16);
-    }, 260);
+      }, 16) as number;
+      this.timerIds.push(innerId);
+    }, 260) as number;
+    this.timerIds.push(id);
   }
 
   private checkedCount(checklist: TripChecklist): number {

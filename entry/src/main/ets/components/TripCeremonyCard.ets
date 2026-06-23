@@ -126,17 +126,28 @@ export struct TripCeremonyCard {
 
   // shimmer 定时器
   private shimmerTimer: number = -1;
+  // 所有匿名 setTimeout ID 数组，aboutToDisappear 遍历清理
+  private timerIds: number[] = [];
+  // 防止组件卸载后 timer 回调访问已销毁的 UI 上下文
+  private isAlive: boolean = true;
 
   aboutToAppear(): void {
     this.startEntrance();
   }
 
   aboutToDisappear(): void {
+    this.isAlive = false;
+    // 清理 shimmer 递归 timer
     if (this.shimmerTimer !== -1) {
       clearTimeout(this.shimmerTimer);
       this.shimmerTimer = -1;
     }
     this.stopTitleShimmer();
+    // 清理所有匿名 setTimeout（入场链/仪式序列/抖动/弹跳等）
+    for (let i = 0; i < this.timerIds.length; i++) {
+      clearTimeout(this.timerIds[i]);
+    }
+    this.timerIds = [];
   }
 
   // ============================================================
@@ -163,7 +174,9 @@ return this.trackWidth - this.SLIDER_WIDTH;
       this.overlayOpacity = 0.6;
     });
 
-    setTimeout(() => {
+    let id: number;
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({
         curve: SPRING_CEREMONY_FLIP()
       }, () => {
@@ -172,47 +185,65 @@ return this.trackWidth - this.SLIDER_WIDTH;
         this.cardRotateZ = 0;
         this.cardTranslateY = 0;
         this.cardOpacity = 1;
-        
-      });
-    }, 50);
 
-    setTimeout(() => {
+      });
+    }, 50) as number;
+    this.timerIds.push(id);
+
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({
         duration: DURATION_CEREMONY_SHINE, curve: CURVE_STANDARD
       }, () => {
         this.shineX = 350;
       });
-    }, 350);
+    }, 350) as number;
+    this.timerIds.push(id);
 
     // 内容错落入场：紧跟翻转，不等完全 settle
-    setTimeout(() => {
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.contentStep = 1;
       });
       // 标题入场完成后 300ms 启动标题 shimmer
-      setTimeout(() => {
+      let innerId = setTimeout(() => {
+        if (!this.isAlive) { return; }
         this.startTitleShimmer();
-      }, 300);
-    }, 300);
-    setTimeout(() => {
+      }, 300) as number;
+      this.timerIds.push(innerId);
+    }, 300) as number;
+    this.timerIds.push(id);
+
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.contentStep = 2;
       });
-    }, 360);
-    setTimeout(() => {
+    }, 360) as number;
+    this.timerIds.push(id);
+
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.contentStep = 3;
       });
-    }, 420);
-    setTimeout(() => {
+    }, 420) as number;
+    this.timerIds.push(id);
+
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.contentStep = 4;
       });
       // 入场完毕后启动 shimmer
-      setTimeout(() => {
+      let innerId = setTimeout(() => {
+        if (!this.isAlive) { return; }
         this.startShimmer();
-      }, 200);
-    }, 480);
+      }, 200) as number;
+      this.timerIds.push(innerId);
+    }, 480) as number;
+    this.timerIds.push(id);
   }
 
   // ============================================================
@@ -409,24 +440,32 @@ return this.trackWidth - this.SLIDER_WIDTH;
     this.ripple2Opacity = 0;
 
     // 波纹1 展开
-    setTimeout(() => {
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.ripple1Scale = 1.8;
       this.ripple1Opacity = 0;
-    }, 10);
+    }, 10) as number;
+    this.timerIds.push(id);
 
     // 波纹2 延迟 60ms 展开
-    setTimeout(() => {
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.ripple2Opacity = 0.35;
-      setTimeout(() => {
+      let innerId = setTimeout(() => {
+        if (!this.isAlive) { return; }
         this.ripple2Scale = 1.5;
         this.ripple2Opacity = 0;
-      }, 10);
-    }, 60);
+      }, 10) as number;
+      this.timerIds.push(innerId);
+    }, 60) as number;
+    this.timerIds.push(id);
 
     // 150ms 后进入 Phase 2
-    setTimeout(() => {
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.startCeremonyPhase2();
-    }, 150);
+    }, 150) as number;
+    this.timerIds.push(id);
   }
 
   // ============================================================
@@ -458,18 +497,22 @@ return this.trackWidth - this.SLIDER_WIDTH;
     });
 
     // 滑块从 1.15 恢复到 1.0
-    setTimeout(() => {
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({
         curve: SPRING_COUNTER()
       }, () => {
         this.sliderBounceScale = 1.0;
       });
-    }, 100);
+    }, 100) as number;
+    this.timerIds.push(id);
 
     // 400ms 后进入 Phase 3
-    setTimeout(() => {
+    id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.startCeremonyPhase3();
-    }, 400);
+    }, 400) as number;
+    this.timerIds.push(id)
   }
 
   // ============================================================
@@ -493,9 +536,11 @@ return this.trackWidth - this.SLIDER_WIDTH;
     this.onFinish();
 
     // 100ms 后飞走
-    setTimeout(() => {
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.flyAway();
-    }, 100);
+    }, 100) as number;
+    this.timerIds.push(id);
   }
 
   // ============================================================
@@ -541,21 +586,25 @@ return this.trackWidth - this.SLIDER_WIDTH;
     const sequence: number[] = [-8, 8, -5, 5, 0];
     let delay = 0;
     sequence.forEach((x: number) => {
-      setTimeout(() => {
+      let id = setTimeout(() => {
+        if (!this.isAlive) { return; }
         this.getUIContext().animateTo({ curve: SPRING_PRESS() }, () => {
           this.titleShakeX = x;
         });
-      }, delay);
+      }, delay) as number;
+      this.timerIds.push(id);
       delay += 80;
     });
 
     // 边框闪红
     this.titleBorderHighlight = true;
-    setTimeout(() => {
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
       this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
         this.titleBorderHighlight = false;
       });
-    }, 600);
+    }, 600) as number;
+    this.timerIds.push(id);
 
     // 触觉反馈
     this.vibratePreset('haptic.tick');

@@ -105,11 +105,26 @@ export struct FocusedZoneView {
   //   方案：onTapContent 用 setTimeout(0) 延迟执行，子 onClick 同帧内设置此标记阻止关闭。
   //   统一用 armSuppressClose() 设置 + 100ms 兜底重置，防止 onTapContent 未触发时标记泄漏。
   private suppressClose: boolean = false;
+  // timer 清理：suppressClose 兜底重置 + onTapContent 延迟
+  private timerIds: number[] = [];
+  private isAlive: boolean = true;
 
   // 统一设置 suppressClose 并注册兜底重置（100ms 足够覆盖同帧事件分发，又不会泄漏）
   private armSuppressClose(): void {
     this.suppressClose = true;
-    setTimeout(() => { this.suppressClose = false; }, 100);
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
+      this.suppressClose = false;
+    }, 100) as number;
+    this.timerIds.push(id);
+  }
+
+  aboutToDisappear(): void {
+    this.isAlive = false;
+    for (let i = 0; i < this.timerIds.length; i++) {
+      clearTimeout(this.timerIds[i]);
+    }
+    this.timerIds = [];
   }
 
   // gearVersion 递增驱动 ForEach key 变化，确保 gear 改名/编辑后列表刷新显示名
