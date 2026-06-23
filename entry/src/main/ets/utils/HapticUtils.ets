@@ -38,18 +38,8 @@ export function hapticPreset(effectId: string, count: number = 1): void {
 }
 
 // ============================================================
-// 语义快捷方法 —— 时长档位
+// 语义快捷方法 —— 时长档位（仅保留实际消费项）
 // ============================================================
-
-/** 轻触觉（短，~15ms）：边缘进入、轻量确认。 */
-export function hapticLight(): void {
-  hapticTime(15);
-}
-
-/** 中触觉（~30ms）：常规点击确认、拖拽换位。 */
-export function hapticMedium(): void {
-  hapticTime(30);
-}
 
 /** 强触觉（~40ms）：成功释放、重要操作落定。 */
 export function hapticStrong(): void {
@@ -59,11 +49,6 @@ export function hapticStrong(): void {
 // ============================================================
 // 语义快捷方法 —— 系统预设
 // ============================================================
-
-/** tick：勾选 / 细粒度刻度反馈。 */
-export function hapticTick(): void {
-  hapticPreset('haptic.effect.tick', 1);
-}
 
 /** soft：柔和反馈，长按拾起 / 选中。 */
 export function hapticSoft(): void {
