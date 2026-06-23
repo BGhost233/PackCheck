@@ -24,6 +24,13 @@ import {
   STAGGER_OFFSET_Y
 } from '../constants/AnimationTokens';
 
+/** 核查卡片宽度百分比 — 保持卡片不贴边但有呼吸感 */
+const REVIEW_CARD_WIDTH: string = '78%';
+/** 核查卡片高度 (vp) — 内容区舒适展示 item 名+操作按钮 */
+const REVIEW_CARD_HEIGHT: number = 240;
+/** 核查完成页高度 (vp) — 比卡片略高容纳两行文字+返回按钮 */
+const REVIEW_SUMMARY_HEIGHT: number = 260;
+
 @Component
 export struct ReviewPage {
   @Prop checklists: TripChecklist[] = [];
@@ -264,8 +271,8 @@ export struct ReviewPage {
       Stack() {
         // 背后预览卡（占位纵深，无内容，随拖动趋近顶层）
         Column()
-          .width('78%')
-          .height(240)
+          .width(REVIEW_CARD_WIDTH)
+          .height(REVIEW_CARD_HEIGHT)
           .backgroundColor(CARD_BG)
           .borderRadius(20)
           .shadow({ radius: 12, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 4 })
@@ -422,8 +429,8 @@ export struct ReviewPage {
           this.onExitReviewMode();
         })
     }
-    .width('78%')
-    .height(260)
+    .width(REVIEW_CARD_WIDTH)
+    .height(REVIEW_SUMMARY_HEIGHT)
     .justifyContent(FlexAlign.Center)
     .alignItems(HorizontalAlign.Center)
     .backgroundColor(CARD_BG)
