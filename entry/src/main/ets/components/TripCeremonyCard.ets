@@ -148,6 +148,12 @@ export struct TripCeremonyCard {
       clearTimeout(this.timerIds[i]);
     }
     this.timerIds = [];
+    // 防御性重置：确保所有弹性 scale 回到中性值 1.0，防止组件销毁中途残留非中性值
+    // （避坑 #17 静止态中性值：rest state 不得停留在弹性中间值）
+    this.sliderBounceScale = 1.0;
+    this.ceremonyCardScale = 1.0;
+    this.targetGlowScale = 1.0;
+    this.launchScale = 1.0;
   }
 
   // ============================================================
