@@ -5,6 +5,7 @@
 
 import {
   CARD_BG,
+  GLASS_BG_LIGHT,
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -158,7 +159,7 @@ export struct GearItemContextMenu {
       }, (menuItem: ContextMenuItem, index: number) => index.toString())
     }
     .width(200)
-    .backgroundColor('#F2FFFFFF') // 92% 白底，配合 blur 透出底层色彩
+    .backgroundColor(GLASS_BG_LIGHT)
     .backgroundBlurStyle(BlurStyle.Thin)
     .borderRadius(14)
     .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetY: 6 })
