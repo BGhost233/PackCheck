@@ -132,6 +132,7 @@ import {
   resolveItemName
 } from '../services/ChecklistService';
 import { ProfilePage } from '../components/ProfilePage';
+import { buildGearTripCountMap } from '../services/FootprintService';
 
 @Entry
 @Component
@@ -231,6 +232,7 @@ struct Index {
   @State private categoryDialogOldName: string = '';
   @State private categoryDialogInput: string = '';
 
+  private pendingTimers: number[] = [];
   private shakeListening: boolean = false;
   private lastShakeAt: number = 0;
   private shakeCallback = (data: sensor.AccelerometerResponse): void => {
@@ -274,6 +276,8 @@ struct Index {
 
   aboutToDisappear(): void {
     this.stopShakeListening();
+    this.pendingTimers.forEach((id: number) => clearTimeout(id));
+    this.pendingTimers = [];
     this.store.forceFlush();
   }
 
@@ -504,7 +508,7 @@ struct Index {
   }
 
   private mostFrequentGearText(): string {
-    return mostFrequentGearText(this.gears, new Map());
+    return mostFrequentGearText(this.gears, buildGearTripCountMap(this.checklists));
   }
 
   private categoryTabs(): string[] {
@@ -1189,11 +1193,11 @@ struct Index {
     const pick = candidates[Math.floor(Math.random() * candidates.length)];
     this.highlightedItemId = pick.id;
     this.showToastMessage('检查一下：' + pick.name);
-    setTimeout(() => {
+    this.pendingTimers.push(setTimeout(() => {
       if (this.highlightedItemId === pick.id) {
         this.highlightedItemId = '';
       }
-    }, 1200);
+    }, 1200));
   }
 
   private async deleteChecklist(checklistId: string): Promise<void> {
@@ -1394,11 +1398,11 @@ struct Index {
     this.tempItemName = '';
     this.showTempAddNotice = true;
     this.errorText = '';
-    setTimeout(() => {
+    this.pendingTimers.push(setTimeout(() => {
       if (this.sheetMode === SHEET_TEMP_ITEM) {
         this.showTempAddNotice = false;
       }
-    }, 500);
+    }, 500));
   }
 
   private currentChecklistItemById(itemId: string): ChecklistItem | undefined {
@@ -1944,11 +1948,11 @@ struct Index {
     this.highlightedItemId = itemId;
     this.applyChecklistState(nextChecklists, true);
     await this.store.saveChecklists(nextChecklists);
-    setTimeout(() => {
+    this.pendingTimers.push(setTimeout(() => {
       if (this.highlightedItemId === itemId) {
         this.highlightedItemId = '';
       }
-    }, 600);
+    }, 600));
     const updatedCurrent = nextChecklists.find((c: TripChecklist) => c.id === checklist.id);
     if (updatedCurrent !== undefined && beforeTotal > 0 &&
       beforeCheckedCount === beforeTotal - 1 && checkedCount(updatedCurrent) === beforeTotal) {
@@ -1960,9 +1964,9 @@ struct Index {
     // 克制高级：仅一条轻量胶囊提示，不阻断、不遮挡、快速自消失；去掉冗余系统 toast
     this.showCompletionToast = true;
     hapticStrong();
-    setTimeout(() => {
+    this.pendingTimers.push(setTimeout(() => {
       this.showCompletionToast = false;
-    }, 1600);
+    }, 1600));
   }
 
   private showToastMessage(message: string, duration: number = 1500): void {
@@ -2148,6 +2152,10 @@ struct Index {
       .hideTitleBar(true)
       .width('100%')
       .height('100%')
+      .onBackPressed(() => {
+        this.exitReviewMode();
+        return true;
+      })
     }
   }
 
@@ -2185,14 +2193,14 @@ struct Index {
       this.contentScale = 0.97;
     });
     // 弹回（spring 回弹，灵动感）
-    setTimeout(() => {
+    this.pendingTimers.push(setTimeout(() => {
       this.getUIContext().animateTo({
         curve: SPRING_TAB_BREATHE()
       }, () => {
         this.contentScale = 1.0;
       });
       this.isClickSwitching = false;
-    }, 80);
+    }, 80));
   }
 
   // 计算 tab 项的视觉权重：1.0 = 完全选中，0.0 = 完全未选中

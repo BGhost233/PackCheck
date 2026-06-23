@@ -97,6 +97,7 @@ export struct FocusedZoneView {
   @State private reorderingItemId: string = ''; // 当前被拖拽排序的 item id（空 = 非排序态）
   @State private reorderInsertIndex: number = -1; // 拖拽项应插入的目标位置
   @State private reorderDragY: number = 0; // 拖拽项的 Y 偏移量
+  private reorderDragFromIndex: number = -1; // 缓存拖拽项原始位置，避免 reorderTranslateY O(N²) findIndex
   // Bug2 同类修复：长按触发后抑制紧随的 onClick（弹详情 Sheet / toggleSelection）
   @State private longPressTriggered: boolean = false;
   // Bug3a/4/5 修复：子元素交互（check/add/longpress/tapRow/checkbox）时抑制 ZoneShell onTouch 触发的 onClose。
@@ -497,7 +498,9 @@ export struct FocusedZoneView {
   private startReorder(item: ChecklistItem, _index: number): void {
     this.reorderingItemId = item.id;
     this.reorderDragY = 0;
-    this.reorderInsertIndex = this.items.findIndex((i: ChecklistItem) => i.id === item.id);
+    const fromIdx = this.items.findIndex((i: ChecklistItem) => i.id === item.id);
+    this.reorderInsertIndex = fromIdx;
+    this.reorderDragFromIndex = fromIdx;
     this.edgeDragFired = false;
   }
 
@@ -584,7 +587,7 @@ export struct FocusedZoneView {
       return this.reorderDragY;
     }
     // 其他项：根据 insertIndex 让位
-    const dragFromIndex = this.items.findIndex((i: ChecklistItem) => i.id === this.reorderingItemId);
+    const dragFromIndex = this.reorderDragFromIndex;
     const itemH = FocusedZoneView.ITEM_HEIGHT;
     if (dragFromIndex < this.reorderInsertIndex) {
       // 拖拽项向下移动：dragFromIndex+1 ~ reorderInsertIndex 的项向上让位

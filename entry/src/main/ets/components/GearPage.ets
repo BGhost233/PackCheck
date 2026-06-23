@@ -77,6 +77,12 @@ interface TripCardArea {
   h: number;
 }
 
+enum OverlayPhase {
+  IDLE = 'idle',
+  MENU = 'menu',
+  DRAGGING = 'dragging'
+}
+
 // 折叠态单品行高（44 content + 4*2 padding），拖拽让位平移量与命中检测共用
 const GEAR_ROW_HEIGHT: number = 52;
 
@@ -137,7 +143,7 @@ export struct GearPage {
   //   范式对齐 UnifiedChecklistView：overlayPhase 状态机（idle→menu→dragging）+ 双坐标系
   //   （长按锚点全局坐标 longPress* + Pan 累积 offset 推出实时全局坐标，转局部驱动飞行胶囊）。
   //   menu 态：在锚点处弹自绘菜单（编辑/多选/删除）；手指开始拖动则收菜单进 dragging 态。
-  @State private gearOverlayPhase: string = 'idle'; // 'idle' | 'menu' | 'dragging'
+  @State private gearOverlayPhase: OverlayPhase = OverlayPhase.IDLE;
   @State private gearOverlayItem: GearItem | null = null;
   @State private gearOverlayVisible: boolean = false; // 入场/退场动画开关（opacity/scale）
   // 拖拽态：飞行胶囊的局部坐标（相对 overlay 容器原点）+ Pan 累积偏移
@@ -330,6 +336,11 @@ export struct GearPage {
   aboutToDisappear(): void {
     this.isAlive = false;
     this.stopTrayAutoScroll();
+    this.stopGearAutoScroll();
+    if (this.gearHoverExpandTimer >= 0) {
+      clearTimeout(this.gearHoverExpandTimer);
+      this.gearHoverExpandTimer = -1;
+    }
     // 退出拖拽态：清理可能残留的拖拽动画状态
     if (this.dragMode) {
       this.dragMode = false;
@@ -686,7 +697,7 @@ export struct GearPage {
   //     - 向上拖（dropIndex < srcIdx）：[dropIndex, srcIdx) 区间内的行下移一行高，
   //       缝出现在 dropIndex 槽。
   private gearRowShiftY(item: GearItem): number {
-    if (this.gearOverlayPhase !== 'dragging') {
+    if (this.gearOverlayPhase !== OverlayPhase.DRAGGING) {
       return 0;
     }
     if (this.gearDropCategory === '' || this.gearDropIndex < 0) {
@@ -1709,7 +1720,7 @@ export struct GearPage {
       .width('100%')
       .clip(true)
       // 拖拽态：原行隐身（透明洞占位），由 overlay 飞行胶囊接管视觉
-      .opacity(this.gearOverlayPhase === 'dragging' && this.gearOverlayItem?.id === item.id ? 0 : 1)
+      .opacity(this.gearOverlayPhase === OverlayPhase.DRAGGING && this.gearOverlayItem?.id === item.id ? 0 : 1)
       // 问题9-A 让位：被拖项留下的透明洞「视觉迁移」到插入点——
       //   洞与插入点之间的兄弟行 SPRING 平移一行高，把洞推到落点位置。
       .translate({ y: this.gearRowShiftY(item) })
@@ -1718,7 +1729,7 @@ export struct GearPage {
       //   拖拽态冻结：让位平移会改变 onAreaChange 上报的 globalPosition，若此时更新
       //   会让命中目标随让位漂移形成反馈回路，故仅在静止态采集 rect。
       .onAreaChange((_oldVal: Area, newVal: Area) => {
-        if (this.gearOverlayPhase === 'dragging') {
+        if (this.gearOverlayPhase === OverlayPhase.DRAGGING) {
           return;
         }
         if (newVal.globalPosition !== undefined) {
@@ -2153,10 +2164,10 @@ export struct GearPage {
         .width('100%')
         .height('100%')
         .backgroundColor(OVERLAY_DIM)
-        .opacity(this.gearOverlayPhase === 'menu' && this.gearOverlayVisible ? 1 : 0)
+        .opacity(this.gearOverlayPhase === OverlayPhase.MENU && this.gearOverlayVisible ? 1 : 0)
         .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
         .onClick(() => {
-          if (this.gearOverlayPhase !== 'dragging') {
+          if (this.gearOverlayPhase !== OverlayPhase.DRAGGING) {
             this.dismissGearOverlay();
           }
         })
@@ -2175,7 +2186,7 @@ export struct GearPage {
     .height('100%')
     // 仅 menu 可见阶段拦截触摸（遮罩点击关闭）；idle/dragging 一律穿透
     .hitTestBehavior(
-      this.gearOverlayPhase === 'menu' && this.gearOverlayVisible
+      this.gearOverlayPhase === OverlayPhase.MENU && this.gearOverlayVisible
         ? HitTestMode.Default
         : HitTestMode.None)
   }
@@ -2223,12 +2234,12 @@ export struct GearPage {
     .margin({ top: this.gearOverlayMenuTop() })
     // 常驻渲染，仅 menu 阶段可见；进入 dragging 时随胶囊交叉淡出
     .scale({
-      x: this.gearOverlayPhase === 'menu' && this.gearOverlayVisible ? 1 : 0.92,
-      y: this.gearOverlayPhase === 'menu' && this.gearOverlayVisible ? 1 : 0.92
+      x: this.gearOverlayPhase === OverlayPhase.MENU && this.gearOverlayVisible ? 1 : 0.92,
+      y: this.gearOverlayPhase === OverlayPhase.MENU && this.gearOverlayVisible ? 1 : 0.92
     })
-    .opacity(this.gearOverlayPhase === 'menu' && this.gearOverlayVisible ? 1 : 0)
+    .opacity(this.gearOverlayPhase === OverlayPhase.MENU && this.gearOverlayVisible ? 1 : 0)
     .animation({ curve: SPRING_CEREMONY_FLIP() })
-    .hitTestBehavior(this.gearOverlayPhase === 'menu' ? HitTestMode.Default : HitTestMode.None)
+    .hitTestBehavior(this.gearOverlayPhase === OverlayPhase.MENU ? HitTestMode.Default : HitTestMode.None)
   }
 
   // 菜单定位：以长按锚点为基准，底部空间不足时翻转到锚点上方弹出。
@@ -2313,14 +2324,14 @@ export struct GearPage {
     .animation({ duration: DURATION_NONE })
     // 进入 dragging 时浮起放大 + 微倾斜，弹性曲线属性级承接
     .scale({
-      x: this.gearOverlayPhase === 'dragging' ? 1.04 : 0.9,
-      y: this.gearOverlayPhase === 'dragging' ? 1.04 : 0.9
+      x: this.gearOverlayPhase === OverlayPhase.DRAGGING ? 1.04 : 0.9,
+      y: this.gearOverlayPhase === OverlayPhase.DRAGGING ? 1.04 : 0.9
     })
     .animation({ curve: SPRING_PRESS() })
-    .rotate({ angle: this.gearOverlayPhase === 'dragging' ? -2 : 0 })
+    .rotate({ angle: this.gearOverlayPhase === OverlayPhase.DRAGGING ? -2 : 0 })
     .animation({ curve: SPRING_PRESS() })
     // 常驻渲染，仅 dragging 阶段可见
-    .opacity(this.gearOverlayPhase === 'dragging' ? 1 : 0)
+    .opacity(this.gearOverlayPhase === OverlayPhase.DRAGGING ? 1 : 0)
     .animation({ curve: EASE_FADE, duration: DURATION_OVERLAY_FADE })
     .hitTestBehavior(HitTestMode.None)
   }
@@ -2445,7 +2456,7 @@ export struct GearPage {
       });
     }
     this.gearOverlayItem = item;
-    this.gearOverlayPhase = 'menu';
+    this.gearOverlayPhase = OverlayPhase.MENU;
     this.gearLongPressGlobalX = globalX;
     this.gearLongPressGlobalY = globalY;
     this.gearDragOffsetX = 0;
@@ -2472,9 +2483,9 @@ export struct GearPage {
     if (this.gearOverlayItem === null) {
       return;
     }
-    if (this.gearOverlayPhase === 'menu') {
+    if (this.gearOverlayPhase === OverlayPhase.MENU) {
       // 进入拖拽态：收菜单
-      this.gearOverlayPhase = 'dragging';
+      this.gearOverlayPhase = OverlayPhase.DRAGGING;
       hapticTime(20);
       // 性能优化：预构建当前分组的 id→index 映射，gearRowShiftY O(1) 查表
       this.rebuildDragIndexMap();
@@ -2562,7 +2573,7 @@ export struct GearPage {
       this.gearHoverExpandTimer = setTimeout(() => {
         this.gearHoverExpandTimer = -1;
         // 仍悬停在同一分组、且仍是折叠态才展开（避免计时期间已离开）
-        if (this.gearOverlayPhase === 'dragging'
+        if (this.gearOverlayPhase === OverlayPhase.DRAGGING
           && this.gearHoverGroup === hitCategory
           && this.isGearGroupCollapsed(hitCategory)) {
           this.expandTempGroup(hitCategory);
@@ -2614,9 +2625,9 @@ export struct GearPage {
     let committed = false;
     const dropCategory = this.gearDropCategory;
     const dropIndex = this.gearDropIndex;
-    if (this.gearOverlayPhase === 'dragging' && dropCategory !== '' && dropIndex >= 0) {
+    if (this.gearOverlayPhase === OverlayPhase.DRAGGING && dropCategory !== '' && dropIndex >= 0) {
       // 先清让位状态：gearRowShiftY 对所有行返回 0，列表渲染时行在自然位置
-      this.gearOverlayPhase = 'idle';
+      this.gearOverlayPhase = OverlayPhase.IDLE;
       this.gearDropCategory = '';
       this.gearDropIndex = -1;
       const next = this.reorderGearsByDrop(dragged, dropCategory, dropIndex);
@@ -2727,7 +2738,7 @@ export struct GearPage {
       curve: SPRING_GENERAL(),
       onFinish: () => {
         this.gearOverlayItem = null;
-        this.gearOverlayPhase = 'idle';
+        this.gearOverlayPhase = OverlayPhase.IDLE;
         this.gearDragOffsetX = 0;
         this.gearDragOffsetY = 0;
         this.gearDropCategory = '';

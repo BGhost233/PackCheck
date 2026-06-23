@@ -49,7 +49,7 @@ import { HomeQuickEntry } from './home/HomeQuickEntry';
 
 @Component
 export struct HomePage {
-  @Prop checklists: TripChecklist[] = [];
+  @Prop @Watch('onChecklistsChange') checklists: TripChecklist[] = [];
   @Prop gears: GearItem[] = [];
   @Prop @Watch('onChecklistRenderNonceChange') checklistRenderNonce: number = 0;
   @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
@@ -79,6 +79,7 @@ export struct HomePage {
   // hdsEffect 按压视效：按下时 Hero 卡「陷入材质 + 点光晕染」，松手回弹（仅真机生效，模拟器降级为无）
   @State private heroPressShadow: hdsEffect.PressShadowType = hdsEffect.PressShadowType.NONE;
   private wasLatestChecklistDone: boolean = false;
+  private cachedLatest: TripChecklist | undefined = undefined;
   private scroller: Scroller = new Scroller();
   private historyListScroller: ListScroller = new ListScroller();
   private isAlive: boolean = true;
@@ -98,6 +99,10 @@ export struct HomePage {
   // timer handles 用于 aboutToDisappear 清理
   private staggerTimerId: number = -1;
   private celebrateTimerId: number = -1;
+
+  private onChecklistsChange(): void {
+    this.cachedLatest = this.computeLatestChecklist();
+  }
 
   private onChecklistRenderNonceChange(): void {
     const checklist = this.latestChecklist();
@@ -219,6 +224,14 @@ export struct HomePage {
   }
 
   private latestChecklist(): TripChecklist | undefined {
+    // 直接返回 @Watch('onChecklistsChange') 预缓存的结果，避免 build 内多次 O(N) 扫描
+    if (this.cachedLatest === undefined) {
+      this.cachedLatest = this.computeLatestChecklist();
+    }
+    return this.cachedLatest;
+  }
+
+  private computeLatestChecklist(): TripChecklist | undefined {
     if (this.checklists.length === 0) {
       return undefined;
     }
@@ -380,10 +393,10 @@ export struct HomePage {
       return PRIMARY_COLOR;
     }
     if (dayDiff >= 1 && dayDiff <= 3) {
-      return PRIMARY_COLOR;
+      return AMBER_ACCENT;
     }
     if (dayDiff > 3) {
-      return PRIMARY_COLOR;
+      return TEXT_SECONDARY;
     }
     // dayDiff < 0，历史行程
     return TEXT_TERTIARY;

@@ -154,6 +154,7 @@ export struct UnifiedChecklistView {
   // 隐含前提（review C2）：Zone 分组只依赖 trip.items 自身字段，不依赖 gears。
   // 因此「gears 数据变化但 trip 引用不变」（如装备库重命名 gear）不会、也无需刷新本缓存。
   private zoneMapCache: Map<string, ChecklistItem[]> = new Map();
+  private cachedProgress: LoadoutProgress = { checked: 0, total: 0 };
 
   // 性能优化：缓存屏幕尺寸（display.getDefaultDisplaySync() 是 IPC 跨进程调用，
   // 在拖拽 Pan 每帧调用会累积延迟吃掉帧预算）。aboutToAppear 时一次性取值。
@@ -798,11 +799,12 @@ this.computeCellHeight();
   }
 
   private progress(): LoadoutProgress {
-    return calcProgress(this.trip.items);
+    return this.cachedProgress;
   }
 
   private refreshCache(): void {
     this.zoneMapCache = groupByZoneAll(this.trip.items);
+    this.cachedProgress = calcProgress(this.trip.items);
   }
 
   // 首屏 2×2.5 密度反算单格高度：(可视高 - 半行gutter冗余) / 2.5 行，扣去行间距
