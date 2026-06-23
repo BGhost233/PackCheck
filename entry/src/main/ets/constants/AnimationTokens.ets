@@ -77,22 +77,14 @@ export const DURATION_OVERLAY_DISMISS: number = 150;
 export const DURATION_NONE: number = 0;
 export const DURATION_TICK: number = 32;
 export const DURATION_FAST: number = 100;
-export const DURATION_PRESS: number = 150;
-export const DURATION_NORMAL: number = 200;
-export const DURATION_HEADER: number = 250;
 export const DURATION_RECOVER: number = 280;
-export const DURATION_SLOW: number = 300;
 export const DURATION_COLOR_FADE: number = 350;
 export const DURATION_COUNTER: number = 400;
 export const DURATION_GAUGE_COUNTER: number = 800;
-export const DURATION_SCROLL_SMOOTH: number = 120;
 
 // 仪式动画专用时长
 export const DURATION_CEREMONY_SHAKE: number = 80;
-export const DURATION_CEREMONY_STAGGER: number = 150;
-export const DURATION_CEREMONY_OVERLAY: number = 300;
 export const DURATION_CEREMONY_SHINE: number = 400;
-export const DURATION_CHART_DRAW: number = 1200;
 export const DURATION_CEREMONY_SHIMMER: number = 1200;
 // 标题光泽呼吸单程时长（明→暗 或 暗→明 半程），整周期约 2 倍
 export const DURATION_TITLE_BREATH: number = 1400;

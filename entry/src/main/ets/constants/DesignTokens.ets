@@ -139,8 +139,3 @@ export {
   TYPE_CAPTION,
   LINE_HEIGHT_RATIO
 } from './Typography';
-
-export const VIEW_HOME: string = 'home';
-export const VIEW_GEAR: string = 'gear';
-export const VIEW_CHECKLIST: string = 'checklist';
-export const VIEW_REVIEW: string = 'review';
