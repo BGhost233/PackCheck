@@ -1,11 +1,25 @@
 # PackCheck 全面性能优化计划
 
 > ✅ **已完成** — 2026-06-14 全部 8 步执行完毕，构建验证通过（BUILD SUCCESSFUL in 10s）。
+> 2026-06-23 二次审计验证落地状态（见下方「核实结论」）。
 >
 > 基于 2026-06-14 全项目代码审计产出，按 P0→P1→P2→P3 优先级实施。
 > 原则：最小改动、向后兼容、不改变任何视觉行为，只消灭冗余计算和不必要的节点重建。
 >
 > **改动文件**：LoadoutService.ets / UnifiedChecklistView.ets / GearPage.ets / TripDetailPage.ets / ZoneGridCell.ets / FocusedZoneView.ets
+>
+> ### 2026-06-23 落地状态核实
+>
+> | 优化 | 状态 | 核实 |
+> |------|------|------|
+> | 优化 1: display 缓存 | ✅ 已落地 | `cachedScreenWidthVp`/`cachedScreenHeightVp` 在 aboutToAppear 缓存，所有热路径已替换 |
+> | 优化 2: GearPage 缓存体系 | ✅ 已落地 | `cachedFilteredGears`/`cachedGearGroups`/`cachedGearsByGroup` + `rebuildGearCache()` |
+> | 优化 3: gearRowShiftY 索引预算 | ✅ 已落地 | `dragItemIndexMap: Map<string,number>` + `gearGroupRects: Map<string,TripCardArea>` O(1) 查表 |
+> | 优化 4: TripDetailPage metaSegments 缓存 | ✅ 已落地 | `cachedMetaSegments` + `refreshMetaCache()` |
+> | 优化 5: TripDetailPage currentChecklist 缓存 | ✅ 已落地 | `cachedTrip` 变量 |
+> | 优化 6: groupByZoneAll 单次分桶 | ✅ 已落地 | O(N) 单次遍历替代 7×filter O(7N) |
+> | 优化 7: gearIndex 上提 | ✅ 已落地 | UnifiedChecklistView `gearIndexMap` @Prop 下发，8 子组件不再各自构建 |
+> | 优化 8: Grid ForEach key 精确化 | ✅ 已落地 | `zoneKey()` 拼 checked 状态串，仅真正变化的 zone 才重建 GridItem |
 
 ---
 
