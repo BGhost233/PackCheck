@@ -17,9 +17,8 @@ import { hapticTime } from '../utils/HapticUtils';
 import { hdsEffect } from '@kit.UIDesignKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
-import { computeGearTripCount } from '../services/FootprintService';
 import { buildGearTripCountMap } from '../services/FootprintService';
-import { computeFootprint, Footprint, LongestCompanion } from '../services/FootprintService';
+import { computeFootprint, Footprint } from '../services/FootprintService';
 import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice, updateGear } from '../services/GearService';
 import {
   ARROW_COLOR,
@@ -654,17 +653,6 @@ export struct GearPage {
     return this.cachedFilteredGears;
   }
 
-  private allGearGroups(): string[] {
-    const groups: string[] = [];
-    for (let i = 0; i < this.gears.length; i++) {
-      const cat = this.gears[i].category;
-      if (cat.length > 0 && groups.indexOf(cat) < 0) {
-        groups.push(cat);
-      }
-    }
-    return groups;
-  }
-
   /** 返回缓存的分组列表（rebuildGearCache 预算）。O(1) 读取。 */
   private filteredGearGroups(): string[] {
     return this.cachedGearGroups;
@@ -768,11 +756,6 @@ export struct GearPage {
     return this.collapsedGearGroups.indexOf(group) >= 0;
   }
 
-  private isFirstGearGroup(group: string): boolean {
-    const groups = this.filteredGearGroups();
-    return groups.length > 0 && groups[0] === group;
-  }
-
   private toggleGearGroupCollapse(group: string): void {
     this.getUIContext().animateTo({
       curve: SPRING_GENERAL()
@@ -788,17 +771,6 @@ export struct GearPage {
       }
     });
     this.persistCollapsedGroups();
-  }
-
-  private gearMetaText(item: GearItem): string {
-    let text = item.category;
-    if (item.weight !== undefined) {
-      text = text + ' · ' + item.weight.toString() + 'g';
-    }
-    if (item.price !== undefined) {
-      text = text + ' · ¥' + item.price.toString();
-    }
-    return text;
   }
 
   private formatDateText(timestamp: number): string {
@@ -838,14 +810,6 @@ export struct GearPage {
 
   private gearTitleFontSize(): number {
     return 28 - this.gearScrollProgress() * 10;
-  }
-
-  private gearRingOpacity(): number {
-    return Math.max(0, 1 - this.gearScrollProgress() * 2.5);
-  }
-
-  private gearRingScale(): number {
-    return 1 - this.gearScrollProgress() * 0.4;
   }
 
   private gearPillOpacity(): number {
