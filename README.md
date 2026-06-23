@@ -41,7 +41,7 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2386 行）
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2280 行）
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
@@ -75,12 +75,12 @@ entry/src/main/ets/
 │   │   ├── LoadoutProgressBar.ets — 全局进度条（counter 动画 + 100% 庆祝）
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
-│   ├── PackStore.ets        — Preferences 持久化封装（schema 版本化 + 错误守卫）
-│   ├── GearService.ets      — 装备业务逻辑（export class GearCalc 聚合导出）
-│   ├── ChecklistService.ets — 清单业务逻辑（export class CheckCalc 聚合导出）
+│   ├── PackStore.ets        — Preferences 持久化封装（schema 版本化 + 安全解析）
+│   ├── GearService.ets      — 装备业务逻辑（纯函数导出）
+│   ├── ChecklistService.ets — 清单业务逻辑（纯函数导出）
 │   ├── CategoryService.ets  — 分类管理（增删改查 + 重命名）
-│   ├── LoadoutService.ets   — 配装业务逻辑（Zone 分组/Layer 排序/进度计算）
-│   └── FootprintService.ets — 足迹统计（海拔/距离/活动天数）
+│   ├── LoadoutService.ets   — 配装业务逻辑（Zone 分组/进度计算/色彩映射/命中检测）
+│   └── FootprintService.ets — 足迹统计（聚合/出行频次/最长陪伴伙伴）
 ├── constants/               — 设计 Token
 │   ├── Colors.ets           — 色彩语义 token
 │   ├── Typography.ets       — 字阶 token
@@ -92,8 +92,9 @@ entry/src/main/ets/
 │   └── DesignTokens.ets     — Barrel re-export
 └── utils/
     ├── ColorUtils.ets       — 分组颜色辅助函数
-    ├── AnimationUtils.ets   — 通用动画封装（按压/错落/面板/转场）
-    └── HeadCollapseController.ets — 顶部折叠滚动数学内核（跟手 1:1 + 松手就近吸附）
+    ├── AnimationUtils.ets   — 通用动画封装（按压处理器/数字滚动counter动画）
+    ├── HapticUtils.ets      — 触觉反馈统一出口
+    ├── HeadCollapseController.ets — 顶部折叠滚动数学内核（跟手 1:1 + 松手就近吸附）
 ```
 
 ## 目录结构
@@ -104,14 +105,11 @@ PackCheck/
 ├── entry/                   — 主模块源码
 ├── docs/
 │   ├── DEVELOPMENT_STANDARDS.md   — 开发规范（必读）
-│   ├── vision/                    — 产品愿景
-│   │   └── 2026-06-04-product-vision-and-restructure.md
-│   ├── v2-foundation/             — v2 地基层 spec & plan（已完成）
-│   │   ├── specs/
-│   │   └── plans/
+│   ├── PERF_OPTIMIZATION_PLAN.md  — 性能优化方案（已全部实施）
 │   └── ROADMAP.md                 — 中短期路线图
+├── memory/                  — 项目记忆 & ArkUI 避坑清单
 ├── hvigor/                  — 构建配置
-├── CLAUDE.md                — AI 协作规范 & 动效避坑清单
+├── CLAUDE.md                — AI 协作规范
 ├── CHANGELOG.md             — 版本变更记录
 └── README.md                — 本文件
 ```
