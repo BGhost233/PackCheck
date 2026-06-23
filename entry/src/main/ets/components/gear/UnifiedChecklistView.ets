@@ -874,8 +874,9 @@ this.computeCellHeight();
         //   首次入场动画由 appeared(false→1) 的 animateTo 驱动 opacity/translate，不受 transition 影响。
         .transition(TransitionEffect.IDENTITY)
         .onAreaChange((_o: Area, n: Area) => {
-          const pos = n.globalPosition as Record<string, number>;
-          this.zoneRects.set(zone, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
+          if (n.globalPosition !== undefined) {
+            this.zoneRects.set(zone, [n.globalPosition.x as number, n.globalPosition.y as number, n.width as number, n.height as number]);
+          }
         })
 // 优化 8：精确 key — 仅当某 zone 的 checked 状态串真正变化时才重建该格，其余 zone 保持复用
 }, (zone: string) => this.zoneKey(zone))
@@ -921,8 +922,9 @@ this.computeCellHeight();
       // 闪烁修复：同上，抑制 nonce key 变更导致的重建视觉闪烁
       .transition(TransitionEffect.IDENTITY)
       .onAreaChange((_o: Area, n: Area) => {
-        const pos = n.globalPosition as Record<string, number>;
-        this.zoneRects.set(BodyZone.Misc, [pos.x ?? 0, pos.y ?? 0, n.width as number, n.height as number]);
+        if (n.globalPosition !== undefined) {
+          this.zoneRects.set(BodyZone.Misc, [n.globalPosition.x as number, n.globalPosition.y as number, n.width as number, n.height as number]);
+        }
       })
     }
     .columnsTemplate('1fr 1fr')
