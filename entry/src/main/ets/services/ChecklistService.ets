@@ -1,4 +1,4 @@
-import { ChecklistItem, GearItem, makeId, TripChecklist } from '../models/PackModels';
+import { ChecklistItem, GearItem, makeId, TripChecklist, CATEGORY_FALLBACK } from '../models/PackModels';
 import { PRIMARY_COLOR, PROGRESS_END_COLOR, PROGRESS_INACTIVE } from '../constants/Colors';
 import { formatKg, gearById } from './GearService';
 
@@ -462,7 +462,7 @@ export function prependChecklist(checklists: TripChecklist[], created: TripCheck
 
 export function matchingGearForChecklistItem(item: ChecklistItem, gears: GearItem[]): GearItem | undefined {
   const name = item.name.trim();
-  const group = item.group.trim().length === 0 ? '其他' : item.group.trim();
+  const group = item.group.trim().length === 0 ? CATEGORY_FALLBACK : item.group.trim();
   for (let index = 0; index < gears.length; index++) {
     const gear = gears[index];
     if (gear.name.trim() === name && gear.category.trim() === group) {

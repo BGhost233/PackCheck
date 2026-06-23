@@ -2,7 +2,7 @@
 // 职责：槽位分配、分组、排序、进度计算、旧数据推断
 
 import { BodyZone, LayerOrder, SlotHint, CATEGORY_SLOT_MAP, slotHintForCategory } from '../constants/GearLoadout';
-import { ChecklistItem, GearItem } from '../models/PackModels';
+import { ChecklistItem, GearItem, CATEGORY_FALLBACK } from '../models/PackModels';
 import {
   TEXT_SECONDARY,
   ZONE_HEAD_COLOR, ZONE_UPPER_COLOR, ZONE_LOWER_COLOR, ZONE_FEET_COLOR, ZONE_CARRY_COLOR, ZONE_SLEEP_COLOR, ZONE_MISC_COLOR,
@@ -231,7 +231,7 @@ function getCategoryForItem(item: ChecklistItem, gears: GearItem[]): string {
       return gear.category;
     }
   }
-  return '其他';
+  return CATEGORY_FALLBACK;
 }
 
 /** Zone 枚举值 → 中文显示名 */
