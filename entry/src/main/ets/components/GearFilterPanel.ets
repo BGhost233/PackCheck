@@ -8,9 +8,8 @@ import {
   WHITE
 } from '../constants/DesignTokens';
 import {
-  DURATION_SLOW,
-  SPRING_GENERAL,
-  SPRING_PANEL_EXIT
+SPRING_GENERAL,
+SPRING_PANEL_EXIT
 } from '../constants/AnimationTokens';
 import { CATEGORY_ALL, GearItem } from '../models/PackModels';
 import { normalizeGearCategories, allGearFilterCategories, gearCategoryCount, tempGearFilterText } from '../services/GearService';
@@ -40,7 +39,6 @@ export struct GearFilterPanel {
     // 入场动画
     setTimeout(() => {
       this.getUIContext().animateTo({
-        duration: DURATION_SLOW,
         curve: SPRING_GENERAL()
       }, () => {
         this.panelTranslateY = 0;

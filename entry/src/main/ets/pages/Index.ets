@@ -2755,14 +2755,15 @@ struct Index {
   @Builder
   private CategoryInputDialog() {
     Stack() {
-      // 半透明遮罩
+      // 半透明遮罩 — 淡入淡出
       Column()
         .width('100%')
         .height('100%')
         .backgroundColor(OVERLAY_MASK)
         .onClick(() => { this.showCategoryDialog = false; })
+        .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_PANEL_ENTER() }))
 
-      // 对话框
+      // 对话框 — 缩放 + 淡入 + 轻微上移
       Column({ space: 16 }) {
         Text(this.categoryDialogMode === 'add' ? '新增分组' : '重命名分组')
           .fontSize(17)
@@ -2814,6 +2815,11 @@ struct Index {
       .backgroundColor(CARD_BG)
       .borderRadius(16)
       .shadow({ radius: 20, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 4 })
+      .transition(TransitionEffect.OPACITY
+        .combine(TransitionEffect.scale({ x: PANEL_SCALE_START, y: PANEL_SCALE_START }))
+        .combine(TransitionEffect.translate({ y: 8 }))
+        .animation({ curve: SPRING_PANEL_ENTER() })
+      )
     }
     .width('100%')
     .height('100%')

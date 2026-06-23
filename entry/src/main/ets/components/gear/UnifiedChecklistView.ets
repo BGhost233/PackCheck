@@ -1041,7 +1041,7 @@ this.computeCellHeight();
     if (!item.fromGearId) {
       return undefined;
     }
-    return this.gears.find((g: GearItem) => g.id === item.fromGearId);
+    return this.gearIndexMap.get(item.fromGearId);
   }
 
   // ---- Helpers ----

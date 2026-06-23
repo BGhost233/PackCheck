@@ -15,6 +15,15 @@ const DEFAULT_ARRAY = '[]';
 const LOG_DOMAIN = 0x0001;
 const LOG_TAG = 'PackStore';
 
+function safeParseArray<T>(json: string): T[] {
+  try {
+    return JSON.parse(json) as T[];
+  } catch (e) {
+    hilog.warn(LOG_DOMAIN, LOG_TAG, 'JSON.parse failed, returning empty array. Input: %{public}s', json.substring(0, 100));
+    return [] as T[];
+  }
+}
+
 export class PackStore {
   private prefs?: preferences.Preferences;
   private initFailed: boolean = false;
@@ -54,7 +63,7 @@ export class PackStore {
 
   async getGears(): Promise<GearItem[]> {
     const value = await this.readString(KEY_GEARS, DEFAULT_ARRAY);
-    return JSON.parse(value) as GearItem[];
+    return safeParseArray<GearItem>(value);
   }
 
   async saveGears(gears: GearItem[]): Promise<void> {
@@ -63,7 +72,7 @@ export class PackStore {
 
   async getChecklists(): Promise<TripChecklist[]> {
     const value = await this.readString(KEY_CHECKLISTS, DEFAULT_ARRAY);
-    return JSON.parse(value) as TripChecklist[];
+    return safeParseArray<TripChecklist>(value);
   }
 
   async saveChecklists(checklists: TripChecklist[]): Promise<void> {
@@ -72,7 +81,7 @@ export class PackStore {
 
   async getCategories(): Promise<string[]> {
     const value = await this.readString(KEY_CATEGORIES, DEFAULT_ARRAY);
-    return JSON.parse(value) as string[];
+    return safeParseArray<string>(value);
   }
 
   async saveCategories(categories: string[]): Promise<void> {
@@ -81,7 +90,7 @@ export class PackStore {
 
   async getCollapsedGearGroups(): Promise<string[]> {
     const value = await this.readString(KEY_COLLAPSED_GEAR_GROUPS, DEFAULT_ARRAY);
-    return JSON.parse(value) as string[];
+    return safeParseArray<string>(value);
   }
 
   async saveCollapsedGearGroups(groups: string[]): Promise<void> {
@@ -90,7 +99,7 @@ export class PackStore {
 
   async getCategoryOrder(): Promise<string[]> {
     const value = await this.readString(KEY_CATEGORY_ORDER, DEFAULT_ARRAY);
-    return JSON.parse(value) as string[];
+    return safeParseArray<string>(value);
   }
 
   async saveCategoryOrder(order: string[]): Promise<void> {
