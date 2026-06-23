@@ -1,3 +1,6 @@
+import { PRIMARY_COLOR, LIGHT_PRIMARY_COLOR, PRIMARY_TINT_COLOR, AMBER_TINT } from '../constants/Colors';
+import { CATEGORY_FALLBACK } from '../models/PackModels';
+
 export function getGroupColor(group: string): string {
   if (group === '证件') {
     return '#5C6BC0';
@@ -15,7 +18,7 @@ export function getGroupColor(group: string): string {
     return '#FF7043';
   }
   if (group === '行走系统') {
-    return '#2D7D46';
+    return PRIMARY_COLOR;
   }
   if (group === '睡眠系统') {
     return '#26A69A';
@@ -35,7 +38,7 @@ export function getGroupColor(group: string): string {
   if (group === '清洁洗护') {
     return '#66BB6A';
   }
-  if (group === '其他') {
+  if (group === CATEGORY_FALLBACK) {
     return '#BDBDBD';
   }
 
@@ -67,19 +70,19 @@ function hslToHex(h: number, s: number, l: number): string {
 
 export function heroGradientStart(daysLeft: number | undefined): string {
   if (daysLeft === undefined) {
-    return '#F1F8F3';
+    return PRIMARY_TINT_COLOR;
   }
   if (daysLeft > 14) {
-    return '#F1F8F3';
+    return PRIMARY_TINT_COLOR;
   }
   if (daysLeft > 7) {
-    return '#E8F5E9';
+    return LIGHT_PRIMARY_COLOR;
   }
   if (daysLeft > 3) {
     return '#DCF1E3';
   }
   if (daysLeft >= 0) {
-    return '#FFF5E6';
+    return AMBER_TINT;
   }
-  return '#E8F5E9';
+  return LIGHT_PRIMARY_COLOR;
 }
