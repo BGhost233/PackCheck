@@ -44,7 +44,25 @@ export function getGroupColor(group: string): string {
     hash = group.charCodeAt(index) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return 'hsl(' + hue.toString() + ', 45%, 55%)';
+  return hslToHex(hue, 45, 55);
+}
+
+/**
+ * 将 HSL 颜色值转换为 HEX 格式（ArkUI 仅支持 HEX/RGB，不支持 hsl() 字符串）
+ */
+function hslToHex(h: number, s: number, l: number): string {
+  const sFrac = s / 100;
+  const lFrac = l / 100;
+  const a = sFrac * Math.min(lFrac, 1 - lFrac);
+  const f = (n: number): number => {
+    const k = (n + h / 30) % 12;
+    return lFrac - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+  };
+  const toHex = (x: number): string => {
+    const hex = Math.round(x * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  return '#' + toHex(f(0)) + toHex(f(4)) + toHex(f(8));
 }
 
 export function heroGradientStart(daysLeft: number | undefined): string {

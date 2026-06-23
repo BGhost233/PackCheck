@@ -1036,6 +1036,7 @@ struct Index {
 
   private dismissTripCeremony(): void {
     this.showTripCeremony = false;
+    this.recoverTripBackground();
   }
 
   private recoverTripBackground(duration: number = DURATION_RECOVER): void {

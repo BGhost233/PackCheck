@@ -98,6 +98,44 @@ DEVELOPMENT_STANDARDS 定义了：
 
 禁止在组件中硬编码色值/字号/时长/曲线，必须从以上文件引用。**任何「顶部随滚动折叠」场景必须走 HeadCollapseController，禁止各页面重写滚动数学**（详见 DEVELOPMENT_STANDARDS §4.3 + MEMORY 避坑 #46）。
 
+## HarmonyOS 全量离线文档
+
+**两套文档源，互补使用：**
+
+| 来源 | 路径 / 命令 | 篇数 | 特点 |
+|------|------------|------|------|
+| DevEco CLI 内置文档 | `devecocli docs search/read` | ~11,000 篇 | 带标题索引 + ripgrep 全文搜索，**优先使用** |
+| 桌面离线副本 | `/Users/bghost233/Desktop/HarmonyOS-Docs/` | ~11,000 篇 .md | 可直接 read_file / grep，适合批量扫描 |
+
+| 分类 | devecocli catalog 名 | 桌面路径 | 用途 |
+|------|---------------------|---------|------|
+| 开发指南 | `harmonyos-guides` | `开发指南/` | ArkUI/ArkTS/Ability Kit 等开发指导 |
+| API 参考 | `harmonyos-references` | `API参考/` | 组件参数、接口签名、状态管理 API |
+| 最佳实践 | `best-practices` | `最佳实践/` | 场景化案例、架构设计、性能优化 |
+| FAQ | `harmonyos-faqs` | `FAQ/` | 高频问题与排错 |
+| 版本说明 | `harmonyos-releases` | `版本说明/` | 各 API 版本 changelog |
+| 变更预告 | `harmonyos-roadmap` | `变更预告/` | Roadmap / 即将废弃 API |
+
+### 渐进式文档阅读策略（开发前检索铁律）
+
+**接到需求 → 先搜文档 → 读懂再动手**，不走网络、不凭经验猜。详见 `memory/harmonyos-docs-first.md`。
+
+**检索优先级：**
+
+1. **`devecocli docs search <关键词>`**（首选）— 带标题/摘要，快速定位
+2. **`devecocli docs read <文档ID>`** — 读取完整文档内容
+3. **桌面离线目录 grep / read_file** — 批量扫描、交叉验证
+
+```bash
+# 方式一：devecocli（推荐，带结构化结果）
+devecocli docs search 性能优化 --catalog best-practices --limit 10
+devecocli docs read 最佳实践/性能/bpta-performance-overview
+
+# 方式二：桌面离线目录（批量扫描）
+find "/Users/bghost233/Desktop/HarmonyOS-Docs" -name "*关键词*"
+grep -rl "关键词" "/Users/bghost233/Desktop/HarmonyOS-Docs/开发指南" | head -20
+```
+
 ## ArkUI 避坑清单
 
 存于 `memory/MEMORY.md`「ArkUI 避坑清单」section（共 46 条）。**已在会话启动第一动作中要求完整读取全部 46 条**——这些坑都是踩过的血泪，开场读完才能在写代码时主动规避，而不是踩了再回查。

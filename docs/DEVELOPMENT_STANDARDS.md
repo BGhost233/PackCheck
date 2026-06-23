@@ -5,6 +5,39 @@
 
 ---
 
+## 零、开发前置 — 文档优先
+
+**接到需求 → 先搜文档 → 读懂再动手。** 不走网络，不凭经验猜。
+
+本地 HarmonyOS 全量离线文档：`/Users/bghost233/Desktop/HarmonyOS-Docs/`（189MB，11,267 篇 .md）。
+
+| 分类 | 路径 | 用途 |
+|------|------|------|
+| 开发指南 | `开发指南/` | ArkUI/ArkTS/Ability Kit 等开发指导 |
+| API 参考 | `API参考/` | 组件参数、接口签名、状态管理 API |
+| 最佳实践 | `最佳实践/` | 场景化案例、架构设计、性能优化 |
+| FAQ | `FAQ/` | 高频问题与排错 |
+| 版本说明 | `版本说明/` | 各 API 版本 changelog |
+| 变更预告 | `变更预告/` | Roadmap / 即将废弃 API |
+
+检索方法：
+
+```bash
+# 按文件名搜
+find "/Users/bghost233/Desktop/HarmonyOS-Docs" -name "*关键词*"
+# 按内容搜
+grep -rl "关键词" "/Users/bghost233/Desktop/HarmonyOS-Docs/开发指南" | head -20
+grep -rl "关键词" "/Users/bghost233/Desktop/HarmonyOS-Docs/API参考" | head -20
+grep -rl "关键词" "/Users/bghost233/Desktop/HarmonyOS-Docs/最佳实践" | head -20
+grep -rl "关键词" "/Users/bghost233/Desktop/HarmonyOS-Docs/FAQ" | head -20
+```
+
+典型流程：需求 → 判断知识域 → grep 检索 → Read 2-5 篇 → 基于文档出方案 → 写代码。性能优化优先查 `最佳实践/性能优化/`，状态管理优先查 `开发指南/...状态管理...` + `最佳实践/状态管理最佳实践`。
+
+详见 `memory/harmonyos-docs-first.md`。
+
+---
+
 ## 一、架构规范
 
 ### 1.1 目录职责
