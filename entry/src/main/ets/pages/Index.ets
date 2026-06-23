@@ -61,22 +61,8 @@ import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, GearItem, makeId, norma
 import { allZones, zoneDisplayName } from '../services/LoadoutService';
 import { PackStore } from '../services/PackStore';
 import {
-  filterGears,
   normalizeGearCategories,
-  sortedGears,
-  filteredGearGroups,
-  filteredGearsByGroup,
-  gearSortLabel,
-  gearStatsText,
-  totalGearWeight,
-  totalGearPrice,
-  averageGearValueRatio,
-  heaviestGearText,
-  mostExpensiveGearText,
-  mostFrequentGearText,
-  categoryTabs,
   presetCategories,
-  gearById,
   uniqueGearIds,
   createGear,
   updateGear
@@ -96,27 +82,17 @@ import {
 } from '../services/CategoryService';
 import {
   startOfDay,
-  checklistGroups,
-  checklistItemsByGroup,
-  isGroupDone,
   checkedCount,
   progressPercent,
   progressValue,
   progressTotal,
   progressText,
   checklistMetaText as calcChecklistMetaText,
-  homeStatusText,
-  isChecklistDone,
-  activeChecklistCount,
   parseTripDateAt,
   countdownText,
-  checklistTotalWeight,
-  checklistCheckedWeight,
   checklistItemWeight,
   checklistItemPrice,
   numberInputText,
-  latestChecklistHomeSubtitle,
-  isChecklistItemInGear,
   hasGearMarker,
   matchingGearForChecklistItem,
   formatTripDate,
@@ -132,7 +108,6 @@ import {
   resolveItemName
 } from '../services/ChecklistService';
 import { ProfilePage } from '../components/ProfilePage';
-import { buildGearTripCountMap } from '../services/FootprintService';
 
 @Entry
 @Component
@@ -319,47 +294,8 @@ struct Index {
     updateState();
   }
 
-  private numberKey(value: number | undefined): string {
-    return value === undefined ? '' : value.toString();
-  }
-
   private latestChecklist(): TripChecklist | undefined {
     return findLatestChecklist(this.checklists);
-  }
-
-  private hasLatestChecklist(): boolean {
-    return this.latestChecklist() !== undefined;
-  }
-
-  private latestChecklistTitle(): string {
-    const latest = this.latestChecklist();
-    if (latest === undefined) {
-      return '';
-    }
-    return latest.title;
-  }
-
-  private latestChecklistSubtitle(): string {
-    const latest = this.latestChecklist();
-    if (latest === undefined) {
-      return '';
-    }
-    return calcChecklistMetaText(latest);
-  }
-
-  private latestChecklistProgress(): number {
-    const latest = this.latestChecklist();
-    if (latest === undefined) {
-      return 0;
-    }
-    return progressPercent(latest);
-  }
-
-  private openLatestChecklist(): void {
-    const latest = this.latestChecklist();
-    if (latest !== undefined) {
-      this.openChecklist(latest.id);
-    }
   }
 
   private currentChecklist(): TripChecklist | undefined {
@@ -371,89 +307,6 @@ struct Index {
     return undefined;
   }
 
-  private hasCurrentChecklist(): boolean {
-    return this.currentChecklist() !== undefined;
-  }
-
-  private currentChecklistTitle(): string {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return '';
-    }
-    return checklist.title;
-  }
-
-  private currentChecklistSubtitle(): string {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return '';
-    }
-    if (checklist.date === undefined || checklist.date.length === 0) {
-      return '点击设置出发日期';
-    }
-    return checklist.date;
-  }
-
-  private currentChecklistProgress(): number {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return 0;
-    }
-    return progressPercent(checklist);
-  }
-
-  private currentChecklistProgressValue(): number {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return 0;
-    }
-    return progressValue(checklist);
-  }
-
-  private currentChecklistProgressTotal(): number {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return 1;
-    }
-    return progressTotal(checklist);
-  }
-
-  private currentChecklistProgressText(): string {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return '0/0';
-    }
-    return progressText(checklist);
-  }
-
-  private currentChecklistCountdownText(): string {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return '';
-    }
-    return countdownText(checklist);
-  }
-
-  private currentChecklistCheckedWeight(): number {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return 0;
-    }
-    return this.checklistCheckedWeight(checklist);
-  }
-
-  private currentChecklistItemCount(): number {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return 0;
-    }
-    return checklist.items.length;
-  }
-
-  private filteredGears(): GearItem[] {
-    return filterGears(this.gears, this.gearSearchKeyword, normalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
-  }
-
   private openGearFilterPanel(): void {
     this.gearFilterPanelExpanded = true;
   }
@@ -463,80 +316,8 @@ struct Index {
     this.gearFilterPanelExpanded = false;
   }
 
-  private sortedGears(items: GearItem[]): GearItem[] {
-    return sortedGears(items, this.gearSortMode);
-  }
-
-  private filteredGearGroups(): string[] {
-    return filteredGearGroups(this.gears, this.gearSearchKeyword, normalizeGearCategories(this.selectedGearCategories), this.gearSortMode);
-  }
-
-  private filteredGearsByGroup(group: string): GearItem[] {
-    return filteredGearsByGroup(this.gears, this.gearSearchKeyword, normalizeGearCategories(this.selectedGearCategories), this.gearSortMode, group);
-  }
-
-  private gearSortLabel(): string {
-    return gearSortLabel(this.gearSortMode);
-  }
-
-  private gearGroupCount(group: string): number {
-    return this.filteredGearsByGroup(group).length;
-  }
-
-  private gearStatsText(): string {
-    return gearStatsText(this.gears);
-  }
-
-  private totalGearWeight(): number {
-    return totalGearWeight(this.gears);
-  }
-
-  private totalGearPrice(): number {
-    return totalGearPrice(this.gears);
-  }
-
-  private averageGearValueRatio(): number {
-    return averageGearValueRatio(this.gears);
-  }
-
-  private heaviestGearText(): string {
-    return heaviestGearText(this.gears);
-  }
-
-  private mostExpensiveGearText(): string {
-    return mostExpensiveGearText(this.gears);
-  }
-
-  private mostFrequentGearText(): string {
-    return mostFrequentGearText(this.gears, buildGearTripCountMap(this.checklists));
-  }
-
-  private categoryTabs(): string[] {
-    return categoryTabs(this.categories);
-  }
-
   private presetCategories(): string[] {
     return presetCategories(this.categories);
-  }
-
-  private checklistGroups(): string[] {
-    return checklistGroups(this.currentChecklist());
-  }
-
-  private checklistItemsByGroup(group: string): ChecklistItem[] {
-    return checklistItemsByGroup(this.currentChecklist(), group);
-  }
-
-  private groupItemCount(group: string): number {
-    return this.checklistItemsByGroup(group).length;
-  }
-
-  private isGroupDone(group: string): boolean {
-    return isGroupDone(this.currentChecklist(), group);
-  }
-
-  private isGroupCollapsed(group: string): boolean {
-    return this.collapsedGroups.indexOf(group) >= 0;
   }
 
   private toggleGroup(group: string): void {
@@ -555,44 +336,12 @@ struct Index {
     this.collapsedGroups = nextGroups;
   }
 
-  private homeStatusText(): string {
-    return homeStatusText(this.checklists);
-  }
-
-  private isCurrentChecklistDone(): boolean {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return false;
-    }
-    return isChecklistDone(checklist);
-  }
-
-  private activeChecklistCount(): number {
-    return activeChecklistCount(this.checklists);
-  }
-
-  private checklistTotalWeight(checklist: TripChecklist): number {
-    return checklistTotalWeight(checklist, this.gears);
-  }
-
-  private checklistCheckedWeight(checklist: TripChecklist): number {
-    return checklistCheckedWeight(checklist, this.gears);
-  }
-
-  private gearById(id: string): GearItem | undefined {
-    return gearById(this.gears, id);
-  }
-
   private checklistItemWeight(item: ChecklistItem): number | undefined {
     return checklistItemWeight(item, this.gears);
   }
 
   private checklistItemPrice(item: ChecklistItem): number | undefined {
     return checklistItemPrice(item, this.gears);
-  }
-
-  private latestChecklistHomeSubtitle(): string {
-    return latestChecklistHomeSubtitle(this.latestChecklist(), this.gears);
   }
 
   private resetGearForm(): void {
@@ -991,10 +740,6 @@ struct Index {
     this.openSheetAnimated();
   }
 
-
-  private isChecklistItemInGear(item: ChecklistItem): boolean {
-    return isChecklistItemInGear(item);
-  }
 
   private hasGearMarker(item: ChecklistItem): boolean {
     return hasGearMarker(item);
@@ -1403,27 +1148,6 @@ struct Index {
         this.showTempAddNotice = false;
       }
     }, 500));
-  }
-
-  private currentChecklistItemById(itemId: string): ChecklistItem | undefined {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return undefined;
-    }
-    for (let index = 0; index < checklist.items.length; index++) {
-      if (checklist.items[index].id === itemId) {
-        return checklist.items[index];
-      }
-    }
-    return undefined;
-  }
-
-  private isChecklistItemChecked(itemId: string): boolean {
-    const item = this.currentChecklistItemById(itemId);
-    if (item === undefined) {
-      return false;
-    }
-    return item.checked;
   }
 
   private async saveEditedItem(): Promise<void> {

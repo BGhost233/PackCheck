@@ -72,7 +72,6 @@ export struct HomePage {
   @State private historyPressedId: string = '';
   @State private heroPressed: boolean = false;
   @State private historyStaggerReady: boolean = false;
-  @State private emptyHeroBreathScale: number = 0.98;
   @State private emptyBtnPressed: boolean = false;
   @State private heroRingCelebrateScale: number = 1.0;
   @State private ringCelebrateColor: string = PRIMARY_COLOR;
@@ -127,7 +126,6 @@ export struct HomePage {
     this.headProgress = 0;
     this.headSnapping = false;
     this.historyStaggerReady = false;
-    this.emptyHeroBreathScale = 1.02;
     this.wasLatestChecklistDone = false;
     this.staggerTimerId = setTimeout(() => {
       if (!this.isAlive) { return; }
