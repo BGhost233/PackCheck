@@ -1,7 +1,7 @@
 // 配装系统业务逻辑（纯函数，无 UI）
-// 职责：槽位分配、分组、排序、进度计算、旧数据推断
+// 职责：分组、进度计算、Zone推断、色彩映射、拖拽命中检测
 
-import { BodyZone, LayerOrder, SlotHint, CATEGORY_SLOT_MAP, slotHintForCategory } from '../constants/GearLoadout';
+import { BodyZone, LayerOrder, CATEGORY_SLOT_MAP } from '../constants/GearLoadout';
 import { ChecklistItem, GearItem, CATEGORY_FALLBACK } from '../models/PackModels';
 import {
   TEXT_SECONDARY,
@@ -13,52 +13,13 @@ import {
 } from '../constants/Colors';
 
 // ============================================================
-// 槽位分配
-// ============================================================
-
-/**
- * @deprecated 新流程已不再使用品类→Zone自动映射。
- * 用户通过点击格子选择装备，Zone 由 buildItemsFromGears 的 zone 参数直接指定。
- * 保留仅为旧数据兼容（旧版本创建的 item 可能依赖此推断）。
- */
-export function assignSlot(gear: GearItem): SlotHint {
-  return slotHintForCategory(gear.category);
-}
-
-// ============================================================
 // 分组
 // ============================================================
 
-/** 按 Zone 分组（跳过空 Zone），返回有序 Map。单次遍历 O(N)。 */
-export function groupByZone(items: ChecklistItem[]): Map<string, ChecklistItem[]> {
-  // 先单次遍历分桶到临时 map
-  const buckets = new Map<string, ChecklistItem[]>();
-  const zoneOrder: string[] = [
-    BodyZone.Head, BodyZone.UpperBody, BodyZone.LowerBody,
-    BodyZone.Feet, BodyZone.Carry, BodyZone.Sleep, BodyZone.Misc
-  ];
-  for (const zone of zoneOrder) {
-    buckets.set(zone, []);
-  }
-  for (let i = 0; i < items.length; i++) {
-    const zone = inferZoneFromGroup(items[i].group);
-    const bucket = buckets.get(zone);
-    if (bucket !== undefined) {
-      bucket.push(items[i]);
-    } else {
-      buckets.get(BodyZone.Misc)!.push(items[i]);
-    }
-  }
-  // 按固定顺序构建结果 map，跳过空 zone
-  const result = new Map<string, ChecklistItem[]>();
-  for (const zone of zoneOrder) {
-    const bucket = buckets.get(zone)!;
-    if (bucket.length > 0) {
-      result.set(zone, bucket);
-    }
-  }
-  return result;
-}
+const ZONE_ORDER: string[] = [
+  BodyZone.Head, BodyZone.UpperBody, BodyZone.LowerBody,
+  BodyZone.Feet, BodyZone.Carry, BodyZone.Sleep, BodyZone.Misc
+];
 
 /**
  * 按 Zone 分组，始终返回全部 7 个 Zone（含空数组）。
@@ -68,12 +29,8 @@ export function groupByZone(items: ChecklistItem[]): Map<string, ChecklistItem[]
  */
 export function groupByZoneAll(items: ChecklistItem[]): Map<string, ChecklistItem[]> {
   const map = new Map<string, ChecklistItem[]>();
-  const zoneOrder: string[] = [
-    BodyZone.Head, BodyZone.UpperBody, BodyZone.LowerBody,
-    BodyZone.Feet, BodyZone.Carry, BodyZone.Sleep, BodyZone.Misc
-  ];
   // 预初始化全部 zone 为空数组（保证遍历顺序 = 插入顺序）
-  for (const zone of zoneOrder) {
+  for (const zone of ZONE_ORDER) {
     map.set(zone, []);
   }
   // 单次遍历分桶
@@ -88,34 +45,6 @@ export function groupByZoneAll(items: ChecklistItem[]): Map<string, ChecklistIte
     }
   }
   return map;
-}
-
-/** Misc Zone 内部按品类分子组 */
-export function groupMiscByCategory(items: ChecklistItem[], gears: GearItem[]): Map<string, ChecklistItem[]> {
-  const map = new Map<string, ChecklistItem[]>();
-  for (const item of items) {
-    const categoryName = getCategoryForItem(item, gears);
-    const existing = map.get(categoryName);
-    if (existing !== undefined) {
-      existing.push(item);
-    } else {
-      map.set(categoryName, [item]);
-    }
-  }
-  return map;
-}
-
-// ============================================================
-// 排序
-// ============================================================
-
-/**
- * @deprecated D-1（spec §3.1）：一期取消「层级」概念。保留签名向后兼容，
- * 内部不再做分层排序，按 items 数组原始顺序（= 添加顺序）恒等返回。
- * 后续积累实际使用数据后再决定是否加回。
- */
-export function sortItemsByLayer(items: ChecklistItem[], gears: GearItem[]): ChecklistItem[] {
-  return items;
 }
 
 // ============================================================
@@ -144,7 +73,7 @@ export function calcProgress(items: ChecklistItem[]): LoadoutProgress {
 // ============================================================
 
 /** 将 group 字段推断为 BodyZone（旧数据兼容） */
-export function inferZoneFromGroup(group: string): string {
+function inferZoneFromGroup(group: string): string {
   // 如果 group 已经是 BodyZone 枚举值，直接返回
   const validZones: string[] = [
     BodyZone.Head, BodyZone.UpperBody, BodyZone.LowerBody,
@@ -181,59 +110,6 @@ export function inferZoneFromGroup(group: string): string {
   return BodyZone.Misc;
 }
 
-/** 清单视图分组名回译：BodyZone 枚举 → 有意义的中文名 */
-export function inferDisplayGroup(item: ChecklistItem, gears: GearItem[]): string {
-  const validZones: string[] = [
-    BodyZone.Head, BodyZone.UpperBody, BodyZone.LowerBody,
-    BodyZone.Feet, BodyZone.Carry, BodyZone.Sleep, BodyZone.Misc
-  ];
-  // 如果 group 不是 BodyZone 枚举值（旧格式），直接返回原值
-  if (validZones.indexOf(item.group) < 0) {
-    return item.group;
-  }
-  // 有 fromGearId → 查品类名作为显示分组
-  if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
-    const gear = gears.find((g) => g.id === item.fromGearId);
-    if (gear !== undefined) {
-      return gear.category;
-    }
-  }
-  // 临时装备 → Zone 中文名 + (临时)
-  return zoneDisplayName(item.group) + '(临时)';
-}
-
-// ============================================================
-// 层级推导
-// ============================================================
-
-/** 获取 item 的 LayerOrder（运行时推导，不持久化） */
-export function getLayerForItem(item: ChecklistItem, gears: GearItem[]): number {
-  if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
-    const gear = gears.find((g) => g.id === item.fromGearId);
-    if (gear !== undefined) {
-      const hint = slotHintForCategory(gear.category);
-      return hint.layer;
-    }
-  }
-  // 无关联装备 / 装备已删除 → Accessory
-  return LayerOrder.Accessory;
-}
-
-// ============================================================
-// 辅助函数
-// ============================================================
-
-/** 获取 item 对应的品类名 */
-function getCategoryForItem(item: ChecklistItem, gears: GearItem[]): string {
-  if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
-    const gear = gears.find((g) => g.id === item.fromGearId);
-    if (gear !== undefined) {
-      return gear.category;
-    }
-  }
-  return CATEGORY_FALLBACK;
-}
-
 /** Zone 枚举值 → 中文显示名 */
 export function zoneDisplayName(zone: string): string {
   if (zone === BodyZone.Head) {
@@ -260,32 +136,6 @@ export function zoneDisplayName(zone: string): string {
   return zone;
 }
 
-/** Zone 枚举值 → 对应 icon 资源名 */
-export function zoneIconName(zone: string): string {
-  if (zone === BodyZone.Head) {
-    return 'sys.symbol.face.smiling';
-  }
-  if (zone === BodyZone.UpperBody) {
-    return 'sys.symbol.tshirt';
-  }
-  if (zone === BodyZone.LowerBody) {
-    return 'sys.symbol.figure.walk';
-  }
-  if (zone === BodyZone.Feet) {
-    return 'sys.symbol.shoeprints.fill';
-  }
-  if (zone === BodyZone.Carry) {
-    return 'sys.symbol.backpack';
-  }
-  if (zone === BodyZone.Sleep) {
-    return 'sys.symbol.tent';
-  }
-  if (zone === BodyZone.Misc) {
-    return 'sys.symbol.square.grid.2x2';
-  }
-  return 'sys.symbol.questionmark';
-}
-
 // ============================================================
 // Zone 色彩映射（权威实现，UI 层统一调用，禁止在组件内重写 switch）
 // ============================================================
@@ -300,18 +150,6 @@ export function zoneColor(zone: string): string {
   if (zone === BodyZone.Sleep) { return ZONE_SLEEP_COLOR; }
   if (zone === BodyZone.Misc) { return ZONE_MISC_COLOR; }
   return TEXT_SECONDARY;
-}
-
-/** Zone → 中等透明染色（chip / tint 背景）。未知 zone 兜底 MISC。 */
-export function zoneTint(zone: string): string {
-  if (zone === BodyZone.Head) { return ZONE_HEAD_TINT; }
-  if (zone === BodyZone.UpperBody) { return ZONE_UPPER_TINT; }
-  if (zone === BodyZone.LowerBody) { return ZONE_LOWER_TINT; }
-  if (zone === BodyZone.Feet) { return ZONE_FEET_TINT; }
-  if (zone === BodyZone.Carry) { return ZONE_CARRY_TINT; }
-  if (zone === BodyZone.Sleep) { return ZONE_SLEEP_TINT; }
-  if (zone === BodyZone.Misc) { return ZONE_MISC_TINT; }
-  return ZONE_MISC_TINT;
 }
 
 /** Zone → 整块淡色填充底（便单式色块）。未知 zone 兜底 MISC。 */
@@ -350,23 +188,6 @@ export function zoneStroke(zone: string): string {
   return ZONE_MISC_STROKE;
 }
 
-/** Layer 枚举值 → 中文显示名 */
-export function layerDisplayName(layer: number): string {
-  if (layer === LayerOrder.Base) {
-    return '贴身';
-  }
-  if (layer === LayerOrder.Mid) {
-    return '保暖';
-  }
-  if (layer === LayerOrder.Shell) {
-    return '防护';
-  }
-  if (layer === LayerOrder.Insulation) {
-    return '隔绝';
-  }
-  return '配件';
-}
-
 /** 所有 BodyZone 枚举值列表（固定顺序） */
 export function allZones(): string[] {
   return [
@@ -375,15 +196,9 @@ export function allZones(): string[] {
   ];
 }
 
-/** 所有 LayerOrder 值列表（升序） */
-export function allLayers(): number[] {
-  return [LayerOrder.Base, LayerOrder.Mid, LayerOrder.Shell, LayerOrder.Insulation, LayerOrder.Accessory];
-}
-
 /**
- * 拖拽命中检测：给定手指全局坐标，返回命中的 zone（命中矩形列表中第一个），无命中返回 null。
- *   纯几何计算，与坐标系无关：globalXY 与 zoneRects（全局坐标 [x,y,w,h]）同时减去 overlayOrigin 转局部后比较，
- *   等价于直接在全局坐标系比较，此处保留原 UnifiedChecklistView 的局部坐标语义以确保零行为变更。
+ * 拖拽命中检测：给定手指全局坐标，返回命中的 zone，无命中返回 null。
+ *   纯几何计算，坐标系无关。
  */
 export function hitTestZoneRect(
   zoneRects: Map<string, number[]>,

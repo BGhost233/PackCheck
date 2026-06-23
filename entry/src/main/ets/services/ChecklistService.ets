@@ -1,5 +1,4 @@
 import { ChecklistItem, GearItem, makeId, TripChecklist, CATEGORY_FALLBACK } from '../models/PackModels';
-import { PRIMARY_COLOR, PROGRESS_END_COLOR, PROGRESS_INACTIVE } from '../constants/Colors';
 import { formatKg, gearById } from './GearService';
 
 /**
@@ -71,23 +70,6 @@ export function checklistMetaText(checklist: TripChecklist): string {
 
 export function isChecklistDone(checklist: TripChecklist): boolean {
   return checklist.items.length > 0 && checkedCount(checklist) === checklist.items.length;
-}
-
-export function activeChecklistCount(checklists: TripChecklist[]): number {
-  let count = 0;
-  for (let index = 0; index < checklists.length; index++) {
-    if (!isChecklistDone(checklists[index])) {
-      count++;
-    }
-  }
-  return count;
-}
-
-export function homeStatusText(checklists: TripChecklist[]): string {
-  if (checklists.length === 0) {
-    return '还没有行程，创建一个吧';
-  }
-  return activeChecklistCount(checklists).toString() + ' 个行程进行中';
 }
 
 // 当日期文本不包含"年"时，默认使用当前年份（适用于"6月15日"这类省略年份的输入）
@@ -163,8 +145,7 @@ export function resolveItemName(item: ChecklistItem, gears: GearItem[]): string 
 }
 
 /**
- * 性能：resolveItemName 的索引版，用预建的 gearIndex（见 buildGearIndex）O(1) 反查，
- * 供 ForEach 渲染热路径调用，避免逐行 O(gears) 线性扫描。逻辑与 resolveItemName 等价。
+ * 性能：resolveItemName 的索引版，用预建的 gearIndex O(1) 反查。
  */
 export function resolveItemNameByIndex(item: ChecklistItem, gearIndex: Map<string, GearItem>): string {
   if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
@@ -176,16 +157,6 @@ export function resolveItemNameByIndex(item: ChecklistItem, gearIndex: Map<strin
   return item.name;
 }
 
-export function resolveItemCategory(item: ChecklistItem, gears: GearItem[]): string {
-  if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
-    const gear = gearById(gears, item.fromGearId);
-    if (gear !== undefined) {
-      return gear.category;
-    }
-  }
-  return item.group;
-}
-
 export function checklistItemWeight(item: ChecklistItem, gears: GearItem[]): number | undefined {
   if (item.fromGearId !== undefined && item.fromGearId.length > 0) {
     const gear = gearById(gears, item.fromGearId);
@@ -193,7 +164,6 @@ export function checklistItemWeight(item: ChecklistItem, gears: GearItem[]): num
       return gear.weight;
     }
   }
-  // orphaned 或临时项：fallback 到快照
   return item.weight;
 }
 
@@ -204,16 +174,7 @@ export function checklistItemPrice(item: ChecklistItem, gears: GearItem[]): numb
       return gear.price;
     }
   }
-  // orphaned 或临时项：fallback 到快照
   return item.price;
-}
-
-/** 判断引用的装备是否已从装备库删除（用于 UI 标识） */
-export function isOrphanedItem(item: ChecklistItem, gears: GearItem[]): boolean {
-  if (item.fromGearId === undefined || item.fromGearId.length === 0) {
-    return false;
-  }
-  return gearById(gears, item.fromGearId) === undefined;
 }
 
 export function checklistTotalWeight(checklist: TripChecklist, gears: GearItem[]): number {
@@ -225,66 +186,6 @@ export function checklistTotalWeight(checklist: TripChecklist, gears: GearItem[]
     }
   }
   return total;
-}
-
-export function checklistCheckedWeight(checklist: TripChecklist, gears: GearItem[]): number {
-  let total = 0;
-  for (let index = 0; index < checklist.items.length; index++) {
-    const item = checklist.items[index];
-    const weight = checklistItemWeight(item, gears);
-    if (item.checked && weight !== undefined) {
-      total += weight;
-    }
-  }
-  return total;
-}
-
-export function progressStartColor(percent: number): string {
-  if (percent < 30) {
-    return PROGRESS_INACTIVE;
-  }
-  return PRIMARY_COLOR;
-}
-
-export function progressEndColor(percent: number): string {
-  if (percent < 30) {
-    return PROGRESS_INACTIVE;
-  }
-  return PROGRESS_END_COLOR;
-}
-
-export function checklistGroups(checklist: TripChecklist | undefined): string[] {
-  if (checklist === undefined) {
-    return [];
-  }
-  const groups: string[] = [];
-  for (let index = 0; index < checklist.items.length; index++) {
-    const group = checklist.items[index].group;
-    if (groups.indexOf(group) < 0) {
-      groups.push(group);
-    }
-  }
-  return groups;
-}
-
-export function checklistItemsByGroup(checklist: TripChecklist | undefined, group: string): ChecklistItem[] {
-  if (checklist === undefined) {
-    return [];
-  }
-  return checklist.items.filter((item: ChecklistItem) => item.group === group);
-}
-
-export function isGroupDone(checklist: TripChecklist | undefined, group: string): boolean {
-  const items = checklistItemsByGroup(checklist, group);
-  if (items.length === 0) {
-    return false;
-  }
-  for (let index = 0; index < items.length; index++) {
-    if (!items[index].checked) {
-      return false;
-    }
-  }
-  return true;
 }
 
 export function formatTripDate(date: Date): string {
@@ -306,82 +207,6 @@ export function isChecklistItemInGear(item: ChecklistItem): boolean {
 
 export function hasGearMarker(item: ChecklistItem): boolean {
   return isChecklistItemInGear(item);
-}
-
-export function checklistHasGear(checklist: TripChecklist, gearId: string): boolean {
-  for (let index = 0; index < checklist.items.length; index++) {
-    if (checklist.items[index].fromGearId === gearId) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export function countableGearIds(checklist: TripChecklist, gearIds: string[]): string[] {
-  const dedupedIds: string[] = [];
-  for (let index = 0; index < gearIds.length; index++) {
-    if (gearIds[index].length > 0 && dedupedIds.indexOf(gearIds[index]) < 0) {
-      dedupedIds.push(gearIds[index]);
-    }
-  }
-  const nextIds: string[] = [];
-  for (let index = 0; index < dedupedIds.length; index++) {
-    if (!checklistHasGear(checklist, dedupedIds[index])) {
-      nextIds.push(dedupedIds[index]);
-    }
-  }
-  return nextIds;
-}
-
-export function addItemsToChecklist(checklists: TripChecklist[], checklistId: string, items: ChecklistItem[]): TripChecklist[] {
-  const nextChecklists: TripChecklist[] = [];
-  for (let index = 0; index < checklists.length; index++) {
-    const checklist = checklists[index];
-    if (checklist.id === checklistId) {
-      const nextItems: ChecklistItem[] = [];
-      for (let itemIndex = 0; itemIndex < checklist.items.length; itemIndex++) {
-        nextItems.push(checklist.items[itemIndex]);
-      }
-      for (let newIndex = 0; newIndex < items.length; newIndex++) {
-        nextItems.push(items[newIndex]);
-      }
-      const updated: TripChecklist = {
-        id: checklist.id,
-        title: checklist.title,
-        date: checklist.date,
-        dateAt: checklist.dateAt,
-        items: nextItems,
-        createdAt: checklist.createdAt,
-        destination: checklist.destination,
-        distanceKm: checklist.distanceKm,
-        maxAltitude: checklist.maxAltitude,
-        ascentM: checklist.ascentM,
-        durationHours: checklist.durationHours
-      };
-      nextChecklists.push(updated);
-    } else {
-      nextChecklists.push(checklist);
-    }
-  }
-  return nextChecklists;
-}
-
-export function latestChecklistHomeSubtitle(checklist: TripChecklist | undefined, gears: GearItem[]): string {
-  if (checklist === undefined) {
-    return '';
-  }
-  const countdown = countdownText(checklist);
-  const weight = checklistTotalWeight(checklist, gears);
-  if (countdown.length > 0 && weight > 0) {
-    return countdown + ' · ' + formatKg(weight);
-  }
-  if (countdown.length > 0) {
-    return countdown;
-  }
-  if (weight > 0) {
-    return formatKg(weight);
-  }
-  return checklistMetaText(checklist);
 }
 
 /**
@@ -423,11 +248,42 @@ export function findLatestChecklist(checklists: TripChecklist[]): TripChecklist 
   return checklists[0];
 }
 
+export function addItemsToChecklist(checklists: TripChecklist[], checklistId: string, items: ChecklistItem[]): TripChecklist[] {
+  const nextChecklists: TripChecklist[] = [];
+  for (let index = 0; index < checklists.length; index++) {
+    const checklist = checklists[index];
+    if (checklist.id === checklistId) {
+      const nextItems: ChecklistItem[] = [];
+      for (let itemIndex = 0; itemIndex < checklist.items.length; itemIndex++) {
+        nextItems.push(checklist.items[itemIndex]);
+      }
+      for (let newIndex = 0; newIndex < items.length; newIndex++) {
+        nextItems.push(items[newIndex]);
+      }
+      const updated: TripChecklist = {
+        id: checklist.id,
+        title: checklist.title,
+        date: checklist.date,
+        dateAt: checklist.dateAt,
+        items: nextItems,
+        createdAt: checklist.createdAt,
+        destination: checklist.destination,
+        distanceKm: checklist.distanceKm,
+        maxAltitude: checklist.maxAltitude,
+        ascentM: checklist.ascentM,
+        durationHours: checklist.durationHours
+      };
+      nextChecklists.push(updated);
+    } else {
+      nextChecklists.push(checklist);
+    }
+  }
+  return nextChecklists;
+}
+
 /**
  * 从装备列表中按 ID 筛选，生成 ChecklistItem 数组。
  * @param zone 可选，指定装备归属的 BodyZone 枚举值。
- *   有值时 group 直接填 zone（用户手动选择格子），
- *   无值时 fallback 为 gear.category（兼容旧调用路径）。
  */
 export function buildItemsFromGears(gears: GearItem[], gearIds: string[], zone?: string): ChecklistItem[] {
   const items: ChecklistItem[] = [];

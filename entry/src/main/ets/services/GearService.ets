@@ -188,26 +188,6 @@ export function gearSortLabel(sortMode: string): string {
   return '按分组';
 }
 
-export function filteredGearGroups(gears: GearItem[], keyword: string, activeCategories: string[], sortMode: string): string[] {
-  const items = filterGears(gears, keyword, activeCategories, sortMode);
-  const groups: string[] = [];
-  for (let index = 0; index < items.length; index++) {
-    const group = sortMode === GEAR_SORT_GROUP ? items[index].category : gearSortLabel(sortMode);
-    if (groups.indexOf(group) < 0) {
-      groups.push(group);
-    }
-  }
-  return groups;
-}
-
-export function filteredGearsByGroup(gears: GearItem[], keyword: string, activeCategories: string[], sortMode: string, group: string): GearItem[] {
-  const items = filterGears(gears, keyword, activeCategories, sortMode);
-  if (sortMode !== GEAR_SORT_GROUP) {
-    return items;
-  }
-  return items.filter((item: GearItem) => item.category === group);
-}
-
 export function totalGearWeight(gears: GearItem[]): number {
   let total = 0;
   for (let index = 0; index < gears.length; index++) {
@@ -224,62 +204,6 @@ export function totalGearPrice(gears: GearItem[]): number {
   return total;
 }
 
-export function averageGearValueRatio(gears: GearItem[]): number {
-  let totalPrice = 0;
-  let totalWeight = 0;
-  for (let index = 0; index < gears.length; index++) {
-    if (gears[index].price !== undefined && gears[index].weight !== undefined) {
-      totalPrice += numberOrZero(gears[index].price);
-      totalWeight += numberOrZero(gears[index].weight);
-    }
-  }
-  if (totalWeight <= 0) {
-    return 0;
-  }
-  return Math.round(totalPrice * 100 / totalWeight) / 100;
-}
-
-export function heaviestGearText(gears: GearItem[]): string {
-  let item: GearItem | undefined = undefined;
-  for (let index = 0; index < gears.length; index++) {
-    if (gears[index].weight !== undefined &&
-      (item === undefined || numberOrZero(gears[index].weight) > numberOrZero(item.weight))) {
-      item = gears[index];
-    }
-  }
-  if (item === undefined || item.weight === undefined) {
-    return '暂无';
-  }
-  return item.name + ' (' + item.weight.toString() + 'g)';
-}
-
-export function mostExpensiveGearText(gears: GearItem[]): string {
-  let item: GearItem | undefined = undefined;
-  for (let index = 0; index < gears.length; index++) {
-    if (gears[index].price !== undefined &&
-      (item === undefined || numberOrZero(gears[index].price) > numberOrZero(item.price))) {
-      item = gears[index];
-    }
-  }
-  if (item === undefined || item.price === undefined) {
-    return '暂无';
-  }
-  return item.name + ' (¥' + item.price.toString() + ')';
-}
-
-export function mostFrequentGearText(gears: GearItem[], tripCountMap: Map<string, number>): string {
-  let item: GearItem | undefined = undefined;
-  let maxCount = 0;
-  for (let index = 0; index < gears.length; index++) {
-    const count = tripCountMap.get(gears[index].id) ?? 0;
-    if (count > maxCount) {
-      maxCount = count;
-      item = gears[index];
-    }
-  }
-  return item === undefined ? '暂无' : item.name + ' (×' + maxCount.toString() + '次)';
-}
-
 export function formatKg(weightGram: number): string {
   if (weightGram <= 0) {
     return '0kg';
@@ -289,11 +213,6 @@ export function formatKg(weightGram: number): string {
     return Math.round(kg).toString() + 'kg';
   }
   return (Math.round(kg * 100) / 100).toString() + 'kg';
-}
-
-export function gearStatsText(gears: GearItem[]): string {
-  return gears.length.toString() + ' 件 · ' + formatKg(totalGearWeight(gears)) +
-    ' · ¥' + totalGearPrice(gears).toString();
 }
 
 export function gearById(gears: GearItem[], id: string): GearItem | undefined {
