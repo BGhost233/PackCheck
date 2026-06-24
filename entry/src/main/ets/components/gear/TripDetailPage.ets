@@ -108,6 +108,14 @@ export struct TripDetailPage {
   // #1：多选批量移动请求（弹出 Zone 选择面板）
   onRequestBatchMoveSheet: (itemIds: string[]) => void = () => {};
 
+  // Itinerary CRUD 回调（由 Index 处理持久化）
+  onAddDay: () => void = () => {};
+  onEditDay: (dayId: string) => void = () => {};
+  onDeleteDay: (dayId: string) => void = () => {};
+  onAddSegment: (dayId: string) => void = () => {};
+  onEditSegment: (dayId: string, segId: string) => void = () => {};
+  onDeleteSegment: (dayId: string, segId: string) => void = () => {};
+
   aboutToAppear(): void {
     this.refreshTripCache();
   }
@@ -269,7 +277,13 @@ export struct TripDetailPage {
         TabContent() {
           // Tab 1：每日行程
           ItineraryView({
-            itinerary: this.getItinerary()
+            itinerary: this.getItinerary(),
+            onAddDay: () => { this.onAddDay(); },
+            onEditDay: (dayId: string) => { this.onEditDay(dayId); },
+            onDeleteDay: (dayId: string) => { this.onDeleteDay(dayId); },
+            onAddSegment: (dayId: string) => { this.onAddSegment(dayId); },
+            onEditSegment: (dayId: string, segId: string) => { this.onEditSegment(dayId, segId); },
+            onDeleteSegment: (dayId: string, segId: string) => { this.onDeleteSegment(dayId, segId); }
           })
             .width('100%')
             .height('100%')

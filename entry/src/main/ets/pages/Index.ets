@@ -57,7 +57,7 @@ import {
   CURVE_DECELERATE,
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
-import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, GearItem, makeId, normalizeNumber, TripChecklist } from '../models/PackModels';
+import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, DayItinerary, DayPatch, GearItem, makeId, normalizeNumber, RouteSegment, SegmentPatch, TripChecklist } from '../models/PackModels';
 import { allZones, zoneDisplayName } from '../services/LoadoutService';
 import { PackStore } from '../services/PackStore';
 import {
@@ -108,6 +108,15 @@ import {
   resolveItemName
 } from '../services/ChecklistService';
 import { ProfilePage } from '../components/ProfilePage';
+import {
+  addDay,
+  removeDay,
+  updateDay,
+  addSegment,
+  removeSegment,
+  updateSegment,
+  createEmptySegment
+} from '../services/ItineraryService';
 
 @Entry
 @Component
@@ -1716,6 +1725,64 @@ struct Index {
     await this.store.saveChecklists(nextChecklists);
   }
 
+  // ============ Itinerary CRUD ============
+
+  /** 统一更新当前行程的 itinerary 并持久化 */
+  private async updateItinerary(nextItinerary: DayItinerary[]): Promise<void> {
+    const checklist = this.currentChecklist();
+    if (checklist === undefined) {
+      return;
+    }
+    const nextChecklists: TripChecklist[] = this.checklists.map((c: TripChecklist) => {
+      if (c.id !== checklist.id) {
+        return c;
+      }
+      const updated: TripChecklist = {
+        id: c.id,
+        title: c.title,
+        items: c.items,
+        createdAt: c.createdAt,
+        date: c.date,
+        dateAt: c.dateAt,
+        destination: c.destination,
+        distanceKm: c.distanceKm,
+        maxAltitude: c.maxAltitude,
+        ascentM: c.ascentM,
+        durationHours: c.durationHours,
+        itinerary: nextItinerary
+      };
+      return updated;
+    });
+    this.applyChecklistState(nextChecklists);
+    await this.store.saveChecklists(nextChecklists);
+  }
+
+  private async handleAddDay(): Promise<void> {
+    const itinerary = this.currentChecklist()?.itinerary ?? [];
+    const next = addDay(itinerary);
+    await this.updateItinerary(next);
+  }
+
+  private async handleDeleteDay(dayId: string): Promise<void> {
+    const itinerary = this.currentChecklist()?.itinerary ?? [];
+    const next = removeDay(itinerary, dayId);
+    await this.updateItinerary(next);
+  }
+
+  private async handleAddSegment(dayId: string): Promise<void> {
+    const itinerary = this.currentChecklist()?.itinerary ?? [];
+    const seg = createEmptySegment();
+    const next = addSegment(itinerary, dayId, seg);
+    await this.updateItinerary(next);
+    // TODO: Phase 8+ 改为先打开 SegmentFormSheet，填完再插入
+  }
+
+  private async handleDeleteSegment(dayId: string, segId: string): Promise<void> {
+    const itinerary = this.currentChecklist()?.itinerary ?? [];
+    const next = removeSegment(itinerary, dayId, segId);
+    await this.updateItinerary(next);
+  }
+
   private openSheetAnimated(): void {
     this.sheetTranslateY = 800;
     this.sheetOverlayOpacity = 0;
@@ -1825,7 +1892,17 @@ struct Index {
             if (checklist) {
               this.confirmDeleteChecklist(checklist);
             }
-          }
+          },
+          onAddDay: () => { this.handleAddDay(); },
+          onEditDay: (dayId: string) => {
+            // TODO: 打开 DayFormSheet 编辑模式（Phase 8+完善）
+          },
+          onDeleteDay: (dayId: string) => { this.handleDeleteDay(dayId); },
+          onAddSegment: (dayId: string) => { this.handleAddSegment(dayId); },
+          onEditSegment: (dayId: string, segId: string) => {
+            // TODO: 打开 SegmentFormSheet 编辑模式（Phase 8+完善）
+          },
+          onDeleteSegment: (dayId: string, segId: string) => { this.handleDeleteSegment(dayId, segId); }
         })
       }
       .hideTitleBar(true)
