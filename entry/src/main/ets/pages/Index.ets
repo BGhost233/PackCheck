@@ -213,13 +213,10 @@ struct Index {
   @State private ceremonyAscentM: string = '';
   @State private ceremonyDurationHours: string = '';
 
-  // ===== 行程日表单 =====
+  // ===== 行程日表单（4 字段：出发地/目的地/日期/备注） =====
   @State private editingDayId: string = '';
   @State private dayFormFrom: string = '';
   @State private dayFormTo: string = '';
-  @State private dayFormTransport: TransportMode = 'other';
-  @State private dayFormDepartTime: string = '';
-  @State private dayFormArriveTime: string = '';
   @State private dayFormDate: string = '';
   @State private dayFormNote: string = '';
   // ===== 路段表单 =====
@@ -1789,9 +1786,6 @@ private resetDayForm(): void {
 this.editingDayId = '';
 this.dayFormFrom = '';
 this.dayFormTo = '';
-this.dayFormTransport = 'other';
-this.dayFormDepartTime = '';
-this.dayFormArriveTime = '';
 this.dayFormDate = '';
 this.dayFormNote = '';
 }
@@ -1809,21 +1803,9 @@ if (day === undefined) {
 return;
 }
 this.editingDayId = dayId;
-// 预填首段信息（如果有）
-if (day.segments.length > 0) {
-const firstSeg = day.segments[0];
-this.dayFormFrom = firstSeg.from;
-this.dayFormTo = firstSeg.to;
-this.dayFormTransport = firstSeg.transport;
-this.dayFormDepartTime = firstSeg.departTime ?? '';
-this.dayFormArriveTime = firstSeg.arriveTime ?? '';
-} else {
-this.dayFormFrom = '';
-this.dayFormTo = '';
-this.dayFormTransport = 'other';
-this.dayFormDepartTime = '';
-this.dayFormArriveTime = '';
-}
+// 预填天级字段
+this.dayFormFrom = day.from ?? '';
+this.dayFormTo = day.to ?? '';
 this.dayFormDate = day.date ?? '';
 this.dayFormNote = day.note ?? '';
 this.sheetMode = SHEET_DAY_FORM;
@@ -1837,28 +1819,11 @@ await this.updateItinerary(next);
 this.closeSheet();
 }
 
-private async handleSubmitEditDay(dayId: string, firstSeg: RouteSegment, date?: string, note?: string): Promise<void> {
+private async handleSubmitEditDay(dayId: string, from: string, to: string, date: string, note: string): Promise<void> {
 let itinerary = this.currentChecklist()?.itinerary ?? [];
-// 更新天级 patch
-const dayPatch: DayPatch = { date: date, note: note };
+// 纯天级 patch（from/to/date/note），不再联动 segments
+const dayPatch: DayPatch = { from: from, to: to, date: date, note: note };
 itinerary = updateDay(itinerary, dayId, dayPatch);
-// 更新首段（如果存在则更新，否则插入）
-const day = itinerary.find((d: DayItinerary) => d.id === dayId);
-if (day !== undefined) {
-if (day.segments.length > 0) {
-const oldSegId = day.segments[0].id;
-const segPatch: SegmentPatch = {
-  from: firstSeg.from,
-  to: firstSeg.to,
-  transport: firstSeg.transport,
-  departTime: firstSeg.departTime,
-  arriveTime: firstSeg.arriveTime
-};
-itinerary = updateSegment(itinerary, dayId, oldSegId, segPatch);
-} else {
-itinerary = addSegment(itinerary, dayId, firstSeg);
-}
-}
 await this.updateItinerary(itinerary);
 this.closeSheet();
 }
@@ -1933,11 +1898,11 @@ const segPatch: SegmentPatch = {
   from: segment.from,
   to: segment.to,
   transport: segment.transport,
-  departTime: segment.departTime,
-  arriveTime: segment.arriveTime,
-  note: segment.note,
+  departTime: segment.departTime ?? '',
+  arriveTime: segment.arriveTime ?? '',
+  note: segment.note ?? '',
   ticket: segment.ticket,
-  accommodation: segment.accommodation
+  accommodation: segment.accommodation ?? ''
 };
 itinerary = updateSegment(itinerary, this.editingSegDayId, this.editingSegmentId, segPatch);
 } else {
@@ -1972,6 +1937,9 @@ await this.updateItinerary(next);
     this.returnToImportAfterGear = false;
     this.editingItemId = '';
     this.showTempAddNotice = false;
+    // 防御性重置表单状态，避免残留脏数据
+    this.resetDayForm();
+    this.resetSegForm();
     this.getUIContext().animateTo({
       curve: SPRING_PANEL_EXIT(),
       onFinish: () => {
@@ -2561,21 +2529,15 @@ await this.updateItinerary(next);
           editingDayId: this.editingDayId,
           dayFrom: this.dayFormFrom,
           dayTo: this.dayFormTo,
-          dayTransport: this.dayFormTransport,
-          dayDepartTime: this.dayFormDepartTime,
-          dayArriveTime: this.dayFormArriveTime,
           dayDate: this.dayFormDate,
           dayNote: this.dayFormNote,
           onDayFromChange: (v: string) => { this.dayFormFrom = v; },
           onDayToChange: (v: string) => { this.dayFormTo = v; },
-          onDayTransportChange: (v: TransportMode) => { this.dayFormTransport = v; },
-          onDayDepartTimeChange: (v: string) => { this.dayFormDepartTime = v; },
-          onDayArriveTimeChange: (v: string) => { this.dayFormArriveTime = v; },
           onDayDateChange: (v: string) => { this.dayFormDate = v; },
           onDayNoteChange: (v: string) => { this.dayFormNote = v; },
           onSubmitDay: (day: DayItinerary) => { this.handleSubmitNewDay(day); },
-          onSubmitEditDay: (dayId: string, firstSeg: RouteSegment, date?: string, note?: string) => {
-            this.handleSubmitEditDay(dayId, firstSeg, date, note);
+          onSubmitEditDay: (dayId: string, from: string, to: string, date: string, note: string) => {
+            this.handleSubmitEditDay(dayId, from, to, date, note);
           },
           // SegmentForm
           editingSegmentId: this.editingSegmentId,

@@ -1,4 +1,5 @@
 import { CATEGORY_ALL, ChecklistItem, GearItem, TransportMode, DayItinerary, RouteSegment } from '../../models/PackModels';
+// Note: RouteSegment still needed for SegmentForm
 import { resolveItemName } from '../../services/ChecklistService';
 import {
   CARD_BG,
@@ -132,24 +133,18 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
   onActionViewDetail: (item: ChecklistItem) => void = () => {};
   onActionRemove: (itemId: string) => void = () => {};
 
-  // DayForm props & callbacks
+  // DayForm props & callbacks（天级 4 字段：出发地/目的地/日期/备注）
   @Prop editingDayId: string = '';
   @Prop dayFrom: string = '';
   @Prop dayTo: string = '';
-  @Prop dayTransport: TransportMode = 'other';
-  @Prop dayDepartTime: string = '';
-  @Prop dayArriveTime: string = '';
   @Prop dayDate: string = '';
   @Prop dayNote: string = '';
   onDayFromChange: (v: string) => void = () => {};
   onDayToChange: (v: string) => void = () => {};
-  onDayTransportChange: (v: TransportMode) => void = () => {};
-  onDayDepartTimeChange: (v: string) => void = () => {};
-  onDayArriveTimeChange: (v: string) => void = () => {};
   onDayDateChange: (v: string) => void = () => {};
   onDayNoteChange: (v: string) => void = () => {};
   onSubmitDay: (day: DayItinerary) => void = () => {};
-  onSubmitEditDay: (dayId: string, firstSeg: RouteSegment, date?: string, note?: string) => void = () => {};
+  onSubmitEditDay: (dayId: string, from: string, to: string, date: string, note: string) => void = () => {};
 
   // SegmentForm props & callbacks
   @Prop editingSegmentId: string = '';
@@ -352,16 +347,10 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
             editingDayId: this.editingDayId,
             dayFrom: this.dayFrom,
             dayTo: this.dayTo,
-            dayTransport: this.dayTransport,
-            dayDepartTime: this.dayDepartTime,
-            dayArriveTime: this.dayArriveTime,
             dayDate: this.dayDate,
             dayNote: this.dayNote,
             onFromChange: this.onDayFromChange,
             onToChange: this.onDayToChange,
-            onTransportChange: this.onDayTransportChange,
-            onDepartTimeChange: this.onDayDepartTimeChange,
-            onArriveTimeChange: this.onDayArriveTimeChange,
             onDateChange: this.onDayDateChange,
             onNoteChange: this.onDayNoteChange,
             onSubmitDay: this.onSubmitDay,

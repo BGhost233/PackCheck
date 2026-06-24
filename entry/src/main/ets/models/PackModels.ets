@@ -52,6 +52,8 @@ export interface RouteSegment {
 export interface DayItinerary {
   id: string;
   dayIndex: number;         // 第几天（0-based，UI 展示时 +1）
+  from?: string;            // 天级出发地（收缩态摘要用，optional 向后兼容）
+  to?: string;              // 天级目的地
   date?: string;            // 日期 "2024-10-03"
   segments: RouteSegment[]; // 路段序列（有序）
   note?: string;            // 整天的备注（收缩态显示）
@@ -78,6 +80,8 @@ export interface TripChecklist {
 // --- Patch 类型（部分更新，用于编辑场景） ---
 
 export interface DayPatch {
+  from?: string;
+  to?: string;
   date?: string;
   note?: string;
 }

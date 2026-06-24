@@ -63,18 +63,20 @@ export interface TripMetaDerived {
  * 从一天的 segments 提取收缩态摘要：首尾地名 + 主交通方式 + 首尾时间
  */
 export function getDaySummary(day: DayItinerary): DaySummary {
-  if (day.segments.length === 0) {
-    return { from: '未填写', to: '未填写', mainTransport: 'other', departTime: undefined, arriveTime: undefined };
-  }
-  const firstSeg = day.segments[0];
-  const lastSeg = day.segments[day.segments.length - 1];
-  return {
-    from: firstSeg.from,
-    to: lastSeg.to,
-    mainTransport: firstSeg.transport,
-    departTime: firstSeg.departTime,
-    arriveTime: lastSeg.arriveTime
-  };
+  // 优先用天级 from/to；旧数据无此字段时 fallback 到 segments 首尾
+  const dayFrom = (day.from !== undefined && day.from.length > 0)
+    ? day.from
+    : (day.segments.length > 0 ? day.segments[0].from : '未填写');
+  const dayTo = (day.to !== undefined && day.to.length > 0)
+    ? day.to
+    : (day.segments.length > 0 ? day.segments[day.segments.length - 1].to : '未填写');
+
+  // 交通方式和时间从 segments 取（它们是路段级概念）
+  const mainTransport: TransportMode = day.segments.length > 0 ? day.segments[0].transport : 'other';
+  const departTime = day.segments.length > 0 ? day.segments[0].departTime : undefined;
+  const arriveTime = day.segments.length > 0 ? day.segments[day.segments.length - 1].arriveTime : undefined;
+
+  return { from: dayFrom, to: dayTo, mainTransport: mainTransport, departTime: departTime, arriveTime: arriveTime };
 }
 
 /**
@@ -173,12 +175,15 @@ export function updateDay(itinerary: DayItinerary[], dayId: string, patch: DayPa
     if (d.id !== dayId) {
       return d;
     }
+    // patch 语义：undefined=不修改，''=显式清空，string=新值
     const updated: DayItinerary = {
       id: d.id,
       dayIndex: d.dayIndex,
+      from: patch.from !== undefined ? (patch.from.length > 0 ? patch.from : undefined) : d.from,
+      to: patch.to !== undefined ? (patch.to.length > 0 ? patch.to : undefined) : d.to,
       segments: d.segments,
-      date: patch.date !== undefined ? patch.date : d.date,
-      note: patch.note !== undefined ? patch.note : d.note
+      date: patch.date !== undefined ? (patch.date.length > 0 ? patch.date : undefined) : d.date,
+      note: patch.note !== undefined ? (patch.note.length > 0 ? patch.note : undefined) : d.note
     };
     return updated;
   });
@@ -202,7 +207,7 @@ export function addSegment(
       ? afterIndex + 1
       : segs.length;
     segs.splice(insertAt, 0, segment);
-    return { id: d.id, dayIndex: d.dayIndex, date: d.date, note: d.note, segments: segs } as DayItinerary;
+    return { id: d.id, dayIndex: d.dayIndex, from: d.from, to: d.to, date: d.date, note: d.note, segments: segs } as DayItinerary;
   });
 }
 
@@ -215,7 +220,7 @@ export function removeSegment(itinerary: DayItinerary[], dayId: string, segmentI
       return d;
     }
     const segs = d.segments.filter((s) => s.id !== segmentId);
-    return { id: d.id, dayIndex: d.dayIndex, date: d.date, note: d.note, segments: segs } as DayItinerary;
+    return { id: d.id, dayIndex: d.dayIndex, from: d.from, to: d.to, date: d.date, note: d.note, segments: segs } as DayItinerary;
   });
 }
 
@@ -236,20 +241,21 @@ export function updateSegment(
       if (s.id !== segmentId) {
         return s;
       }
+      // patch 语义：undefined=不修改，''=显式清空，有值=新值
       const updated: RouteSegment = {
         id: s.id,
         from: patch.from !== undefined ? patch.from : s.from,
         to: patch.to !== undefined ? patch.to : s.to,
         transport: patch.transport !== undefined ? patch.transport : s.transport,
-        departTime: patch.departTime !== undefined ? patch.departTime : s.departTime,
-        arriveTime: patch.arriveTime !== undefined ? patch.arriveTime : s.arriveTime,
-        note: patch.note !== undefined ? patch.note : s.note,
+        departTime: patch.departTime !== undefined ? (patch.departTime.length > 0 ? patch.departTime : undefined) : s.departTime,
+        arriveTime: patch.arriveTime !== undefined ? (patch.arriveTime.length > 0 ? patch.arriveTime : undefined) : s.arriveTime,
+        note: patch.note !== undefined ? (patch.note.length > 0 ? patch.note : undefined) : s.note,
         ticket: patch.ticket !== undefined ? patch.ticket : s.ticket,
-        accommodation: patch.accommodation !== undefined ? patch.accommodation : s.accommodation
+        accommodation: patch.accommodation !== undefined ? (patch.accommodation.length > 0 ? patch.accommodation : undefined) : s.accommodation
       };
       return updated;
     });
-    return { id: d.id, dayIndex: d.dayIndex, date: d.date, note: d.note, segments: segs } as DayItinerary;
+    return { id: d.id, dayIndex: d.dayIndex, from: d.from, to: d.to, date: d.date, note: d.note, segments: segs } as DayItinerary;
   });
 }
 
@@ -288,7 +294,7 @@ function renumberDays(days: DayItinerary[]): DayItinerary[] {
     if (d.dayIndex === i) {
       return d;
     }
-    return { id: d.id, dayIndex: i, date: d.date, note: d.note, segments: d.segments } as DayItinerary;
+    return { id: d.id, dayIndex: i, from: d.from, to: d.to, date: d.date, note: d.note, segments: d.segments } as DayItinerary;
   });
 }
 
