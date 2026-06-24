@@ -1,5 +1,5 @@
-// 行程日程相关纯业务逻辑 — 数据派生、摘要提取、图标映射
-import { DayItinerary, TransportMode } from '../models/PackModels';
+// 行程日程相关纯业务逻辑 — 数据派生、摘要提取、图标映射、CRUD 纯函数
+import { DayItinerary, DayPatch, makeId, RouteSegment, SegmentPatch, TransportMode } from '../models/PackModels';
 
 /**
  * 日摘要数据（供 DayCard 收缩态展示）
@@ -128,9 +128,166 @@ export function getTransportLabel(mode: TransportMode): string {
   }
 }
 
+// ============ CRUD 纯函数（全部 immutable，返回新数组） ============
+
+/**
+ * 新增一天。afterIndex 为插入位置的 index（插入到该位置之后），
+ * 省略或越界则追加到末尾。dayIndex 自动重排。
+ */
+export function addDay(itinerary: DayItinerary[], afterIndex?: number): DayItinerary[] {
+  const newDay: DayItinerary = {
+    id: makeId('day'),
+    dayIndex: 0, // 下方 renumber
+    segments: []
+  };
+  const result = itinerary.slice();
+  const insertAt = (afterIndex !== undefined && afterIndex >= 0 && afterIndex < result.length)
+    ? afterIndex + 1
+    : result.length;
+  result.splice(insertAt, 0, newDay);
+  return renumberDays(result);
+}
+
+/**
+ * 删除一天（按 dayId）。dayIndex 自动重排。
+ */
+export function removeDay(itinerary: DayItinerary[], dayId: string): DayItinerary[] {
+  const result = itinerary.filter((d) => d.id !== dayId);
+  return renumberDays(result);
+}
+
+/**
+ * 更新一天的元信息（date/note），不影响 segments。
+ */
+export function updateDay(itinerary: DayItinerary[], dayId: string, patch: DayPatch): DayItinerary[] {
+  return itinerary.map((d) => {
+    if (d.id !== dayId) {
+      return d;
+    }
+    const updated: DayItinerary = {
+      id: d.id,
+      dayIndex: d.dayIndex,
+      segments: d.segments,
+      date: patch.date !== undefined ? patch.date : d.date,
+      note: patch.note !== undefined ? patch.note : d.note
+    };
+    return updated;
+  });
+}
+
+/**
+ * 在指定 day 中新增一段路程。afterIndex 为插入位置（省略追加末尾）。
+ */
+export function addSegment(
+  itinerary: DayItinerary[],
+  dayId: string,
+  segment: RouteSegment,
+  afterIndex?: number
+): DayItinerary[] {
+  return itinerary.map((d) => {
+    if (d.id !== dayId) {
+      return d;
+    }
+    const segs = d.segments.slice();
+    const insertAt = (afterIndex !== undefined && afterIndex >= 0 && afterIndex < segs.length)
+      ? afterIndex + 1
+      : segs.length;
+    segs.splice(insertAt, 0, segment);
+    return { id: d.id, dayIndex: d.dayIndex, date: d.date, note: d.note, segments: segs } as DayItinerary;
+  });
+}
+
+/**
+ * 删除指定 day 中的一段路程。
+ */
+export function removeSegment(itinerary: DayItinerary[], dayId: string, segmentId: string): DayItinerary[] {
+  return itinerary.map((d) => {
+    if (d.id !== dayId) {
+      return d;
+    }
+    const segs = d.segments.filter((s) => s.id !== segmentId);
+    return { id: d.id, dayIndex: d.dayIndex, date: d.date, note: d.note, segments: segs } as DayItinerary;
+  });
+}
+
+/**
+ * 更新指定 day 中的一段路程（patch 模式）。
+ */
+export function updateSegment(
+  itinerary: DayItinerary[],
+  dayId: string,
+  segmentId: string,
+  patch: SegmentPatch
+): DayItinerary[] {
+  return itinerary.map((d) => {
+    if (d.id !== dayId) {
+      return d;
+    }
+    const segs: RouteSegment[] = d.segments.map((s) => {
+      if (s.id !== segmentId) {
+        return s;
+      }
+      const updated: RouteSegment = {
+        id: s.id,
+        from: patch.from !== undefined ? patch.from : s.from,
+        to: patch.to !== undefined ? patch.to : s.to,
+        transport: patch.transport !== undefined ? patch.transport : s.transport,
+        departTime: patch.departTime !== undefined ? patch.departTime : s.departTime,
+        arriveTime: patch.arriveTime !== undefined ? patch.arriveTime : s.arriveTime,
+        note: patch.note !== undefined ? patch.note : s.note,
+        ticket: patch.ticket !== undefined ? patch.ticket : s.ticket,
+        accommodation: patch.accommodation !== undefined ? patch.accommodation : s.accommodation
+      };
+      return updated;
+    });
+    return { id: d.id, dayIndex: d.dayIndex, date: d.date, note: d.note, segments: segs } as DayItinerary;
+  });
+}
+
+/**
+ * 按给定 id 顺序重排天列表。dayIndex 自动重排。
+ */
+export function reorderDays(itinerary: DayItinerary[], orderedIds: string[]): DayItinerary[] {
+  const idMap = new Map<string, DayItinerary>();
+  itinerary.forEach((d) => idMap.set(d.id, d));
+  const result: DayItinerary[] = [];
+  orderedIds.forEach((id) => {
+    const day = idMap.get(id);
+    if (day !== undefined) {
+      result.push(day);
+    }
+  });
+  return renumberDays(result);
+}
+
+/**
+ * 创建新路段（带默认值）。
+ */
+export function createEmptySegment(): RouteSegment {
+  return {
+    id: makeId('seg'),
+    from: '',
+    to: '',
+    transport: 'other'
+  };
+}
+
+// --- 内部工具 ---
+
+function renumberDays(days: DayItinerary[]): DayItinerary[] {
+  return days.map((d, i) => {
+    if (d.dayIndex === i) {
+      return d;
+    }
+    return { id: d.id, dayIndex: i, date: d.date, note: d.note, segments: d.segments } as DayItinerary;
+  });
+}
+
+// ============ Mock 数据（开发期过渡，Phase 9 移除） ============
+
 /**
  * 开发期 Mock 数据：模拟 4 天户外行程（成都→日隆→大本营→长坪沟→成都）
- * TODO: Phase 2 移除，改为真实数据
+ * TODO: Phase 9 移除，改为真实数据
  */
 export function createMockItinerary(): DayItinerary[] {
   return [

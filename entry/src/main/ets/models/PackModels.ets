@@ -75,6 +75,24 @@ export interface TripChecklist {
 }
 
 
+// --- Patch 类型（部分更新，用于编辑场景） ---
+
+export interface DayPatch {
+  date?: string;
+  note?: string;
+}
+
+export interface SegmentPatch {
+  from?: string;
+  to?: string;
+  transport?: TransportMode;
+  departTime?: string;
+  arriveTime?: string;
+  note?: string;
+  ticket?: TicketInfo;
+  accommodation?: string;
+}
+
 // 「全部」分类哨兵值：用于筛选/标签组中表示「不限分类」。统一引用此常量，禁止硬编码字符串。
 export const CATEGORY_ALL = '全部';
 
