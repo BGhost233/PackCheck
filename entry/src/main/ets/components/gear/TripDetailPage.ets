@@ -23,7 +23,6 @@ import {
 import { ChecklistItem, DayItinerary, GearItem, TripChecklist } from '../../models/PackModels';
 import { UnifiedChecklistView } from './UnifiedChecklistView';
 import { ItineraryView } from './ItineraryView';
-import { createMockItinerary } from '../../services/ItineraryService';
 
 // E-3：顶部元信息区结构化段。kind 决定着色：
 //   'plain' 日期/地点 → TEXT_TERTIARY 纯文字；'data' 里程/海拔/时长 → AMBER_ACCENT + tnum 等宽点睛。
@@ -338,14 +337,13 @@ export struct TripDetailPage {
     .backgroundColor(PAGE_BG)
   }
 
-  // 获取当前行程的 itinerary 数据（有真数据用真数据，否则用 mock）
+  // 获取当前行程的 itinerary 数据（无数据时返回空数组，由 ItineraryView 展示空态）
   private getItinerary(): DayItinerary[] {
     const trip = this.currentChecklist();
     if (trip !== undefined && trip.itinerary !== undefined && trip.itinerary.length > 0) {
       return trip.itinerary;
     }
-    // TODO: Phase 2 移除 mock，改为返回空数组让空态展示
-    return createMockItinerary();
+    return [];
   }
 
   @Builder
