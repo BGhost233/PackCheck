@@ -228,34 +228,69 @@ export struct TripDetailPage {
       // 共享信息区：行程参数摘要
       this.buildSharedInfo()
 
-      // 统一清单视图（带格子的核查清单）
-      UnifiedChecklistView({
-        trip: this.currentChecklist() ?? { id: '', title: '', items: [], createdAt: 0 },
-        gears: this.gears,
-        checklistRenderNonce: this.checklistRenderNonce,
-        reservedTopHeight: this.reservedTop(),
-        focusedZone: this.focusedZone,
-        closeFocusSignal: this.closeFocusSignal,
-        onOpenPicker: (zone?: string) => { this.onOpenGearPicker(zone); },
-        onToggleCheck: this.onToggleChecklistItem,
-        onMoveItemToZone: this.onMoveItemToZone,
-        onEditItem: this.onOpenEditItem,
-        onRemoveItem: this.onDeleteChecklistItem,
-        onRequestMoveSheet: this.onRequestMoveSheet,
-        onReorderItems: this.onReorderItems,
-        onRequestBatchMoveSheet: this.onRequestBatchMoveSheet,
-        onReviewZone: this.onOpenZoneReview,
-        // 问题4a：接收子组件 head 折叠进度，驱动本层 SharedInfo 日期行同帧收起。
-        onHeadCollapseChange: (progress: number, snapping: boolean) => {
-          this.headSnapping = snapping;
-          this.headCollapseProgress = progress;
+      // 内容区：条件渲染装备/行程，transition 补切换动画
+      Stack() {
+        if (this.tripTabIndex === 0) {
+          // Tab 0：装备准备（统一清单视图）
+          UnifiedChecklistView({
+            trip: this.currentChecklist() ?? { id: '', title: '', items: [], createdAt: 0 },
+            gears: this.gears,
+            checklistRenderNonce: this.checklistRenderNonce,
+            reservedTopHeight: this.reservedTop(),
+            focusedZone: this.focusedZone,
+            closeFocusSignal: this.closeFocusSignal,
+            onOpenPicker: (zone?: string) => { this.onOpenGearPicker(zone); },
+            onToggleCheck: this.onToggleChecklistItem,
+            onMoveItemToZone: this.onMoveItemToZone,
+            onEditItem: this.onOpenEditItem,
+            onRemoveItem: this.onDeleteChecklistItem,
+            onRequestMoveSheet: this.onRequestMoveSheet,
+            onReorderItems: this.onReorderItems,
+            onRequestBatchMoveSheet: this.onRequestBatchMoveSheet,
+            onReviewZone: this.onOpenZoneReview,
+            // 问题4a：接收子组件 head 折叠进度，驱动本层 SharedInfo 日期行同帧收起。
+            onHeadCollapseChange: (progress: number, snapping: boolean) => {
+              this.headSnapping = snapping;
+              this.headCollapseProgress = progress;
+            }
+          })
+            .width('100%')
+            .height('100%')
+            .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_TAB() }))
         }
-      })
-        .layoutWeight(1)
+
+        if (this.tripTabIndex === 1) {
+          // Tab 1：每日行程（Phase 8 替换为 ItineraryView 组件）
+          this.buildItineraryPlaceholder()
+        }
+      }
+      .layoutWeight(1)
+      .width('100%')
     }
     .width('100%')
     .height('100%')
     .backgroundColor(PAGE_BG)
+  }
+
+  // Phase 5 占位：行程 Tab 内容（Phase 8 将替换为 ItineraryView 组件）
+  @Builder
+  private buildItineraryPlaceholder() {
+    Column() {
+      Text('每日行程')
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor(TEXT_TERTIARY)
+        .margin({ top: 80 })
+      Text('即将展示时间线路线…')
+        .fontSize(13)
+        .fontColor(TEXT_TERTIARY)
+        .margin({ top: 8 })
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Start)
+    .alignItems(HorizontalAlign.Center)
+    .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_TAB() }))
   }
 
   @Builder
