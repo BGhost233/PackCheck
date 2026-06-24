@@ -287,6 +287,7 @@ export struct TripDetailPage {
           // Tab 1：每日行程
           ItineraryView({
             itinerary: this.getItinerary(),
+            renderNonce: this.checklistRenderNonce,
             onAddDay: () => { this.onAddDay(); },
             onEditDay: (dayId: string) => { this.onEditDay(dayId); },
             onDeleteDay: (dayId: string) => { this.onDeleteDay(dayId); },

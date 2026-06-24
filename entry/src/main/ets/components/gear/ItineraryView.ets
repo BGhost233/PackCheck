@@ -18,6 +18,8 @@ import {
 @Component
 export struct ItineraryView {
   @Prop itinerary: DayItinerary[] = [];
+  // 强制刷新 nonce：父组件数据变更时递增，建立 ArkUI 依赖追踪链路
+  @Prop renderNonce: number = 0;
 
   // 编辑回调
   onAddDay: () => void = () => {};
