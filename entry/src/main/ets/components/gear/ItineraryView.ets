@@ -18,8 +18,14 @@ import {
 @Component
 export struct ItineraryView {
   @Prop itinerary: DayItinerary[] = [];
-  // 预留回调（Phase 2 编辑功能用）
+
+  // 编辑回调
   onAddDay: () => void = () => {};
+  onEditDay: (dayId: string) => void = () => {};
+  onDeleteDay: (dayId: string) => void = () => {};
+  onAddSegment: (dayId: string) => void = () => {};
+  onEditSegment: (dayId: string, segId: string) => void = () => {};
+  onDeleteSegment: (dayId: string, segId: string) => void = () => {};
 
   // 手风琴互斥：同时只展开一天
   @State private expandedDayId: string = '';
@@ -96,7 +102,12 @@ export struct ItineraryView {
           DayCard({
             day: day,
             isExpanded: this.expandedDayId === day.id,
-            onToggle: () => { this.toggleDay(day.id); }
+            onToggle: () => { this.toggleDay(day.id); },
+            onEditDay: () => { this.onEditDay(day.id); },
+            onDeleteDay: () => { this.onDeleteDay(day.id); },
+            onAddSegment: () => { this.onAddSegment(day.id); },
+            onEditSegment: (segId: string) => { this.onEditSegment(day.id, segId); },
+            onDeleteSegment: (segId: string) => { this.onDeleteSegment(day.id, segId); }
           })
             .opacity(this.appeared ? 1 : 0)
             .translate({ y: this.appeared ? 0 : STAGGER_OFFSET_Y })
@@ -105,6 +116,18 @@ export struct ItineraryView {
               delay: staggerDelay(index)
             })
         }, (day: DayItinerary) => day.id)
+
+        // 底部添加一天按钮
+        Text('+ 添加一天')
+          .fontSize(14)
+          .fontColor(PRIMARY_COLOR)
+          .fontWeight(FontWeight.Medium)
+          .textAlign(TextAlign.Center)
+          .width('100%')
+          .padding({ top: 12, bottom: 12 })
+          .onClick(() => { this.onAddDay(); })
+          .opacity(this.appeared ? 1 : 0)
+          .animation({ curve: SPRING_GENERAL(), delay: staggerDelay(this.itinerary.length) })
       }
       .width('100%')
       .padding({

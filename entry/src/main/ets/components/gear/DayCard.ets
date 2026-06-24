@@ -10,7 +10,8 @@ import {
   CARD_BG,
   TIMELINE_LINE,
   TIMELINE_NODE,
-  CHIP_BG_DEFAULT
+  CHIP_BG_DEFAULT,
+  PRIMARY_COLOR
 } from '../../constants/Colors';
 import {
   TIMELINE_LINE_WIDTH,
@@ -28,6 +29,11 @@ export struct DayCard {
   @Prop day: DayItinerary = { id: '', dayIndex: 0, segments: [] };
   @Prop isExpanded: boolean = false;
   onToggle: () => void = () => {};
+  onEditDay: () => void = () => {};
+  onDeleteDay: () => void = () => {};
+  onAddSegment: () => void = () => {};
+  onEditSegment: (segId: string) => void = () => {};
+  onDeleteSegment: (segId: string) => void = () => {};
 
   @State private cardScale: number = 1.0;
 
@@ -59,6 +65,10 @@ export struct DayCard {
       }
     })
     .onClick(() => { this.onToggle(); })
+    .gesture(
+      LongPressGesture()
+        .onAction(() => { this.onEditDay(); })
+    )
   }
 
   @Builder
@@ -154,13 +164,35 @@ export struct DayCard {
     .width('100%')
   }
 
-  // Phase 7 展开态占位（将实现时间线 UI）
   @Builder
   private buildExpandedContent() {
     Column({ space: 8 }) {
       ForEach(this.day.segments, (seg: RouteSegment, index: number) => {
         this.buildSegmentRow(seg, index)
       }, (seg: RouteSegment) => seg.id)
+
+      // 添加路段节点
+      Row({ space: 10 }) {
+        Column() {
+          Circle()
+            .width(TIMELINE_NODE_SIZE)
+            .height(TIMELINE_NODE_SIZE)
+            .fill('transparent')
+            .stroke(PRIMARY_COLOR)
+            .strokeWidth(1.5)
+        }
+        .width(TIMELINE_LEFT_MARGIN)
+        .alignItems(HorizontalAlign.Center)
+
+        Text('+ 添加路段')
+          .fontSize(13)
+          .fontColor(PRIMARY_COLOR)
+          .fontWeight(FontWeight.Medium)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .padding({ top: 4, bottom: 2 })
+      .onClick(() => { this.onAddSegment(); })
     }
     .width('100%')
     .margin({ top: 12 })
@@ -192,7 +224,7 @@ export struct DayCard {
       .width(TIMELINE_LEFT_MARGIN)
       .alignItems(HorizontalAlign.Center)
 
-      // 右侧内容
+      // 右侧内容（点击编辑）
       Column({ space: 2 }) {
         // 起点 → 终点
         Text(`${seg.from} → ${seg.to}`)
@@ -254,6 +286,11 @@ export struct DayCard {
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
+      .onClick(() => { this.onEditSegment(seg.id); })
+      .gesture(
+        LongPressGesture()
+          .onAction(() => { this.onDeleteSegment(seg.id); })
+      )
     }
     .width('100%')
     .alignItems(VerticalAlign.Top)
