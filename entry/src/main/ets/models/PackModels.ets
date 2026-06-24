@@ -51,7 +51,7 @@ export interface RouteSegment {
 // 一天的行程
 export interface DayItinerary {
   id: string;
-  dayIndex: number;         // 第几天（从 1 开始）
+  dayIndex: number;         // 第几天（0-based，UI 展示时 +1）
   date?: string;            // 日期 "2024-10-03"
   segments: RouteSegment[]; // 路段序列（有序）
   note?: string;            // 整天的备注（收缩态显示）
