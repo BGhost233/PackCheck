@@ -41,7 +41,6 @@ export const SPRING_CEREMONY_DISMISS = (): ICurve => curves.springMotion(0.25, 0
 export const SPRING_REORDER = (): ICurve => curves.springMotion(0.25, 0.85);
 
 // 上下文菜单/托盘卡片
-export const SPRING_CONTEXT_EXIT = (): ICurve => curves.springMotion(0.28, 0.85);
 export const SPRING_TRAY_CARD = (): ICurve => curves.springMotion(0.28, 0.72);
 
 // Tab 呼吸/图标
@@ -66,9 +65,6 @@ export const EASE_FADE: Curve = Curve.EaseOut;
 export const DURATION_OVERLAY_ENTER: number = 180;
 // 菜单/详情卡淡出时长
 export const DURATION_OVERLAY_FADE: number = 120;
-// 浮层消失时长
-export const DURATION_OVERLAY_DISMISS: number = 150;
-
 // ============================================================
 // 时长 (ms)
 // ============================================================
@@ -78,9 +74,7 @@ export const DURATION_NONE: number = 0;
 export const DURATION_TICK: number = 32;
 export const DURATION_FAST: number = 100;
 export const DURATION_RECOVER: number = 280;
-export const DURATION_COLOR_FADE: number = 350;
 export const DURATION_COUNTER: number = 400;
-export const DURATION_GAUGE_COUNTER: number = 800;
 
 // 仪式动画专用时长
 export const DURATION_CEREMONY_SHAKE: number = 80;

@@ -32,12 +32,14 @@ export struct GearFilterPanel {
   @State private tempCategories: string[] = [CATEGORY_ALL];
   @State private panelTranslateY: number = -600;
   @State private overlayOpacity: number = 0;
+  private entryTimerId: number = -1;
 
   aboutToAppear(): void {
     // 初始化临时筛选为外部传入值
     this.tempCategories = this.normalizeCategories(this.selectedCategories);
     // 入场动画
-    setTimeout(() => {
+    this.entryTimerId = setTimeout(() => {
+      this.entryTimerId = -1;
       this.getUIContext().animateTo({
         curve: SPRING_GENERAL()
       }, () => {
@@ -45,6 +47,13 @@ export struct GearFilterPanel {
         this.overlayOpacity = 1;
       });
     }, 0);
+  }
+
+  aboutToDisappear(): void {
+    if (this.entryTimerId !== -1) {
+      clearTimeout(this.entryTimerId);
+      this.entryTimerId = -1;
+    }
   }
 
   private normalizeCategories(input: string[]): string[] {

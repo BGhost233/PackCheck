@@ -71,7 +71,6 @@ export struct HomePage {
   // head 折叠进度镜像（0=全展开，1=全折叠）。
   //   ⚠️ 刷新陷阱：render 必须读此 @State（非控制器内部字段），controller.onChange 推动更新。
   @State private headProgress: number = 0;
-  @State private headSnapping: boolean = false;
   @State private historyPressedId: string = '';
   @State private heroPressed: boolean = false;
   @State private historyStaggerReady: boolean = false;
@@ -94,7 +93,6 @@ export struct HomePage {
     enableSnap: true,
     getUIContext: () => this.getUIContext(),
     onChange: (progress: number, snapping: boolean) => {
-      this.headSnapping = snapping;
       this.headProgress = progress;
     }
   });
@@ -146,14 +144,13 @@ export struct HomePage {
   onTabVisibilityNonceChange(): void {
     this.resetEntryStates();
     this.scheduleStaggerEntry();
-    // headProgress/headSnapping 不重置 — 由 HeadCollapseController 滚动驱动
+    // headProgress 不重置 — 由 HeadCollapseController 滚动驱动
   }
 
   aboutToAppear(): void {
     this.isAlive = true;
     this.resetEntryStates();
     this.headProgress = 0;
-    this.headSnapping = false;
     this.scheduleStaggerEntry();
   }
 
@@ -382,11 +379,6 @@ export struct HomePage {
     // 总重
     parts.push(this.formatKg(this.checklistTotalWeight(checklist)));
     return parts.join(' · ');
-  }
-
-  private formatDateText(timestamp: number): string {
-    const date = new Date(timestamp);
-    return date.getFullYear().toString() + '-' + (date.getMonth() + 1).toString() + '-' + date.getDate().toString();
   }
 
   private rowDateText(item: TripChecklist): string {

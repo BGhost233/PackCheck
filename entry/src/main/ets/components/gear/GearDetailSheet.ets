@@ -15,7 +15,6 @@ import {
 } from '../../constants/Colors';
 import {
   FONT_SIZE_TITLE_MEDIUM,
-  FONT_SIZE_BODY_LARGE,
   FONT_SIZE_BODY_MEDIUM,
   FONT_SIZE_CAPTION,
   FONT_WEIGHT_MEDIUM

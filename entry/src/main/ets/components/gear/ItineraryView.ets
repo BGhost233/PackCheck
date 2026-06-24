@@ -23,6 +23,11 @@ import { HeadCollapseController } from '../../utils/HeadCollapseController';
 @Component
 export struct ItineraryView {
   @Prop itinerary: DayItinerary[] = [];
+  // 强制刷新 nonce：父组件数据变更时递增，建立 ArkUI 依赖追踪链路，拼入 ForEach key
+  @Prop renderNonce: number = 0;
+  // tabVisibilityNonce：父层每次切至此 tab 时递增，驱动入场动画重播
+  // 解决 ArkUI TabContent keep-alive 时 aboutToAppear 不触发的问题
+  @Prop @Watch('onTabVisibilityNonceChange') tabVisibilityNonce: number = 0;
 
   // 编辑回调
   onAddDay: () => void = () => {};
@@ -52,13 +57,24 @@ export struct ItineraryView {
     }
   });
 
+  private isAlive: boolean = true;
+
   aboutToAppear(): void {
+    this.isAlive = true;
     // 直接置位；动画由各元素的 .animation({ delay }) 控制错落时机
     this.appeared = true;
   }
 
+  // tab 可见性变化时重置并重播错落入场
+  onTabVisibilityNonceChange(): void {
+    // toggle appeared false→true 让 .animation({ delay }) 重新评估错落
+    this.appeared = false;
+    this.appeared = true;
+  }
+
   aboutToDisappear(): void {
-    // 预留生命周期清理位。appeared 不重置：Tab 切回时不重播入场动画。
+    this.isAlive = false;
+    this.appeared = false;
   }
 
   build() {

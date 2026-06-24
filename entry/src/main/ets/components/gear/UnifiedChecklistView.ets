@@ -7,7 +7,6 @@ import { display } from '@kit.ArkUI';
 import {
   PRIMARY_COLOR,
   TEXT_MAIN,
-  TEXT_SECONDARY,
   CARD_BG,
   PAGE_BG,
   OVERLAY_DIM,
@@ -70,6 +69,9 @@ export struct UnifiedChecklistView {
   @Prop @Watch('onTripChange') trip: TripChecklist = { id: '', title: '', items: [], createdAt: 0 };
   @Prop @Watch('onGearsChange') gears: GearItem[] = [];
 @Prop checklistRenderNonce: number = 0;
+// tabVisibilityNonce：父层每次切至此 tab 时递增，驱动入场动画重播
+// 解决 ArkUI TabContent keep-alive 时 aboutToAppear 不触发的问题
+@Prop @Watch('onTabVisibilityNonceChange') tabVisibilityNonce: number = 0;
 // 顶部已占高度（NavBar + SharedInfo + ProgressBar），用于首屏 cell 高度反算
 // @Watch：aboutToAppear 时父层 build 可能尚未传入实算值，prop 后续更新需重算 cell 高度（review B3）
 @Prop @Watch('onReservedTopChange') reservedTopHeight: number = 180;
@@ -183,6 +185,20 @@ export struct UnifiedChecklistView {
     this.headController.setForcedCollapsed(this.focusedZone != null);
   }
 
+  // shared：网格错落入场触发（被 aboutToAppear 和 onTabVisibilityNonceChange 复用）
+  private triggerGridStagger(): void {
+    this.appeared = false;
+    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+      this.appeared = true;
+    });
+  }
+
+  // tab 可见性变化时重播网格错落入场
+  onTabVisibilityNonceChange(): void {
+    this.triggerGridStagger();
+    // 重型计算（screen cache / gear index / cell height / refreshCache）不重跑
+  }
+
   aboutToAppear() {
     // 性能优化：一次性缓存屏幕尺寸，避免后续拖拽热路径反复 IPC
     try {
@@ -196,9 +212,7 @@ export struct UnifiedChecklistView {
     this.refreshCache();
     this.gearIndexMap = buildGearIndex(this.gears);
     this.computeCellHeight();
-    this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
-      this.appeared = true;
-    });
+    this.triggerGridStagger();
   }
 
   // C1 守卫：组件卸载后 timer 回调不再操作 state

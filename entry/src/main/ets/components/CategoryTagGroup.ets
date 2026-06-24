@@ -4,6 +4,7 @@ import {
   CHIP_BG_DEFAULT,
   CHIP_BORDER,
   DANGER_COLOR,
+  OVERLAY_DIM,
   PAGE_BG,
   PRIMARY_COLOR,
   PRIMARY_PRESSED,
@@ -322,7 +323,7 @@ export struct CategoryTagGroup {
         .justifyContent(FlexAlign.Center)
         .backgroundColor(DANGER_COLOR)
         .borderRadius(9)
-        .shadow({ radius: 4, color: '#33000000', offsetX: 0, offsetY: 1 })
+        .shadow({ radius: 4, color: OVERLAY_DIM, offsetX: 0, offsetY: 1 })
         .position({ top: -5, right: -5 })
         .hitTestBehavior(HitTestMode.Block)
         .onClick(() => {

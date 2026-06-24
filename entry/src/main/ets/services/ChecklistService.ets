@@ -1,5 +1,5 @@
 import { ChecklistItem, GearItem, makeId, TripChecklist, CATEGORY_FALLBACK } from '../models/PackModels';
-import { formatKg, gearById } from './GearService';
+import { gearById } from './GearService';
 
 /**
  * 清单相关纯业务逻辑 — 不依赖 UI 上下文
@@ -201,7 +201,7 @@ export function numberInputText(value: number | undefined): string {
   return value === undefined ? '' : value.toString();
 }
 
-export function isChecklistItemInGear(item: ChecklistItem): boolean {
+function isChecklistItemInGear(item: ChecklistItem): boolean {
   return item.fromGearId !== undefined && item.fromGearId.length > 0;
 }
 

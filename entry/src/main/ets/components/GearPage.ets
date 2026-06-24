@@ -6,7 +6,6 @@ import {
   SPRING_TRAY_CARD, SPRING_SCROLL, SPRING_REORDER,
   EASE_FADE, DURATION_OVERLAY_FADE,
   DURATION_TICK, DURATION_FAST,
-  DURATION_CEREMONY_SHAKE,
   DURATION_NONE,
   PRESS_SCALE_DOWN, PRESS_SCALE_REST,
   CURVE_LINEAR,
@@ -23,11 +22,9 @@ import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGear
 import {
   ARROW_COLOR,
   CARD_BG,
-  CARD_PADDING,
   CHIP_RADIUS,
   SMALL_CARD_RADIUS,
   DANGER_COLOR,
-  DANGER_TINT,
   DISABLED_COLOR,
   DIVIDER_COLOR,
   FONT_FEATURE_TNUM,
@@ -52,7 +49,6 @@ import {
   PRIMARY_SHADOW,
   PRIMARY_TINT_COLOR,
   SHADOW_DEFAULT,
-  SHADOW_LIGHT,
   SHADOW_MEDIUM,
   SHADOW_SUBTLE,
   TEXT_MAIN,
@@ -60,8 +56,7 @@ import {
   TEXT_TERTIARY,
   TRANSPARENT,
   WHITE,
-  WHITE_SECONDARY,
-  AMBER_ACCENT
+  WHITE_SECONDARY
 } from '../constants/DesignTokens';
 import { getGroupColor } from '../utils/ColorUtils';
 import { GearEmptyState } from './gear/GearEmptyState';

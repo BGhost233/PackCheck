@@ -46,9 +46,11 @@ export struct EditItemPanel {
   @State private panelOpacity: number = 0;
   @State private buttonPressed: boolean = false;
   @State private closePressed: boolean = false;
+  private entryTimerId: number = -1;
 
   aboutToAppear(): void {
-    setTimeout(() => {
+    this.entryTimerId = setTimeout(() => {
+      this.entryTimerId = -1;
       this.getUIContext().animateTo({
         curve: SPRING_PANEL_ENTER()
       }, () => {
@@ -56,6 +58,13 @@ export struct EditItemPanel {
         this.panelOpacity = 1;
       });
     }, 0);
+  }
+
+  aboutToDisappear(): void {
+    if (this.entryTimerId !== -1) {
+      clearTimeout(this.entryTimerId);
+      this.entryTimerId = -1;
+    }
   }
 
   private handleClose(): void {

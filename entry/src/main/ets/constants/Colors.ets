@@ -16,7 +16,6 @@ export const PRIMARY_PRESSED_DEEP: string = '#256B3A';
 export const PRIMARY_STROKE_FAINT: string = '#332D7D46';
 export const PRIMARY_STROKE_GHOST: string = '#0A2D7D46';
 export const PRIMARY_SHADOW: string = '#1A2D7D46';
-export const PRIMARY_TRANSPARENT: string = '#002D7D46';
 export const PRIMARY_SHADOW_LIGHT: string = '#262D7D46';
 export const PRIMARY_HALF: string = '#802D7D46';
 export const PRIMARY_FILL_SUBTLE: string = '#602D7D46';
@@ -25,7 +24,6 @@ export const PRIMARY_GRADIENT_END: string = '#4D2D7D46';
 
 // ============ 页面/卡片背景 ============
 export const PAGE_BG: string = '#F8F9FA';
-export const PAGE_BG_TRANSLUCENT: string = '#66F8F9FA';
 export const CARD_BG: string = '#FFFFFF';
 export const GROUP_HEADER_BG: string = '#F5F5F5';
 export const INPUT_BG: string = '#F7F8F7';
@@ -59,8 +57,6 @@ export const META_SEPARATOR: string = '#C2C2C2';
 export const ARROW_COLOR: string = '#CCCCCC';
 export const DISABLED_COLOR: string = '#CCCCCC';
 export const PLACEHOLDER_COLOR: string = '#BBBBBB';
-export const PROGRESS_END_COLOR: string = '#4CAF50';
-export const PROGRESS_INACTIVE: string = '#90A4AE';
 
 // ============ 强调/警告色 ============
 export const DANGER_COLOR: string = '#E53935';
@@ -82,6 +78,7 @@ export const SHADOW_DEFAULT: string = '#1A000000';
 export const SHADOW_LIGHT: string = '#14000000';
 export const SHADOW_SUBTLE: string = '#0A000000';
 export const SHADOW_MICRO: string = '#08000000';
+export const PRESS_OVERLAY: string = '#0D000000';
 export const SHADOW_MEDIUM: string = '#28000000';
 
 // ============ Zone 颜色（配装系统） ============
@@ -140,13 +137,8 @@ export const ZONE_MISC_STROKE: string = '#2478909C';
 // ============ 时间线（Itinerary） ============
 export const TIMELINE_LINE: string = '#E0E0E0';
 export const TIMELINE_NODE: string = '#2D7D46';  // 复用 PRIMARY_COLOR 值
-export const TIMELINE_NODE_EMPTY: string = '#C8E6C9';  // 浅绿空心态
-
 // ============ Ceremony 渐变/光效 ============
 export const WHITE_TRANSPARENT: string = '#00FFFFFF';
-export const SHIMMER_WHITE_FAINT: string = '#18FFFFFF';
-export const SHIMMER_GREEN_GLOSS: string = '#30E8F5E9';
-
 // ============ Layer Badge 背景色（配装系统） ============
 export const LAYER_BASE_BG: string = '#E3F2FD';
 export const LAYER_MID_BG: string = '#FFF3E0';

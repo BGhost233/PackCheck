@@ -71,25 +71,6 @@ export function computeFootprint(trips: TripChecklist[], gears: GearItem[]): Foo
   return result;
 }
 
-// 单件装备的「同行次数」= 含该装备的不同行程数（实时派生，单一事实源是行程数据）。
-// 同一行程内重复出现（多格子引用同一 fromGearId）只计 1 次；删除/重加行程内装备会即时反映，不会虚高。
-export function computeGearTripCount(gearId: string, trips: TripChecklist[]): number {
-  if (gearId.length === 0 || trips.length === 0) {
-    return 0;
-  }
-  const tripIds: Set<string> = new Set<string>();
-  for (let i = 0; i < trips.length; i++) {
-    const t = trips[i];
-    for (let j = 0; j < t.items.length; j++) {
-      if (t.items[j].fromGearId === gearId) {
-        tripIds.add(t.id);
-        break;
-      }
-    }
-  }
-  return tripIds.size;
-}
-
 function computeLongestCompanion(gears: GearItem[]): LongestCompanion | undefined {
   if (gears.length === 0) {
     return undefined;

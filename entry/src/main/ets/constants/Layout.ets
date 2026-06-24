@@ -3,7 +3,6 @@ export const CARD_BORDER_BOTTOM_WIDTH: number = 0.5;
 
 export const PAGE_PADDING: number = 20;
 export const CARD_PADDING: number = 20;
-export const SECTION_GAP: number = 24;
 export const ITEM_GAP: number = 12;
 export const CARD_RADIUS: number = 20;
 export const SMALL_CARD_RADIUS: number = 12;

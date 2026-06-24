@@ -39,8 +39,6 @@ export struct TripDetailPage {
   @Prop @Watch('onTripDataChange') checklists: TripChecklist[] = [];
   @Prop gears: GearItem[] = [];
   @Prop @Watch('onTripDataChange') selectedChecklistId: string = '';
-  @Prop collapsedGroups: string[] = [];
-  @Prop highlightedItemId: string = '';
   @Prop checklistRenderNonce: number = 0;
   // 问题4a：聚焦态由 Index 持有 @State 源，本层 @Link 透传给 UnifiedChecklistView，使 Index onBackPressed 能分层拦截
   @Link focusedZone: string | null;
@@ -52,7 +50,6 @@ export struct TripDetailPage {
   @State private tripTabIndex: number = 0;
   // visibility nonce：每次 tab 切至此组件时递增，驱动子组件入场动画重播
   // 解决 ArkUI TabContent keep-alive 时 aboutToAppear 不触发的问题
-  @State private tripTab0VisibilityNonce: number = 0;
   @State private tripTab1VisibilityNonce: number = 0;
   // 0~1 连续值：滑动跟手逐帧驱动 / 点击时 animateTo 驱动
   @State private tripTabProgress: number = 0;
@@ -93,18 +90,13 @@ export struct TripDetailPage {
   onOpenReview: () => void = () => {};
   // D-2：聚焦态「逐项核查本区」回调
   onOpenZoneReview: (zone: string) => void = () => {};
-  onDeleteTrip: () => void = () => {};
-  onToggleGroup: (group: string) => void = () => {};
   onOpenEditItem: (item: ChecklistItem) => void = () => {};
   onToggleChecklistItem: (itemId: string) => void = () => {};
-  onSaveChecklistItemToGear: (item: ChecklistItem) => void = () => {};
   onDeleteChecklistItem: (itemId: string) => void = () => {};
 
   // UnifiedChecklistView callbacks
   // zone 可选：从空格子进入时透传 Zone，picker 据此排序高亮 + 预选临时新建分区（review I4）
   onOpenGearPicker: (zone?: string) => void = () => {};
-  onLongPressItem: (item: ChecklistItem) => void = () => {};
-  onLayerChange: (itemId: string, layer: string) => void = () => {};
   // 问题4：聚焦态长按转拖拽移动装备到目标 Zone（改 group），透传到 Index 持久化
   onMoveItemToZone: (itemId: string, zone: string) => void = () => {};
   // Phase 4：长按菜单「移动到…」→ 由 Index 弹出 zone 选择面板
@@ -220,8 +212,7 @@ export struct TripDetailPage {
       return;
     }
     // visibility nonce：驱动目标 tab 子组件入场动画重播
-    if (targetIndex === 0) { this.tripTab0VisibilityNonce++; }
-    else { this.tripTab1VisibilityNonce++; }
+    if (targetIndex === 1) { this.tripTab1VisibilityNonce++; }
     // 行程 Tab 已接入 HeadCollapseController，切换时不再强制重置折叠进度
     this.tabController.changeIndex(targetIndex);
   }
@@ -298,6 +289,8 @@ export struct TripDetailPage {
           // Tab 1：每日行程
           ItineraryView({
             itinerary: this.getItinerary(),
+            renderNonce: this.checklistRenderNonce,
+            tabVisibilityNonce: this.tripTab1VisibilityNonce,
             onAddDay: () => { this.onAddDay(); },
             onEditDay: (dayId: string) => { this.onEditDay(dayId); },
             onDeleteDay: (dayId: string) => { this.onDeleteDay(dayId); },
@@ -339,15 +332,13 @@ export struct TripDetailPage {
             this.tripTabProgress = targetIndex;
           });
           // visibility nonce：驱动目标 tab 子组件入场动画重播
-          if (targetIndex === 0) { this.tripTab0VisibilityNonce++; }
-          else { this.tripTab1VisibilityNonce++; }
+          if (targetIndex === 1) { this.tripTab1VisibilityNonce++; }
         })
       .onChange((index: number) => {
         // 兜底同步 index（动画完成后）
         this.tripTabIndex = index;
         // visibility nonce：驱动目标 tab 子组件入场动画重播
-        if (index === 0) { this.tripTab0VisibilityNonce++; }
-        else { this.tripTab1VisibilityNonce++; }
+        if (index === 1) { this.tripTab1VisibilityNonce++; }
       })
     }
     .width('100%')

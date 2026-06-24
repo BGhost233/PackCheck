@@ -139,7 +139,7 @@ export function renameCategory(categories: string[], oldName: string, newName: s
   return { categories: result, renamed: true };
 }
 
-export interface RenameCategoryResult {
+interface RenameCategoryResult {
   categories: string[];
   renamed: boolean;
 }

@@ -422,77 +422,85 @@ struct Index {
   }
 
   private async saveGear(): Promise<void> {
-    const name = this.gearName.trim();
-    const category = this.gearCategory.trim().length === 0 ? '其他' : this.gearCategory.trim();
-    if (name.length === 0) {
-      this.errorText = '装备名称不能为空';
-      return;
-    }
+    try {
+      const name = this.gearName.trim();
+      const category = this.gearCategory.trim().length === 0 ? '其他' : this.gearCategory.trim();
+      if (name.length === 0) {
+        this.errorText = '装备名称不能为空';
+        return;
+      }
 
-    const nextGears: GearItem[] = [];
-    let updated = false;
-    let oldPrice: number | undefined = undefined;
-    const newPrice = normalizeNumber(this.gearPrice);
-    for (let index = 0; index < this.gears.length; index++) {
-      const item = this.gears[index];
-      if (item.id === this.editingGearId) {
-        oldPrice = item.price;
-        const edited = updateGear(item, {
+      const nextGears: GearItem[] = [];
+      let updated = false;
+      let oldPrice: number | undefined = undefined;
+      const newPrice = normalizeNumber(this.gearPrice);
+      for (let index = 0; index < this.gears.length; index++) {
+        const item = this.gears[index];
+        if (item.id === this.editingGearId) {
+          oldPrice = item.price;
+          const edited = updateGear(item, {
+            name: name,
+            category: category,
+            weight: normalizeNumber(this.gearWeight),
+            price: newPrice,
+            note: this.gearNote.trim()
+          });
+          nextGears.push(edited);
+          updated = true;
+        } else {
+          nextGears.push(item);
+        }
+      }
+
+      if (!updated) {
+        const created = createGear({
           name: name,
           category: category,
           weight: normalizeNumber(this.gearWeight),
           price: newPrice,
           note: this.gearNote.trim()
         });
-        nextGears.push(edited);
-        updated = true;
-      } else {
-        nextGears.push(item);
+        nextGears.unshift(created);
       }
-    }
 
-    if (!updated) {
-      const created = createGear({
-        name: name,
-        category: category,
-        weight: normalizeNumber(this.gearWeight),
-        price: newPrice,
-        note: this.gearNote.trim()
-      });
-      nextGears.unshift(created);
-    }
+      await this.store.saveGears(nextGears);
+      this.gears = nextGears;
+      // 「实时引用」模型：gear 数据变化后，行程内引用该 gear 的 item 展示名/重量/价格
+      // 自动从新 gears 回查。但 ForEach key 不变导致不重渲染，需 nonce 强制刷新。
+      if (updated) {
+        this.checklistRenderNonce = this.checklistRenderNonce + 1;
+      }
 
-    await this.store.saveGears(nextGears);
-    this.gears = nextGears;
-    // 「实时引用」模型：gear 数据变化后，行程内引用该 gear 的 item 展示名/重量/价格
-    // 自动从新 gears 回查。但 ForEach key 不变导致不重渲染，需 nonce 强制刷新。
-    if (updated) {
-      this.checklistRenderNonce = this.checklistRenderNonce + 1;
-    }
-
-    await this.ensureCategory(category);
-    if (this.returnToImportAfterGear) {
-      this.returnToImportAfterGear = false;
-      this.errorText = '';
-      this.sheetMode = SHEET_IMPORT;
-    } else if (this.showEditGearPanel) {
-      this.closeEditGearPanel();
-    } else {
-      this.closeSheet();
+      await this.ensureCategory(category);
+      if (this.returnToImportAfterGear) {
+        this.returnToImportAfterGear = false;
+        this.errorText = '';
+        this.sheetMode = SHEET_IMPORT;
+      } else if (this.showEditGearPanel) {
+        this.closeEditGearPanel();
+      } else {
+        this.closeSheet();
+      }
+    } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'saveGear failed: %{public}s', JSON.stringify(error));
     }
   }
 
   private async ensureCategory(category: string): Promise<void> {
-    if (this.categories.indexOf(category) >= 0) {
-      return;
+    try {
+      if (this.categories.indexOf(category) >= 0) {
+        return;
+      }
+      const nextCategories: string[] = [];
+      for (let index = 0; index < this.categories.length; index++) {
+        nextCategories.push(this.categories[index]);
+      }
+      nextCategories.push(category);
+      await this.store.saveCategories(nextCategories);
+      this.categories = nextCategories;
+    } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'ensureCategory failed: %{public}s', JSON.stringify(error));
     }
-    const nextCategories: string[] = [];
-    for (let index = 0; index < this.categories.length; index++) {
-      nextCategories.push(this.categories[index]);
-    }
-    nextCategories.push(category);
-    await this.store.saveCategories(nextCategories);
-    this.categories = nextCategories;
   }
 
   // ===== 分组标签编辑 =====
@@ -516,67 +524,83 @@ struct Index {
   }
 
   private async executeCategoryDelete(category: string): Promise<void> {
-    const nextCategories = deleteCategory(this.categories, category);
-    const nextGears = migrateGearsOnDelete(this.gears, category);
-    const nextChecklists = migrateChecklistsOnDelete(this.checklists, category);
-    await this.store.saveCategories(nextCategories);
-    await this.store.saveGears(nextGears);
-    await this.store.saveChecklists(nextChecklists);
-    this.categories = nextCategories;
-    this.gears = nextGears;
-    this.checklists = nextChecklists;
-    this.checklistRenderNonce++;
+    try {
+      const nextCategories = deleteCategory(this.categories, category);
+      const nextGears = migrateGearsOnDelete(this.gears, category);
+      const nextChecklists = migrateChecklistsOnDelete(this.checklists, category);
+      await this.store.saveCategories(nextCategories);
+      await this.store.saveGears(nextGears);
+      await this.store.saveChecklists(nextChecklists);
+      this.categories = nextCategories;
+      this.gears = nextGears;
+      this.checklists = nextChecklists;
+      this.checklistRenderNonce++;
+    } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'executeCategoryDelete failed: %{public}s', JSON.stringify(error));
+    }
   }
 
   private async executeCategoryRename(oldName: string, newName: string): Promise<void> {
-    // rename 场景：验证时排除 oldName，避免"同名已存在"误判
-    const categoriesExcludingOld: string[] = [];
-    for (let i = 0; i < this.categories.length; i++) {
-      if (this.categories[i] !== oldName) {
-        categoriesExcludingOld.push(this.categories[i]);
+    try {
+      // rename 场景：验证时排除 oldName，避免"同名已存在"误判
+      const categoriesExcludingOld: string[] = [];
+      for (let i = 0; i < this.categories.length; i++) {
+        if (this.categories[i] !== oldName) {
+          categoriesExcludingOld.push(this.categories[i]);
+        }
       }
-    }
-    const error = validateCategoryName(newName, categoriesExcludingOld);
-    if (error.length > 0) {
-      return;
-    }
-    const renameResult = renameCategory(this.categories, oldName, newName);
-    if (!renameResult.renamed) {
-      return;
-    }
-    const nextCategories = renameResult.categories;
-    const nextGears = renameGearsCategory(this.gears, oldName, newName);
-    const nextChecklists = renameChecklistsCategory(this.checklists, oldName, newName);
-    await this.store.saveCategories(nextCategories);
-    await this.store.saveGears(nextGears);
-    await this.store.saveChecklists(nextChecklists);
-    this.categories = nextCategories;
-    this.gears = nextGears;
-    this.checklists = nextChecklists;
-    this.checklistRenderNonce++;
-    // 如果当前选中的分组被重命名了，同步更新
-    if (this.gearCategory === oldName) {
-      this.gearCategory = newName;
-    }
-    if (this.tempItemGroup === oldName) {
-      this.tempItemGroup = newName;
+      const error = validateCategoryName(newName, categoriesExcludingOld);
+      if (error.length > 0) {
+        return;
+      }
+      const renameResult = renameCategory(this.categories, oldName, newName);
+      if (!renameResult.renamed) {
+        return;
+      }
+      const nextCategories = renameResult.categories;
+      const nextGears = renameGearsCategory(this.gears, oldName, newName);
+      const nextChecklists = renameChecklistsCategory(this.checklists, oldName, newName);
+      await this.store.saveCategories(nextCategories);
+      await this.store.saveGears(nextGears);
+      await this.store.saveChecklists(nextChecklists);
+      this.categories = nextCategories;
+      this.gears = nextGears;
+      this.checklists = nextChecklists;
+      this.checklistRenderNonce++;
+      // 如果当前选中的分组被重命名了，同步更新
+      if (this.gearCategory === oldName) {
+        this.gearCategory = newName;
+      }
+      if (this.tempItemGroup === oldName) {
+        this.tempItemGroup = newName;
+      }
+    } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'executeCategoryRename failed: %{public}s', JSON.stringify(error));
     }
   }
 
   private async executeCategoryAdd(name: string): Promise<void> {
-    const error = validateCategoryName(name, this.categories);
-    if (error.length > 0) {
-      return;
+    try {
+      const error = validateCategoryName(name, this.categories);
+      if (error.length > 0) {
+        return;
+      }
+      const nextCategories = addCategory(this.categories, name);
+      await this.store.saveCategories(nextCategories);
+      this.categories = nextCategories;
+    } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'executeCategoryAdd failed: %{public}s', JSON.stringify(error));
     }
-    const nextCategories = addCategory(this.categories, name);
-    await this.store.saveCategories(nextCategories);
-    this.categories = nextCategories;
   }
 
   private async executeCategoryReorder(newOrder: string[]): Promise<void> {
-    const nextCategories = reorderCategories(newOrder);
-    await this.store.saveCategories(nextCategories);
-    this.categories = nextCategories;
+    try {
+      const nextCategories = reorderCategories(newOrder);
+      await this.store.saveCategories(nextCategories);
+      this.categories = nextCategories;
+    } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'executeCategoryReorder failed: %{public}s', JSON.stringify(error));
+    }
   }
 
   private showCategoryRenameDialog(oldName: string): void {
@@ -627,14 +651,18 @@ struct Index {
   }
 
   private async deleteGear(id: string): Promise<void> {
-    const nextGears = this.gears.filter((item: GearItem) => item.id !== id);
-    await this.store.saveGears(nextGears);
-    this.gears = nextGears;
-    // 「实时引用」：gear 删除后行程内引用变 orphaned，强制 UI 刷新
-    this.checklistRenderNonce = this.checklistRenderNonce + 1;
+    try {
+      const nextGears = this.gears.filter((item: GearItem) => item.id !== id);
+      await this.store.saveGears(nextGears);
+      this.gears = nextGears;
+      // 「实时引用」：gear 删除后行程内引用变 orphaned，强制 UI 刷新
+      this.checklistRenderNonce = this.checklistRenderNonce + 1;
 
-    if (this.expandedGearId === id) {
-      this.expandedGearId = '';
+      if (this.expandedGearId === id) {
+        this.expandedGearId = '';
+      }
+    } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'deleteGear failed: %{public}s', JSON.stringify(error));
     }
   }
 
@@ -671,38 +699,46 @@ struct Index {
         value: '确定删除',
         fontColor: DANGER_COLOR,
         action: async () => {
-          // O(1) 成员判断：在 filter 外构建一次 Set，避免每个 item 做 O(n) 的 indexOf
-          const idSet = new Set<string>(ids);
-          const nextGears = this.gears.filter((item: GearItem) => !idSet.has(item.id));
-          await this.store.saveGears(nextGears);
-          this.gears = nextGears;
-          this.checklistRenderNonce++;
+          try {
+            // O(1) 成员判断：在 filter 外构建一次 Set，避免每个 item 做 O(n) 的 indexOf
+            const idSet = new Set<string>(ids);
+            const nextGears = this.gears.filter((item: GearItem) => !idSet.has(item.id));
+            await this.store.saveGears(nextGears);
+            this.gears = nextGears;
+            this.checklistRenderNonce++;
 
-          this.cancelGearMultiSelect();
+            this.cancelGearMultiSelect();
+          } catch (error) {
+            hilog.error(0x0001, 'PackCheck', 'batchDeleteGears failed: %{public}s', JSON.stringify(error));
+          }
         }
       }
     });
   }
 
   private async batchMoveGroup(ids: string[], targetGroup: string): Promise<void> {
-    if (ids.length === 0) {
-      return;
-    }
-    // O(1) 成员判断：在循环外构建一次 Set，避免对每个 gear 做 O(n) 的 indexOf
-    const idSet = new Set<string>(ids);
-    const nextGears: GearItem[] = [];
-    for (let i = 0; i < this.gears.length; i++) {
-      const gear = this.gears[i];
-      if (idSet.has(gear.id)) {
-        nextGears.push(updateGear(gear, { category: targetGroup }));
-      } else {
-        nextGears.push(gear);
+    try {
+      if (ids.length === 0) {
+        return;
       }
+      // O(1) 成员判断：在循环外构建一次 Set，避免对每个 gear 做 O(n) 的 indexOf
+      const idSet = new Set<string>(ids);
+      const nextGears: GearItem[] = [];
+      for (let i = 0; i < this.gears.length; i++) {
+        const gear = this.gears[i];
+        if (idSet.has(gear.id)) {
+          nextGears.push(updateGear(gear, { category: targetGroup }));
+        } else {
+          nextGears.push(gear);
+        }
+      }
+      await this.store.saveGears(nextGears);
+      this.gears = nextGears;
+      this.checklistRenderNonce++;
+      this.cancelGearMultiSelect();
+    } catch (error) {
+      hilog.error(0x0001, 'PackCheck', 'batchMoveGroup failed: %{public}s', JSON.stringify(error));
     }
-    await this.store.saveGears(nextGears);
-    this.gears = nextGears;
-    this.checklistRenderNonce++;
-    this.cancelGearMultiSelect();
   }
 
   // 问题9-B：单品拖拽落位——optimistic update。
@@ -1966,8 +2002,6 @@ await this.updateItinerary(next);
           checklists: this.checklists,
           gears: this.gears,
           selectedChecklistId: this.selectedChecklistId,
-          collapsedGroups: this.collapsedGroups,
-          highlightedItemId: this.highlightedItemId,
           checklistRenderNonce: this.checklistRenderNonce,
           focusedZone: this.focusedZone,
           closeFocusSignal: this.focusedCloseSignal,
@@ -1995,17 +2029,11 @@ await this.updateItinerary(next);
           onOpenZoneReview: (zone: string) => {
             this.openZoneReview(zone);
           },
-          onToggleGroup: (group: string) => {
-            this.toggleGroup(group);
-          },
           onOpenEditItem: (item: ChecklistItem) => {
             this.openEditItemSheet(item);
           },
           onToggleChecklistItem: (itemId: string) => {
             this.toggleChecklistItem(itemId);
-          },
-          onSaveChecklistItemToGear: (item: ChecklistItem) => {
-            this.saveChecklistItemToGear(item);
           },
           onDeleteChecklistItem: (itemId: string) => {
             this.deleteChecklistItem(itemId);
@@ -2013,14 +2041,8 @@ await this.updateItinerary(next);
           onOpenGearPicker: (zone?: string) => {
             this.openGearPickerSheet(zone);
           },
-          onLongPressItem: (item: ChecklistItem) => {
-            this.openGearItemActionSheet(item);
-          },
           onMoveItemToZone: (itemId: string, zone: string) => {
             this.moveItemToZone(itemId, zone);
-          },
-          onLayerChange: (itemId: string, layer: string) => {
-            // 一期取消「层级」概念，spec D-1：保留 callback 签名占位，无逻辑
           },
           onRequestMoveSheet: (item: ChecklistItem) => {
             this.openGearItemActionSheet(item);
@@ -2030,12 +2052,6 @@ await this.updateItinerary(next);
           },
           onRequestBatchMoveSheet: (itemIds: string[]) => {
             this.openBatchMoveSheet(itemIds);
-          },
-          onDeleteTrip: () => {
-            const checklist = this.checklists.find(c => c.id === this.selectedChecklistId);
-            if (checklist) {
-              this.confirmDeleteChecklist(checklist);
-            }
           },
           onAddDay: () => { this.openAddDaySheet(); },
           onEditDay: (dayId: string) => { this.openEditDaySheet(dayId); },

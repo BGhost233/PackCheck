@@ -11,7 +11,8 @@ import {
   TIMELINE_LINE,
   TIMELINE_NODE,
   CHIP_BG_DEFAULT,
-  PRIMARY_COLOR
+  PRIMARY_COLOR,
+  PRESS_OVERLAY
 } from '../../constants/Colors';
 import {
   TIMELINE_LINE_WIDTH,
@@ -66,7 +67,7 @@ export struct DayCard {
 
   // 段行按压态样式
   @Styles segRowPressed() {
-    .backgroundColor('#0D000000')  // 6% 黑色蒙层
+    .backgroundColor(PRESS_OVERLAY)
   }
 
   @Styles segRowNormal() {

@@ -16,8 +16,7 @@ import {
   TRANSPARENT
 } from '../../constants/Colors';
 import {
-  FONT_SIZE_BODY_MEDIUM,
-  FONT_WEIGHT_MEDIUM
+  FONT_SIZE_BODY_MEDIUM
 } from '../../constants/Typography';
 import { SPRING_PRESS, PRESS_SCALE_DOWN, PRESS_SCALE_REST } from '../../constants/AnimationTokens';
 import { ChecklistItem } from '../../models/PackModels';

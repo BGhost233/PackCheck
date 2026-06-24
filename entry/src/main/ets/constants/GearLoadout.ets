@@ -20,7 +20,7 @@ export enum LayerOrder {
   Accessory = 9,
 }
 
-export interface SlotHint {
+interface SlotHint {
   zone: BodyZone;
   layer: LayerOrder;
 }
@@ -43,12 +43,3 @@ export const CATEGORY_SLOT_MAP: Record<string, SlotHint> = {
   '其他':       { zone: BodyZone.Misc,      layer: LayerOrder.Accessory },
 };
 
-// 给定品类返回槽位提示，未命中回退到 Misc/Accessory
-export function slotHintForCategory(category: string): SlotHint {
-  const hint = CATEGORY_SLOT_MAP[category];
-  if (hint !== undefined) {
-    return hint;
-  }
-  const fallback: SlotHint = { zone: BodyZone.Misc, layer: LayerOrder.Accessory };
-  return fallback;
-}

@@ -1,8 +1,8 @@
 // 配装系统业务逻辑（纯函数，无 UI）
 // 职责：分组、进度计算、Zone推断、色彩映射、拖拽命中检测
 
-import { BodyZone, LayerOrder, CATEGORY_SLOT_MAP } from '../constants/GearLoadout';
-import { ChecklistItem, GearItem, CATEGORY_FALLBACK } from '../models/PackModels';
+import { BodyZone, CATEGORY_SLOT_MAP } from '../constants/GearLoadout';
+import { ChecklistItem } from '../models/PackModels';
 import {
   TEXT_SECONDARY,
   ZONE_HEAD_COLOR, ZONE_UPPER_COLOR, ZONE_LOWER_COLOR, ZONE_FEET_COLOR, ZONE_CARRY_COLOR, ZONE_SLEEP_COLOR, ZONE_MISC_COLOR,

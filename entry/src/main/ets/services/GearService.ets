@@ -18,7 +18,7 @@ export function numberOrZero(value: number | undefined): number {
 
 // ─── GearItem 工厂 ───────────────────────────────────────────
 
-export interface CreateGearParams {
+interface CreateGearParams {
   name: string;
   category: string;
   weight?: number;
@@ -43,7 +43,7 @@ export function createGear(params: CreateGearParams): GearItem {
   };
 }
 
-export interface UpdateGearFields {
+interface UpdateGearFields {
   name?: string;
   category?: string;
   weight?: number;

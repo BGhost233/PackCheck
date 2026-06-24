@@ -17,8 +17,7 @@ import {
 } from '../../constants/AnimationTokens';
 import {
   filteredImportGears,
-  importGearMetaText,
-  categoryTabs
+  importGearMetaText
 } from '../../services/GearService';
 import { CategoryTagGroup } from '../CategoryTagGroup';
 

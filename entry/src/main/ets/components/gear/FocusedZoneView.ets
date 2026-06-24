@@ -9,6 +9,7 @@
 // 长按菜单 + 长按转拖拽跨 Zone（问题4d）留 Phase 4，回调已预埋透传到位
 
 import {
+  SHADOW_DEFAULT,
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -362,7 +363,7 @@ export struct FocusedZoneView {
             y: this.reorderingItemId === item.id ? 1.03 : 1.0
           })
           .shadow(this.reorderingItemId === item.id
-            ? { radius: 24, color: '#1A000000', offsetY: 8 }
+            ? { radius: 24, color: SHADOW_DEFAULT, offsetY: 8 }
             : undefined)
           .zIndex(this.reorderingItemId === item.id ? 100 : 0)
           // 修复 #7：删除时退场动画（向左滑出 + 缩小 + 淡出）
