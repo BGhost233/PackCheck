@@ -51,8 +51,12 @@ export struct TripDetailPage {
   // ============ Tab 切换状态 ============
   // 0=装备准备, 1=每日行程
   @State private tripTabIndex: number = 0;
-  // 0~1 连续值，点击时动画驱动（Phase 5 扩展为手势跟手）
+  // 0~1 连续值：滑动跟手逐帧驱动 / 点击时 animateTo 驱动
   @State private tripTabProgress: number = 0;
+  // Tabs 控制器
+  private tabController: TabsController = new TabsController();
+  // Tabs 宽度缓存（onAreaChange 获取，用于计算 swipe ratio）
+  private tabsWidth: number = 360;
 
   // 返回按钮按压
   @State private backScale: number = 1.0;
@@ -182,20 +186,18 @@ export struct TripDetailPage {
     return weight > 0.5 ? TEXT_MAIN : TEXT_TERTIARY;
   }
 
-  // Tab 切换：动画驱动 tripTabProgress → 0 或 1
+  // Tab 切换（点击标题触发）：通过 controller 驱动 Tabs 翻页
   private switchTab(targetIndex: number): void {
     if (this.tripTabIndex === targetIndex) {
       return;
     }
-    this.tripTabIndex = targetIndex;
-    // 切换到行程 Tab 时重置 head 折叠进度，避免 header 卡在半折叠状态
+    // 切换到行程 Tab 时重置 head 折叠进度
     if (targetIndex === 1) {
       this.headCollapseProgress = 0;
       this.headSnapping = false;
     }
-    this.getUIContext().animateTo({ curve: SPRING_TAB() }, () => {
-      this.tripTabProgress = targetIndex;
-    });
+    this.tabController.changeIndex(targetIndex);
+    // tripTabProgress 通过 onAnimationStart 回调更新
   }
 
   // 下沉位移：展开 +4vp（向 SharedInfo 方向靠，强化「档案大标题」感）→ 折叠 0（归位居中）。
@@ -235,9 +237,9 @@ export struct TripDetailPage {
       // 共享信息区：行程参数摘要
       this.buildSharedInfo()
 
-      // 内容区：条件渲染装备/行程，transition 补切换动画
-      Stack() {
-        if (this.tripTabIndex === 0) {
+      // 内容区：Tabs 组件原生支持左右滑动切换
+      Tabs({ barPosition: BarPosition.Start, controller: this.tabController, index: this.tripTabIndex }) {
+        TabContent() {
           // Tab 0：装备准备（统一清单视图）
           UnifiedChecklistView({
             trip: this.currentChecklist() ?? { id: '', title: '', items: [], createdAt: 0 },
@@ -255,7 +257,6 @@ export struct TripDetailPage {
             onReorderItems: this.onReorderItems,
             onRequestBatchMoveSheet: this.onRequestBatchMoveSheet,
             onReviewZone: this.onOpenZoneReview,
-            // 问题4a：接收子组件 head 折叠进度，驱动本层 SharedInfo 日期行同帧收起。
             onHeadCollapseChange: (progress: number, snapping: boolean) => {
               this.headSnapping = snapping;
               this.headCollapseProgress = progress;
@@ -263,22 +264,60 @@ export struct TripDetailPage {
           })
             .width('100%')
             .height('100%')
-            .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_TAB() }))
         }
 
-        if (this.tripTabIndex === 1) {
+        TabContent() {
           // Tab 1：每日行程
           ItineraryView({
             itinerary: this.getItinerary()
           })
             .width('100%')
             .height('100%')
-            .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_TAB() }))
         }
       }
       .layoutWeight(1)
       .width('100%')
-      .clip(true)
+      .barHeight(0)
+      .scrollable(true)
+      .animationDuration(200)
+      .onAreaChange((_old: Area, newArea: Area) => {
+        const w = newArea.width as number;
+        if (w > 0) {
+          this.tabsWidth = w;
+        }
+      })
+      .onGestureSwipe((_index: number, event: TabsAnimationEvent) => {
+        // 逐帧跟手：计算连续 progress 驱动标题字号/颜色插值
+        const offset: number = event.currentOffset;
+        const ratio: number = Math.abs(offset) / this.tabsWidth;
+        if (offset < 0) {
+          // 向左滑 → 往 index+1 方向
+          this.tripTabProgress = this.tripTabIndex + ratio;
+        } else {
+          // 向右滑 → 往 index-1 方向
+          this.tripTabProgress = this.tripTabIndex - ratio;
+        }
+        // clamp 0~1
+        if (this.tripTabProgress < 0) {
+          this.tripTabProgress = 0;
+        } else if (this.tripTabProgress > 1) {
+          this.tripTabProgress = 1;
+        }
+      })
+      .onAnimationStart((_index: number, targetIndex: number) => {
+        // 手势释放后动画开始：更新目标 tab + 驱动标题归位动画
+        if (targetIndex === 1) {
+          this.headCollapseProgress = 0;
+          this.headSnapping = false;
+        }
+        this.getUIContext().animateTo({ curve: SPRING_TAB() }, () => {
+          this.tripTabProgress = targetIndex;
+        });
+      })
+      .onChange((index: number) => {
+        // 兜底同步 index（动画完成后）
+        this.tripTabIndex = index;
+      })
     }
     .width('100%')
     .height('100%')

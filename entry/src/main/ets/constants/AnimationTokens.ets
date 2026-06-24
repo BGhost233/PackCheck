@@ -7,7 +7,7 @@ import { curves } from '@kit.ArkUI';
 // 通用
 export const SPRING_GENERAL = (): ICurve => curves.springMotion(0.35, 0.8);
 export const SPRING_PRESS = (): ICurve => curves.springMotion(0.25, 0.7);
-export const SPRING_TAB = (): ICurve => curves.springMotion(0.4, 0.75);
+export const SPRING_TAB = (): ICurve => curves.springMotion(0.32, 0.82);
 export const SPRING_COUNTER = (): ICurve => curves.springMotion(0.3, 0.75);
 export const SPRING_SCROLL = (): ICurve => curves.springMotion(0.45, 0.85);
 
