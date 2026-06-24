@@ -198,7 +198,7 @@ export struct DayCard {
     Column({ space: 8 }) {
       ForEach(this.day.segments, (seg: RouteSegment, index: number) => {
         this.buildSegmentRow(seg, index)
-      }, (seg: RouteSegment) => seg.id)
+      }, (seg: RouteSegment, index: number) => seg.id + '_' + index.toString())
 
       // 添加路段节点
       Row({ space: 10 }) {
@@ -333,6 +333,15 @@ export struct DayCard {
     .width('100%')
     .alignItems(VerticalAlign.Top)
     .padding({ bottom: 6 })
+    // 新增路段入场动效
+    .transition(
+      TransitionEffect.asymmetric(
+        TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: 8 }))
+          .animation({ curve: SPRING_GENERAL() }),
+        TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -4 }))
+          .animation({ curve: SPRING_GENERAL() })
+      )
+    )
   }
 
   private formatTicket(seg: RouteSegment): string {

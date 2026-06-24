@@ -115,7 +115,17 @@ export struct ItineraryView {
               curve: SPRING_GENERAL(),
               delay: staggerDelay(index)
             })
-        }, (day: DayItinerary) => day.id)
+            // 新增天入场动效：从下方滑入 + 淡入 + Spring
+            .transition(
+              TransitionEffect.asymmetric(
+                TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: 12 }))
+                  .combine(TransitionEffect.scale({ x: 0.95, y: 0.95 }))
+                  .animation({ curve: SPRING_GENERAL() }),
+                TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -8 }))
+                  .animation({ curve: SPRING_GENERAL() })
+              )
+            )
+        }, (day: DayItinerary) => day.id + '_' + day.segments.length.toString())
 
         // 底部添加一天按钮
         Text('+ 添加一天')
