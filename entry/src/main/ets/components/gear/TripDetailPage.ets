@@ -14,6 +14,7 @@ import { PAGE_PADDING, FONT_FEATURE_TNUM } from '../../constants/Layout';
 import {
   SPRING_GENERAL,
   SPRING_PRESS,
+  SPRING_TAB,
   PRESS_SCALE_DOWN,
   SPRING_HERO_EXPAND,
   SPRING_SCROLL,
@@ -44,6 +45,12 @@ export struct TripDetailPage {
   @Link focusedZone: string | null;
   // 问题4a：Index 命中聚焦态时递增此信号，透传给 UnifiedChecklistView 走带动画收起
   @Prop closeFocusSignal: number;
+
+  // ============ Tab 切换状态 ============
+  // 0=装备准备, 1=每日行程
+  @State private tripTabIndex: number = 0;
+  // 0~1 连续值，点击时动画驱动（Phase 5 扩展为手势跟手）
+  @State private tripTabProgress: number = 0;
 
   // 返回按钮按压
   @State private backScale: number = 1.0;
@@ -149,13 +156,41 @@ export struct TripDetailPage {
     return this.headSnapping ? SPRING_SCROLL() : SPRING_HEAD_FOLLOW();
   }
 
-  // 方案A：navbar 标题随折叠「呼吸」——展开态略大且轻微下沉（Large Title 余韵），
-  //   折叠态收回标准 navbar 标题位。与 SharedInfo 同帧联动，让整条 head 作为整体被压扁，消除割裂感。
-  // 字号：展开 20 → 折叠 17（标准 navbar 标题）。
-  private titleFontSize(): number {
-    const t: number = this.effectiveHeadCollapse();
-    return 20 - 3 * t;
+  // ============ 双标题 Tab 插值逻辑 ============
+  // 激活态基础字号 20，折叠呼吸收到 17；非激活态固定 14。
+  // tabIndex=0 的激活权重 = 1 - tripTabProgress；tabIndex=1 的激活权重 = tripTabProgress。
+  private tabTitleFontSize(tabIndex: number): number {
+    const weight: number = tabIndex === 0 ? (1 - this.tripTabProgress) : this.tripTabProgress;
+    // 激活态字号 = 20 - 3 * collapseProgress（呼吸）；非激活态 = 14（不参与呼吸）
+    const activeSize: number = 20 - 3 * this.effectiveHeadCollapse();
+    const inactiveSize: number = 14;
+    return inactiveSize + (activeSize - inactiveSize) * weight;
   }
+
+  // 字重在 weight > 0.5 时切换为 Medium，否则 Regular
+  private tabTitleWeight(tabIndex: number): FontWeight {
+    const weight: number = tabIndex === 0 ? (1 - this.tripTabProgress) : this.tripTabProgress;
+    return weight > 0.5 ? FontWeight.Medium : FontWeight.Regular;
+  }
+
+  // 颜色：激活 TEXT_MAIN，非激活 TEXT_TERTIARY，通过 opacity 模拟渐变
+  private tabTitleColor(tabIndex: number): string {
+    const weight: number = tabIndex === 0 ? (1 - this.tripTabProgress) : this.tripTabProgress;
+    // weight=1 全激活 → TEXT_MAIN; weight=0 全非激活 → TEXT_TERTIARY
+    return weight > 0.5 ? TEXT_MAIN : TEXT_TERTIARY;
+  }
+
+  // Tab 切换：动画驱动 tripTabProgress → 0 或 1
+  private switchTab(targetIndex: number): void {
+    if (this.tripTabIndex === targetIndex) {
+      return;
+    }
+    this.tripTabIndex = targetIndex;
+    this.getUIContext().animateTo({ curve: SPRING_TAB() }, () => {
+      this.tripTabProgress = targetIndex;
+    });
+  }
+
   // 下沉位移：展开 +4vp（向 SharedInfo 方向靠，强化「档案大标题」感）→ 折叠 0（归位居中）。
   private titleOffsetY(): number {
     return 4 * (1 - this.effectiveHeadCollapse());
@@ -252,17 +287,34 @@ export struct TripDetailPage {
         this.onReturnHome();
       })
 
-      // 行程名称：方案A 随折叠呼吸——字号 20→17、下沉 4→0，与 SharedInfo 同帧联动
-      Text(this.currentChecklist()?.title ?? '')
-        .fontSize(this.titleFontSize())
-        .fontWeight(FontWeight.Medium)
-        .fontColor(TEXT_MAIN)
-        .layoutWeight(1)
-        .textAlign(TextAlign.Center)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .translate({ y: this.titleOffsetY() })
-        .animation({ curve: this.headCollapseCurve() })
+      // 双标题 Tab：装备准备 / 每日行程
+      // 激活态 fontSize 20fp（折叠呼吸→17），非激活态 14fp 固定
+      // tripTabProgress 0→1 驱动字号连续插值，fontWeight 在 0.5 阈值切换
+      Row({ space: 16 }) {
+        Text(this.currentChecklist()?.title ?? '装备准备')
+          .fontSize(this.tabTitleFontSize(0))
+          .fontWeight(this.tabTitleWeight(0))
+          .fontColor(this.tabTitleColor(0))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .constraintSize({ maxWidth: '45%' })
+          .animation({ curve: SPRING_TAB() })
+          .onClick(() => { this.switchTab(0); })
+
+        Text('每日行程')
+          .fontSize(this.tabTitleFontSize(1))
+          .fontWeight(this.tabTitleWeight(1))
+          .fontColor(this.tabTitleColor(1))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .constraintSize({ maxWidth: '45%' })
+          .animation({ curve: SPRING_TAB() })
+          .onClick(() => { this.switchTab(1); })
+      }
+      .layoutWeight(1)
+      .justifyContent(FlexAlign.Center)
+      .translate({ y: this.titleOffsetY() })
+      .animation({ curve: this.headCollapseCurve() })
 
       // 逐项核查入口：与首页核查图标统一（checkmark_shield）
       Row() {
