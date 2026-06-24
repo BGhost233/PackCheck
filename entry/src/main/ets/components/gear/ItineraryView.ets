@@ -102,6 +102,7 @@ export struct ItineraryView {
           DayCard({
             day: day,
             isExpanded: this.expandedDayId === day.id,
+            renderNonce: this.renderNonce,
             onToggle: () => { this.toggleDay(day.id); },
             onEditDay: () => { this.onEditDay(day.id); },
             onDeleteDay: () => { this.onDeleteDay(day.id); },

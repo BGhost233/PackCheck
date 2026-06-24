@@ -28,6 +28,8 @@ import {
 export struct DayCard {
   @Prop @Watch('onDayChange') day: DayItinerary = { id: '', dayIndex: 0, segments: [] };
   @Prop isExpanded: boolean = false;
+  // 强制刷新 nonce：父组件数据变更时递增，确保 @Prop day 深层变化被感知
+  @Prop renderNonce: number = 0;
   onToggle: () => void = () => {};
   onEditDay: () => void = () => {};
   onDeleteDay: () => void = () => {};
