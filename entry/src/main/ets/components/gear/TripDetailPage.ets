@@ -61,6 +61,9 @@ export struct TripDetailPage {
   @State private backScale: number = 1.0;
   // 逐项核查按钮按压
   @State private menuScale: number = 1.0;
+  // Tab 标题按压缩放
+  @State private tab0Scale: number = 1.0;
+  @State private tab1Scale: number = 1.0;
   // 共享信息区按压
   @State private infoScale: number = 1.0;
   // 问题4a：head 随网格滚动的折叠进度（0=全展开，1=全折叠），由 UnifiedChecklistView.onScroll 回调驱动。
@@ -186,11 +189,17 @@ export struct TripDetailPage {
     return weight > 0.5 ? FontWeight.Medium : FontWeight.Regular;
   }
 
-  // 颜色：激活 TEXT_MAIN，非激活 TEXT_TERTIARY，通过 opacity 模拟渐变
+  // 颜色：激活 TEXT_MAIN，非激活 TEXT_TERTIARY，通过透明度连续插值实现渐变
+  // 返回 [color, opacity] 不现实（ArkUI fontColor 不支持 opacity 参数），
+  // 改用 hex 插值：TEXT_MAIN #1A1A1A / TEXT_TERTIARY #999999
   private tabTitleColor(tabIndex: number): string {
     const weight: number = tabIndex === 0 ? (1 - this.tripTabProgress) : this.tripTabProgress;
-    // weight=1 全激活 → TEXT_MAIN; weight=0 全非激活 → TEXT_TERTIARY
-    return weight > 0.5 ? TEXT_MAIN : TEXT_TERTIARY;
+    // 线性插值 #999999 → #1A1A1A（RGB 各通道 153→26）
+    const from: number = 153; // 0x99
+    const to: number = 26;   // 0x1A
+    const channel: number = Math.round(from + (to - from) * weight);
+    const hex: string = channel.toString(16).padStart(2, '0');
+    return `#${hex}${hex}${hex}`;
   }
 
   // Tab 切换（点击标题触发）：通过 controller 驱动 Tabs 翻页
@@ -198,13 +207,14 @@ export struct TripDetailPage {
     if (this.tripTabIndex === targetIndex) {
       return;
     }
-    // 切换到行程 Tab 时重置 head 折叠进度
-    if (targetIndex === 1) {
-      this.headCollapseProgress = 0;
-      this.headSnapping = false;
+    // 切换到行程 Tab 时平滑重置 head 折叠进度（不硬切）
+    if (targetIndex === 1 && this.headCollapseProgress > 0) {
+      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
+        this.headCollapseProgress = 0;
+        this.headSnapping = false;
+      });
     }
     this.tabController.changeIndex(targetIndex);
-    // tripTabProgress 通过 onAnimationStart 回调更新
   }
 
   // 下沉位移：展开 +4vp（向 SharedInfo 方向靠，强化「档案大标题」感）→ 折叠 0（归位居中）。
@@ -300,31 +310,20 @@ export struct TripDetailPage {
         }
       })
       .onGestureSwipe((_index: number, event: TabsAnimationEvent) => {
-        // 逐帧跟手：计算连续 progress 驱动标题字号/颜色插值
-        const offset: number = event.currentOffset;
-        const ratio: number = Math.abs(offset) / this.tabsWidth;
-        if (offset < 0) {
-          // 向左滑 → 往 index+1 方向
-          this.tripTabProgress = this.tripTabIndex + ratio;
-        } else {
-          // 向右滑 → 往 index-1 方向
-          this.tripTabProgress = this.tripTabIndex - ratio;
-        }
-        // clamp 0~1
-        if (this.tripTabProgress < 0) {
-          this.tripTabProgress = 0;
-        } else if (this.tripTabProgress > 1) {
-          this.tripTabProgress = 1;
-        }
+        // 逐帧跟手：currentOffset 负值=内容向左偏=趋向 index+1
+        // progress = currentIndex - offset/width（offset 负时 progress 增大）
+        const raw: number = this.tripTabIndex - event.currentOffset / this.tabsWidth;
+        // clamp [0, 1]
+        this.tripTabProgress = Math.max(0, Math.min(1, raw));
       })
       .onAnimationStart((_index: number, targetIndex: number) => {
-        // 手势释放后动画开始：更新目标 tab + 驱动标题归位动画
-        if (targetIndex === 1) {
-          this.headCollapseProgress = 0;
-          this.headSnapping = false;
-        }
+        // 手势释放后动画开始：驱动标题归位 + 平滑重置 head
         this.getUIContext().animateTo({ curve: SPRING_TAB() }, () => {
           this.tripTabProgress = targetIndex;
+          if (targetIndex === 1 && this.headCollapseProgress > 0) {
+            this.headCollapseProgress = 0;
+            this.headSnapping = false;
+          }
         });
       })
       .onChange((index: number) => {
@@ -386,7 +385,15 @@ export struct TripDetailPage {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .constraintSize({ maxWidth: '45%' })
+          .scale({ x: this.tab0Scale, y: this.tab0Scale })
           .animation({ curve: SPRING_TAB() })
+          .onTouch((e: TouchEvent) => {
+            if (e.type === TouchType.Down) {
+              this.tab0Scale = PRESS_SCALE_DOWN;
+            } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+              this.tab0Scale = 1.0;
+            }
+          })
           .onClick(() => { this.switchTab(0); })
 
         Text('每日行程')
@@ -396,7 +403,15 @@ export struct TripDetailPage {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .constraintSize({ maxWidth: '45%' })
+          .scale({ x: this.tab1Scale, y: this.tab1Scale })
           .animation({ curve: SPRING_TAB() })
+          .onTouch((e: TouchEvent) => {
+            if (e.type === TouchType.Down) {
+              this.tab1Scale = PRESS_SCALE_DOWN;
+            } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+              this.tab1Scale = 1.0;
+            }
+          })
           .onClick(() => { this.switchTab(1); })
       }
       .layoutWeight(1)

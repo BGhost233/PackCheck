@@ -33,10 +33,8 @@ export struct ItineraryView {
   @State private appeared: boolean = false;
 
   aboutToAppear(): void {
-    // 延迟 1 帧触发入场动画
-    setTimeout(() => {
-      this.appeared = true;
-    }, 16);
+    // 直接置位；动画由各元素的 .animation({ delay }) 控制错落时机
+    this.appeared = true;
   }
 
   build() {

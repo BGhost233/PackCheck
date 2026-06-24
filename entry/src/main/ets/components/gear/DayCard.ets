@@ -26,7 +26,7 @@ import {
 
 @Component
 export struct DayCard {
-  @Prop day: DayItinerary = { id: '', dayIndex: 0, segments: [] };
+  @Prop @Watch('onDayChange') day: DayItinerary = { id: '', dayIndex: 0, segments: [] };
   @Prop isExpanded: boolean = false;
   onToggle: () => void = () => {};
   onEditDay: () => void = () => {};
@@ -36,9 +36,27 @@ export struct DayCard {
   onDeleteSegment: (segId: string) => void = () => {};
 
   @State private cardScale: number = 1.0;
+  // 缓存 summary 避免重复计算
+  @State private cachedSummary: DaySummary = { from: '', to: '', mainTransport: 'train', departTime: undefined, arriveTime: undefined };
+  // 长按触发标志，用于短路 onClick
+  private longPressTriggered: boolean = false;
 
-  private getSummary(): DaySummary {
-    return getDaySummary(this.day);
+  aboutToAppear(): void {
+    this.cachedSummary = getDaySummary(this.day);
+  }
+
+  // @Prop day 变化时刷新 summary 缓存
+  onDayChange(): void {
+    this.cachedSummary = getDaySummary(this.day);
+  }
+
+  // 段行按压态样式
+  @Styles segRowPressed() {
+    .backgroundColor('#0D000000')  // 6% 黑色蒙层
+  }
+
+  @Styles segRowNormal() {
+    .backgroundColor(Color.Transparent)
   }
 
   build() {
@@ -60,14 +78,25 @@ export struct DayCard {
     .onTouch((e: TouchEvent) => {
       if (e.type === TouchType.Down) {
         this.cardScale = PRESS_SCALE_DOWN;
+        this.longPressTriggered = false;
       } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
         this.cardScale = 1.0;
       }
     })
-    .onClick(() => { this.onToggle(); })
+    .onClick(() => {
+      // 长按已触发则跳过，避免展开/收起与编辑同时触发
+      if (this.longPressTriggered) {
+        this.longPressTriggered = false;
+        return;
+      }
+      this.onToggle();
+    })
     .gesture(
       LongPressGesture()
-        .onAction(() => { this.onEditDay(); })
+        .onAction(() => {
+          this.longPressTriggered = true;
+          this.onEditDay();
+        })
     )
   }
 
@@ -101,7 +130,7 @@ export struct DayCard {
 
       // 第二行：起点 ──icon──→ 终点
       Row({ space: 8 }) {
-        Text(this.getSummary().from)
+        Text(this.cachedSummary.from)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
@@ -110,7 +139,7 @@ export struct DayCard {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         // 交通图标
-        SymbolGlyph(getTransportIcon(this.getSummary().mainTransport))
+        SymbolGlyph(getTransportIcon(this.cachedSummary.mainTransport))
           .fontSize(16)
           .fontColor([TEXT_SECONDARY])
 
@@ -119,7 +148,7 @@ export struct DayCard {
           .fontSize(14)
           .fontColor(TEXT_TERTIARY)
 
-        Text(this.getSummary().to)
+        Text(this.cachedSummary.to)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
@@ -131,20 +160,20 @@ export struct DayCard {
       .alignItems(VerticalAlign.Center)
 
       // 第三行：出发时间 / 到达时间（可选）
-      if (this.getSummary().departTime !== undefined || this.getSummary().arriveTime !== undefined) {
+      if (this.cachedSummary.departTime !== undefined || this.cachedSummary.arriveTime !== undefined) {
         Row({ space: 12 }) {
-          if (this.getSummary().departTime !== undefined) {
-            Text(this.getSummary().departTime)
+          if (this.cachedSummary.departTime !== undefined) {
+            Text(this.cachedSummary.departTime)
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
           }
-          if (this.getSummary().departTime !== undefined && this.getSummary().arriveTime !== undefined) {
+          if (this.cachedSummary.departTime !== undefined && this.cachedSummary.arriveTime !== undefined) {
             Text('–')
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
           }
-          if (this.getSummary().arriveTime !== undefined) {
-            Text(this.getSummary().arriveTime)
+          if (this.cachedSummary.arriveTime !== undefined) {
+            Text(this.cachedSummary.arriveTime)
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
           }
@@ -196,9 +225,16 @@ export struct DayCard {
     }
     .width('100%')
     .margin({ top: 12 })
-    .transition(TransitionEffect.OPACITY.combine(
-      TransitionEffect.translate({ y: -6 })
-    ).animation({ curve: SPRING_GENERAL() }))
+    .transition(
+      TransitionEffect.asymmetric(
+        // 入场：从下方涌入（展开方向符合直觉）
+        TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: 8 }))
+          .animation({ curve: SPRING_GENERAL() }),
+        // 退场：向上收起 + 淡出
+        TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -4 }))
+          .animation({ curve: SPRING_GENERAL() })
+      )
+    )
   }
 
   @Builder
@@ -224,7 +260,7 @@ export struct DayCard {
       .width(TIMELINE_LEFT_MARGIN)
       .alignItems(HorizontalAlign.Center)
 
-      // 右侧内容（点击编辑）
+      // 右侧内容（点击编辑，带按压高亮反馈）
       Column({ space: 2 }) {
         // 起点 → 终点
         Text(`${seg.from} → ${seg.to}`)
@@ -286,11 +322,13 @@ export struct DayCard {
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
+      .padding({ left: 6, right: 6, top: 4, bottom: 4 })
+      .borderRadius(8)
+      .stateStyles({
+        pressed: this.segRowPressed,
+        normal: this.segRowNormal
+      })
       .onClick(() => { this.onEditSegment(seg.id); })
-      .gesture(
-        LongPressGesture()
-          .onAction(() => { this.onDeleteSegment(seg.id); })
-      )
     }
     .width('100%')
     .alignItems(VerticalAlign.Top)
