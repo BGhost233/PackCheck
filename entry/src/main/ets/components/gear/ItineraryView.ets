@@ -78,11 +78,16 @@ export struct ItineraryView {
   }
 
   build() {
-    if (this.itinerary.length === 0) {
-      this.buildEmptyState()
-    } else {
-      this.buildDayList()
+    Column() {
+      if (this.itinerary.length === 0) {
+        this.buildEmptyState()
+      } else {
+        this.buildDayList()
+      }
     }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Start)
   }
 
   // 空态 CTA 按钮按压态

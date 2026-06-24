@@ -204,14 +204,6 @@ export struct DayCard {
         }
       }
 
-      // 无路段时显示引导提示
-      if (this.day.segments.length === 0 && !this.isExpanded) {
-        Text('展开添加路段 ›')
-          .fontSize(12)
-          .fontColor(PRIMARY_COLOR)
-          .fontStyle(FontStyle.Italic)
-      }
-
       // 第四行：当天备注（可选，单行截断）
       if (this.day.note !== undefined && this.day.note.length > 0) {
         Text(this.day.note)
