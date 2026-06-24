@@ -202,6 +202,14 @@ export struct TripDetailPage {
     return `#${hex}${hex}${hex}`;
   }
 
+  // ============ Tab 滑动下压效果 ============
+  // 双侧对称下压：progress 在 0.5（中间态）时最深 0.97，两端恢复 1.0。
+  // sin(π * progress) 天然满足 f(0)=0, f(0.5)=1, f(1)=0 的抛物线分布。
+  private tabContentScale(): number {
+    const TAB_DEPRESS_DEPTH: number = 0.03;
+    return 1 - TAB_DEPRESS_DEPTH * Math.sin(Math.PI * this.tripTabProgress);
+  }
+
   // Tab 切换（点击标题触发）：通过 controller 驱动 Tabs 翻页
   private switchTab(targetIndex: number): void {
     if (this.tripTabIndex === targetIndex) {
@@ -282,6 +290,8 @@ export struct TripDetailPage {
             .width('100%')
             .height('100%')
         }
+        .scale({ x: this.tabContentScale(), y: this.tabContentScale() })
+        .animation({ curve: SPRING_TAB() })
 
         TabContent() {
           // Tab 1：每日行程
@@ -298,6 +308,8 @@ export struct TripDetailPage {
             .width('100%')
             .height('100%')
         }
+        .scale({ x: this.tabContentScale(), y: this.tabContentScale() })
+        .animation({ curve: SPRING_TAB() })
       }
       .layoutWeight(1)
       .width('100%')
