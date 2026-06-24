@@ -134,6 +134,11 @@ struct Index {
   @State private currentTabIndex: number = 0;
   @State private homeSwipeResetNonce: number = 0;
   @State private gearSwipeResetNonce: number = 0;
+  // visibility nonce：每次 tab 切至此组件时递增，驱动子组件入场动画重播
+  // 解决 ArkUI TabContent 可能 keep-alive 导致 aboutToAppear 不触发、入场动画不重播的问题
+  @State private homeVisibilityNonce: number = 0;
+  @State private gearVisibilityNonce: number = 0;
+  @State private profileVisibilityNonce: number = 0;
   @State private tabSwipeProgress: number = 0; // [-1, 1] 滑动进度，跟手指示器用
   private readonly tabCount: number = 3;
   private tabsWidth: number = 360; // Tabs 内容区宽度，onAreaChange 更新
@@ -2122,6 +2127,10 @@ await this.updateItinerary(next);
     this.currentTabIndex = targetIndex;
     this.tabSwipeProgress = 0;
     this.tabsController.changeIndex(targetIndex);
+    // visibility nonce：驱动目标 tab 子组件入场动画重播
+    if (targetIndex === 0) { this.homeVisibilityNonce++; }
+    else if (targetIndex === 1) { this.gearVisibilityNonce++; }
+    else if (targetIndex === 2) { this.profileVisibilityNonce++; }
     // 呼吸下压（极短 EaseOut，不用 spring 避免拖尾）
     this.getUIContext().animateTo({
       duration: DURATION_CEREMONY_SHAKE, curve: CURVE_DECELERATE
@@ -2203,6 +2212,7 @@ await this.updateItinerary(next);
                 gears: this.gears,
                 checklistRenderNonce: this.checklistRenderNonce,
                 swipeResetNonce: this.homeSwipeResetNonce,
+                tabVisibilityNonce: this.homeVisibilityNonce,
                 onOpenTrip: () => {
                   this.startTripCeremony();
                 },
@@ -2234,6 +2244,7 @@ await this.updateItinerary(next);
                 gearSortMode: this.gearSortMode,
                 expandedGearId: this.expandedGearId,
                 swipeResetNonce: this.gearSwipeResetNonce,
+                tabVisibilityNonce: this.gearVisibilityNonce,
                 multiSelectMode: this.multiSelectMode,
                 selectedMultiGearIds: this.selectedMultiGearIds,
                 checklists: this.checklists,
@@ -2298,6 +2309,7 @@ await this.updateItinerary(next);
               ProfilePage({
                 trips: this.checklists,
                 gears: this.gears,
+                tabVisibilityNonce: this.profileVisibilityNonce,
               });
             }
             .tabBar(this.customTabBar(2, $r('sys.symbol.person'), '我'))
@@ -2369,6 +2381,10 @@ await this.updateItinerary(next);
             // 松手后确定最终目标，立即将指示器弹到目标位置
             this.currentTabIndex = to;
             this.tabSwipeProgress = 0;
+            // visibility nonce：驱动目标 tab 子组件入场动画重播
+            if (to === 0) { this.homeVisibilityNonce++; }
+            else if (to === 1) { this.gearVisibilityNonce++; }
+            else if (to === 2) { this.profileVisibilityNonce++; }
             // 呼吸回弹：spring 弹回原始 scale
             this.getUIContext().animateTo({
               curve: SPRING_GENERAL()
@@ -2382,6 +2398,10 @@ await this.updateItinerary(next);
             // 切换 Tab 时收回两个页面已展开的 swipeAction
             this.homeSwipeResetNonce++;
             this.gearSwipeResetNonce++;
+            // visibility nonce：驱动目标 tab 子组件入场动画重播
+            if (index === 0) { this.homeVisibilityNonce++; }
+            else if (index === 1) { this.gearVisibilityNonce++; }
+            else if (index === 2) { this.profileVisibilityNonce++; }
           })
 
           if (this.gearFilterPanelExpanded) {
@@ -2561,7 +2581,15 @@ await this.updateItinerary(next);
           onTicketCodeChange: (v: string) => { this.segFormTicketCode = v; },
           onTicketSeatChange: (v: string) => { this.segFormTicketSeat = v; },
           onTicketPriceChange: (v: string) => { this.segFormTicketPrice = v; },
-          onSubmitSegment: (segment: RouteSegment) => { this.handleSubmitSegment(segment); }
+          onSubmitSegment: (segment: RouteSegment) => { this.handleSubmitSegment(segment); },
+          onDeleteDayFromSheet: () => {
+            this.handleDeleteDay(this.editingDayId);
+            this.closeSheet();
+          },
+          onDeleteSegmentFromSheet: () => {
+            this.handleDeleteSegment(this.editingSegDayId, this.editingSegmentId);
+            this.closeSheet();
+          }
         })
       }
       if (this.showEditItemPanel) {

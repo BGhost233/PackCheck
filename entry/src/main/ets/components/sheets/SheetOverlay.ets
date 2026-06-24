@@ -145,6 +145,7 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
   onDayNoteChange: (v: string) => void = () => {};
   onSubmitDay: (day: DayItinerary) => void = () => {};
   onSubmitEditDay: (dayId: string, from: string, to: string, date: string, note: string) => void = () => {};
+  onDeleteDayFromSheet: () => void = () => {};
 
   // SegmentForm props & callbacks
   @Prop editingSegmentId: string = '';
@@ -169,6 +170,7 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
   onTicketSeatChange: (v: string) => void = () => {};
   onTicketPriceChange: (v: string) => void = () => {};
   onSubmitSegment: (segment: RouteSegment) => void = () => {};
+  onDeleteSegmentFromSheet: () => void = () => {};
 
   build() {
     Column() {
@@ -354,7 +356,8 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
             onDateChange: this.onDayDateChange,
             onNoteChange: this.onDayNoteChange,
             onSubmitDay: this.onSubmitDay,
-            onSubmitEdit: this.onSubmitEditDay
+            onSubmitEdit: this.onSubmitEditDay,
+            onDeleteDay: this.onDeleteDayFromSheet
           })
         } else if (this.sheetMode === SHEET_SEGMENT_FORM) {
           SegmentFormSheet({
@@ -379,7 +382,8 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
             onTicketCodeChange: this.onTicketCodeChange,
             onTicketSeatChange: this.onTicketSeatChange,
             onTicketPriceChange: this.onTicketPriceChange,
-            onSubmit: this.onSubmitSegment
+            onSubmit: this.onSubmitSegment,
+            onDeleteSegment: this.onDeleteSegmentFromSheet
           })
         }
       }

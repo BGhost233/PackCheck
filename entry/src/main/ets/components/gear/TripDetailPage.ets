@@ -50,6 +50,10 @@ export struct TripDetailPage {
   // ============ Tab 切换状态 ============
   // 0=装备准备, 1=每日行程
   @State private tripTabIndex: number = 0;
+  // visibility nonce：每次 tab 切至此组件时递增，驱动子组件入场动画重播
+  // 解决 ArkUI TabContent keep-alive 时 aboutToAppear 不触发的问题
+  @State private tripTab0VisibilityNonce: number = 0;
+  @State private tripTab1VisibilityNonce: number = 0;
   // 0~1 连续值：滑动跟手逐帧驱动 / 点击时 animateTo 驱动
   @State private tripTabProgress: number = 0;
   // Tabs 控制器
@@ -215,13 +219,10 @@ export struct TripDetailPage {
     if (this.tripTabIndex === targetIndex) {
       return;
     }
-    // 切换到行程 Tab 时平滑重置 head 折叠进度（不硬切）
-    if (targetIndex === 1 && this.headCollapseProgress > 0) {
-      this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
-        this.headCollapseProgress = 0;
-        this.headSnapping = false;
-      });
-    }
+    // visibility nonce：驱动目标 tab 子组件入场动画重播
+    if (targetIndex === 0) { this.tripTab0VisibilityNonce++; }
+    else { this.tripTab1VisibilityNonce++; }
+    // 行程 Tab 已接入 HeadCollapseController，切换时不再强制重置折叠进度
     this.tabController.changeIndex(targetIndex);
   }
 
@@ -297,13 +298,16 @@ export struct TripDetailPage {
           // Tab 1：每日行程
           ItineraryView({
             itinerary: this.getItinerary(),
-            renderNonce: this.checklistRenderNonce,
             onAddDay: () => { this.onAddDay(); },
             onEditDay: (dayId: string) => { this.onEditDay(dayId); },
             onDeleteDay: (dayId: string) => { this.onDeleteDay(dayId); },
             onAddSegment: (dayId: string) => { this.onAddSegment(dayId); },
             onEditSegment: (dayId: string, segId: string) => { this.onEditSegment(dayId, segId); },
-            onDeleteSegment: (dayId: string, segId: string) => { this.onDeleteSegment(dayId, segId); }
+            onDeleteSegment: (dayId: string, segId: string) => { this.onDeleteSegment(dayId, segId); },
+            onHeadCollapseChange: (progress: number, snapping: boolean) => {
+              this.headSnapping = snapping;
+              this.headCollapseProgress = progress;
+            }
           })
             .width('100%')
             .height('100%')
@@ -329,19 +333,21 @@ export struct TripDetailPage {
         // clamp [0, 1]
         this.tripTabProgress = Math.max(0, Math.min(1, raw));
       })
-      .onAnimationStart((_index: number, targetIndex: number) => {
-        // 手势释放后动画开始：驱动标题归位 + 平滑重置 head
-        this.getUIContext().animateTo({ curve: SPRING_TAB() }, () => {
-          this.tripTabProgress = targetIndex;
-          if (targetIndex === 1 && this.headCollapseProgress > 0) {
-            this.headCollapseProgress = 0;
-            this.headSnapping = false;
-          }
-        });
-      })
+        .onAnimationStart((_index: number, targetIndex: number) => {
+          // 手势释放后动画开始：驱动标题归位
+          this.getUIContext().animateTo({ curve: SPRING_TAB() }, () => {
+            this.tripTabProgress = targetIndex;
+          });
+          // visibility nonce：驱动目标 tab 子组件入场动画重播
+          if (targetIndex === 0) { this.tripTab0VisibilityNonce++; }
+          else { this.tripTab1VisibilityNonce++; }
+        })
       .onChange((index: number) => {
         // 兜底同步 index（动画完成后）
         this.tripTabIndex = index;
+        // visibility nonce：驱动目标 tab 子组件入场动画重播
+        if (index === 0) { this.tripTab0VisibilityNonce++; }
+        else { this.tripTab1VisibilityNonce++; }
       })
     }
     .width('100%')
@@ -391,7 +397,7 @@ export struct TripDetailPage {
       // 激活态 fontSize 20fp（折叠呼吸→17），非激活态 14fp 固定
       // tripTabProgress 0→1 驱动字号连续插值，fontWeight 在 0.5 阈值切换
       Row({ space: 16 }) {
-        Text(this.currentChecklist()?.title ?? '装备准备')
+        Text('装备准备')
           .fontSize(this.tabTitleFontSize(0))
           .fontWeight(this.tabTitleWeight(0))
           .fontColor(this.tabTitleColor(0))

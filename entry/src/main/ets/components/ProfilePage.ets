@@ -17,6 +17,9 @@ import {
 export struct ProfilePage {
   @Prop @Watch('onDataChange') trips: TripChecklist[] = [];
   @Prop @Watch('onDataChange') gears: GearItem[] = [];
+  // tabVisibilityNonce：父层每次切至此 tab 时递增，驱动入场动画重播
+  // 解决 ArkUI TabContent keep-alive 时 aboutToAppear 不触发的问题
+  @Prop @Watch('onTabVisibilityNonceChange') tabVisibilityNonce: number = 0;
 
   @State private footprint: Footprint = {
     tripCount: 0, totalDistanceKm: 0, totalAscentM: 0, totalDurationHours: 0,
@@ -71,6 +74,43 @@ export struct ProfilePage {
     this.isAlive = false;
     this.cancelAllCounters();
     this.clearAllStaggerTimers();
+  }
+
+  // shared：所有错落入场 @State 回零（被 onTabVisibilityNonceChange 复用）
+  // 首次挂载时 @State 初始值已为零，仅 tab 重显时需要手动重置
+  private resetStaggerStates(): void {
+    this.heroOpacity = 0;
+    this.heroTranslateY = STAGGER_OFFSET_Y;
+    this.timelineOpacity = 0;
+    this.timelineTranslateY = STAGGER_OFFSET_Y;
+    this.companionOpacity = 0;
+    this.companionTranslateY = STAGGER_OFFSET_Y;
+    this.gridOpacity = 0;
+    this.gridTranslateY = STAGGER_OFFSET_Y;
+    this.outroOpacity = 0;
+    this.timelineItemOpacities = [0, 0, 0, 0, 0];
+    this.timelineItemTranslateY = [
+      STAGGER_OFFSET_Y, STAGGER_OFFSET_Y, STAGGER_OFFSET_Y, STAGGER_OFFSET_Y, STAGGER_OFFSET_Y
+    ];
+    // counter 展示值归零
+    this.animDistance = 0;
+    this.animAscent = 0;
+    this.animTrips = 0;
+    this.animPlaces = 0;
+    this.animDays = 0;
+    this.animGearCount = 0;
+    this.animMaxAlt = 0;
+    this.animDuration = 0;
+  }
+
+  // tab 可见性变化时重置并重播全部入场动画
+  onTabVisibilityNonceChange(): void {
+    this.clearAllStaggerTimers();
+    this.cancelAllCounters();
+    this.resetStaggerStates();
+    this.refreshFootprint(true);
+    this.staggerSections();
+    // hasAppeared 不重置 — 它是功能 guard，hidden tab 期间需继续响应数据变更
   }
 
   private clearAllStaggerTimers(): void {

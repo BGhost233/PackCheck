@@ -53,6 +53,9 @@ export struct HomePage {
   @Prop gears: GearItem[] = [];
   @Prop @Watch('onChecklistRenderNonceChange') checklistRenderNonce: number = 0;
   @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
+  // tabVisibilityNonce：父层每次切至此 tab 时递增，驱动入场动画重播
+  // 解决 ArkUI TabContent keep-alive 时 aboutToAppear 不触发的问题
+  @Prop @Watch('onTabVisibilityNonceChange') tabVisibilityNonce: number = 0;
 
   onOpenTrip: () => void = (): void => {};
   onOpenChecklist: (id: string) => void = (id: string): void => {};
@@ -117,21 +120,41 @@ export struct HomePage {
     }
   }
 
-  aboutToAppear(): void {
-    this.isAlive = true;
+  // shared：入场动画状态重置（被 aboutToAppear 和 onTabVisibilityNonceChange 复用）
+  private resetEntryStates(): void {
     this.heroDaysDisplay = 0;
     this.heroNumberAnimated = false;
     this.progressNumeratorDisplay = 0;
     this.progressAnimated = false;
-    this.headProgress = 0;
-    this.headSnapping = false;
     this.historyStaggerReady = false;
     this.wasLatestChecklistDone = false;
+  }
+
+  // shared：历史列表错落 stagger 调度（被 aboutToAppear 和 onTabVisibilityNonceChange 复用）
+  private scheduleStaggerEntry(): void {
+    if (this.staggerTimerId >= 0) {
+      clearTimeout(this.staggerTimerId);
+    }
     this.staggerTimerId = setTimeout(() => {
       if (!this.isAlive) { return; }
       this.historyStaggerReady = true;
       this.checkCelebration();
     }, 100);
+  }
+
+  // tab 可见性变化时重置入场动画并重播
+  onTabVisibilityNonceChange(): void {
+    this.resetEntryStates();
+    this.scheduleStaggerEntry();
+    // headProgress/headSnapping 不重置 — 由 HeadCollapseController 滚动驱动
+  }
+
+  aboutToAppear(): void {
+    this.isAlive = true;
+    this.resetEntryStates();
+    this.headProgress = 0;
+    this.headSnapping = false;
+    this.scheduleStaggerEntry();
   }
 
   aboutToDisappear(): void {

@@ -176,11 +176,14 @@ export function updateDay(itinerary: DayItinerary[], dayId: string, patch: DayPa
       return d;
     }
     // patch 语义：undefined=不修改，''=显式清空，string=新值
+    // from/to 为空字符串时视为 undefined（防御性忽略，不允许清空必填字段）
+    const patchFrom = (patch.from !== undefined && patch.from.length > 0) ? patch.from : undefined;
+    const patchTo = (patch.to !== undefined && patch.to.length > 0) ? patch.to : undefined;
     const updated: DayItinerary = {
       id: d.id,
       dayIndex: d.dayIndex,
-      from: patch.from !== undefined ? (patch.from.length > 0 ? patch.from : undefined) : d.from,
-      to: patch.to !== undefined ? (patch.to.length > 0 ? patch.to : undefined) : d.to,
+      from: patchFrom !== undefined ? patchFrom : d.from,
+      to: patchTo !== undefined ? patchTo : d.to,
       segments: d.segments,
       date: patch.date !== undefined ? (patch.date.length > 0 ? patch.date : undefined) : d.date,
       note: patch.note !== undefined ? (patch.note.length > 0 ? patch.note : undefined) : d.note

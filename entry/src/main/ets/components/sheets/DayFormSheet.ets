@@ -2,11 +2,13 @@ import {
   PAGE_BG,
   PRIMARY_COLOR,
   TEXT_MAIN,
-  TEXT_SECONDARY
+  TEXT_SECONDARY,
+  TEXT_TERTIARY
 } from '../../constants/DesignTokens';
 import {
   WHITE,
-  DISABLED_COLOR
+  DISABLED_COLOR,
+  DANGER_COLOR
 } from '../../constants/Colors';
 import {
   SPRING_PRESS,
@@ -42,8 +44,12 @@ export struct DayFormSheet {
   onSubmitDay: (day: DayItinerary) => void = () => {};
   // 编辑模式：提交天级 patch（from/to/date/note 始终传字符串，'' = 清空）
   onSubmitEdit: (dayId: string, from: string, to: string, date: string, note: string) => void = () => {};
+  // 编辑模式：删除此天
+  onDeleteDay: () => void = () => {};
 
   @State private buttonPressed: boolean = false;
+  @State private deletePressed: boolean = false;
+  @State private focusedField: string = '';
 
   private isFormValid(): boolean {
     return this.dayFrom.trim().length > 0 && this.dayTo.trim().length > 0;
@@ -62,6 +68,9 @@ export struct DayFormSheet {
           .backgroundColor(PAGE_BG)
           .borderRadius(12)
           .padding({ left: 12, right: 12 })
+          .border({ width: 1, color: this.focusedField === 'from' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
+          .onFocus(() => { this.focusedField = 'from'; })
+          .onBlur(() => { if (this.focusedField === 'from') this.focusedField = ''; })
           .onChange((value: string) => { this.onFromChange(value); })
 
         // 目的地（必填）
@@ -74,19 +83,45 @@ export struct DayFormSheet {
           .backgroundColor(PAGE_BG)
           .borderRadius(12)
           .padding({ left: 12, right: 12 })
+          .border({ width: 1, color: this.focusedField === 'to' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
+          .onFocus(() => { this.focusedField = 'to'; })
+          .onBlur(() => { if (this.focusedField === 'to') this.focusedField = ''; })
           .onChange((value: string) => { this.onToChange(value); })
 
-        // 日期（可选）
-        TextInput({ placeholder: '日期 YYYY-MM-DD（可选）', text: this.dayDate })
-          .type(InputType.Normal)
-          .height(48)
-          .fontSize(14)
-          .fontColor(TEXT_MAIN)
-          .placeholderColor(TEXT_SECONDARY)
-          .backgroundColor(PAGE_BG)
-          .borderRadius(12)
-          .padding({ left: 12, right: 12 })
-          .onChange((value: string) => { this.onDateChange(value); })
+        // 日期（可选，点击弹出 DatePickerDialog）
+        Row() {
+          Text(this.dayDate.length > 0 ? this.dayDate : '选择日期（可选）')
+            .fontSize(14)
+            .fontColor(this.dayDate.length > 0 ? TEXT_MAIN : TEXT_TERTIARY)
+        }
+        .height(48)
+        .width('100%')
+        .backgroundColor(PAGE_BG)
+        .borderRadius(12)
+        .padding({ left: 12, right: 12 })
+        .alignItems(VerticalAlign.Center)
+        .onClick(() => {
+          // 解析已选日期作为初始值
+          let selected: Date = new Date();
+          if (this.dayDate.length > 0) {
+            const parsed = new Date(this.dayDate);
+            if (!isNaN(parsed.getTime())) {
+              selected = parsed;
+            }
+          }
+          DatePickerDialog.show({
+            start: new Date('2020-01-01'),
+            end: new Date('2030-12-31'),
+            selected: selected,
+            lunar: false,
+            onDateAccept: (value: Date) => {
+              const y = value.getFullYear();
+              const m = (value.getMonth() + 1).toString().padStart(2, '0');
+              const d = value.getDate().toString().padStart(2, '0');
+              this.onDateChange(`${y}-${m}-${d}`);
+            }
+          });
+        })
 
         // 备注（可选）
         TextInput({ placeholder: '当天备注（可选）', text: this.dayNote })
@@ -98,6 +133,9 @@ export struct DayFormSheet {
           .backgroundColor(PAGE_BG)
           .borderRadius(12)
           .padding({ left: 12, right: 12 })
+          .border({ width: 1, color: this.focusedField === 'note' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
+          .onFocus(() => { this.focusedField = 'note'; })
+          .onBlur(() => { if (this.focusedField === 'note') this.focusedField = ''; })
           .onChange((value: string) => { this.onNoteChange(value); })
 
         // 提交按钮
@@ -143,6 +181,43 @@ export struct DayFormSheet {
               );
             }
           })
+
+        // 编辑模式：删除此天按钮（红色文字按钮，确认弹窗后删除）
+        if (this.editingDayId.length > 0) {
+          Button('删除此天')
+            .height(44)
+            .fontSize(14)
+            .fontColor(DANGER_COLOR)
+            .backgroundColor(Color.Transparent)
+            .width('100%')
+            .borderRadius(12)
+            .margin({ top: 4 })
+            .scale({ x: this.deletePressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+              y: this.deletePressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST })
+            .animation({ curve: SPRING_PRESS() })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.deletePressed = true;
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.deletePressed = false;
+              }
+            })
+            .onClick(() => {
+              AlertDialog.show({
+                title: '删除行程日',
+                message: '删除后无法恢复，确定删除吗？',
+                primaryButton: {
+                  value: '取消',
+                  action: () => {}
+                },
+                secondaryButton: {
+                  value: '删除',
+                  fontColor: DANGER_COLOR,
+                  action: () => { this.onDeleteDay(); }
+                }
+              });
+            })
+        }
       }
       .padding({ left: 16, right: 16, top: 8, bottom: 24 })
     }

@@ -95,6 +95,9 @@ export struct GearPage {
   @Prop multiSelectMode: boolean = false;
   @Prop selectedMultiGearIds: string[] = [];
   @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
+  // tabVisibilityNonce：父层每次切至此 tab 时递增，驱动入场动画重播
+  // 解决 ArkUI TabContent keep-alive 时 aboutToAppear 不触发的问题
+  @Prop @Watch('onTabVisibilityNonceChange') tabVisibilityNonce: number = 0;
 
   // 人生足迹精简聚合（装备库顶部黄金区，提纲 §3.4）
   @State private footprintVm: Footprint = {
@@ -301,6 +304,23 @@ export struct GearPage {
     }
   }
 
+  // shared：列表错落入场调度（被 aboutToAppear 和 onTabVisibilityNonceChange 复用）
+  private triggerListStagger(): void {
+    this.listEntered = false;
+    let id = setTimeout(() => {
+      if (!this.isAlive) { return; }
+      this.listEntered = true;
+    }, 20) as number;
+    this.timerIds.push(id);
+  }
+
+  // tab 可见性变化时重播列表 stager
+  onTabVisibilityNonceChange(): void {
+    this.triggerListStagger();
+    // 重型计算（screen size / footprint / collapsedGroups / cache）不重跑
+    // 交互状态（searchExpanded / dragMode / overlayPhase / fabX/Y）保持不重置
+  }
+
   aboutToAppear(): void {
     this.isAlive = true;
     // 获取屏幕尺寸（vp）
@@ -322,11 +342,7 @@ export struct GearPage {
     // 性能优化：初始构建缓存
     this.rebuildGearCache();
     // 触发列表错落入场
-    let id = setTimeout(() => {
-      if (!this.isAlive) { return; }
-      this.listEntered = true;
-    }, 20) as number;
-    this.timerIds.push(id);
+    this.triggerListStagger();
   }
 
   // 人生足迹聚合

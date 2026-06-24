@@ -21,15 +21,15 @@ import {
 import {
   SPRING_GENERAL,
   SPRING_PRESS,
-  PRESS_SCALE_DOWN
+  PRESS_SCALE_DOWN,
+  PRESS_SCALE_REST,
+  staggerDelay
 } from '../../constants/AnimationTokens';
 
 @Component
 export struct DayCard {
   @Prop @Watch('onDayChange') day: DayItinerary = { id: '', dayIndex: 0, segments: [] };
   @Prop isExpanded: boolean = false;
-  // 强制刷新 nonce：父组件数据变更时递增，确保 @Prop day 深层变化被感知
-  @Prop renderNonce: number = 0;
   onToggle: () => void = () => {};
   onEditDay: () => void = () => {};
   onDeleteDay: () => void = () => {};
@@ -41,10 +41,22 @@ export struct DayCard {
   // 缓存 summary 避免重复计算
   @State private cachedSummary: DaySummary = { from: '', to: '', mainTransport: 'train', departTime: undefined, arriveTime: undefined };
   // 长按触发标志，用于短路 onClick
-  private longPressTriggered: boolean = false;
+  @State private longPressTriggered: boolean = false;
+  // 添加路段按钮按压态
+  @State private addSegPressed: boolean = false;
+  // 长按弹跳定时器 ID，aboutToDisappear 时清理
+  private longPressTimerId: number = -1;
 
   aboutToAppear(): void {
     this.cachedSummary = getDaySummary(this.day);
+  }
+
+  aboutToDisappear(): void {
+    // 清理长按弹跳定时器（避坑 #39）
+    if (this.longPressTimerId !== -1) {
+      clearTimeout(this.longPressTimerId);
+      this.longPressTimerId = -1;
+    }
   }
 
   // @Prop day 变化时刷新 summary 缓存
@@ -82,13 +94,16 @@ export struct DayCard {
         this.cardScale = PRESS_SCALE_DOWN;
         this.longPressTriggered = false;
       } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
-        this.cardScale = 1.0;
+        // 非长按场景才弹回；长按场景由 gesture 自己控制弹回
+        if (!this.longPressTriggered) {
+          this.cardScale = 1.0;
+        }
       }
     })
     .onClick(() => {
-      // 长按已触发则跳过，避免展开/收起与编辑同时触发
+      // 长按已触发则跳过，用 setTimeout(0) 延迟重置避免竞争窗口
       if (this.longPressTriggered) {
-        this.longPressTriggered = false;
+        setTimeout(() => { this.longPressTriggered = false; }, 0);
         return;
       }
       this.onToggle();
@@ -97,7 +112,13 @@ export struct DayCard {
       LongPressGesture()
         .onAction(() => {
           this.longPressTriggered = true;
-          this.onEditDay();
+          // 长按确认弹跳：0.96 → 1.02 → 1.0
+          this.cardScale = 1.02;
+          this.longPressTimerId = setTimeout(() => {
+            this.longPressTimerId = -1;
+            this.cardScale = 1.0;
+            this.onEditDay();
+          }, 120);
         })
     )
   }
@@ -182,6 +203,14 @@ export struct DayCard {
         }
       }
 
+      // 无路段时显示引导提示
+      if (this.day.segments.length === 0 && !this.isExpanded) {
+        Text('展开添加路段 ›')
+          .fontSize(12)
+          .fontColor(PRIMARY_COLOR)
+          .fontStyle(FontStyle.Italic)
+      }
+
       // 第四行：当天备注（可选，单行截断）
       if (this.day.note !== undefined && this.day.note.length > 0) {
         Text(this.day.note)
@@ -223,6 +252,18 @@ export struct DayCard {
       .width('100%')
       .alignItems(VerticalAlign.Center)
       .padding({ top: 4, bottom: 2 })
+      .scale({
+        x: this.addSegPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
+        y: this.addSegPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST
+      })
+      .animation({ curve: SPRING_PRESS() })
+      .onTouch((e: TouchEvent) => {
+        if (e.type === TouchType.Down) {
+          this.addSegPressed = true;
+        } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+          this.addSegPressed = false;
+        }
+      })
       .onClick(() => { this.onAddSegment(); })
     }
     .width('100%')
@@ -335,11 +376,11 @@ export struct DayCard {
     .width('100%')
     .alignItems(VerticalAlign.Top)
     .padding({ bottom: 6 })
-    // 新增路段入场动效
+    // 路段入场动效：stagger 错落（间隔 30ms），退场同步消失
     .transition(
       TransitionEffect.asymmetric(
         TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: 8 }))
-          .animation({ curve: SPRING_GENERAL() }),
+          .animation({ curve: SPRING_GENERAL(), delay: staggerDelay(index, 30) }),
         TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -4 }))
           .animation({ curve: SPRING_GENERAL() })
       )
