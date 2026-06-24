@@ -623,8 +623,10 @@ type = feat | fix | refactor | style | docs | chore
 
 提交组件代码前确认：
 
+- [ ] `build()` 有显式根容器吗？（禁止裸 `if/else`、裸 `@Builder` 调用、裸 `ForEach` 作为 build 根节点——隐式 Column 会导致内容居中，避坑 #51）
 - [ ] 箭头函数参数有类型标注吗？
 - [ ] 色值/尺寸从常量引用了吗？
 - [ ] @State 数量合理吗？（不超过 10 个）
 - [ ] props 不超过 8 个吗？
+- [ ] TabContent 内的子组件入场动画是否依赖 `onAppear`？（TabContent keep-alive 下 onAppear 不重触发，需用 nonce 驱动，避坑 #52）
 - [ ] 构建通过了吗？

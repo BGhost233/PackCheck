@@ -52,6 +52,13 @@
 - 行程托盘动态滚速：边缘区域 100vp，二次曲线加速 `speed = minSpeed + (maxSpeed - minSpeed) * t²`（min=2, max=12），手感自然。Timer 每次回调读 mutable field `trayScrollSpeed`，无需重启 timer 即可变速
 - 行程托盘尺寸优化：位置从 screenHeight-200 → screenHeight-240，卡片从 100×80 → 88×68，间距 12→10，容纳更多行程
 
+### Tab 切换 visibilityNonce 单点递增规则（2026-06-24 修复）
+
+- **问题**：HdsTabs `onAnimationStart` + `onChange` 双重递增 `homeVisibilityNonce`，导致子组件 `@Watch` 回调被连续触发两次——第一次 stagger 刚启动就被第二次 reset 打断，造成闪烁 + HeroCard 倒计时归零
+- **修复铁律**：visibilityNonce 只在**一处**递增。滑动切换→`onAnimationStart`；点击切换→`triggerBlurPulse`。`onChange` 是兜底确认回调，**不递增 nonce**（只做 swipeReset）
+- **配套**：`onTabVisibilityNonceChange` 中 reset 后必须**主动调用** `startHeroNumberAnimation()` + `startProgressAnimation()`——TabContent keep-alive 下 `.onAppear` 不会再触发
+- DayCard 删除了冗余的绿色「展开添加路段 ›」提示——违反交互入口原则（点击卡片即可展开，不需要额外文字入口）
+
 ### HDS（@kit.UIDesignKit）使用边界（2026-06-13 落地）
 
 - **核心结论：HDS 在本项目只做「材质/视效层增强」，不做「框架替换」。** 项目所有自绘顶栏（HomePage Hero 卡 / GearPage 搜索工具栏 / 各页 HeadCollapseController 折叠导航）保真度高于 HDS 标准组件，替换 = 降质，已否决。
@@ -108,7 +115,7 @@
 - **结构防腐铁律已成文**（2026-06-14）：DEVELOPMENT_STANDARDS 第八章 + CLAUDE.md 会话启动第一动作。新增代码前必须 grep-before-add（先查全仓有无同名/同义实现再写）；判死代码看可达性（入口无调用点 → 整链不可达 → 可删）；拆分看阈值（>300行/>10 @State/>8 props/>60行方法），但动画状态机、geometryTransition 两端、拖拽浮层、Index 容器、内联 @Builder **不拆**
 - **targetWeightGram/WeightTargetEditor 死代码已清理**（commit `63f079a`）：openWeightEditor 无调用点 → showWeightEditor 永 false → 整套不可达。跨 GearPage/Index/PackStore 删除，PackStore 的 KEY_GEAR_TARGET_WEIGHT 从未被真实写入（无孤儿数据）。WeightGauge.ets 是全仓无实例化的孤立组件，其 targetWeight prop 与本链路无关
 
-## ArkUI 避坑清单（实战总结，共 50 条）
+## ArkUI 避坑清单（实战总结，共 52 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -171,6 +178,10 @@
 49. **`@Watch` 必须写在 `@Prop`/`@State` 声明上，不能作为独立行装饰器** — ArkUI V1 中 `@Watch('methodName')` 是**属性装饰器**，必须紧跟 `@Prop`/`@State`/`@Link` 同行声明：`@Prop @Watch('onDayChange') day: ItineraryDay`。若把 `@Watch('onDayChange')` 单独放一行在方法上方，编译报错「装饰器不匹配」。与 TypeScript 装饰器语法不同——ArkUI 的 @Watch 是属性级别的响应式监听，不是方法装饰器
 
 50. **Tabs `onGestureSwipe` 的 `currentOffset` 是 vp 位移（非 progress 0-1）** — `TabsController.onGestureSwipe(index, event)` 中 `event.currentOffset` 是当前内容相对于初始位置的**像素位移**（单位 vp），不是 0-1 归一化值。负值=内容左移=朝 index+1 滑动。计算连续 progress 的正确公式：`progress = currentTabIndex - currentOffset / tabsWidth`（需除以单页宽度归一化）。**常见错误**：直接把 offset 当 progress 用 → 颜色/指示器飙出范围
+
+51. **`build()` 裸 `if/else` 产生隐式 Column 居中** — 当 `@Component` 的 `build()` 方法内直接写 `if/else`（不包在显式 Column/Stack/Row 里），ArkUI 编译器会隐式包裹一层 Column 作为根容器。这个隐式 Column 的默认行为：**当子内容高度不满容器时，内容会被垂直居中放置**——而非顶部对齐。**后果**：组件被父层 `.height('100%')` 约束时，少量内容悬浮在屏幕正中央，上半部分大片空白。实战：ItineraryView 只有 1 个 DayCard 时内容居中于屏幕中部。**解法**：`build()` 必须有**显式根容器**——`Column().width('100%').height('100%').justifyContent(FlexAlign.Start)`。**铁律：禁止 `build()` 根节点为裸 `if/else`、裸 `@Builder` 调用、或裸 `ForEach`**
+
+52. **TabContent keep-alive 下 `onAppear` 不再触发（入场动画重播靠 nonce）** — HdsTabs/Tabs 的 TabContent 默认 keep-alive，子组件首次挂载后**切走再切回不会触发 `aboutToAppear` / `.onAppear`**。**后果**：若入场动画（如 HeroCard 数字滚动、stagger 错落）仅在 `onAppear` 启动，切回后动画不重播（停在 reset 态）。**解法**：父层维护 `@State visibilityNonce` 每次切至此 tab 递增，子组件 `@Prop @Watch('onNonceChange') nonce` 监听变化主动重启动画。**关键**：nonce 只在一处递增（`onAnimationStart` 或 `triggerBlurPulse`），不要 `onAnimationStart` + `onChange` 双重递增——否则 `@Watch` 回调被连续调两次，第二次 reset 打断第一次刚启动的动画造成闪烁
 
 ### 补充验证结论
 
