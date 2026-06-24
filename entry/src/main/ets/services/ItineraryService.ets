@@ -149,6 +149,15 @@ export function addDay(itinerary: DayItinerary[], afterIndex?: number): DayItine
 }
 
 /**
+ * 插入一个已构建好的 DayItinerary（由表单组装）。追加到末尾，dayIndex 自动重排。
+ */
+export function insertDay(itinerary: DayItinerary[], day: DayItinerary): DayItinerary[] {
+  const result = itinerary.slice();
+  result.push(day);
+  return renumberDays(result);
+}
+
+/**
  * 删除一天（按 dayId）。dayIndex 自动重排。
  */
 export function removeDay(itinerary: DayItinerary[], dayId: string): DayItinerary[] {

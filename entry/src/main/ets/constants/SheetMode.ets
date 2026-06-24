@@ -11,3 +11,5 @@ export const SHEET_GENERATE_TRIP: string = 'generate_trip';
 export const SHEET_MOVE_GROUP: string = 'move_group';
 export const SHEET_GEAR_PICKER: string = 'gear_picker';
 export const SHEET_GEAR_ITEM_ACTION: string = 'gear_item_action';
+export const SHEET_DAY_FORM: string = 'day_form';
+export const SHEET_SEGMENT_FORM: string = 'segment_form';

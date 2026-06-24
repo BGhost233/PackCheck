@@ -1,3 +1,4 @@
+import { LengthMetrics } from '@kit.ArkUI';
 import {
   PAGE_BG,
   PRIMARY_COLOR,

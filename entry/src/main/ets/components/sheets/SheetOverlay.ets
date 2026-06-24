@@ -1,4 +1,4 @@
-import { CATEGORY_ALL, ChecklistItem, GearItem } from '../../models/PackModels';
+import { CATEGORY_ALL, ChecklistItem, GearItem, TransportMode, DayItinerary, RouteSegment } from '../../models/PackModels';
 import { resolveItemName } from '../../services/ChecklistService';
 import {
   CARD_BG,
@@ -16,6 +16,8 @@ import {
   SHEET_TRIP,
   SHEET_GEAR_PICKER,
   SHEET_GEAR_ITEM_ACTION,
+  SHEET_DAY_FORM,
+  SHEET_SEGMENT_FORM,
   TEXT_MAIN,
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
@@ -34,6 +36,8 @@ import { ProfileEditSheet } from './ProfileEditSheet';
 import { MoveGroupSheet } from './MoveGroupSheet';
 import { GearPickerSheet } from './GearPickerSheet';
 import { GearItemActionSheet } from './GearItemActionSheet';
+import { DayFormSheet } from './DayFormSheet';
+import { SegmentFormSheet } from './SegmentFormSheet';
 
 @Component
 export struct SheetOverlay {
@@ -127,6 +131,49 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
   onActionMoveToZone: (itemId: string, zone: string) => void = () => {};
   onActionViewDetail: (item: ChecklistItem) => void = () => {};
   onActionRemove: (itemId: string) => void = () => {};
+
+  // DayForm props & callbacks
+  @Prop editingDayId: string = '';
+  @Prop dayFrom: string = '';
+  @Prop dayTo: string = '';
+  @Prop dayTransport: TransportMode = 'other';
+  @Prop dayDepartTime: string = '';
+  @Prop dayArriveTime: string = '';
+  @Prop dayDate: string = '';
+  @Prop dayNote: string = '';
+  onDayFromChange: (v: string) => void = () => {};
+  onDayToChange: (v: string) => void = () => {};
+  onDayTransportChange: (v: TransportMode) => void = () => {};
+  onDayDepartTimeChange: (v: string) => void = () => {};
+  onDayArriveTimeChange: (v: string) => void = () => {};
+  onDayDateChange: (v: string) => void = () => {};
+  onDayNoteChange: (v: string) => void = () => {};
+  onSubmitDay: (day: DayItinerary) => void = () => {};
+  onSubmitEditDay: (dayId: string, firstSeg: RouteSegment, date?: string, note?: string) => void = () => {};
+
+  // SegmentForm props & callbacks
+  @Prop editingSegmentId: string = '';
+  @Prop segFrom: string = '';
+  @Prop segTo: string = '';
+  @Prop segTransport: TransportMode = 'other';
+  @Prop segDepartTime: string = '';
+  @Prop segArriveTime: string = '';
+  @Prop segNote: string = '';
+  @Prop segAccommodation: string = '';
+  @Prop ticketCode: string = '';
+  @Prop ticketSeat: string = '';
+  @Prop ticketPrice: string = '';
+  onSegFromChange: (v: string) => void = () => {};
+  onSegToChange: (v: string) => void = () => {};
+  onSegTransportChange: (v: TransportMode) => void = () => {};
+  onSegDepartTimeChange: (v: string) => void = () => {};
+  onSegArriveTimeChange: (v: string) => void = () => {};
+  onSegNoteChange: (v: string) => void = () => {};
+  onSegAccommodationChange: (v: string) => void = () => {};
+  onTicketCodeChange: (v: string) => void = () => {};
+  onTicketSeatChange: (v: string) => void = () => {};
+  onTicketPriceChange: (v: string) => void = () => {};
+  onSubmitSegment: (segment: RouteSegment) => void = () => {};
 
   build() {
     Column() {
@@ -300,6 +347,51 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
             onRemove: this.onActionRemove,
             onClose: this.onClose
           })
+        } else if (this.sheetMode === SHEET_DAY_FORM) {
+          DayFormSheet({
+            editingDayId: this.editingDayId,
+            dayFrom: this.dayFrom,
+            dayTo: this.dayTo,
+            dayTransport: this.dayTransport,
+            dayDepartTime: this.dayDepartTime,
+            dayArriveTime: this.dayArriveTime,
+            dayDate: this.dayDate,
+            dayNote: this.dayNote,
+            onFromChange: this.onDayFromChange,
+            onToChange: this.onDayToChange,
+            onTransportChange: this.onDayTransportChange,
+            onDepartTimeChange: this.onDayDepartTimeChange,
+            onArriveTimeChange: this.onDayArriveTimeChange,
+            onDateChange: this.onDayDateChange,
+            onNoteChange: this.onDayNoteChange,
+            onSubmitDay: this.onSubmitDay,
+            onSubmitEdit: this.onSubmitEditDay
+          })
+        } else if (this.sheetMode === SHEET_SEGMENT_FORM) {
+          SegmentFormSheet({
+            editingSegmentId: this.editingSegmentId,
+            segFrom: this.segFrom,
+            segTo: this.segTo,
+            segTransport: this.segTransport,
+            segDepartTime: this.segDepartTime,
+            segArriveTime: this.segArriveTime,
+            segNote: this.segNote,
+            segAccommodation: this.segAccommodation,
+            ticketCode: this.ticketCode,
+            ticketSeat: this.ticketSeat,
+            ticketPrice: this.ticketPrice,
+            onFromChange: this.onSegFromChange,
+            onToChange: this.onSegToChange,
+            onTransportChange: this.onSegTransportChange,
+            onDepartTimeChange: this.onSegDepartTimeChange,
+            onArriveTimeChange: this.onSegArriveTimeChange,
+            onNoteChange: this.onSegNoteChange,
+            onAccommodationChange: this.onSegAccommodationChange,
+            onTicketCodeChange: this.onTicketCodeChange,
+            onTicketSeatChange: this.onTicketSeatChange,
+            onTicketPriceChange: this.onTicketPriceChange,
+            onSubmit: this.onSubmitSegment
+          })
         }
       }
       .width('100%')
@@ -381,6 +473,12 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
     }
     if (this.sheetMode === SHEET_GEAR_ITEM_ACTION) {
       return '';
+    }
+    if (this.sheetMode === SHEET_DAY_FORM) {
+      return this.editingDayId.length === 0 ? '添加一天' : '编辑行程日';
+    }
+    if (this.sheetMode === SHEET_SEGMENT_FORM) {
+      return this.editingSegmentId.length === 0 ? '添加路段' : '编辑路段';
     }
     return '';
   }

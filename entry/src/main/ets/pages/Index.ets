@@ -38,6 +38,8 @@ import {
   SHEET_TRIP,
   SHEET_GEAR_PICKER,
   SHEET_GEAR_ITEM_ACTION,
+  SHEET_DAY_FORM,
+  SHEET_SEGMENT_FORM,
   TEXT_MAIN,
   TEXT_TERTIARY,
   TRANSPARENT,
@@ -57,7 +59,7 @@ import {
   CURVE_DECELERATE,
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
-import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, DayItinerary, DayPatch, GearItem, makeId, normalizeNumber, RouteSegment, SegmentPatch, TripChecklist } from '../models/PackModels';
+import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, DayItinerary, DayPatch, GearItem, makeId, normalizeNumber, RouteSegment, SegmentPatch, TransportMode, TripChecklist } from '../models/PackModels';
 import { allZones, zoneDisplayName } from '../services/LoadoutService';
 import { PackStore } from '../services/PackStore';
 import {
@@ -110,6 +112,7 @@ import {
 import { ProfilePage } from '../components/ProfilePage';
 import {
   addDay,
+  insertDay,
   removeDay,
   updateDay,
   addSegment,
@@ -209,6 +212,29 @@ struct Index {
   @State private ceremonyMaxAltitude: string = '';
   @State private ceremonyAscentM: string = '';
   @State private ceremonyDurationHours: string = '';
+
+  // ===== 行程日表单 =====
+  @State private editingDayId: string = '';
+  @State private dayFormFrom: string = '';
+  @State private dayFormTo: string = '';
+  @State private dayFormTransport: TransportMode = 'other';
+  @State private dayFormDepartTime: string = '';
+  @State private dayFormArriveTime: string = '';
+  @State private dayFormDate: string = '';
+  @State private dayFormNote: string = '';
+  // ===== 路段表单 =====
+  @State private editingSegmentId: string = '';
+  @State private editingSegDayId: string = '';  // 路段所属天 ID
+  @State private segFormFrom: string = '';
+  @State private segFormTo: string = '';
+  @State private segFormTransport: TransportMode = 'other';
+  @State private segFormDepartTime: string = '';
+  @State private segFormArriveTime: string = '';
+  @State private segFormNote: string = '';
+  @State private segFormAccommodation: string = '';
+  @State private segFormTicketCode: string = '';
+  @State private segFormTicketSeat: string = '';
+  @State private segFormTicketPrice: string = '';
 
   // ===== 分组编辑 Dialog =====
   @State private showCategoryDialog: boolean = false;
@@ -1757,31 +1783,176 @@ struct Index {
     await this.store.saveChecklists(nextChecklists);
   }
 
-  private async handleAddDay(): Promise<void> {
-    const itinerary = this.currentChecklist()?.itinerary ?? [];
-    const next = addDay(itinerary);
-    await this.updateItinerary(next);
-  }
+// ===== 新建/编辑一天 =====
 
-  private async handleDeleteDay(dayId: string): Promise<void> {
-    const itinerary = this.currentChecklist()?.itinerary ?? [];
-    const next = removeDay(itinerary, dayId);
-    await this.updateItinerary(next);
-  }
+private resetDayForm(): void {
+this.editingDayId = '';
+this.dayFormFrom = '';
+this.dayFormTo = '';
+this.dayFormTransport = 'other';
+this.dayFormDepartTime = '';
+this.dayFormArriveTime = '';
+this.dayFormDate = '';
+this.dayFormNote = '';
+}
 
-  private async handleAddSegment(dayId: string): Promise<void> {
-    const itinerary = this.currentChecklist()?.itinerary ?? [];
-    const seg = createEmptySegment();
-    const next = addSegment(itinerary, dayId, seg);
-    await this.updateItinerary(next);
-    // TODO: Phase 8+ 改为先打开 SegmentFormSheet，填完再插入
-  }
+private openAddDaySheet(): void {
+this.resetDayForm();
+this.sheetMode = SHEET_DAY_FORM;
+this.openSheetAnimated();
+}
 
-  private async handleDeleteSegment(dayId: string, segId: string): Promise<void> {
-    const itinerary = this.currentChecklist()?.itinerary ?? [];
-    const next = removeSegment(itinerary, dayId, segId);
-    await this.updateItinerary(next);
-  }
+private openEditDaySheet(dayId: string): void {
+const itinerary = this.currentChecklist()?.itinerary ?? [];
+const day = itinerary.find((d: DayItinerary) => d.id === dayId);
+if (day === undefined) {
+return;
+}
+this.editingDayId = dayId;
+// 预填首段信息（如果有）
+if (day.segments.length > 0) {
+const firstSeg = day.segments[0];
+this.dayFormFrom = firstSeg.from;
+this.dayFormTo = firstSeg.to;
+this.dayFormTransport = firstSeg.transport;
+this.dayFormDepartTime = firstSeg.departTime ?? '';
+this.dayFormArriveTime = firstSeg.arriveTime ?? '';
+} else {
+this.dayFormFrom = '';
+this.dayFormTo = '';
+this.dayFormTransport = 'other';
+this.dayFormDepartTime = '';
+this.dayFormArriveTime = '';
+}
+this.dayFormDate = day.date ?? '';
+this.dayFormNote = day.note ?? '';
+this.sheetMode = SHEET_DAY_FORM;
+this.openSheetAnimated();
+}
+
+private async handleSubmitNewDay(day: DayItinerary): Promise<void> {
+const itinerary = this.currentChecklist()?.itinerary ?? [];
+const next = insertDay(itinerary, day);
+await this.updateItinerary(next);
+this.closeSheet();
+}
+
+private async handleSubmitEditDay(dayId: string, firstSeg: RouteSegment, date?: string, note?: string): Promise<void> {
+let itinerary = this.currentChecklist()?.itinerary ?? [];
+// 更新天级 patch
+const dayPatch: DayPatch = { date: date, note: note };
+itinerary = updateDay(itinerary, dayId, dayPatch);
+// 更新首段（如果存在则更新，否则插入）
+const day = itinerary.find((d: DayItinerary) => d.id === dayId);
+if (day !== undefined) {
+if (day.segments.length > 0) {
+const oldSegId = day.segments[0].id;
+const segPatch: SegmentPatch = {
+  from: firstSeg.from,
+  to: firstSeg.to,
+  transport: firstSeg.transport,
+  departTime: firstSeg.departTime,
+  arriveTime: firstSeg.arriveTime
+};
+itinerary = updateSegment(itinerary, dayId, oldSegId, segPatch);
+} else {
+itinerary = addSegment(itinerary, dayId, firstSeg);
+}
+}
+await this.updateItinerary(itinerary);
+this.closeSheet();
+}
+
+private async handleDeleteDay(dayId: string): Promise<void> {
+const itinerary = this.currentChecklist()?.itinerary ?? [];
+const next = removeDay(itinerary, dayId);
+await this.updateItinerary(next);
+}
+
+// ===== 新建/编辑路段 =====
+
+private resetSegForm(): void {
+this.editingSegmentId = '';
+this.editingSegDayId = '';
+this.segFormFrom = '';
+this.segFormTo = '';
+this.segFormTransport = 'other';
+this.segFormDepartTime = '';
+this.segFormArriveTime = '';
+this.segFormNote = '';
+this.segFormAccommodation = '';
+this.segFormTicketCode = '';
+this.segFormTicketSeat = '';
+this.segFormTicketPrice = '';
+}
+
+private openAddSegmentSheet(dayId: string): void {
+this.resetSegForm();
+this.editingSegDayId = dayId;
+this.sheetMode = SHEET_SEGMENT_FORM;
+this.openSheetAnimated();
+}
+
+private openEditSegmentSheet(dayId: string, segId: string): void {
+const itinerary = this.currentChecklist()?.itinerary ?? [];
+const day = itinerary.find((d: DayItinerary) => d.id === dayId);
+if (day === undefined) {
+return;
+}
+const seg = day.segments.find((s: RouteSegment) => s.id === segId);
+if (seg === undefined) {
+return;
+}
+this.editingSegmentId = segId;
+this.editingSegDayId = dayId;
+this.segFormFrom = seg.from;
+this.segFormTo = seg.to;
+this.segFormTransport = seg.transport;
+this.segFormDepartTime = seg.departTime ?? '';
+this.segFormArriveTime = seg.arriveTime ?? '';
+this.segFormNote = seg.note ?? '';
+this.segFormAccommodation = seg.accommodation ?? '';
+if (seg.ticket !== undefined) {
+this.segFormTicketCode = seg.ticket.code ?? '';
+this.segFormTicketSeat = seg.ticket.seat ?? '';
+this.segFormTicketPrice = seg.ticket.price !== undefined ? seg.ticket.price.toString() : '';
+} else {
+this.segFormTicketCode = '';
+this.segFormTicketSeat = '';
+this.segFormTicketPrice = '';
+}
+this.sheetMode = SHEET_SEGMENT_FORM;
+this.openSheetAnimated();
+}
+
+private async handleSubmitSegment(segment: RouteSegment): Promise<void> {
+let itinerary = this.currentChecklist()?.itinerary ?? [];
+if (this.editingSegmentId.length > 0) {
+// 编辑模式：patch
+const segPatch: SegmentPatch = {
+  from: segment.from,
+  to: segment.to,
+  transport: segment.transport,
+  departTime: segment.departTime,
+  arriveTime: segment.arriveTime,
+  note: segment.note,
+  ticket: segment.ticket,
+  accommodation: segment.accommodation
+};
+itinerary = updateSegment(itinerary, this.editingSegDayId, this.editingSegmentId, segPatch);
+} else {
+// 新建模式：插入
+itinerary = addSegment(itinerary, this.editingSegDayId, segment);
+}
+await this.updateItinerary(itinerary);
+this.closeSheet();
+}
+
+private async handleDeleteSegment(dayId: string, segId: string): Promise<void> {
+const itinerary = this.currentChecklist()?.itinerary ?? [];
+const next = removeSegment(itinerary, dayId, segId);
+await this.updateItinerary(next);
+}
 
   private openSheetAnimated(): void {
     this.sheetTranslateY = 800;
@@ -1893,15 +2064,11 @@ struct Index {
               this.confirmDeleteChecklist(checklist);
             }
           },
-          onAddDay: () => { this.handleAddDay(); },
-          onEditDay: (dayId: string) => {
-            // TODO: 打开 DayFormSheet 编辑模式（Phase 8+完善）
-          },
+          onAddDay: () => { this.openAddDaySheet(); },
+          onEditDay: (dayId: string) => { this.openEditDaySheet(dayId); },
           onDeleteDay: (dayId: string) => { this.handleDeleteDay(dayId); },
-          onAddSegment: (dayId: string) => { this.handleAddSegment(dayId); },
-          onEditSegment: (dayId: string, segId: string) => {
-            // TODO: 打开 SegmentFormSheet 编辑模式（Phase 8+完善）
-          },
+          onAddSegment: (dayId: string) => { this.openAddSegmentSheet(dayId); },
+          onEditSegment: (dayId: string, segId: string) => { this.openEditSegmentSheet(dayId, segId); },
           onDeleteSegment: (dayId: string, segId: string) => { this.handleDeleteSegment(dayId, segId); }
         })
       }
@@ -2389,7 +2556,50 @@ struct Index {
               this.contentBlur = 0;
             });
           },
-          onActionRemove: (itemId: string) => { this.removeItemFromTrip(itemId); }
+          onActionRemove: (itemId: string) => { this.removeItemFromTrip(itemId); },
+          // DayForm
+          editingDayId: this.editingDayId,
+          dayFrom: this.dayFormFrom,
+          dayTo: this.dayFormTo,
+          dayTransport: this.dayFormTransport,
+          dayDepartTime: this.dayFormDepartTime,
+          dayArriveTime: this.dayFormArriveTime,
+          dayDate: this.dayFormDate,
+          dayNote: this.dayFormNote,
+          onDayFromChange: (v: string) => { this.dayFormFrom = v; },
+          onDayToChange: (v: string) => { this.dayFormTo = v; },
+          onDayTransportChange: (v: TransportMode) => { this.dayFormTransport = v; },
+          onDayDepartTimeChange: (v: string) => { this.dayFormDepartTime = v; },
+          onDayArriveTimeChange: (v: string) => { this.dayFormArriveTime = v; },
+          onDayDateChange: (v: string) => { this.dayFormDate = v; },
+          onDayNoteChange: (v: string) => { this.dayFormNote = v; },
+          onSubmitDay: (day: DayItinerary) => { this.handleSubmitNewDay(day); },
+          onSubmitEditDay: (dayId: string, firstSeg: RouteSegment, date?: string, note?: string) => {
+            this.handleSubmitEditDay(dayId, firstSeg, date, note);
+          },
+          // SegmentForm
+          editingSegmentId: this.editingSegmentId,
+          segFrom: this.segFormFrom,
+          segTo: this.segFormTo,
+          segTransport: this.segFormTransport,
+          segDepartTime: this.segFormDepartTime,
+          segArriveTime: this.segFormArriveTime,
+          segNote: this.segFormNote,
+          segAccommodation: this.segFormAccommodation,
+          ticketCode: this.segFormTicketCode,
+          ticketSeat: this.segFormTicketSeat,
+          ticketPrice: this.segFormTicketPrice,
+          onSegFromChange: (v: string) => { this.segFormFrom = v; },
+          onSegToChange: (v: string) => { this.segFormTo = v; },
+          onSegTransportChange: (v: TransportMode) => { this.segFormTransport = v; },
+          onSegDepartTimeChange: (v: string) => { this.segFormDepartTime = v; },
+          onSegArriveTimeChange: (v: string) => { this.segFormArriveTime = v; },
+          onSegNoteChange: (v: string) => { this.segFormNote = v; },
+          onSegAccommodationChange: (v: string) => { this.segFormAccommodation = v; },
+          onTicketCodeChange: (v: string) => { this.segFormTicketCode = v; },
+          onTicketSeatChange: (v: string) => { this.segFormTicketSeat = v; },
+          onTicketPriceChange: (v: string) => { this.segFormTicketPrice = v; },
+          onSubmitSegment: (segment: RouteSegment) => { this.handleSubmitSegment(segment); }
         })
       }
       if (this.showEditItemPanel) {
