@@ -144,6 +144,10 @@ export struct HomePage {
   onTabVisibilityNonceChange(): void {
     this.resetEntryStates();
     this.scheduleStaggerEntry();
+    // 主动重启 hero 数字动画和进度动画
+    // TabContent keep-alive 下 onAppear 不会再触发，必须在此处主动调用
+    this.startHeroNumberAnimation();
+    this.startProgressAnimation();
     // headProgress 不重置 — 由 HeadCollapseController 滚动驱动
   }
 

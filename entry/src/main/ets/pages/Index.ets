@@ -2414,10 +2414,8 @@ await this.updateItinerary(next);
             // 切换 Tab 时收回两个页面已展开的 swipeAction
             this.homeSwipeResetNonce++;
             this.gearSwipeResetNonce++;
-            // visibility nonce：驱动目标 tab 子组件入场动画重播
-            if (index === 0) { this.homeVisibilityNonce++; }
-            else if (index === 1) { this.gearVisibilityNonce++; }
-            else if (index === 2) { this.profileVisibilityNonce++; }
+            // visibility nonce 不在此递增 — onAnimationStart（滑动）和 triggerBlurPulse（点击）已各自递增过，
+            // onChange 是兜底确认回调，重复递增会导致 resetEntryStates 被调用两次造成闪烁
           })
 
           if (this.gearFilterPanelExpanded) {
