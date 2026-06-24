@@ -27,6 +27,8 @@
 
 **视觉质感**：等宽数字 `fontFeature('tnum')`、噪点纹理纸感背景（64×64 noise tile）、Section Breathing 分组呼吸间距、暖琥珀警示色系（接近目标 80-100% 态）、卡片底部微边框。
 
+**行程编辑**：行程详情页 Tabs 双 Tab 滑动切换（装备/行程），按天/路段规划行程（添加/删除/编辑日程和路段），DayCard 手风琴展开，SegmentFormSheet / DayFormSheet 表单面板，Tab 标题跟手颜色插值。
+
 **基础体验**：全屏沉浸式布局、窗口背景色统一消除闪屏色差、数据持久化。
 
 ## 设计规范
@@ -41,7 +43,7 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2280 行）
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2850 行）
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
@@ -52,8 +54,8 @@ entry/src/main/ets/
 │   ├── EditGearPanel.ets    — 装备编辑半屏面板
 │   ├── EditItemPanel.ets    — 清单项编辑面板
 │   ├── GearFilterPanel.ets  — 装备筛选面板
-│   ├── EmptyIllustration.ets— 空态插画组件
-│   ├── WeightGauge.ets      — 重量/价格环形仪表
+│   ├── home/                — 首页子组件
+│   │   └── HomeQuickEntry.ets — 首页快捷入口（新建行程/快速核查）
 │   └── sheets/              — Sheet 面板组件（统一通过 SheetOverlay 路由）
 │       ├── SheetOverlay.ets — 遮罩容器 + Sheet 路由 + 下滑关闭手势
 │       ├── GearSortSheet.ets
@@ -65,6 +67,7 @@ entry/src/main/ets/
 │       ├── ProfileEditSheet.ets
 │       ├── MoveGroupSheet.ets
 │       ├── GearPickerSheet.ets — 配装装备选择器（品类筛选+搜索+临时添加）
+│       ├── GearItemActionSheet.ets — 装备操作 Sheet
 │       ├── SegmentFormSheet.ets— 路段编辑表单（出发/到达城市+交通+时间）
 │       └── DayFormSheet.ets   — 日编辑表单（日期+备注）
 │   ├── gear/                — 行程详情系统组件（核查清单 + 行程编辑）
@@ -77,6 +80,11 @@ entry/src/main/ets/
 │   │   ├── GearItemContextMenu.ets — 自绘长按浮层（详情缩略图 + 编辑/移动到/移除菜单，复用 GearPage 视觉）
 │   │   ├── ChecklistRow.ets       — 通用核查行（圆形 CheckMark + 勾选弹跳 + 双热区模式）
 │   │   ├── LoadoutProgressBar.ets — 全局进度条（counter 动画 + 100% 庆祝）
+│   │   ├── ZoneShell.ets          — 格子外壳（网格态/聚焦态共用，标题行浅染+描边）
+│   │   ├── GearDetailSheet.ets    — 装备详情面板
+│   │   ├── GearEmptyState.ets     — 装备库空态组件
+│   │   ├── GearEmptyText.ets      — 空态文案组件
+│   │   └── GearFootprintRow.ets   — 足迹行组件
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
 │   ├── PackStore.ets        — Preferences 持久化封装（schema 版本化 + 安全解析）
@@ -85,7 +93,7 @@ entry/src/main/ets/
 │   ├── CategoryService.ets  — 分类管理（增删改查 + 重命名）
 │   ├── LoadoutService.ets   — 配装业务逻辑（Zone 分组/进度计算/色彩映射/命中检测）
 │   ├── FootprintService.ets — 足迹统计（聚合/出行频次/最长陪伴伙伴）
-│   └── ItineraryService.ets — 行程 CRUD 纯函数（addDay/removeDay/patchDay/addSegment/removeSegment/patchSegment）
+│   └── ItineraryService.ets — 行程 CRUD 纯函数（getDaySummary/getTransportIcon/addDay/insertDay/removeDay/updateDay/addSegment/removeSegment/updateSegment/createEmptySegment）
 ├── constants/               — 设计 Token
 │   ├── Colors.ets           — 色彩语义 token
 │   ├── Typography.ets       — 字阶 token

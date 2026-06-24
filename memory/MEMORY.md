@@ -77,15 +77,16 @@
 - **TransitionEffect.asymmetric 非对称进退场**：展开进入从下方 `translate({y:8})` + 淡入，退出向上 `translate({y:-4})` + 淡出。比对称 transition 更有方向感
 - **stateStyles 原生按压态**：`@Styles segRowPressed() { .backgroundColor('#0D000000') }` + `@Styles segRowNormal() { .backgroundColor(Color.Transparent) }` + `.stateStyles({ pressed: segRowPressed, normal: segRowNormal })`——零额外 @State 实现按压高亮
 - **switchTab head collapse 重置**：切 Tab 时需重置 headProgress 到 0，必须包裹 `animateTo` 否则硬切（头部瞬间弹回无过渡）。正确：`animateTo({ curve: SPRING_SCROLL() }, () => { this.headProgress = 0 })`
-- **ItineraryService 纯函数层**：`addDay`/`removeDay`/`patchDay`/`addSegment`/`removeSegment`/`patchSegment` 均为 immutable 操作（返回新 itinerary 对象），持久化由调用方统一处理
+- **ItineraryService 纯函数层**：`getDaySummary`/`getTransportIcon`/`addDay`/`insertDay`/`removeDay`/`updateDay`/`addSegment`/`removeSegment`/`updateSegment`/`createEmptySegment` 均为 immutable 操作（返回新 itinerary 对象），持久化由调用方统一处理
 - **新组件文件**：`components/gear/ItineraryView.ets`、`components/gear/DayCard.ets`、`components/sheets/SegmentFormSheet.ets`、`components/sheets/DayFormSheet.ets`、`services/ItineraryService.ets`
+- **DayItinerary 数据模型**：v0.7.8 后增加 `from`/`to` 字段，天级起止与路段解耦
 
 ## 架构
 
 - 已从 Index.ets 提取独立组件：TripCeremonyCard、EditGearPanel、EditItemPanel、GearFilterPanel
 - 已提取 Sheet 面板组件到 `components/sheets/`：SheetOverlay（容器）、GearSortSheet、GenerateTripSheet、GearFormSheet、TripFormSheet、TempItemSheet、ImportSheet
 - GearService.ets 导出 `class GearCalc`，ChecklistService.ets 导出 `class CheckCalc`，Index.ets 通过 namespace import 调用
-- 已删除废弃组件：EdgeFade.ets
+- 已删除废弃组件：EdgeFade.ets、EmptyIllustration.ets、WeightGauge.ets
 - CategoryService.ets 导出 `renameCategory` 返回 `RenameCategoryResult { categories: string[], renamed: number }`
 - FootprintService.ets 提供足迹/海拔/距离统计
 - PackModels.ets 导出 `CATEGORY_ALL`（哨兵常量替代魔法字符串 '全部'）和 `CATEGORY_FALLBACK`（受保护分类 '其他'）

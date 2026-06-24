@@ -2,12 +2,12 @@
 
 ## v0.7.8 (2026-06-24)
 
-行程编辑模块完整落地 + 全面交互动效审查优化。行程详情页新增「行程」Tab，支持按天/路段规划行程，与「装备」Tab 平行滑动切换。
+行程编辑模块完整落地 + 全面交互动效审查优化 + 行程详情页审计修复 + 全量代码审查清理。行程详情页新增「行程」Tab，支持按天/路段规划行程，与「装备」Tab 平行滑动切换。
 
 **Phase 1-10 — 行程编辑模块**
 
 - **Tabs 替换 Stack+if**：原生 Tabs 组件实现左右滑动切换，`onGestureSwipe` 跟手插值 Tab 标题颜色渐变（RGB hex 通道插值 `#1A1A1A` ↔ `#999999`），`SPRING_TAB(0.32, 0.82)` 加速切换动画
-- **ItineraryService CRUD**：新增 `services/ItineraryService.ets` 纯函数层（`addDay`/`removeDay`/`patchDay`/`addSegment`/`removeSegment`/`patchSegment`），类型定义 `DayPatch`/`SegmentPatch`
+- **ItineraryService CRUD**：新增 `services/ItineraryService.ets` 纯函数层（`addDay`/`removeDay`/`updateDay`/`addSegment`/`removeSegment`/`updateSegment`/`insertDay`/`getDaySummary`/`getTransportIcon`/`createEmptySegment`），类型定义 `DayPatch`/`SegmentPatch`
 - **ItineraryView 列表容器**：新增 `components/gear/ItineraryView.ets`，ForEach 按天渲染 DayCard，手风琴展开同时只展开一天
 - **DayCard 日卡片**：新增 `components/gear/DayCard.ets`，手风琴折叠展开（`TransitionEffect.asymmetric` 进入 y:8 / 退出 y:-4）、段行（城市→城市 + 交通图标 + 时间摘要）、`cachedSummary` @Watch 缓存
 - **SegmentFormSheet + DayFormSheet**：新增两个表单面板，通过 SheetOverlay 路由统一管理
@@ -26,6 +26,34 @@
 - **错落入场去 setTimeout**：ItineraryView 入场直接设 `appeared = true`，去除 16ms hack
 
 > 3 文件改动，+106/-55 行。构建通过。
+
+**行程详情页审计修复（commits `42a9750`～`35581ba`，8 个增量 commit）**
+
+- **数据模型变更**：DayItinerary 增加 `from`/`to` 字段，天级起止与路段解耦（commit `48a3897`）
+- **表单 Sheet 接入**：DayFormSheet + SegmentFormSheet 正式接入 SheetOverlay 路由统一管理（commit `042f3eb`）
+- **UI 刷新链修复**：ItineraryView / DayCard renderNonce 透传修复添加/修改后 UI 不刷新（commits `42a9750`/`71c71a8`）
+- **ForEach key 稳定化**：key 从复合（`day.id + segments.length + renderNonce`）回退为纯 `day.id`，消除添加路段时整卡闪烁重建（commit `19e4d5e`）
+- **空态增强**：ItineraryView 空态视觉权重提升（审计 #11，commit `35581ba`）
+- **聚焦态边框**：DayFormSheet TextInput 聚焦态增加主题色边框（审计 #19，commit `35581ba`）
+- **入场动效**：新增天/路段入场 stagger 错落动画（commit `6e58d38`）
+- **Tab 按压 polish**：Tab 切换添加双侧对称下压效果（commit `d9e78d7`）
+- **清理**：移除不存在的 `tabVisibilityNonce` 引用（commit `35581ba`）
+
+> 8 个增量 commit，覆盖数据模型/表单接入/刷新链/动效/视觉增强。
+
+**全量代码审查清理（commit `bded20e`）**
+
+横跨 28 文件、净删 786 行的全项目代码卫生清理：
+
+- **死代码清除**：AnimationUtils 280→78 行（88% 切除）、HapticUtils 76→52 行、services 三文件共删 27 死函数/453 行、constants 死 token 15 个
+- **无用 import 清理**：全项目范围移除不再引用的 import 声明
+- **浮动 Promise 修复**：所有 fire-and-forget 的 async 调用补 `.catch()` 显式错误处理
+- **hardcode 色值 → token**：GearItemContextMenu / ReviewPage 等残留硬编码 hex 替换为 Colors token 引用
+- **Timer 泄漏修复**：7 文件补 `aboutToDisappear` + `isAlive` + `timerIds[]` 体系（TripCeremonyCard 12+ timer / ReviewPage 3 / FocusedZoneView 2 等）
+- **DesignTokens barrel re-export 清理**：移除引用已删除常量的 re-export 条目
+- **Typography 清理**：移除已废弃 `TypographyToken` interface 和冗余导出
+
+> 28 files，+290/-1076（净删 786 行）。构建通过。
 
 ## v0.7.7 (2026-06-14)
 
