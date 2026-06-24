@@ -70,6 +70,16 @@
 - **4c 单击装备名展开详情（手风琴）**：ChecklistRow 用 `checkOnlyHotzone: true` 让 check 圆圈只负责勾选、行其余调 `onTapRow` → `toggleExpand(item.id)`（SPRING_GENERAL 手风琴 toggle，同时只展开一个）。详情 buildItemDetail 经 fromGearId 反查 GearItem 取 category/brand/note，用 Flex wrap chips 展示。ForEach key 拼入展开态 `(expandedItemId===item.id?'e':'c')`。进退聚焦时 onActiveChange 重置 expandedItemId
 - **4d 长按菜单 + 拖拽跨区（推迟 phase4）**：onEditItem/onRemoveItem/onMoveItemToZone 三回调透传链已贯通到 FocusedZoneView 并预埋注释，Index.moveItemToZone 改 group 逻辑已就绪。手势消费方（长按弹菜单 + 长按不松手转拖拽收缩网格跨 Zone）留待 phase4。方案建议见 plan §六：阈值分流（短按展开/长按菜单）+ 收缩网格拖放
 
+### 行程编辑模块（v0.7.8，2026-06-24）
+
+- **TripDetailPage Tab 架构**：从 Stack+if 切换改为原生 Tabs 组件，双 Tab（装备/行程）左右滑动切换。Tab 标题用 `onGestureSwipe` 跟手颜色插值——`currentOffset` 为 vp 位移（负值=内容左移=朝 index+1），progress 公式：`tabIndex - offset / tabsWidth`。颜色从阈值硬切改为 RGB hex 通道逐字节插值（channel 153↔26），跟手时零跳变
+- **DaySummary 缓存范式**：DayCard 用 `@Prop @Watch('onDayChange') day` 驱动 `cachedSummary` 重算，build 中 O(1) 读。注意 `@Watch` 必须写在 `@Prop` 声明上（`@Prop @Watch('onDayChange') day: ItineraryDay`），不能作为独立装饰器
+- **TransitionEffect.asymmetric 非对称进退场**：展开进入从下方 `translate({y:8})` + 淡入，退出向上 `translate({y:-4})` + 淡出。比对称 transition 更有方向感
+- **stateStyles 原生按压态**：`@Styles segRowPressed() { .backgroundColor('#0D000000') }` + `@Styles segRowNormal() { .backgroundColor(Color.Transparent) }` + `.stateStyles({ pressed: segRowPressed, normal: segRowNormal })`——零额外 @State 实现按压高亮
+- **switchTab head collapse 重置**：切 Tab 时需重置 headProgress 到 0，必须包裹 `animateTo` 否则硬切（头部瞬间弹回无过渡）。正确：`animateTo({ curve: SPRING_SCROLL() }, () => { this.headProgress = 0 })`
+- **ItineraryService 纯函数层**：`addDay`/`removeDay`/`patchDay`/`addSegment`/`removeSegment`/`patchSegment` 均为 immutable 操作（返回新 itinerary 对象），持久化由调用方统一处理
+- **新组件文件**：`components/gear/ItineraryView.ets`、`components/gear/DayCard.ets`、`components/sheets/SegmentFormSheet.ets`、`components/sheets/DayFormSheet.ets`、`services/ItineraryService.ets`
+
 ## 架构
 
 - 已从 Index.ets 提取独立组件：TripCeremonyCard、EditGearPanel、EditItemPanel、GearFilterPanel
@@ -97,7 +107,7 @@
 - **结构防腐铁律已成文**（2026-06-14）：DEVELOPMENT_STANDARDS 第八章 + CLAUDE.md 会话启动第一动作。新增代码前必须 grep-before-add（先查全仓有无同名/同义实现再写）；判死代码看可达性（入口无调用点 → 整链不可达 → 可删）；拆分看阈值（>300行/>10 @State/>8 props/>60行方法），但动画状态机、geometryTransition 两端、拖拽浮层、Index 容器、内联 @Builder **不拆**
 - **targetWeightGram/WeightTargetEditor 死代码已清理**（commit `63f079a`）：openWeightEditor 无调用点 → showWeightEditor 永 false → 整套不可达。跨 GearPage/Index/PackStore 删除，PackStore 的 KEY_GEAR_TARGET_WEIGHT 从未被真实写入（无孤儿数据）。WeightGauge.ets 是全仓无实例化的孤立组件，其 targetWeight prop 与本链路无关
 
-## ArkUI 避坑清单（实战总结，共 48 条）
+## ArkUI 避坑清单（实战总结，共 50 条）
 
 1. **linearGradient 禁用 Color.Transparent** — 它是透明黑 `#00000000`，渐变出灰中间值。正确：`'#00FFFFFF'` 同色相只变 alpha
 2. **Spring 曲线忽略 duration** — `animateTo({ duration, curve: springMotion })` 中 duration 无效，时间完全由 response 决定。需要短动画就用 EaseOut。**错落延迟场景**：不要用 duration 来做延迟，用 `delay` 字段（`animateTo({ delay: index * 40, curve: springMotion })` 或 `.animation({ delay: index * 40 })`）
@@ -156,6 +166,10 @@
 47. **拖拽避让用 translate 模拟时必须冻结 rect 采集（防反馈回路）** — 拖拽排序做兄弟项让位动画（被拖项 `opacity(0)` 留洞 + 兄弟行 `.translate({y})` 平移填洞）时，若被平移的节点同时挂了 `onAreaChange` 采集 `globalPosition` 喂给命中检测，会形成致命反馈回路：让位平移 → globalPosition 漂移 → 命中检测读到漂移后的 rect → 重算落点 → 让位量再变 → 抖动/命中目标乱跳。**解法**：`onAreaChange` 回调在拖拽态（`gearOverlayPhase === 'dragging'`）直接 `return` 冻结采集，整个拖拽过程命中检测基于「拖拽开始前冻结的 rect 集合」。**配套**：让位计算（`gearRowShiftY`）与命中检测（`hitTestGearDrop`）必须基于**同一坐标系**——统一用「含被拖项的完整列表」full index，不能一个用剔除后列表一个用完整列表，否则洞的视觉位置与命中插入点对不上
 
 48. **拖拽落位卡顿 = await 持久化阻塞视觉帧（optimistic + 错帧解耦）** — 拖拽松手落位若在重排函数里 `await store.saveGears()` 再 setState，持久化 I/O 会阻塞落位动画帧造成明显卡顿。**解法 optimistic update**：UI 先同步 setState 落位（`this.gears = next; this.renderNonce++`），持久化抽独立方法 fire-and-forget 后台跑——`private persistInBackground(next) { this.store.save(next).catch(e => console.error(...)) }`，**不 await**（floating promise 必须 `.catch()` 显式处理否则 ArkTS 警告）。**配套错帧解耦**：落位帧（reorder 重渲染）与覆盖层收起帧（chip 淡出 `animateTo`）若同帧触发仍会叠加卡顿，用 `setTimeout(() => this.dismissOverlay(), 0)` 把收起推到下一帧
+
+49. **`@Watch` 必须写在 `@Prop`/`@State` 声明上，不能作为独立行装饰器** — ArkUI V1 中 `@Watch('methodName')` 是**属性装饰器**，必须紧跟 `@Prop`/`@State`/`@Link` 同行声明：`@Prop @Watch('onDayChange') day: ItineraryDay`。若把 `@Watch('onDayChange')` 单独放一行在方法上方，编译报错「装饰器不匹配」。与 TypeScript 装饰器语法不同——ArkUI 的 @Watch 是属性级别的响应式监听，不是方法装饰器
+
+50. **Tabs `onGestureSwipe` 的 `currentOffset` 是 vp 位移（非 progress 0-1）** — `TabsController.onGestureSwipe(index, event)` 中 `event.currentOffset` 是当前内容相对于初始位置的**像素位移**（单位 vp），不是 0-1 归一化值。负值=内容左移=朝 index+1 滑动。计算连续 progress 的正确公式：`progress = currentTabIndex - currentOffset / tabsWidth`（需除以单页宽度归一化）。**常见错误**：直接把 offset 当 progress 用 → 颜色/指示器飙出范围
 
 ### 补充验证结论
 

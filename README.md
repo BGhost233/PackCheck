@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.7.7
+## 当前版本：v0.7.8
 
 ### 已实现功能
 
@@ -64,10 +64,14 @@ entry/src/main/ets/
 │       ├── ImportSheet.ets
 │       ├── ProfileEditSheet.ets
 │       ├── MoveGroupSheet.ets
-│       └── GearPickerSheet.ets — 配装装备选择器（品类筛选+搜索+临时添加）
-│   ├── gear/                — 核查清单系统组件（统一视图）
-│   │   ├── TripDetailPage.ets      — 行程详情页（替代旧双 Tab，删 SegmentButton）
+│       ├── GearPickerSheet.ets — 配装装备选择器（品类筛选+搜索+临时添加）
+│       ├── SegmentFormSheet.ets— 路段编辑表单（出发/到达城市+交通+时间）
+│       └── DayFormSheet.ets   — 日编辑表单（日期+备注）
+│   ├── gear/                — 行程详情系统组件（核查清单 + 行程编辑）
+│   │   ├── TripDetailPage.ets      — 行程详情页（Tabs 双 Tab：装备/行程，滑动切换）
 │   │   ├── UnifiedChecklistView.ets— 统一核查清单主视图（2 列网格 + 全屏聚焦 + 长按浮层 + 拖拽管理）
+│   │   ├── ItineraryView.ets      — 行程列表容器（按天渲染 DayCard，手风琴展开）
+│   │   ├── DayCard.ets            — 日卡片（手风琴 + 段行摘要 + cachedSummary）
 │   │   ├── ZoneGridCell.ets       — 网格态单格（空态虚线框 / 有内容白卡 + 勾选 + 长按手势）
 │   │   ├── FocusedZoneView.ets    — 全屏聚焦单格子视图（geometryTransition + 手风琴详情 + 点空白/左右划收起）
 │   │   ├── GearItemContextMenu.ets — 自绘长按浮层（详情缩略图 + 编辑/移动到/移除菜单，复用 GearPage 视觉）
@@ -80,7 +84,8 @@ entry/src/main/ets/
 │   ├── ChecklistService.ets — 清单业务逻辑（纯函数导出）
 │   ├── CategoryService.ets  — 分类管理（增删改查 + 重命名）
 │   ├── LoadoutService.ets   — 配装业务逻辑（Zone 分组/进度计算/色彩映射/命中检测）
-│   └── FootprintService.ets — 足迹统计（聚合/出行频次/最长陪伴伙伴）
+│   ├── FootprintService.ets — 足迹统计（聚合/出行频次/最长陪伴伙伴）
+│   └── ItineraryService.ets — 行程 CRUD 纯函数（addDay/removeDay/patchDay/addSegment/removeSegment/patchSegment）
 ├── constants/               — 设计 Token
 │   ├── Colors.ets           — 色彩语义 token
 │   ├── Typography.ets       — 字阶 token
@@ -151,7 +156,8 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.7.4 | ✅ 已完成 | 行程详情页格子交互三 Bug 修复（白底/长按穿透/菜单关闭） |
 | v0.7.5 | ✅ 已完成 | 顶部折叠交互统一（对齐 iOS Large Title：跟手 1:1 + 松手就近吸附）+ HeadCollapseController 控制器封装 |
 | v0.7.6 | ✅ 已完成 | 行程详情页顶部体验收口（navbar 三元素居中对齐 + 删…菜单换核查图标 + 标题随折叠呼吸）+ 全屏沉浸 |
-| v0.7.7 | ✅ 当前 | 装备库单品拖拽真机回归（拖拽避让丝滑让位 + 松手 optimistic 落位去卡顿 + 跨分组 spring-load 悬停自动展开） |
+| v0.7.7 | ✅ 已完成 | 装备库单品拖拽真机回归（拖拽避让丝滑让位 + 松手 optimistic 落位去卡顿 + 跨分组 spring-load 悬停自动展开） |
+| v0.7.8 | ✅ 当前 | 行程编辑模块（Tabs 滑动切换 + ItineraryService CRUD + DayCard 手风琴 + 表单面板 + 动效审查优化） |
 | v0.8.0 | 📋 中期 | GearPage 组件瘦身（FabController/DragToTripOverlay/GroupDragController 提取） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 

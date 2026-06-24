@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.7.8 (2026-06-24)
+
+行程编辑模块完整落地 + 全面交互动效审查优化。行程详情页新增「行程」Tab，支持按天/路段规划行程，与「装备」Tab 平行滑动切换。
+
+**Phase 1-10 — 行程编辑模块**
+
+- **Tabs 替换 Stack+if**：原生 Tabs 组件实现左右滑动切换，`onGestureSwipe` 跟手插值 Tab 标题颜色渐变（RGB hex 通道插值 `#1A1A1A` ↔ `#999999`），`SPRING_TAB(0.32, 0.82)` 加速切换动画
+- **ItineraryService CRUD**：新增 `services/ItineraryService.ets` 纯函数层（`addDay`/`removeDay`/`patchDay`/`addSegment`/`removeSegment`/`patchSegment`），类型定义 `DayPatch`/`SegmentPatch`
+- **ItineraryView 列表容器**：新增 `components/gear/ItineraryView.ets`，ForEach 按天渲染 DayCard，手风琴展开同时只展开一天
+- **DayCard 日卡片**：新增 `components/gear/DayCard.ets`，手风琴折叠展开（`TransitionEffect.asymmetric` 进入 y:8 / 退出 y:-4）、段行（城市→城市 + 交通图标 + 时间摘要）、`cachedSummary` @Watch 缓存
+- **SegmentFormSheet + DayFormSheet**：新增两个表单面板，通过 SheetOverlay 路由统一管理
+- **可编辑模式**：编辑回调 + 添加路段节点 + 长按菜单交互
+- **CRUD 数据贯通**：Index → TripDetailPage → ItineraryView → DayCard 回调链完整对接 + ItineraryService 持久化
+
+**全面审查优化（commit `a705cf0`）**
+
+- **onGestureSwipe progress 修正**：`currentOffset` 为 vp 位移（负值=内容左移=朝 index+1），修正公式 `progress = tabIndex - offset / tabsWidth`
+- **Tab 标题颜色连续插值**：从阈值硬切改为 hex 通道逐字节插值（channel 153→26），跟手时零跳变
+- **longPressTriggered 防双击**：DayCard 复用避坑 #45 的 flag 模式，长按后 500ms 内短路 onClick
+- **head collapse 平滑重置**：`switchTab()` 时 head progress 重置包裹 `animateTo`，消除硬切
+- **段行 pressed 高亮**：`@Styles segRowPressed/segRowNormal` + `stateStyles` 实现原生按压态
+- **展开 asymmetric transition**：进入从下方 y:8 淡入，退出向上 y:-4 淡出，消除对称感
+- **Tab 按压反馈**：`tab0Scale`/`tab1Scale` states + `.onTouch` press 三段式
+- **错落入场去 setTimeout**：ItineraryView 入场直接设 `appeared = true`，去除 16ms hack
+
+> 3 文件改动，+106/-55 行。构建通过。
+
 ## v0.7.7 (2026-06-14)
 
 装备库单品拖拽真机回归 + 跨分组 spring-load 悬停展开。围绕「拖拽时兄弟项不避让 / 松手卡顿 / 目标分组折叠时无法落入」三个观感问题，从第一性原理重做避让动画、落位性能与悬停展开，全程 SPRING。
