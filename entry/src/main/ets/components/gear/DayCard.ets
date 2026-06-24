@@ -9,7 +9,8 @@ import {
   TEXT_TERTIARY,
   CARD_BG,
   TIMELINE_LINE,
-  TIMELINE_NODE
+  TIMELINE_NODE,
+  CHIP_BG_DEFAULT
 } from '../../constants/Colors';
 import {
   TIMELINE_LINE_WIDTH,
@@ -228,7 +229,7 @@ export struct DayCard {
           Text(this.formatTicket(seg))
             .fontSize(11)
             .fontColor(TEXT_SECONDARY)
-            .backgroundColor('#F5F5F5')
+            .backgroundColor(CHIP_BG_DEFAULT)
             .borderRadius(8)
             .padding({ left: 8, right: 8, top: 3, bottom: 3 })
             .margin({ top: 2 })

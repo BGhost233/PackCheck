@@ -188,6 +188,11 @@ export struct TripDetailPage {
       return;
     }
     this.tripTabIndex = targetIndex;
+    // 切换到行程 Tab 时重置 head 折叠进度，避免 header 卡在半折叠状态
+    if (targetIndex === 1) {
+      this.headCollapseProgress = 0;
+      this.headSnapping = false;
+    }
     this.getUIContext().animateTo({ curve: SPRING_TAB() }, () => {
       this.tripTabProgress = targetIndex;
     });
@@ -264,8 +269,7 @@ export struct TripDetailPage {
         if (this.tripTabIndex === 1) {
           // Tab 1：每日行程
           ItineraryView({
-            itinerary: this.getItinerary(),
-            gears: this.gears
+            itinerary: this.getItinerary()
           })
             .width('100%')
             .height('100%')
@@ -274,6 +278,7 @@ export struct TripDetailPage {
       }
       .layoutWeight(1)
       .width('100%')
+      .clip(true)
     }
     .width('100%')
     .height('100%')

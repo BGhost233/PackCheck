@@ -1,18 +1,16 @@
 // ItineraryView — 每日行程 Tab 容器组件
 // 职责：管理 DayCard 列表 + 空态展示 + 手风琴互斥状态
 
-import { DayItinerary, GearItem } from '../../models/PackModels';
+import { DayItinerary } from '../../models/PackModels';
 import { DayCard } from './DayCard';
 import {
   TEXT_SECONDARY,
-  TEXT_TERTIARY,
-  PAGE_BG
+  TEXT_TERTIARY
 } from '../../constants/Colors';
 import { PRIMARY_COLOR } from '../../constants/Colors';
 import { DAY_CARD_GAP, PAGE_PADDING } from '../../constants/Layout';
 import {
   SPRING_GENERAL,
-  SPRING_TAB,
   staggerDelay,
   STAGGER_OFFSET_Y
 } from '../../constants/AnimationTokens';
@@ -20,7 +18,6 @@ import {
 @Component
 export struct ItineraryView {
   @Prop itinerary: DayItinerary[] = [];
-  @Prop gears: GearItem[] = [];
   // 预留回调（Phase 2 编辑功能用）
   onAddDay: () => void = () => {};
 

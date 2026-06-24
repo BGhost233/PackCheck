@@ -1,5 +1,5 @@
 // 行程日程相关纯业务逻辑 — 数据派生、摘要提取、图标映射
-import { DayItinerary, TransportMode, TripChecklist } from '../models/PackModels';
+import { DayItinerary, TransportMode } from '../models/PackModels';
 
 /**
  * 日摘要数据（供 DayCard 收缩态展示）
@@ -75,30 +75,6 @@ export function getDaySummary(day: DayItinerary): DaySummary {
     departTime: firstSeg.departTime,
     arriveTime: lastSeg.arriveTime
   };
-}
-
-/**
- * 交通方式 → sys.symbol 图标名映射（字符串，用于文本展示场景）
- */
-export function getTransportIconName(mode: TransportMode): string {
-  switch (mode) {
-    case 'flight':
-      return 'airplane';
-    case 'train':
-      return 'tram';
-    case 'bus':
-      return 'bus';
-    case 'drive':
-      return 'car';
-    case 'walk':
-      return 'figure.walk';
-    case 'bike':
-      return 'bicycle';
-    case 'boat':
-      return 'ferry';
-    default:
-      return 'arrow.right';
-  }
 }
 
 /**
