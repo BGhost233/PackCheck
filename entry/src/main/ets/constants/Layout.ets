@@ -12,3 +12,9 @@ export const GEAR_HEADER_EXPANDED: number = 116;
 export const GEAR_HEADER_COLLAPSED: number = 56;
 export const HOME_HEADER_COLLAPSED: number = 56;
 export const HOME_COLLAPSE_MAX: number = 200;
+
+// ============ 时间线（Itinerary） ============
+export const TIMELINE_LINE_WIDTH: number = 1;
+export const TIMELINE_NODE_SIZE: number = 8;
+export const TIMELINE_LEFT_MARGIN: number = 24;
+export const DAY_CARD_GAP: number = 12;

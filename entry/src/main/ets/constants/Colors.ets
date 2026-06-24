@@ -137,6 +137,11 @@ export const ZONE_CARRY_STROKE: string = '#1CFFA726';
 export const ZONE_SLEEP_STROKE: string = '#1C7E57C2';
 export const ZONE_MISC_STROKE: string = '#2478909C';
 
+// ============ 时间线（Itinerary） ============
+export const TIMELINE_LINE: string = '#E0E0E0';
+export const TIMELINE_NODE: string = '#2D7D46';  // 复用 PRIMARY_COLOR 值
+export const TIMELINE_NODE_EMPTY: string = '#C8E6C9';  // 浅绿空心态
+
 // ============ Ceremony 渐变/光效 ============
 export const WHITE_TRANSPARENT: string = '#00FFFFFF';
 export const SHIMMER_WHITE_FAINT: string = '#18FFFFFF';
