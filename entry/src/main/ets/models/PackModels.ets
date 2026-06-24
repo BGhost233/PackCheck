@@ -21,6 +21,44 @@ export interface ChecklistItem {
   fromGearId?: string;
 }
 
+// --- 每日行程相关类型 ---
+
+// 交通方式
+export type TransportMode = 'flight' | 'train' | 'bus' | 'drive' | 'walk' | 'bike' | 'boat' | 'other';
+
+// 票务信息
+export interface TicketInfo {
+  type: string;             // "机票" / "火车票" / "大巴票"
+  code?: string;            // 航班号/车次
+  seat?: string;            // 座位
+  price?: number;           // 价格
+  note?: string;            // 备注
+}
+
+// 单段路程
+export interface RouteSegment {
+  id: string;
+  from: string;             // 出发地名
+  to: string;               // 到达地名
+  transport: TransportMode; // 交通方式
+  departTime?: string;      // 出发时间 "08:30"
+  arriveTime?: string;      // 到达时间 "14:00"
+  note?: string;            // 该段备注
+  ticket?: TicketInfo;      // 票务信息（可选）
+  accommodation?: string;   // 住宿信息（可选）
+}
+
+// 一天的行程
+export interface DayItinerary {
+  id: string;
+  dayIndex: number;         // 第几天（从 1 开始）
+  date?: string;            // 日期 "2024-10-03"
+  segments: RouteSegment[]; // 路段序列（有序）
+  note?: string;            // 整天的备注（收缩态显示）
+}
+
+// --- 行程清单 ---
+
 export interface TripChecklist {
   id: string;
   title: string;
@@ -33,6 +71,7 @@ export interface TripChecklist {
   maxAltitude?: number;     // 最高海拔（m）
   ascentM?: number;         // 累计爬升（m）
   durationHours?: number;   // 时长（h）
+  itinerary?: DayItinerary[]; // 每日行程（Phase 1 新增，optional 向后兼容）
 }
 
 
