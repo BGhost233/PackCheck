@@ -2,30 +2,24 @@
 // Phase 6：收缩态 | Phase 7：展开态时间线
 
 import { DayItinerary, RouteSegment } from '../../models/PackModels';
-import { getDaySummary, getTransportIconName, DaySummary } from '../../services/ItineraryService';
+import { getDaySummary, getTransportIcon, DaySummary } from '../../services/ItineraryService';
 import {
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
-  CARD_WHITE,
+  CARD_BG,
   TIMELINE_LINE,
-  TIMELINE_NODE,
-  TIMELINE_NODE_EMPTY
+  TIMELINE_NODE
 } from '../../constants/Colors';
 import {
-  PAGE_PADDING,
   TIMELINE_LINE_WIDTH,
   TIMELINE_NODE_SIZE,
-  TIMELINE_LEFT_MARGIN,
-  DAY_CARD_GAP
+  TIMELINE_LEFT_MARGIN
 } from '../../constants/Layout';
 import {
   SPRING_GENERAL,
   SPRING_PRESS,
-  SPRING_TAB,
-  PRESS_SCALE_DOWN,
-  staggerDelay,
-  STAGGER_OFFSET_Y
+  PRESS_SCALE_DOWN
 } from '../../constants/AnimationTokens';
 
 @Component
@@ -35,6 +29,10 @@ export struct DayCard {
   onToggle: () => void = () => {};
 
   @State private cardScale: number = 1.0;
+
+  private getSummary(): DaySummary {
+    return getDaySummary(this.day);
+  }
 
   build() {
     Column() {
@@ -48,7 +46,7 @@ export struct DayCard {
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 14, bottom: 14 })
-    .backgroundColor(CARD_WHITE)
+    .backgroundColor(CARD_BG)
     .borderRadius(16)
     .scale({ x: this.cardScale, y: this.cardScale })
     .animation({ curve: SPRING_PRESS() })
@@ -64,8 +62,6 @@ export struct DayCard {
 
   @Builder
   private buildCollapsedContent() {
-    const summary: DaySummary = getDaySummary(this.day);
-
     Column({ space: 6 }) {
       // 第一行：Day N · 日期
       Row({ space: 6 }) {
@@ -94,7 +90,7 @@ export struct DayCard {
 
       // 第二行：起点 ──icon──→ 终点
       Row({ space: 8 }) {
-        Text(summary.from)
+        Text(this.getSummary().from)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
@@ -103,7 +99,7 @@ export struct DayCard {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
 
         // 交通图标
-        SymbolGlyph($r(`sys.symbol.${getTransportIconName(summary.mainTransport)}`))
+        SymbolGlyph(getTransportIcon(this.getSummary().mainTransport))
           .fontSize(16)
           .fontColor([TEXT_SECONDARY])
 
@@ -112,7 +108,7 @@ export struct DayCard {
           .fontSize(14)
           .fontColor(TEXT_TERTIARY)
 
-        Text(summary.to)
+        Text(this.getSummary().to)
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
@@ -124,20 +120,20 @@ export struct DayCard {
       .alignItems(VerticalAlign.Center)
 
       // 第三行：出发时间 / 到达时间（可选）
-      if (summary.departTime !== undefined || summary.arriveTime !== undefined) {
+      if (this.getSummary().departTime !== undefined || this.getSummary().arriveTime !== undefined) {
         Row({ space: 12 }) {
-          if (summary.departTime !== undefined) {
-            Text(summary.departTime)
+          if (this.getSummary().departTime !== undefined) {
+            Text(this.getSummary().departTime)
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
           }
-          if (summary.departTime !== undefined && summary.arriveTime !== undefined) {
+          if (this.getSummary().departTime !== undefined && this.getSummary().arriveTime !== undefined) {
             Text('–')
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
           }
-          if (summary.arriveTime !== undefined) {
-            Text(summary.arriveTime)
+          if (this.getSummary().arriveTime !== undefined) {
+            Text(this.getSummary().arriveTime)
               .fontSize(12)
               .fontColor(TEXT_TERTIARY)
           }
@@ -205,7 +201,7 @@ export struct DayCard {
 
         // 交通方式 + 时间
         Row({ space: 6 }) {
-          SymbolGlyph($r(`sys.symbol.${getTransportIconName(seg.transport)}`))
+          SymbolGlyph(getTransportIcon(seg.transport))
             .fontSize(13)
             .fontColor([TEXT_TERTIARY])
 

@@ -78,7 +78,7 @@ export function getDaySummary(day: DayItinerary): DaySummary {
 }
 
 /**
- * 交通方式 → sys.symbol 图标名映射
+ * 交通方式 → sys.symbol 图标名映射（字符串，用于文本展示场景）
  */
 export function getTransportIconName(mode: TransportMode): string {
   switch (mode) {
@@ -98,6 +98,33 @@ export function getTransportIconName(mode: TransportMode): string {
       return 'ferry';
     default:
       return 'arrow.right';
+  }
+}
+
+/**
+ * 交通方式 → SymbolGlyph Resource（用于 SymbolGlyph 组件）
+ */
+export function getTransportIcon(mode: TransportMode): Resource {
+  switch (mode) {
+    case 'flight':
+      return $r('sys.symbol.airplane');
+    case 'train':
+      // HarmonyOS 无 tram/train symbol，复用 map 表达路线
+      return $r('sys.symbol.map');
+    case 'bus':
+      // HarmonyOS 无 bus symbol，复用 map 表达路线
+      return $r('sys.symbol.map');
+    case 'drive':
+      return $r('sys.symbol.car');
+    case 'walk':
+      return $r('sys.symbol.figure_walk');
+    case 'bike':
+      return $r('sys.symbol.bicycle');
+    case 'boat':
+      // HarmonyOS 无 ferry/boat symbol，复用 map 表达路线
+      return $r('sys.symbol.map');
+    default:
+      return $r('sys.symbol.arrow_right');
   }
 }
 
@@ -123,4 +150,132 @@ export function getTransportLabel(mode: TransportMode): string {
     default:
       return '其他';
   }
+}
+
+/**
+ * 开发期 Mock 数据：模拟 4 天户外行程（成都→日隆→大本营→长坪沟→成都）
+ * TODO: Phase 2 移除，改为真实数据
+ */
+export function createMockItinerary(): DayItinerary[] {
+  return [
+    {
+      id: 'mock-day-1',
+      dayIndex: 0,
+      date: '2025-05-01',
+      note: '抵达日隆镇，采购补给物资',
+      segments: [
+        {
+          id: 'seg-1-1',
+          from: '成都双流',
+          to: '四姑娘山镇',
+          transport: 'bus',
+          departTime: '07:00',
+          arriveTime: '12:30',
+          ticket: { type: '大巴', code: 'CD-SG0501', seat: '前排', price: 158 },
+          note: '茶店子客运站出发'
+        },
+        {
+          id: 'seg-1-2',
+          from: '四姑娘山镇',
+          to: '日隆镇客栈',
+          transport: 'walk',
+          departTime: '12:45',
+          arriveTime: '13:00',
+          accommodation: '雪域假日酒店'
+        }
+      ]
+    },
+    {
+      id: 'mock-day-2',
+      dayIndex: 1,
+      date: '2025-05-02',
+      note: '徒步进山至大本营，海拔 3800m',
+      segments: [
+        {
+          id: 'seg-2-1',
+          from: '日隆镇',
+          to: '长坪沟口',
+          transport: 'drive',
+          departTime: '06:30',
+          arriveTime: '07:00',
+          note: '包车前往沟口'
+        },
+        {
+          id: 'seg-2-2',
+          from: '长坪沟口',
+          to: '枯树滩',
+          transport: 'walk',
+          departTime: '07:30',
+          arriveTime: '10:00'
+        },
+        {
+          id: 'seg-2-3',
+          from: '枯树滩',
+          to: '大本营',
+          transport: 'walk',
+          departTime: '10:30',
+          arriveTime: '15:00',
+          accommodation: '大本营营地（帐篷）'
+        }
+      ]
+    },
+    {
+      id: 'mock-day-3',
+      dayIndex: 2,
+      date: '2025-05-03',
+      note: '冲顶日，视天气决定路线',
+      segments: [
+        {
+          id: 'seg-3-1',
+          from: '大本营',
+          to: '垭口',
+          transport: 'walk',
+          departTime: '04:00',
+          arriveTime: '08:00',
+          note: '凌晨出发，注意保暖'
+        },
+        {
+          id: 'seg-3-2',
+          from: '垭口',
+          to: '大本营',
+          transport: 'walk',
+          departTime: '09:00',
+          arriveTime: '13:00'
+        }
+      ]
+    },
+    {
+      id: 'mock-day-4',
+      dayIndex: 3,
+      date: '2025-05-04',
+      note: '下撤返回成都',
+      segments: [
+        {
+          id: 'seg-4-1',
+          from: '大本营',
+          to: '长坪沟口',
+          transport: 'walk',
+          departTime: '07:00',
+          arriveTime: '11:00'
+        },
+        {
+          id: 'seg-4-2',
+          from: '长坪沟口',
+          to: '日隆镇',
+          transport: 'drive',
+          departTime: '11:30',
+          arriveTime: '12:00'
+        },
+        {
+          id: 'seg-4-3',
+          from: '四姑娘山镇',
+          to: '成都',
+          transport: 'bus',
+          departTime: '13:00',
+          arriveTime: '18:30',
+          ticket: { type: '大巴', code: 'SG-CD0504', price: 158 }
+        }
+      ]
+    }
+  ];
 }

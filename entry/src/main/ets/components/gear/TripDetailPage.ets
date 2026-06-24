@@ -20,8 +20,10 @@ import {
   SPRING_SCROLL,
   SPRING_HEAD_FOLLOW
 } from '../../constants/AnimationTokens';
-import { ChecklistItem, GearItem, TripChecklist } from '../../models/PackModels';
+import { ChecklistItem, DayItinerary, GearItem, TripChecklist } from '../../models/PackModels';
 import { UnifiedChecklistView } from './UnifiedChecklistView';
+import { ItineraryView } from './ItineraryView';
+import { createMockItinerary } from '../../services/ItineraryService';
 
 // E-3：顶部元信息区结构化段。kind 决定着色：
 //   'plain' 日期/地点 → TEXT_TERTIARY 纯文字；'data' 里程/海拔/时长 → AMBER_ACCENT + tnum 等宽点睛。
@@ -260,8 +262,14 @@ export struct TripDetailPage {
         }
 
         if (this.tripTabIndex === 1) {
-          // Tab 1：每日行程（Phase 8 替换为 ItineraryView 组件）
-          this.buildItineraryPlaceholder()
+          // Tab 1：每日行程
+          ItineraryView({
+            itinerary: this.getItinerary(),
+            gears: this.gears
+          })
+            .width('100%')
+            .height('100%')
+            .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_TAB() }))
         }
       }
       .layoutWeight(1)
@@ -272,25 +280,14 @@ export struct TripDetailPage {
     .backgroundColor(PAGE_BG)
   }
 
-  // Phase 5 占位：行程 Tab 内容（Phase 8 将替换为 ItineraryView 组件）
-  @Builder
-  private buildItineraryPlaceholder() {
-    Column() {
-      Text('每日行程')
-        .fontSize(16)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(TEXT_TERTIARY)
-        .margin({ top: 80 })
-      Text('即将展示时间线路线…')
-        .fontSize(13)
-        .fontColor(TEXT_TERTIARY)
-        .margin({ top: 8 })
+  // 获取当前行程的 itinerary 数据（有真数据用真数据，否则用 mock）
+  private getItinerary(): DayItinerary[] {
+    const trip = this.currentChecklist();
+    if (trip !== undefined && trip.itinerary !== undefined && trip.itinerary.length > 0) {
+      return trip.itinerary;
     }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Start)
-    .alignItems(HorizontalAlign.Center)
-    .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_TAB() }))
+    // TODO: Phase 2 移除 mock，改为返回空数组让空态展示
+    return createMockItinerary();
   }
 
   @Builder
