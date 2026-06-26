@@ -206,9 +206,11 @@ export struct GearPage {
   private isAlive: boolean = true;
 
   // ---- 性能缓存：filteredGears / groups / byGroup 一帧只算一次 ----
-  private cachedFilteredGears: GearItem[] = [];
-  private cachedGearGroups: string[] = [];
-  private cachedGearsByGroup: Map<string, GearItem[]> = new Map();
+  // ⚠️ 必须 @State：rebuildGearCache() 重新赋值时需触发 ArkUI 依赖追踪，
+  //   否则 ForEach 数据源引用不变 → 拖拽重排/跨分类移动后列表不刷新。
+  @State private cachedFilteredGears: GearItem[] = [];
+  @State private cachedGearGroups: string[] = [];
+  @State private cachedGearsByGroup: Map<string, GearItem[]> = new Map();
 
   private onGearDataChange(): void {
     if (this.isAlive) {
