@@ -2,6 +2,10 @@
 
 > 详细 commit 历史见 `git log`。此处只保留近期版本摘要和早期版本一行概述。
 
+## v0.7.9 (2026-06-26)
+
+多选功能全量删除：移除 GearPage 多选模式及关联状态/方法/回调（~600 行）、删除 GenerateTripSheet 与 MoveGroupSheet 组件、清理 SheetOverlay 路由分支与 SheetMode 常量。全项目净删 877 行。
+
 ## v0.7.8 (2026-06-24)
 
 行程编辑模块完整落地。行程详情页新增「行程」Tab（原生 Tabs 左右滑动），支持按天/路段规划行程。含 ItineraryService CRUD 纯函数层、DayCard 手风琴展开、SegmentFormSheet/DayFormSheet 表单、全面交互动效审查、行程详情页审计修复（8 commit）、全量代码审查清理（28 文件净删 786 行）。

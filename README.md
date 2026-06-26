@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.7.8
+## 当前版本：v0.7.9
 
 ### 已实现功能
 
@@ -43,7 +43,7 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2850 行）
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2660 行）
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
@@ -59,13 +59,11 @@ entry/src/main/ets/
 │   └── sheets/              — Sheet 面板组件（统一通过 SheetOverlay 路由）
 │       ├── SheetOverlay.ets — 遮罩容器 + Sheet 路由 + 下滑关闭手势
 │       ├── GearSortSheet.ets
-│       ├── GenerateTripSheet.ets
 │       ├── GearFormSheet.ets
 │       ├── TripFormSheet.ets
 │       ├── TempItemSheet.ets
 │       ├── ImportSheet.ets
 │       ├── ProfileEditSheet.ets
-│       ├── MoveGroupSheet.ets
 │       ├── GearPickerSheet.ets — 配装装备选择器（品类筛选+搜索+临时添加）
 │       ├── GearItemActionSheet.ets — 装备操作 Sheet
 │       ├── SegmentFormSheet.ets— 路段编辑表单（出发/到达城市+交通+时间）
@@ -100,7 +98,7 @@ entry/src/main/ets/
 │   ├── Layout.ets           — 间距/尺寸 token
 │   ├── AnimationTokens.ets  — Spring 预设 + Bezier + 时长/缩放常量
 │   ├── GearSort.ets         — 排序模式
-│   ├── SheetMode.ets        — Sheet 模式（9 种 + 空态）
+│   ├── SheetMode.ets        — Sheet 模式（12 种 + 空态）
 │   ├── GearLoadout.ets      — 配装数据种子（BodyZone/LayerOrder 枚举 + 品类→槽位映射）
 │   └── DesignTokens.ets     — Barrel re-export
 └── utils/
@@ -118,7 +116,6 @@ PackCheck/
 ├── entry/                   — 主模块源码
 ├── docs/
 │   ├── DEVELOPMENT_STANDARDS.md   — 开发规范（必读）
-│   ├── PERF_OPTIMIZATION_PLAN.md  — 性能优化方案（已全部实施）
 │   └── ROADMAP.md                 — 中短期路线图
 ├── memory/                  — 项目记忆 & ArkUI 避坑清单
 ├── hvigor/                  — 构建配置
@@ -165,8 +162,9 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.7.5 | ✅ 已完成 | 顶部折叠交互统一（对齐 iOS Large Title：跟手 1:1 + 松手就近吸附）+ HeadCollapseController 控制器封装 |
 | v0.7.6 | ✅ 已完成 | 行程详情页顶部体验收口（navbar 三元素居中对齐 + 删…菜单换核查图标 + 标题随折叠呼吸）+ 全屏沉浸 |
 | v0.7.7 | ✅ 已完成 | 装备库单品拖拽真机回归（拖拽避让丝滑让位 + 松手 optimistic 落位去卡顿 + 跨分组 spring-load 悬停自动展开） |
-| v0.7.8 | ✅ 当前 | 行程编辑模块（Tabs 滑动切换 + ItineraryService CRUD + DayCard 手风琴 + 表单面板 + 动效审查优化） |
-| v0.8.0 | 📋 中期 | GearPage 组件瘦身（FabController/DragToTripOverlay/GroupDragController 提取） |
+| v0.7.8 | ✅ 已完成 | 行程编辑模块（Tabs 滑动切换 + ItineraryService CRUD + DayCard 手风琴 + 表单面板 + 动效审查优化） |
+| v0.7.9 | ✅ 当前 | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行） |
+| v0.8.0 | 📋 中期 | GearPage 组件瘦身（FabController/GroupDragController 提取） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 
 ## 开发约定

@@ -35,7 +35,7 @@
 - PackStore schema v1，`initFailed` 阻止写入；`makeId()` = `Date.now()` + 单调计数器
 - `CATEGORY_ALL`（哨兵 '全部'）/ `CATEGORY_FALLBACK`（受保护 '其他'）在 PackModels.ets
 
-## ArkUI 避坑清单（52 条）
+## ArkUI 避坑清单（51 条）
 
 1. `linearGradient` 禁用 `Color.Transparent` — 用 `'#00FFFFFF'` 同色相只变 alpha
 2. Spring 曲线忽略 duration — 时间由 response 决定；错落用 `delay` 字段
@@ -56,39 +56,38 @@
 17. 装饰动画静止态必须中性值（scale=1.0）
 18. 手势坐标 vp，display 物理像素必须 px2vp()
 19. 拖拽浮层 `animation({ duration: 0 })` 覆盖父级动画继承
-20. 多选模式切换不改变 Header 可见性 — 内部切换内容
-21. 浮动 Header + List spacer = Header高度 - paddingTop - space
-22. 浮动组件放根 Stack + position + zIndex
-23. 覆盖层必须在 Navigation 外层
-24. ForEach key 包含所有变化维度（拼入属性 + nonce）
-25. 搜索态绕过折叠/隐藏 — 查询方法在关键词非空时返回 false
-26. PanGesture distance≥5 防吃 onClick
-27. if/else 条件渲染动画：animateTo 包 state + 组件加 .transition()
-28. Stack 子组件禁止 `height('100%')` — position 后同样不可靠
-29. `Curve.EaseInOut` ≠ Material Standard — 用 `curves.cubicBezierCurve(0.4, 0, 0.2, 1.0)`
-30. ForEach callback index 是 number 不是 optional
-31. 死代码及时清理 — 预留常量无消费者就删
-32. CURVE_LINEAR 合法场景：帧级匀速运动（如 timer 驱动滚动）
-33. 大规模机械性修改用并行 subagent + 事后人工复查
-34. Colors token 补充透明色常量
-35. `.animation()` 作用域隔离：只捕获它与前一个 `.animation()` 之间的属性
-36. `.overlay()` 对 @Builder 内条件渲染不可靠 — 改用 Stack + if + position
-37. `.shadow()` + `backdropBlur` 产生亮色伪影 — 暗色场景移除 shadow
-38. @State 数组禁止原地 mutation — 必须 spread 副本再赋值
-39. aboutToDisappear 必须清 timer
-40. ForEach 退场动画需显式加 `.transition()`
-41. counter 动画无条件启动新动画 + clearInterval 取消旧的
-42. 自定义组件外挂 `.onClick` 被根节点自身 onClick 抢占 — 走内部回调链路
-43. 半透明色浮白底发灰 — 用不透明预混色 + 实色边框
-44. `hitTestBehavior(None)` 不可靠阻止子 onClick — 用 if 条件渲染移除
-45. `GestureGroup(Sequence)` 不阻止子 onClick — 用 flag + setTimeout 短路
-46. 普通 class 改字段不触发 re-render — 控制器必配 @State 镜像 + onChange 回调
-47. 拖拽避让冻结 rect 采集防反馈回路
-48. 拖拽落位 optimistic update — 不 await 持久化
-49. `@Watch` 必须写在 `@Prop`/`@State` 声明上（属性装饰器）
-50. Tabs `onGestureSwipe` currentOffset 是 vp 位移非 progress — 除以 tabsWidth 归一化
-51. `build()` 裸 if/else 产生隐式 Column 居中 — 必须显式根容器
-52. TabContent keep-alive 下 onAppear 不再触发 — 靠 visibilityNonce @Watch 重播动画
+20. 浮动 Header + List spacer = Header高度 - paddingTop - space
+21. 浮动组件放根 Stack + position + zIndex
+22. 覆盖层必须在 Navigation 外层
+23. ForEach key 包含所有变化维度（拼入属性 + nonce）
+24. 搜索态绕过折叠/隐藏 — 查询方法在关键词非空时返回 false
+25. PanGesture distance≥5 防吃 onClick
+26. if/else 条件渲染动画：animateTo 包 state + 组件加 .transition()
+27. Stack 子组件禁止 `height('100%')` — position 后同样不可靠
+28. `Curve.EaseInOut` ≠ Material Standard — 用 `curves.cubicBezierCurve(0.4, 0, 0.2, 1.0)`
+29. ForEach callback index 是 number 不是 optional
+30. 死代码及时清理 — 预留常量无消费者就删
+31. CURVE_LINEAR 合法场景：帧级匀速运动（如 timer 驱动滚动）
+32. 大规模机械性修改用并行 subagent + 事后人工复查
+33. Colors token 补充透明色常量
+34. `.animation()` 作用域隔离：只捕获它与前一个 `.animation()` 之间的属性
+35. `.overlay()` 对 @Builder 内条件渲染不可靠 — 改用 Stack + if + position
+36. `.shadow()` + `backdropBlur` 产生亮色伪影 — 暗色场景移除 shadow
+37. @State 数组禁止原地 mutation — 必须 spread 副本再赋值
+38. aboutToDisappear 必须清 timer
+39. ForEach 退场动画需显式加 `.transition()`
+40. counter 动画无条件启动新动画 + clearInterval 取消旧的
+41. 自定义组件外挂 `.onClick` 被根节点自身 onClick 抢占 — 走内部回调链路
+42. 半透明色浮白底发灰 — 用不透明预混色 + 实色边框
+43. `hitTestBehavior(None)` 不可靠阻止子 onClick — 用 if 条件渲染移除
+44. `GestureGroup(Sequence)` 不阻止子 onClick — 用 flag + setTimeout 短路
+45. 普通 class 改字段不触发 re-render — 控制器必配 @State 镜像 + onChange 回调
+46. 拖拽避让冻结 rect 采集防反馈回路
+47. 拖拽落位 optimistic update — 不 await 持久化
+48. `@Watch` 必须写在 `@Prop`/`@State` 声明上（属性装饰器）
+49. Tabs `onGestureSwipe` currentOffset 是 vp 位移非 progress — 除以 tabsWidth 归一化
+50. `build()` 裸 if/else 产生隐式 Column 居中 — 必须显式根容器
+51. TabContent keep-alive 下 onAppear 不再触发 — 靠 visibilityNonce @Watch 重播动画
 
 ## 补充验证
 

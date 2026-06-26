@@ -1,6 +1,6 @@
 # PackCheck 路线图
 
-> 最后更新：2026-06-24 | 当前版本：v0.7.8
+> 最后更新：2026-06-26 | 当前版本：v0.7.9
 
 ---
 
@@ -19,6 +19,7 @@
 | v0.7.7-perf | ✅ | 全面性能优化（cache-on-@Watch + zoneKey 精确化 + O(1) 索引）|
 | v0.7.7-cleanup | ✅ | 全面代码审查清理（净删 786 行）|
 | v0.7.8 | ✅ | 行程编辑模块（Tabs 滑动 + CRUD + DayCard + 动效审查）|
+| v0.7.9 | ✅ | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行）|
 | v0.8.0 | 🟡 中期 | GearPage 组件瘦身 |
 | v1.0.0 | 🟣 远期 | 智能 PackCheck + 成就卡 + 深色模式 |
 
@@ -33,12 +34,11 @@
 
 ## 🟡 中期（v0.8.0）—— 组件架构瘦身
 
-GearPage 当前 ~2810 行 / 40 @State / 8 个子系统，需提取独立组件降低耦合。
+GearPage 当前 ~2280 行 / 38 @State / 7 个子系统（多选已删除），需提取独立组件降低耦合。
 
 - [ ] 提取 FabController（减 @State -7）
-- [ ] 提取 DragToTripOverlay（减 @State -5）
 - [ ] 提取 GroupDragController（减 @State -6）
-- [ ] 目标：GearPage @State ~12，行数 ~1600
+- [ ] 目标：GearPage @State ~15，行数 ~1500
 
 ---
 
