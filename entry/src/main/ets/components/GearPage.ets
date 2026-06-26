@@ -17,7 +17,6 @@ import { hdsEffect } from '@kit.UIDesignKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { PackStore } from '../services/PackStore';
 import { buildGearTripCountMap } from '../services/FootprintService';
-import { computeFootprint, Footprint } from '../services/FootprintService';
 import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice, updateGear } from '../services/GearService';
 import {
   ARROW_COLOR,
@@ -61,7 +60,6 @@ import {
 import { getGroupColor } from '../utils/ColorUtils';
 import { GearEmptyState } from './gear/GearEmptyState';
 import { GearEmptyText } from './gear/GearEmptyText';
-import { GearFootprintRow } from './gear/GearFootprintRow';
 
 interface TripCardArea {
   id: string;
@@ -94,11 +92,6 @@ export struct GearPage {
   // 解决 ArkUI TabContent keep-alive 时 aboutToAppear 不触发的问题
   @Prop @Watch('onTabVisibilityNonceChange') tabVisibilityNonce: number = 0;
 
-  // 人生足迹精简聚合（装备库顶部黄金区，提纲 §3.4）
-  @State private footprintVm: Footprint = {
-    tripCount: 0, totalDistanceKm: 0, totalAscentM: 0, totalDurationHours: 0,
-    maxAltitude: 0, placeCount: 0, gearCount: 0, recentTrips: [],
-  };
   // gear id → 出行次数预计算 Map（避免 O(trips×items) 重复遍历）
   @State private gearTripCountMap: Map<string, number> = new Map();
 
@@ -214,7 +207,7 @@ export struct GearPage {
 
   private onGearDataChange(): void {
     if (this.isAlive) {
-      this.refreshFootprint();
+      this.refreshGearTripCounts();
       this.rebuildGearCache();
     }
   }
@@ -314,7 +307,7 @@ export struct GearPage {
   // tab 可见性变化时重播列表 stager
   onTabVisibilityNonceChange(): void {
     this.triggerListStagger();
-    // 重型计算（screen size / footprint / collapsedGroups / cache）不重跑
+    // 重型计算（screen size / collapsedGroups / cache）不重跑
     // 交互状态（searchExpanded / dragMode / overlayPhase / fabX/Y）保持不重置
   }
 
@@ -328,8 +321,8 @@ export struct GearPage {
     } catch (e) {
       // fallback
     }
-    // 人生足迹聚合
-    this.refreshFootprint();
+    // 预计算出行次数
+    this.refreshGearTripCounts();
     // 初始位置：右下角
     this.fabX = this.screenWidth - 50 - 16;
     this.fabY = this.screenHeight - 50 - 160; // 留出 TabBar 空间
@@ -342,10 +335,8 @@ export struct GearPage {
     this.triggerListStagger();
   }
 
-  // 人生足迹聚合
-  private refreshFootprint(): void {
-    this.footprintVm = computeFootprint(this.checklists, this.gears);
-    // 预计算 gear→出行次数 map，渲染/排序时查表无需遍历
+  // 预计算 gear→出行次数 map（排序/详情展示用），避免每次排序/渲染重复遍历
+  private refreshGearTripCounts(): void {
     this.gearTripCountMap = buildGearTripCountMap(this.checklists);
   }
 
@@ -936,15 +927,6 @@ export struct GearPage {
               Column()
                 .width('100%')
                 .height(this.topSpacerHeight())
-            }
-            // 人生足迹精简聚合区（装备库顶部黄金区，提纲 §3.4）
-            if (this.gears.length > 0 && this.footprintVm.tripCount > 0) {
-              ListItem() {
-                GearFootprintRow({ footprint: this.footprintVm })
-              }
-              .opacity(this.listEntered ? 1 : 0)
-              .translate({ y: this.listEntered ? 0 : STAGGER_OFFSET_Y })
-              .animation({ delay: staggerDelay(0, 30, 4, 200), curve: SPRING_GENERAL() })
             }
             if (this.gears.length === 0) {
               ListItem() {
