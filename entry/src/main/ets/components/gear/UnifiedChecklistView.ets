@@ -155,8 +155,11 @@ export struct UnifiedChecklistView {
   // 分组缓存：仅在 @Watch('trip') 时刷新。
   // 隐含前提（review C2）：Zone 分组只依赖 trip.items 自身字段，不依赖 gears。
   // 因此「gears 数据变化但 trip 引用不变」（如装备库重命名 gear）不会、也无需刷新本缓存。
-  private zoneMapCache: Map<string, ChecklistItem[]> = new Map();
-  private cachedProgress: LoadoutProgress = { checked: 0, total: 0 };
+  // ⚠️ 必须 @State：refreshCache() 赋新 Map 后触发 build 重渲染，
+  //   itemsForZone() 返回新数据 → FocusedZoneView 的 items @Prop 实时更新（check/排序立即刷新）。
+  //   原为普通 private，赋值不触发 re-render，导致展开态 check/排序后视觉不同步（问题 1 & 3 根因）。
+  @State private zoneMapCache: Map<string, ChecklistItem[]> = new Map();
+  @State private cachedProgress: LoadoutProgress = { checked: 0, total: 0 };
 
   // 性能优化：缓存屏幕尺寸（display.getDefaultDisplaySync() 是 IPC 跨进程调用，
   // 在拖拽 Pan 每帧调用会累积延迟吃掉帧预算）。aboutToAppear 时一次性取值。

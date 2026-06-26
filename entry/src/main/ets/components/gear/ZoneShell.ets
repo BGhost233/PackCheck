@@ -80,8 +80,13 @@ export struct ZoneShell {
   //   第一性原理：浏览手势（上下滑）与返回手势（轻点）必须正交。改为 onTouch 全程记录
   //   按下坐标，抬手时仅当位移 < TAP_SLOP 才认定为「原地轻点」，否则视为滑动、忽略。
   private static readonly TAP_SLOP: number = 10;
+  // 问题2 修复：长按阈值（ms）。按下→松手持续时间 ≥ 此值时视为长按而非 tap，不触发 onTapContent 收起。
+  //   聚焦态 LongPressGesture duration=400ms，此处取 350ms 留余量——
+  //   长按弹菜单后松手不再被误判为 tap 导致格子收缩。
+  private static readonly LONG_PRESS_THRESHOLD: number = 350;
   private touchDownX: number = 0;
   private touchDownY: number = 0;
+  private touchDownTime: number = 0;
   private touchMoved: boolean = false;
 
   build() {
@@ -129,6 +134,7 @@ export struct ZoneShell {
       if (e.type === TouchType.Down) {
         this.onContentTouch(true);
         this.touchMoved = false;
+        this.touchDownTime = Date.now();
         if (touch !== undefined) {
           this.touchDownX = touch.x;
           this.touchDownY = touch.y;
@@ -145,9 +151,14 @@ export struct ZoneShell {
       } else if (e.type === TouchType.Up) {
         this.onContentTouch(false);
         // 聚焦态（tapNeedsStationary）：仅「原地轻点」（位移 < TAP_SLOP）才触发，滑动一律忽略。
+        //   问题2 修复：按下持续时间 ≥ LONG_PRESS_THRESHOLD 视为长按而非 tap，不触发收起。
+        //   长按弹出菜单后松手不再被误判为 tap 导致格子收缩。
         //   网格态由 onClick 处理（互斥语义），此处不重复触发。
         if (this.tapNeedsStationary && !this.touchMoved) {
-          this.onTapContent(this.zone);
+          const elapsed = Date.now() - this.touchDownTime;
+          if (elapsed < ZoneShell.LONG_PRESS_THRESHOLD) {
+            this.onTapContent(this.zone);
+          }
         }
       } else if (e.type === TouchType.Cancel) {
         this.onContentTouch(false);
