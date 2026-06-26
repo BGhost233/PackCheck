@@ -3,12 +3,11 @@ import { display } from '@kit.ArkUI';
 import {
   SPRING_SWIPE_RESET, SPRING_FAB_SNAP, SPRING_GENERAL, SPRING_SEARCH,
   SPRING_CHEVRON, SPRING_PRESS, SPRING_CEREMONY_FLIP,
-  SPRING_TRAY_CARD, SPRING_SCROLL, SPRING_REORDER,
+  SPRING_SCROLL, SPRING_REORDER,
   EASE_FADE, DURATION_OVERLAY_FADE,
-  DURATION_TICK, DURATION_FAST,
+  DURATION_FAST,
   DURATION_NONE,
   PRESS_SCALE_DOWN, PRESS_SCALE_REST,
-  CURVE_LINEAR,
   STAGGER_OFFSET_Y, staggerDelay
 } from '../constants/AnimationTokens';
 import { HeadCollapseController } from '../utils/HeadCollapseController';
@@ -24,7 +23,6 @@ import {
   CHIP_RADIUS,
   SMALL_CARD_RADIUS,
   DANGER_COLOR,
-  DISABLED_COLOR,
   DIVIDER_COLOR,
   FONT_FEATURE_TNUM,
   GEAR_HEADER_COLLAPSED,
@@ -36,12 +34,8 @@ import {
   GEAR_SORT_VALUE,
   GEAR_SORT_WEIGHT,
   GLASS_BG,
-  GLASS_BG_LIGHT,
-  GLASS_BG_MEDIUM,
   GROUP_HEADER_BG,
-  LIGHT_PRIMARY_COLOR,
   OVERLAY_DIM,
-  OVERLAY_MASK,
   PAGE_BG,
   PAGE_PADDING,
   PRIMARY_COLOR,
@@ -54,8 +48,7 @@ import {
   TEXT_SECONDARY,
   TEXT_TERTIARY,
   TRANSPARENT,
-  WHITE,
-  WHITE_SECONDARY
+  WHITE
 } from '../constants/DesignTokens';
 import { getGroupColor } from '../utils/ColorUtils';
 import { GearEmptyState } from './gear/GearEmptyState';
@@ -85,8 +78,6 @@ export struct GearPage {
   @Prop @Watch('onFilterSortChange') gearSearchKeyword: string = '';
   @Prop @Watch('onFilterSortChange') gearSortMode: string = GEAR_SORT_GROUP;
   @Prop expandedGearId: string = '';
-  @Prop multiSelectMode: boolean = false;
-  @Prop selectedMultiGearIds: string[] = [];
   @Prop @Watch('onSwipeResetNonceChange') swipeResetNonce: number = 0;
   // tabVisibilityNonce：父层每次切至此 tab 时递增，驱动入场动画重播
   // 解决 ArkUI TabContent keep-alive 时 aboutToAppear 不触发的问题
@@ -132,7 +123,7 @@ export struct GearPage {
   // --- 问题9：单品长按 → 菜单 → 拖动排序（自绘 overlay 状态机，替代系统 bindContextMenu）---
   //   范式对齐 UnifiedChecklistView：overlayPhase 状态机（idle→menu→dragging）+ 双坐标系
   //   （长按锚点全局坐标 longPress* + Pan 累积 offset 推出实时全局坐标，转局部驱动飞行胶囊）。
-  //   menu 态：在锚点处弹自绘菜单（编辑/多选/删除）；手指开始拖动则收菜单进 dragging 态。
+  //   menu 态：在锚点处弹自绘菜单（编辑/删除）；手指开始拖动则收菜单进 dragging 态。
   @State private gearOverlayPhase: OverlayPhase = OverlayPhase.IDLE;
   @State private gearOverlayItem: GearItem | null = null;
   @State private gearOverlayVisible: boolean = false; // 入场/退场动画开关（opacity/scale）
@@ -170,19 +161,13 @@ export struct GearPage {
   // 菜单实测高度（onAreaChange 动态采集，用于底部边界检测 + 翻转弹出）
   private gearMenuMeasuredHeight: number = 320;
 
-  // --- 拖拽到行程 ---
-  @State private dragMode: boolean = false;
-  @State private dragX: number = 0;
-  @State private dragY: number = 0;
-  @State private dragOverTripId: string = '';
-  @State private showTripTray: boolean = false;
   @Prop @Watch('onGearDataChange') checklists: TripChecklist[] = [];
   private store: PackStore = new PackStore();
   private gearListScroller: Scroller = new Scroller();
 
   // 统一折叠控制器（overlay 范式：header 定高浮在 List 上、靠内部元素变形）。
   //   只接管「滚动数学」：progress 计算 + 跟手 + 松手就近吸附（补齐原本缺失的 onScrollStop）。
-  //   collapseDistance = EXPANDED-COLLAPSED。锁定态（searchExpanded/multiSelect）的高度/背景/模糊特判均保留在各函数内（是高度自定义视觉，不属于「折叠」语义）。
+  //   collapseDistance = EXPANDED-COLLAPSED。锁定态（searchExpanded）的高度/背景/模糊特判均保留在各函数内（是高度自定义视觉，不属于「折叠」语义）。
   private headController: HeadCollapseController = new HeadCollapseController({
     collapseDistance: GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED,
     enableSnap: true,
@@ -192,8 +177,6 @@ export struct GearPage {
       this.gearHeadProgress = progress;
     }
   });
-  private tripTrayScroller: Scroller = new Scroller();
-  private trayAutoScrollTimer: number = -1;
   private screenWidth: number = 360; // fallback
   private screenHeight: number = 780;
   private isAlive: boolean = true;
@@ -308,7 +291,7 @@ export struct GearPage {
   onTabVisibilityNonceChange(): void {
     this.triggerListStagger();
     // 重型计算（screen size / collapsedGroups / cache）不重跑
-    // 交互状态（searchExpanded / dragMode / overlayPhase / fabX/Y）保持不重置
+    // 交互状态（searchExpanded / overlayPhase / fabX/Y）保持不重置
   }
 
   aboutToAppear(): void {
@@ -342,7 +325,6 @@ export struct GearPage {
 
   aboutToDisappear(): void {
     this.isAlive = false;
-    this.stopTrayAutoScroll();
     this.stopGearAutoScroll();
     if (this.gearHoverExpandTimer >= 0) {
       clearTimeout(this.gearHoverExpandTimer);
@@ -353,12 +335,6 @@ export struct GearPage {
       clearTimeout(this.timerIds[i]);
     }
     this.timerIds = [];
-    // 退出拖拽态：清理可能残留的拖拽动画状态
-    if (this.dragMode) {
-      this.dragMode = false;
-      this.showTripTray = false;
-      this.dragOverTripId = '';
-    }
   }
 
   private async loadCollapsedGroups(): Promise<void> {
@@ -425,144 +401,13 @@ export struct GearPage {
     });
   }
 
-  // --- 拖拽到行程: 碰撞检测区域 ---
-  private tripCardAreas: TripCardArea[] = [];
-
-  private enterDragMode(startX: number, startY: number): void {
-    this.dragMode = true;
-    this.dragX = startX;
-    this.dragY = startY;
-    // 触觉确认
-    hapticTime(30);
-    // 弹出托盘 + 背景模糊
-    this.getUIContext().animateTo({
-      curve: SPRING_GENERAL()
-    }, () => {
-      this.showTripTray = true;
-    });
-  }
-
-  private updateDragPosition(x: number, y: number): void {
-    this.dragX = x;
-    this.dragY = y;
-    // 碰撞检测
-    let hitId = '';
-    for (const area of this.tripCardAreas) {
-      if (x >= area.x && x <= area.x + area.w && y >= area.y && y <= area.y + area.h) {
-        hitId = area.id;
-        break;
-      }
-    }
-    if (hitId !== this.dragOverTripId) {
-      this.dragOverTripId = hitId;
-      if (hitId !== '') {
-        // 振动反馈：进入目标
-        hapticTime(15);
-      }
-    }
-    // 动态边缘滚动：越靠近边缘速度越快，中间区域不滚动
-    const edgeZone = 100; // 边缘触发区宽度 vp
-    const minSpeed = 2;
-    const maxSpeed = 12;
-    if (this.showTripTray) {
-      const leftDist = x; // 距离左边缘
-      const rightDist = this.screenWidth - x; // 距离右边缘
-      if (leftDist < edgeZone) {
-        // 左边缘：越靠左越快
-        const t = 1 - leftDist / edgeZone; // 0~1，越靠边越大
-        const speed = minSpeed + (maxSpeed - minSpeed) * t * t; // 平方加速
-        this.startTrayAutoScroll(-speed);
-      } else if (rightDist < edgeZone) {
-        // 右边缘：越靠右越快
-        const t = 1 - rightDist / edgeZone;
-        const speed = minSpeed + (maxSpeed - minSpeed) * t * t;
-        this.startTrayAutoScroll(speed);
-      } else {
-        this.stopTrayAutoScroll();
-      }
-    } else {
-      this.stopTrayAutoScroll();
-    }
-  }
-
-  private trayScrollSpeed: number = 0;
-
-  private startTrayAutoScroll(speed: number): void {
-    this.trayScrollSpeed = speed;
-    if (this.trayAutoScrollTimer >= 0) {
-      return; // 已在滚动，只更新速度
-    }
-    this.trayAutoScrollTimer = setInterval(() => {
-      if (!this.isAlive) {
-        clearInterval(this.trayAutoScrollTimer);
-        this.trayAutoScrollTimer = -1;
-        return;
-      }
-      const current = this.tripTrayScroller.currentOffset().xOffset;
-      this.tripTrayScroller.scrollTo({
-        xOffset: current + this.trayScrollSpeed,
-        yOffset: 0,
-        animation: { duration: DURATION_TICK, curve: CURVE_LINEAR }
-      });
-    }, 16);
-  }
-
-  private stopTrayAutoScroll(): void {
-    if (this.trayAutoScrollTimer >= 0) {
-      clearInterval(this.trayAutoScrollTimer);
-      this.trayAutoScrollTimer = -1;
-    }
-  }
-
-  private completeDrag(): void {
-    this.stopTrayAutoScroll();
-    const hitTarget = this.dragOverTripId;
-    if (hitTarget !== '' && this.selectedMultiGearIds.length > 0) {
-      // 成功释放：强振动确认
-      hapticTime(40);
-      if (hitTarget === '__new_trip__') {
-        this.onAddGearsToNewTrip(this.selectedMultiGearIds);
-      } else {
-        this.onAddGearsToTrip(this.selectedMultiGearIds, hitTarget);
-      }
-    }
-    // 退出拖拽态
-    this.getUIContext().animateTo({
-      curve: SPRING_GENERAL()
-    }, () => {
-      this.dragMode = false;
-      this.showTripTray = false;
-      this.dragOverTripId = '';
-    });
-  }
-
-  private cancelDrag(): void {
-    this.stopTrayAutoScroll();
-    this.getUIContext().animateTo({
-      curve: SPRING_GENERAL()
-    }, () => {
-      this.dragMode = false;
-      this.showTripTray = false;
-      this.dragOverTripId = '';
-    });
-  }
-
   onSearchChange: (keyword: string) => void = (keyword: string): void => {};
   onOpenFilterPanel: () => void = (): void => {};
   onOpenSort: () => void = (): void => {};
-  onStartMultiSelect: () => void = (): void => {};
   onOpenAddGear: () => void = (): void => {};
   onOpenEditGear: (item: GearItem) => void = (item: GearItem): void => {};
   onConfirmDeleteGear: (item: GearItem) => void = (item: GearItem): void => {};
   onToggleGearExpanded: (id: string) => void = (id: string): void => {};
-  onEnterGearMultiSelect: (id: string) => void = (id: string): void => {};
-  onToggleMultiGearSelection: (id: string) => void = (id: string): void => {};
-  onCancelGearMultiSelect: () => void = (): void => {};
-  onOpenGenerateTripSheet: () => void = (): void => {};
-  onBatchDeleteGears: (ids: string[]) => void = (ids: string[]): void => {};
-  onOpenMoveGroupSheet: () => void = (): void => {};
-  onAddGearsToTrip: (gearIds: string[], tripId: string) => void = (gearIds: string[], tripId: string): void => {};
-  onAddGearsToNewTrip: (gearIds: string[]) => void = (gearIds: string[]): void => {};
   // 问题9：单品拖拽排序/跨分类移动后，回传全量 gears 由父组件 saveGears + 回写 @Prop
   onReorderGears: (nextGears: GearItem[]) => void = (nextGears: GearItem[]): void => {};
 
@@ -740,9 +585,6 @@ export struct GearPage {
     return (Math.round(weightGram / 100) / 10).toString() + 'kg';
   }
 
-  private hasMultiGearSelection(id: string): boolean {
-    return this.selectedMultiGearIds.indexOf(id) >= 0;
-  }
 
   private gearGroupCount(group: string): number {
     return this.filteredGearsByGroup(group).length;
@@ -912,7 +754,7 @@ export struct GearPage {
 
   // 顶部 spacer 高度：给 Header 腾出空间（含状态栏避让）
   private topSpacerHeight(): number {
-    if (this.multiSelectMode || this.searchExpanded) {
+    if (this.searchExpanded) {
       return this.statusBarHeight + GEAR_HEADER_COLLAPSED;
     }
     return this.statusBarHeight + GEAR_HEADER_EXPANDED - 20; // 减去 List padding-top(6) + space(16) 的多余间距，消除灰色间隙
@@ -984,32 +826,11 @@ export struct GearPage {
       .height('100%')
 
       this.CollapsingHeader();
-      if (!this.multiSelectMode) {
-        this.Fab();
-      }
+      this.Fab();
 
       // --- 分组拖拽浮动层 ---
       if (this.groupDragMode) {
         this.FloatingGroupCard()
-      }
-
-      // --- 拖拽覆盖层 ---
-      if (this.dragMode) {
-        // 背景遮罩 + 模糊
-        Column()
-          .width('100%')
-          .height('100%')
-          .backgroundColor(OVERLAY_MASK)
-          .backdropBlur(20)
-          .onClick(() => {
-            this.cancelDrag();
-          })
-
-        // 底部行程托盘
-        this.TripDropTray()
-
-        // 浮动装备堆
-        this.DragGearStack()
       }
 
       // --- 问题9：单品长按 overlay（菜单态 + 拖拽飞行胶囊）---
@@ -1048,59 +869,11 @@ export struct GearPage {
         });
       }
     })
-    .gesture(
-      SwipeGesture({ direction: SwipeDirection.Horizontal, speed: 80 })
-        .onAction((event: GestureEvent) => {
-          if (this.multiSelectMode && event.angle > -45 && event.angle < 45) {
-            // 右滑退出多选
-            this.onCancelGearMultiSelect();
-          }
-        })
-    )
   }
 
   @Builder
   private CollapsingHeader() {
-    if (this.multiSelectMode) {
-      // 多选模式：固定收缩态，显示选中计数 + 操作按钮
-      Row() {
-        Text('已选 ' + this.selectedMultiGearIds.length.toString() + ' 件')
-          .fontSize(17)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-          .fontFeature(FONT_FEATURE_TNUM)
-          .layoutWeight(1)
-        Button('生成行程')
-          .height(32)
-          .fontSize(13)
-          .fontColor(WHITE)
-          .backgroundColor(this.selectedMultiGearIds.length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
-          .borderRadius(16)
-          .padding({ left: 14, right: 14 })
-          .enabled(this.selectedMultiGearIds.length > 0)
-          .onClick(() => {
-            this.onOpenGenerateTripSheet();
-          })
-        Button('取消')
-          .height(32)
-          .fontSize(13)
-          .fontColor(TEXT_SECONDARY)
-          .backgroundColor(TRANSPARENT)
-          .padding({ left: 10, right: 10 })
-          .onClick(() => {
-            this.onCancelGearMultiSelect();
-          })
-      }
-      .width('100%')
-      .height(this.statusBarHeight + GEAR_HEADER_COLLAPSED)
-      .alignItems(VerticalAlign.Center)
-      .padding({ left: PAGE_PADDING, right: PAGE_PADDING, top: this.statusBarHeight + 6 })
-      .backgroundColor(PAGE_BG)
-      .position({ x: 0, y: 0 })
-      .zIndex(10)
-    } else {
-      // 普通模式：可折叠 Header
-      Stack({ alignContent: Alignment.TopStart }) {
+    Stack({ alignContent: Alignment.TopStart }) {
         // 主内容层
         Column() {
           Row() {
@@ -1296,7 +1069,6 @@ export struct GearPage {
       .border({ width: { bottom: 0.5 }, color: { bottom: this.gearHeaderBorderColor() } })
       .position({ x: 0, y: 0 })
       .hitTestBehavior(HitTestMode.Transparent)
-    }
   }
 
   @Builder
@@ -1349,7 +1121,7 @@ export struct GearPage {
         GestureGroup(GestureMode.Sequence,
           LongPressGesture({ fingers: 1, repeat: false, duration: 300 })
             .onAction((event: GestureEvent) => {
-              if (this.gearSortMode !== GEAR_SORT_GROUP || this.multiSelectMode || this.searchExpanded) {
+              if (this.gearSortMode !== GEAR_SORT_GROUP || this.searchExpanded) {
                 return;
               }
               this.enterGroupDrag(group, event.fingerList[0].globalY);
@@ -1469,78 +1241,8 @@ export struct GearPage {
 
   @Builder
   private GearRow(item: GearItem) {
-    if (this.multiSelectMode) {
-      // 多选模式：紧凑行 + Checkbox
-      Column() {
-        Row({ space: 10 }) {
-          Checkbox()
-            .select(this.hasMultiGearSelection(item.id))
-            .width(18)
-            .height(18)
-            .hitTestBehavior(HitTestMode.None)
-            .transition(TransitionEffect.OPACITY.combine(
-              TransitionEffect.translate({ x: -12 })
-            ).animation({ curve: SPRING_GENERAL() }))
-          this.GearNameText(item.name)
-          if (item.weight !== undefined && item.weight > 0) {
-            Text(item.weight.toString() + 'g')
-              .fontSize(12)
-              .fontColor(TEXT_TERTIARY)
-              .fontFeature(FONT_FEATURE_TNUM)
-          }
-        }
-        .width('100%')
-        .height(44)
-        .alignItems(VerticalAlign.Center)
-      }
-      .width('100%')
-      .padding({ left: 14, right: 14, top: 4, bottom: 4 })
-      .backgroundColor(this.hasMultiGearSelection(item.id) ? LIGHT_PRIMARY_COLOR : CARD_BG)
-      .scale({
-        x: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
-        y: this.pressedGearId === item.id ? PRESS_SCALE_DOWN : PRESS_SCALE_REST
-      })
-      .opacity(this.dragMode && this.hasMultiGearSelection(item.id) ? 0.4 : 1)
-      .animation({ curve: SPRING_PRESS() })
-      .onClick(() => {
-        this.onToggleMultiGearSelection(item.id);
-      })
-      .onTouch((event: TouchEvent) => {
-        if (event.type === TouchType.Down) {
-          this.pressedGearId = item.id;
-        } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-          this.pressedGearId = '';
-        }
-      })
-      .gesture(
-        GestureGroup(GestureMode.Sequence,
-          LongPressGesture({ fingers: 1, repeat: false, duration: 400 })
-            .onAction((event: GestureEvent) => {
-              if (this.hasMultiGearSelection(item.id)) {
-                this.enterDragMode(event.fingerList[0].globalX, event.fingerList[0].globalY);
-              }
-            }),
-          PanGesture({ fingers: 1, distance: 5 })
-            .onActionUpdate((event: GestureEvent) => {
-              if (this.dragMode) {
-                this.updateDragPosition(event.fingerList[0].globalX, event.fingerList[0].globalY);
-              }
-            })
-            .onActionEnd(() => {
-              if (this.dragMode) {
-                this.completeDrag();
-              }
-            })
-            .onActionCancel(() => {
-              if (this.dragMode) {
-                this.cancelDrag();
-              }
-            })
-        )
-      )
-    } else {
-      // 普通模式：左滑删除（仅折叠态可滑动，展开态互斥）
-      Stack({ alignContent: Alignment.End }) {
+    // 普通模式：左滑删除（仅折叠态可滑动，展开态互斥）
+    Stack({ alignContent: Alignment.End }) {
         // 底层：删除按钮（固定高度 52vp = 折叠态内容行高度）
         if (this.swipedGearId === item.id) {
           Column({ space: 2 }) {
@@ -1732,7 +1434,6 @@ export struct GearPage {
         )
       )
     }
-  }
 
   @Builder
   private GearPreviewCard(item: GearItem) {
@@ -1914,216 +1615,6 @@ export struct GearPage {
     })
   }
 
-  // --- 行程托盘 ---
-  @Builder
-  private TripDropTray() {
-    Column() {
-      // 顶部拖拽指示器
-      Row()
-        .width(40)
-        .height(4)
-        .borderRadius(2)
-        .backgroundColor(OVERLAY_DIM)
-        .margin({ top: 10, bottom: 6 })
-
-      // 标题行
-      Row() {
-        Text('拖入行程')
-          .fontSize(15)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(TEXT_MAIN)
-        Text(' · ' + this.checklists.length.toString() + ' 个')
-          .fontSize(13)
-          .fontColor(TEXT_TERTIARY)
-      }
-      .width('100%')
-      .padding({ left: 20, right: 20, top: 4, bottom: 12 })
-
-      // 横向行程卡片列表
-      Scroll(this.tripTrayScroller) {
-        Row({ space: 10 }) {
-          ForEach(this.checklists, (trip: TripChecklist) => {
-            this.TripCard(trip)
-          }, (trip: TripChecklist) => trip.id)
-
-          // 新建行程卡片
-          Column({ space: 4 }) {
-            SymbolGlyph($r('sys.symbol.plus'))
-              .fontSize(22)
-              .fontColor([this.dragOverTripId === '__new_trip__' ? WHITE : PRIMARY_COLOR])
-            Text('新建')
-              .fontSize(11)
-              .fontColor(this.dragOverTripId === '__new_trip__' ? WHITE : TEXT_SECONDARY)
-          }
-          .width(88)
-          .height(68)
-          .justifyContent(FlexAlign.Center)
-          .alignItems(HorizontalAlign.Center)
-          .borderRadius(12)
-          .backgroundColor(this.dragOverTripId === '__new_trip__' ? PRIMARY_COLOR : TRANSPARENT)
-          .border({
-            width: 1.5,
-            color: this.dragOverTripId === '__new_trip__' ? PRIMARY_COLOR : TEXT_TERTIARY,
-            style: this.dragOverTripId === '__new_trip__' ? BorderStyle.Solid : BorderStyle.Dashed
-          })
-          .scale({
-            x: this.tripCardScale('__new_trip__'),
-            y: this.tripCardScale('__new_trip__')
-          })
-          .translate({ y: this.tripCardLift('__new_trip__') })
-          .animation({ curve: SPRING_TRAY_CARD() })
-          .onAreaChange((_old: Area, area: Area) => {
-            const pos = area.globalPosition as Position;
-            this.updateTripCardArea('__new_trip__',
-              pos.x as number, pos.y as number,
-              area.width as number, area.height as number);
-          })
-        }
-        .padding({ left: 20, right: 20 })
-      }
-      .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
-      .width('100%')
-      .height(82)
-    }
-    .width('100%')
-    .height(274)
-    .alignItems(HorizontalAlign.Center)
-    .padding({ bottom: 34 })
-    .backgroundColor(GLASS_BG_MEDIUM)
-    .backdropBlur(40)
-    .borderRadius({ topLeft: 24, topRight: 24 })
-    .shadow({ radius: 20, color: SHADOW_DEFAULT, offsetX: 0, offsetY: -6 })
-    .position({ x: 0, y: this.showTripTray ? this.screenHeight - 274 : this.screenHeight })
-    .animation({ curve: SPRING_GENERAL() })
-    .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
-  }
-
-  @Builder
-  private TripCard(trip: TripChecklist) {
-    Column({ space: 3 }) {
-      Text(trip.title)
-        .fontSize(12)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(this.dragOverTripId === trip.id ? WHITE : TEXT_MAIN)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-      Text(trip.items.length.toString() + ' 件装备')
-        .fontSize(10)
-        .fontColor(this.dragOverTripId === trip.id ? WHITE_SECONDARY : TEXT_TERTIARY)
-    }
-    .width(88)
-    .height(68)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .padding({ left: 10, right: 10 })
-    .borderRadius(12)
-    .backgroundColor(this.dragOverTripId === trip.id ? PRIMARY_COLOR : CARD_BG)
-    .shadow({ radius: this.dragOverTripId === trip.id ? 16 : 4, color: SHADOW_SUBTLE, offsetX: 0, offsetY: 2 })
-    .scale({
-      x: this.tripCardScale(trip.id),
-      y: this.tripCardScale(trip.id)
-    })
-    .translate({ y: this.tripCardLift(trip.id) })
-    .animation({ curve: SPRING_TRAY_CARD() })
-    .onAreaChange((_old: Area, area: Area) => {
-      const pos = area.globalPosition as Position;
-      this.updateTripCardArea(trip.id,
-        pos.x as number, pos.y as number,
-        area.width as number, area.height as number);
-    })
-  }
-
-  private updateTripCardArea(id: string, x: number, y: number, w: number, h: number): void {
-    const area: TripCardArea = { id: id, x: x, y: y, w: w, h: h };
-    const idx = this.tripCardAreas.findIndex((a: TripCardArea) => a.id === id);
-    if (idx >= 0) {
-      this.tripCardAreas[idx] = area;
-    } else {
-      this.tripCardAreas.push(area);
-    }
-  }
-
-  // 磁吸效果：计算卡片基于手指距离的 proximity (0~1)
-  private tripCardProximity(id: string): number {
-    if (!this.dragMode) {
-      return 0;
-    }
-    const area = this.tripCardAreas.find((a: TripCardArea) => a.id === id);
-    if (area === undefined) {
-      return 0;
-    }
-    const centerX = area.x + area.w / 2;
-    const centerY = area.y + area.h / 2;
-    const dx = this.dragX - centerX;
-    const dy = this.dragY - centerY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const threshold = 140; // 影响半径 vp
-    return Math.max(0, 1 - distance / threshold);
-  }
-
-  // 基于 proximity 的 scale: 1.0 ~ 1.25 (命中时 1.25，接近时渐变)
-  private tripCardScale(id: string): number {
-    if (this.dragOverTripId === id) {
-      return 1.25;
-    }
-    const p = this.tripCardProximity(id);
-    return 1 + 0.25 * p * p; // 平方曲线：接近时加速放大
-  }
-
-  // 基于 proximity 的 translateY: 0 ~ -22vp (向上涌起)
-  private tripCardLift(id: string): number {
-    if (this.dragOverTripId === id) {
-      return -22;
-    }
-    const p = this.tripCardProximity(id);
-    return -20 * p * p;
-  }
-
-  // --- 浮动装备堆 ---
-  @Builder
-  private DragGearStack() {
-    Row({ space: 6 }) {
-      Text(this.dragGearFirstName())
-        .fontSize(13)
-        .fontWeight(FontWeight.Medium)
-        .fontColor(TEXT_MAIN)
-        .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .layoutWeight(1)
-      if (this.selectedMultiGearIds.length > 1) {
-        Text('×' + this.selectedMultiGearIds.length.toString())
-          .fontSize(12)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(WHITE)
-          .backgroundColor(PRIMARY_COLOR)
-          .borderRadius(10)
-          .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-      }
-    }
-    .width(140)
-    .height(44)
-    .padding({ left: 12, right: 12 })
-    .backgroundColor(GLASS_BG_LIGHT)
-    .backdropBlur(20)
-    .borderRadius(12)
-    .shadow({ radius: 20, color: SHADOW_MEDIUM, offsetX: 0, offsetY: 6 })
-    .rotate({ angle: -2 })
-    .position({ x: this.dragX - 70, y: this.dragY - 56 })
-    .animation({ duration: DURATION_NONE })
-  }
-
-  private dragGearFirstName(): string {
-    if (this.selectedMultiGearIds.length > 0) {
-      const firstId = this.selectedMultiGearIds[0];
-      const gear = this.gears.find((g: GearItem) => g.id === firstId);
-      if (gear !== undefined) {
-        return gear.name;
-      }
-    }
-    return '装备';
-  }
-
   // --- 问题9：单品长按 overlay（菜单态 + 拖拽飞行胶囊）---
   @Builder
   private GearDragOverlay() {
@@ -2161,7 +1652,7 @@ export struct GearPage {
         : HitTestMode.None)
   }
 
-  // menu 态：预览卡 + 编辑/多选/删除 菜单（自绘，替代系统 bindContextMenu）
+  // menu 态：预览卡 + 编辑/删除 菜单（自绘，替代系统 bindContextMenu）
   @Builder
   private GearOverlayMenu(item: GearItem) {
     Column({ space: 10 }) {
@@ -2172,11 +1663,6 @@ export struct GearPage {
         this.GearOverlayMenuItem('编辑', false, () => {
           this.dismissGearOverlay();
           this.onOpenEditGear(item);
-        })
-        Divider().strokeWidth(0.5).color(DIVIDER_COLOR)
-        this.GearOverlayMenuItem('多选', false, () => {
-          this.dismissGearOverlay();
-          this.onEnterGearMultiSelect(item.id);
         })
         Divider().strokeWidth(0.5).color(DIVIDER_COLOR)
         this.GearOverlayMenuItem('删除', true, () => {
@@ -2413,9 +1899,9 @@ export struct GearPage {
   // ============ 问题9：单品长按菜单 → 拖动排序（自绘 overlay 状态机）============
 
   // 长按触发：进入 menu 态，记录手指全局坐标锚点，弹出自绘菜单。
-  //   仅 GROUP 排序态生效（其它排序模式 order 不参与，拖动无意义）；多选/搜索态屏蔽。
+  //   仅 GROUP 排序态生效（其它排序模式 order 不参与，拖动无意义）；搜索态屏蔽。
   private enterGearOverlay(item: GearItem, globalX: number, globalY: number): void {
-    if (this.gearSortMode !== GEAR_SORT_GROUP || this.multiSelectMode || this.searchExpanded) {
+    if (this.gearSortMode !== GEAR_SORT_GROUP || this.searchExpanded) {
       return;
     }
     // 长按前若有左滑打开的行，先收回，避免视觉残留

@@ -30,9 +30,7 @@ import {
   SHEET_EDIT_TRIP,
   SHEET_GEAR,
   SHEET_GEAR_SORT,
-  SHEET_GENERATE_TRIP,
   SHEET_IMPORT,
-  SHEET_MOVE_GROUP,
   SHEET_NONE,
   SHEET_TEMP_ITEM,
   SHEET_TRIP,
@@ -153,9 +151,6 @@ struct Index {
   @State private gearSearchKeyword: string = '';
   @State private gearSortMode: string = GEAR_SORT_GROUP;
   @State private expandedGearId: string = '';
-  @State private multiSelectMode: boolean = false;
-  @State private selectedMultiGearIds: string[] = [];
-  @State private generateTripTitle: string = '';
   @State private selectedChecklistId: string = '';
   // 问题4a：聚焦态 @State 源，向 TripDetailPage → UnifiedChecklistView @Link 透传。
   //   null = 网格态，非 null = 当前聚焦的 Zone。onBackPressed 据此分层拦截。
@@ -684,62 +679,6 @@ struct Index {
     });
   }
 
-  private batchDeleteGears(ids: string[]): void {
-    if (ids.length === 0) {
-      return;
-    }
-    AlertDialog.show({
-      message: '确定删除选中的 ' + ids.length.toString() + ' 件装备？',
-      primaryButton: {
-        value: '取消',
-        action: () => {
-        }
-      },
-      secondaryButton: {
-        value: '确定删除',
-        fontColor: DANGER_COLOR,
-        action: async () => {
-          try {
-            // O(1) 成员判断：在 filter 外构建一次 Set，避免每个 item 做 O(n) 的 indexOf
-            const idSet = new Set<string>(ids);
-            const nextGears = this.gears.filter((item: GearItem) => !idSet.has(item.id));
-            await this.store.saveGears(nextGears);
-            this.gears = nextGears;
-            this.checklistRenderNonce++;
-
-            this.cancelGearMultiSelect();
-          } catch (error) {
-            hilog.error(0x0001, 'PackCheck', 'batchDeleteGears failed: %{public}s', JSON.stringify(error));
-          }
-        }
-      }
-    });
-  }
-
-  private async batchMoveGroup(ids: string[], targetGroup: string): Promise<void> {
-    try {
-      if (ids.length === 0) {
-        return;
-      }
-      // O(1) 成员判断：在循环外构建一次 Set，避免对每个 gear 做 O(n) 的 indexOf
-      const idSet = new Set<string>(ids);
-      const nextGears: GearItem[] = [];
-      for (let i = 0; i < this.gears.length; i++) {
-        const gear = this.gears[i];
-        if (idSet.has(gear.id)) {
-          nextGears.push(updateGear(gear, { category: targetGroup }));
-        } else {
-          nextGears.push(gear);
-        }
-      }
-      await this.store.saveGears(nextGears);
-      this.gears = nextGears;
-      this.checklistRenderNonce++;
-      this.cancelGearMultiSelect();
-    } catch (error) {
-      hilog.error(0x0001, 'PackCheck', 'batchMoveGroup failed: %{public}s', JSON.stringify(error));
-    }
-  }
 
   // 问题9-B：单品拖拽落位——optimistic update。
   //   第一性原理：松手 = 视觉即时落位（同步当帧），持久化 = 后台事务。
@@ -765,53 +704,6 @@ struct Index {
     });
   }
 
-  private enterGearMultiSelect(id: string): void {
-    this.multiSelectMode = true;
-    this.expandedGearId = '';
-    if (this.selectedMultiGearIds.indexOf(id) < 0) {
-      this.selectedMultiGearIds = [id];
-    }
-  }
-
-  private cancelGearMultiSelect(): void {
-    this.multiSelectMode = false;
-    this.selectedMultiGearIds = [];
-    this.generateTripTitle = '';
-  }
-
-  private hasMultiGearSelection(id: string): boolean {
-    return this.selectedMultiGearIds.indexOf(id) >= 0;
-  }
-
-  private toggleMultiGearSelection(id: string): void {
-    const nextIds: string[] = [];
-    let exists = false;
-    for (let index = 0; index < this.selectedMultiGearIds.length; index++) {
-      if (this.selectedMultiGearIds[index] === id) {
-        exists = true;
-      } else {
-        nextIds.push(this.selectedMultiGearIds[index]);
-      }
-    }
-    if (!exists) {
-      nextIds.push(id);
-    }
-    this.selectedMultiGearIds = nextIds;
-    // 取消所有选中后自动退出多选模式
-    if (nextIds.length === 0) {
-      this.cancelGearMultiSelect();
-    }
-  }
-
-  private openGenerateTripSheet(): void {
-    if (this.selectedMultiGearIds.length === 0) {
-      this.showToastMessage('请选择装备');
-      return;
-    }
-    this.generateTripTitle = '';
-    this.sheetMode = SHEET_GENERATE_TRIP;
-    this.openSheetAnimated();
-  }
 
 
   private hasGearMarker(item: ChecklistItem): boolean {
@@ -1256,10 +1148,6 @@ struct Index {
     this.openSheetAnimated();
   }
 
-  private openMoveGroupSheet(): void {
-    this.sheetMode = SHEET_MOVE_GROUP;
-    this.openSheetAnimated();
-  }
 
   private openGearPickerSheet(zone?: string): void {
     // zone 非空时记录预选分区，picker 据此排序高亮 + 预选临时新建分区（review I4）
@@ -1589,42 +1477,8 @@ struct Index {
     this.closeSheet();
   }
 
-  private async generateChecklistFromSelectedGears(): Promise<void> {
-    const title = this.generateTripTitle.trim();
-    if (title.length === 0) {
-      this.errorText = '行程名称不能为空';
-      return;
-    }
-    const uniqueIds = uniqueGearIds(this.selectedMultiGearIds);
-    const items = buildItemsFromGears(this.gears, uniqueIds);
-    const created: TripChecklist = {
-      id: makeId('trip'),
-      title: title,
-      items: items,
-      createdAt: Date.now()
-    };
-    const nextChecklists = prependChecklist(this.checklists, created);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
-    this.selectedChecklistId = created.id;
-    this.cancelGearMultiSelect();
-    this.closeSheet();
-    this.startShakeListening();
-    this.pushTripDetail();
-  }
 
 
-  private async addGearsToExistingTrip(gearIds: string[], tripId: string): Promise<void> {
-    const uniqueIds = uniqueGearIds(gearIds);
-    const items = buildItemsFromGears(this.gears, uniqueIds);
-    const updatedChecklists = addItemsToChecklist(this.checklists, tripId, items);
-    this.applyChecklistState(updatedChecklists);
-    await this.store.saveChecklists(updatedChecklists);
-    this.cancelGearMultiSelect();
-    const targetTrip = updatedChecklists.find((c: TripChecklist) => c.id === tripId);
-    const tripName = targetTrip !== undefined ? targetTrip.title : '行程';
-    this.showToastMessage('已添加 ' + items.length.toString() + ' 件到「' + tripName + '」');
-  }
 
   private currentReviewItem(): ChecklistItem | undefined {
     const checklist = this.currentChecklist();
@@ -2261,8 +2115,6 @@ await this.updateItinerary(next);
                 expandedGearId: this.expandedGearId,
                 swipeResetNonce: this.gearSwipeResetNonce,
                 tabVisibilityNonce: this.gearVisibilityNonce,
-                multiSelectMode: this.multiSelectMode,
-                selectedMultiGearIds: this.selectedMultiGearIds,
                 checklists: this.checklists,
                 onSearchChange: (keyword: string) => {
                   this.gearSearchKeyword = keyword;
@@ -2273,10 +2125,6 @@ await this.updateItinerary(next);
                 onOpenSort: () => {
                   this.sheetMode = SHEET_GEAR_SORT;
                   this.openSheetAnimated();
-                },
-                onStartMultiSelect: () => {
-                  this.multiSelectMode = true;
-                  this.selectedMultiGearIds = [];
                 },
                 onOpenAddGear: () => {
                   this.openAddGear();
@@ -2289,30 +2137,6 @@ await this.updateItinerary(next);
                 },
                 onToggleGearExpanded: (id: string) => {
                   this.toggleGearExpanded(id);
-                },
-                onEnterGearMultiSelect: (id: string) => {
-                  this.enterGearMultiSelect(id);
-                },
-                onToggleMultiGearSelection: (id: string) => {
-                  this.toggleMultiGearSelection(id);
-                },
-                onCancelGearMultiSelect: () => {
-                  this.cancelGearMultiSelect();
-                },
-                onOpenGenerateTripSheet: () => {
-                  this.openGenerateTripSheet();
-                },
-                onBatchDeleteGears: (ids: string[]) => {
-                  this.batchDeleteGears(ids);
-                },
-                onOpenMoveGroupSheet: () => {
-                  this.openMoveGroupSheet();
-                },
-                onAddGearsToTrip: (gearIds: string[], tripId: string) => {
-                  this.addGearsToExistingTrip(gearIds, tripId);
-                },
-                onAddGearsToNewTrip: (gearIds: string[]) => {
-                  this.openGenerateTripSheet();
                 },
                 onReorderGears: (nextGears: GearItem[]) => {
                   this.reorderGears(nextGears);
@@ -2333,9 +2157,9 @@ await this.updateItinerary(next);
           .animationDuration(200)
           .barOverlap(true)
           .vertical(false)
-          .scrollable(!this.multiSelectMode)
+          .scrollable(true)
           .barPosition(BarPosition.End)
-          .barHeight(this.multiSelectMode ? 0 : 56)
+          .barHeight(56)
           .barFloatingStyle({
             barBottomMargin: 28,
             // gradientMask 已移除：从下往上的灰色渐变遮罩观感糟糕，删除后底部更干净。
@@ -2473,8 +2297,6 @@ await this.updateItinerary(next);
           gears: this.gears,
           importGearIds: this.importGearIds,
           importGearCategory: this.importGearCategory,
-          generateTripTitle: this.generateTripTitle,
-          selectedMultiGearCount: this.selectedMultiGearIds.length,
           onClose: () => { this.closeSheet(); },
           onSelectSort: (mode: string) => {
             this.gearSortMode = mode;
@@ -2503,12 +2325,6 @@ await this.updateItinerary(next);
           onToggleImportSelection: (id: string, checked: boolean) => { this.toggleImportSelection(id, checked); },
           onImportSelectedGear: () => { this.importSelectedGear(); },
           onAddGearFromImport: () => { this.openAddGearFromImport(); },
-          onGenerateTripTitleChange: (value: string) => { this.generateTripTitle = value; },
-          onGenerateTrip: () => { this.generateChecklistFromSelectedGears(); },
-          onSelectMoveGroup: (group: string) => {
-            this.batchMoveGroup(this.selectedMultiGearIds, group);
-            this.closeSheet();
-          },
           onCategoryRename: (oldName: string, newName: string) => { this.handleCategoryRename(oldName, newName); },
           onCategoryDelete: (category: string) => { this.handleCategoryDelete(category); },
           onCategoryReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },

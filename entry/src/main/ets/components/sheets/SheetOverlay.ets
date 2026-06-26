@@ -10,9 +10,7 @@ import {
   SHEET_EDIT_TRIP,
   SHEET_GEAR,
   SHEET_GEAR_SORT,
-  SHEET_GENERATE_TRIP,
   SHEET_IMPORT,
-  SHEET_MOVE_GROUP,
   SHEET_TEMP_ITEM,
   SHEET_TRIP,
   SHEET_GEAR_PICKER,
@@ -28,13 +26,11 @@ import {
 } from '../../constants/Colors';
 import { SPRING_GENERAL } from '../../constants/AnimationTokens';
 import { GearSortSheet } from './GearSortSheet';
-import { GenerateTripSheet } from './GenerateTripSheet';
 import { GearFormSheet } from './GearFormSheet';
 import { TripFormSheet } from './TripFormSheet';
 import { TempItemSheet } from './TempItemSheet';
 import { ImportSheet } from './ImportSheet';
 import { ProfileEditSheet } from './ProfileEditSheet';
-import { MoveGroupSheet } from './MoveGroupSheet';
 import { GearPickerSheet } from './GearPickerSheet';
 import { GearItemActionSheet } from './GearItemActionSheet';
 import { DayFormSheet } from './DayFormSheet';
@@ -71,10 +67,6 @@ export struct SheetOverlay {
   @Prop gears: GearItem[] = [];
   @Prop importGearIds: string[] = [];
   @Prop importGearCategory: string = CATEGORY_ALL;
-  // Generate trip
-  @Prop generateTripTitle: string = '';
-  @Prop selectedMultiGearCount: number = 0;
-
   // Callbacks
   onClose: () => void = (): void => {};
   onSelectSort: (mode: string) => void = (mode: string): void => {};
@@ -105,11 +97,6 @@ export struct SheetOverlay {
   onToggleImportSelection: (id: string, checked: boolean) => void = (id: string, checked: boolean): void => {};
   onImportSelectedGear: () => void = (): void => {};
   onAddGearFromImport: () => void = (): void => {};
-  // Generate trip callbacks
-  onGenerateTripTitleChange: (value: string) => void = (value: string): void => {};
-  onGenerateTrip: () => void = (): void => {};
-  // Move group callback
-  onSelectMoveGroup: (group: string) => void = (group: string): void => {};
   // Swipe-to-dismiss gesture
   @State private sheetDragOffset: number = 0;
   @State private cardHeight: number = 600; // 默认值，onAreaChange 实时更新
@@ -306,21 +293,6 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
             gearSortMode: this.gearSortMode,
             onSelectSort: this.onSelectSort
           })
-        } else if (this.sheetMode === SHEET_GENERATE_TRIP) {
-          GenerateTripSheet({
-            selectedCount: this.selectedMultiGearCount,
-            generateTripTitle: this.generateTripTitle,
-            onTitleChange: this.onGenerateTripTitleChange,
-            onConfirm: this.onGenerateTrip
-          })
-        } else if (this.sheetMode === SHEET_MOVE_GROUP) {
-          MoveGroupSheet({
-            categories: this.categories,
-            selectedCount: this.selectedMultiGearCount,
-            onSelectGroup: (group: string) => {
-              this.onSelectMoveGroup(group);
-            }
-          })
         } else if (this.sheetMode === SHEET_GEAR_PICKER) {
           // 问题3 根因修复：GearPickerSheet 根节点 height('100%') 在外层 Column({space:14}) 里
           // 无 layoutWeight 时高度计算异常，把搜索栏顶到上方、Scroll 撑到卡片底，中间留出大段空白。
@@ -454,12 +426,6 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
     }
     if (this.sheetMode === SHEET_GEAR_SORT) {
       return '排序方式';
-    }
-    if (this.sheetMode === SHEET_GENERATE_TRIP) {
-      return '生成行程';
-    }
-    if (this.sheetMode === SHEET_MOVE_GROUP) {
-      return '移动到分组';
     }
     if (this.sheetMode === SHEET_GEAR_PICKER) {
       return '选择装备';
