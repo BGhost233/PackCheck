@@ -523,58 +523,64 @@ struct Index {
   }
 
   private async executeCategoryDelete(category: string): Promise<void> {
+    // 事务化：先构建完整新状态，全部持久化成功后才一次性赋值 @State
+    const nextCategories = deleteCategory(this.categories, category);
+    const nextGears = migrateGearsOnDelete(this.gears, category);
+    const nextChecklists = migrateChecklistsOnDelete(this.checklists, category);
     try {
-      const nextCategories = deleteCategory(this.categories, category);
-      const nextGears = migrateGearsOnDelete(this.gears, category);
-      const nextChecklists = migrateChecklistsOnDelete(this.checklists, category);
       await this.store.saveCategories(nextCategories);
       await this.store.saveGears(nextGears);
       await this.store.saveChecklists(nextChecklists);
-      this.categories = nextCategories;
-      this.gears = nextGears;
-      this.checklists = nextChecklists;
-      this.checklistRenderNonce++;
     } catch (error) {
-      hilog.error(0x0001, 'PackCheck', 'executeCategoryDelete failed: %{public}s', JSON.stringify(error));
+      hilog.error(0x0001, 'PackCheck', 'executeCategoryDelete save failed, state NOT updated: %{public}s', JSON.stringify(error));
+      return; // save 失败则不更新 @State，保持一致性
     }
+    // 持久化成功，一次性更新 @State
+    this.categories = nextCategories;
+    this.gears = nextGears;
+    this.checklists = nextChecklists;
+    this.checklistRenderNonce++;
   }
 
   private async executeCategoryRename(oldName: string, newName: string): Promise<void> {
+    // rename 场景：验证时排除 oldName，避免"同名已存在"误判
+    const categoriesExcludingOld: string[] = [];
+    for (let i = 0; i < this.categories.length; i++) {
+      if (this.categories[i] !== oldName) {
+        categoriesExcludingOld.push(this.categories[i]);
+      }
+    }
+    const error = validateCategoryName(newName, categoriesExcludingOld);
+    if (error.length > 0) {
+      return;
+    }
+    const renameResult = renameCategory(this.categories, oldName, newName);
+    if (!renameResult.renamed) {
+      return;
+    }
+    // 事务化：先构建完整新状态
+    const nextCategories = renameResult.categories;
+    const nextGears = renameGearsCategory(this.gears, oldName, newName);
+    const nextChecklists = renameChecklistsCategory(this.checklists, oldName, newName);
     try {
-      // rename 场景：验证时排除 oldName，避免"同名已存在"误判
-      const categoriesExcludingOld: string[] = [];
-      for (let i = 0; i < this.categories.length; i++) {
-        if (this.categories[i] !== oldName) {
-          categoriesExcludingOld.push(this.categories[i]);
-        }
-      }
-      const error = validateCategoryName(newName, categoriesExcludingOld);
-      if (error.length > 0) {
-        return;
-      }
-      const renameResult = renameCategory(this.categories, oldName, newName);
-      if (!renameResult.renamed) {
-        return;
-      }
-      const nextCategories = renameResult.categories;
-      const nextGears = renameGearsCategory(this.gears, oldName, newName);
-      const nextChecklists = renameChecklistsCategory(this.checklists, oldName, newName);
       await this.store.saveCategories(nextCategories);
       await this.store.saveGears(nextGears);
       await this.store.saveChecklists(nextChecklists);
-      this.categories = nextCategories;
-      this.gears = nextGears;
-      this.checklists = nextChecklists;
-      this.checklistRenderNonce++;
-      // 如果当前选中的分组被重命名了，同步更新
-      if (this.gearCategory === oldName) {
-        this.gearCategory = newName;
-      }
-      if (this.tempItemGroup === oldName) {
-        this.tempItemGroup = newName;
-      }
-    } catch (error) {
-      hilog.error(0x0001, 'PackCheck', 'executeCategoryRename failed: %{public}s', JSON.stringify(error));
+    } catch (saveError) {
+      hilog.error(0x0001, 'PackCheck', 'executeCategoryRename save failed, state NOT updated: %{public}s', JSON.stringify(saveError));
+      return;
+    }
+    // 持久化成功，一次性更新 @State
+    this.categories = nextCategories;
+    this.gears = nextGears;
+    this.checklists = nextChecklists;
+    this.checklistRenderNonce++;
+    // 如果当前选中的分组被重命名了，同步更新
+    if (this.gearCategory === oldName) {
+      this.gearCategory = newName;
+    }
+    if (this.tempItemGroup === oldName) {
+      this.tempItemGroup = newName;
     }
   }
 
@@ -909,12 +915,15 @@ struct Index {
   }
 
   private async deleteChecklist(checklistId: string): Promise<void> {
+    // 原子化：先计算好所有新状态，再一次性赋值
     const nextChecklists = this.checklists.filter((item: TripChecklist) => item.id !== checklistId);
+    const nextSelectedId = this.selectedChecklistId === checklistId
+      ? (nextChecklists.length === 0 ? '' : nextChecklists[0].id)
+      : this.selectedChecklistId;
+    // 一次性更新 @State，消灭中间帧 selectedIndex 越界
+    this.selectedChecklistId = nextSelectedId;
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
-    if (this.selectedChecklistId === checklistId) {
-      this.selectedChecklistId = nextChecklists.length === 0 ? '' : nextChecklists[0].id;
-    }
   }
 
   private confirmDeleteChecklist(item: TripChecklist): void {
