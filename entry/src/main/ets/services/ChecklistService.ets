@@ -21,7 +21,8 @@ export function cloneChecklistWithItems(source: TripChecklist, items: ChecklistI
     distanceKm: source.distanceKm,
     maxAltitude: source.maxAltitude,
     ascentM: source.ascentM,
-    durationHours: source.durationHours
+    durationHours: source.durationHours,
+    itinerary: source.itinerary
   };
 }
 
@@ -271,7 +272,8 @@ export function addItemsToChecklist(checklists: TripChecklist[], checklistId: st
         distanceKm: checklist.distanceKm,
         maxAltitude: checklist.maxAltitude,
         ascentM: checklist.ascentM,
-        durationHours: checklist.durationHours
+        durationHours: checklist.durationHours,
+        itinerary: checklist.itinerary
       };
       nextChecklists.push(updated);
     } else {
@@ -402,7 +404,8 @@ export function updateChecklistMeta(checklists: TripChecklist[], checklistId: st
         distanceKm: profile !== undefined ? profile.distanceKm : source.distanceKm,
         maxAltitude: profile !== undefined ? profile.maxAltitude : source.maxAltitude,
         ascentM: profile !== undefined ? profile.ascentM : source.ascentM,
-        durationHours: profile !== undefined ? profile.durationHours : source.durationHours
+        durationHours: profile !== undefined ? profile.durationHours : source.durationHours,
+        itinerary: source.itinerary
       };
       result.push(updated);
     } else {

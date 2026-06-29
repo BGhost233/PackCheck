@@ -1285,7 +1285,8 @@ struct Index {
         distanceKm: cl.distanceKm,
         maxAltitude: cl.maxAltitude,
         ascentM: cl.ascentM,
-        durationHours: cl.durationHours
+        durationHours: cl.durationHours,
+        itinerary: cl.itinerary
       };
       return updated;
     });
@@ -1344,7 +1345,8 @@ struct Index {
         distanceKm: cl.distanceKm,
         maxAltitude: cl.maxAltitude,
         ascentM: cl.ascentM,
-        durationHours: cl.durationHours
+        durationHours: cl.durationHours,
+        itinerary: cl.itinerary
       };
       return updated;
     });
@@ -1423,7 +1425,8 @@ struct Index {
         distanceKm: cl.distanceKm,
         maxAltitude: cl.maxAltitude,
         ascentM: cl.ascentM,
-        durationHours: cl.durationHours
+        durationHours: cl.durationHours,
+        itinerary: cl.itinerary
       };
       return updated;
     });
