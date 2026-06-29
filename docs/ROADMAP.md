@@ -20,8 +20,8 @@
 | v0.7.7-cleanup | ✅ | 全面代码审查清理（净删 786 行）|
 | v0.7.8 | ✅ | 行程编辑模块（Tabs 滑动 + CRUD + DayCard + 动效审查）|
 | v0.7.9 | ✅ | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行）|
-| v0.7.10 | ✅ | 完整性修复：23 项审计问题修复（clone helper / singleton / 事务化 / token 化）|
-| v0.8.0 | 🟡 中期 | GearPage 组件瘦身 |
+| v0.7.10 | ✅ | 完整性修复 + 上帝组件瘦身 Wave 1-2（纯计算下沉 services + GearPage/HomePage/Index 瘦身）|
+| v0.8.0 | 🟡 中期 | 上帝组件瘦身 Phase 5-9（@Builder 子组件化 → Sheet 解耦 → 状态分组 → 交互控制器 → 最终收口） |
 | v1.0.0 | 🟣 远期 | 智能 PackCheck + 成就卡 + 深色模式 |
 
 ---
@@ -33,13 +33,32 @@
 
 ---
 
-## 🟡 中期（v0.8.0）—— 组件架构瘦身
+## 🟡 中期（v0.8.0）—— 上帝组件瘦身（Phase 5-9）
 
-GearPage 当前 ~2290 行 / 35 @State / 7 个子系统（多选已删除），需提取独立组件降低耦合。
+> 已完成 Wave 1-2（纯计算下沉 + 纯展示 @Builder 提取），效果：HomePage 1099→812, GearPage 2388→2063, Index 2388→2260。
+> 完整方案见 `.planning/god-component-split/next_plan.md`。
 
-- [ ] 提取 FabController（减 @State -7）
-- [ ] 提取 GroupDragController（减 @State -6）
-- [ ] 目标：GearPage @State ~15，行数 ~1500
+**Phase 5 — @Builder 子组件化**（低风险，带自己状态的 @Builder 提为独立 @Component）
+- [ ] GearPage: 拖拽浮层 FloatingGroupCard / GearGroupSection / GearItemRow
+- [ ] Index.ets: ChecklistCard / EmptyHomeView / HeroContent
+- [ ] 预期：GearPage -200~300 行，Index -150~200 行
+
+**Phase 6 — SheetContainer 解耦**（Index 瘦身主力）
+- [ ] 抽取 SheetContainerManager 组件，收纳 12+ Sheet 分支逻辑
+- [ ] 预期：Index -300~400 行
+
+**Phase 7 — 状态分组**（中风险，减 @State）
+- [ ] GearPage: DragState / FilterState 分组管理器
+- [ ] Index: SheetState / NavigationState 分组管理器
+- [ ] 预期：@State 净减 30-40%
+
+**Phase 8 — 交互控制器**（高风险，触及动画状态机）
+- [ ] GearPage: FabController / GroupDragController 提取
+- [ ] 必须对照 §8.2 「不该拆」清单
+
+**Phase 9 — 最终收口**
+- [ ] 目标：Index < 2000，GearPage < 1500，HomePage < 700
+- [ ] 全量审计 + 文档同步
 
 ---
 

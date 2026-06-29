@@ -43,10 +43,10 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2530 行）
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2260 行）
 ├── components/              — UI 组件
-│   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
-│   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
+│   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表，~810 行）
+│   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部，~2060 行）
 │   ├── ProfilePage.ets      — 「我」Tab 人生足迹年报叙事
 │   ├── ReviewPage.ets       — 核查复盘
 │   ├── TripCeremonyCard.ets — 新建行程仪式卡片（翻转 + 滑动出发）
@@ -56,8 +56,8 @@ entry/src/main/ets/
 │   ├── GearFilterPanel.ets  — 装备筛选面板
 │   ├── home/                — 首页子组件
 │   │   └── HomeQuickEntry.ets — 首页快捷入口（新建行程/快速核查）
-│   └── sheets/              — Sheet 面板组件（统一通过 SheetOverlay 路由）
-│       ├── SheetOverlay.ets — 遮罩容器 + Sheet 路由 + 下滑关闭手势
+│   └── sheets/              — Sheet 面板组件（统一通过 SheetContainer 纯壳容器包装）
+│       ├── SheetContainer.ets — 遮罩容器 + 标题栏 + 下滑关闭手势（纯 UI 壳，零业务逻辑）
 │       ├── GearSortSheet.ets
 │       ├── GearFormSheet.ets
 │       ├── TripFormSheet.ets
@@ -87,7 +87,7 @@ entry/src/main/ets/
 ├── services/                — 业务逻辑层
 │   ├── PackStore.ets        — Preferences 持久化封装（singleton + 防抖 flush + 运行时验证 + 容量告警）
 │   ├── GearService.ets      — 装备业务逻辑（纯函数导出）
-│   ├── ChecklistService.ets — 清单业务逻辑（纯函数导出）
+│   ├── ChecklistService.ets — 清单业务逻辑（纯函数导出：CRUD + clone + 倒计时/分组/重量/日期格式化）
 │   ├── CategoryService.ets  — 分类管理（增删改查 + 重命名）
 │   ├── LoadoutService.ets   — 配装业务逻辑（Zone 分组/进度计算/色彩映射/命中检测）
 │   ├── FootprintService.ets — 足迹统计（聚合/出行频次/最长陪伴伙伴）
@@ -165,7 +165,7 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.7.8 | ✅ 已完成 | 行程编辑模块（Tabs 滑动切换 + ItineraryService CRUD + DayCard 手风琴 + 表单面板 + 动效审查优化） |
 | v0.7.9 | ✅ 已完成 | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行） |
 | v0.7.10 | ✅ 当前 | 完整性修复：23 项审计问题修复（clone helper + singleton PackStore + 事务化更新 + 全量 token 化） |
-| v0.8.0 | 📋 中期 | GearPage 组件瘦身（FabController/GroupDragController 提取） |
+| v0.8.0 | 📋 中期 | 上帝组件瘦身五阶段（@Builder 子组件化 → Sheet 解耦 → 状态分组 → 交互控制器 → 最终收口） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 
 ## 开发约定

@@ -17,7 +17,7 @@
 - 顶部折叠统一走 `HeadCollapseController`：跟手 1:1 + 松手就近吸附。三页已对齐（Home/Gear/TripDetail）
 - `geometryTransition` 两种语境：跨页（`trip-*`）无参形式 + 同页放大（`zone_*`）`{ follow: true }`
 - NavDestination `.onBackPressed()` 拦截系统返回，走 `animateTo { pop(false) }` 保 geometryTransition
-- Sheet 面板用 `animateTo` + state 驱动 `translateY`（TransitionEffect 不支持 Spring）
+- Sheet 面板：SheetContainer 纯壳容器 + `@BuilderParam` trailing lambda，Index.ets 直接构建子 Sheet 内容；`animateTo` + state 驱动 `translateY`（TransitionEffect 不支持 Spring）
 - HDS 只做「材质/视效层增强」，不做框架替换。唯一替换：`Navigation` → `HdsNavigation`
 - hdsEffect `pressShadow` 只在「高频按压点进去卡片」上叠加（Hero 卡/装备卡）
 - Tab visibilityNonce 只在一处递增（`onAnimationStart` 或 `triggerBlurPulse`），`onChange` 不递增
@@ -30,13 +30,15 @@
 ## 架构速查
 
 - 单 Page（Index.ets）+ Navigation NavPathStack，NavDestination：ChecklistDetail、ReviewPage
+- Sheet 层级：Index.ets → SheetContainer（纯 UI 壳）→ trailing lambda 条件渲染各子 Sheet（AddGear/EditGear/Import/GearPicker/…）
 - 统一核查清单：UnifiedChecklistView → ZoneShell → ZoneGridCell / FocusedZoneView → ChecklistRow
-- GearService(`GearCalc`) / ChecklistService(`CheckCalc`) / LoadoutService / ItineraryService / FootprintService / CategoryService
+- GearService(`GearCalc`: 筛选/排序/统计/格式化 8 个纯函数) / ChecklistService(`CheckCalc`: CRUD + clone + 倒计时/分组/重量/日期显示 9 个纯函数) / LoadoutService / ItineraryService / FootprintService / CategoryService
 - PackStore schema v2，singleton `getPackStore()` + 防抖 flush + 运行时验证 + 容量告警；`makeId()` = `Date.now()` + 单调计数器
 - @Prop→@State 内化模式：EditItemPanel/EditGearPanel/DayFormSheet/SegmentFormSheet/TripCeremonyCard
 - clone helper 铁律：DayItinerary/RouteSegment/TicketInfo 在 ItineraryService，ChecklistItem/TripChecklist 在 ChecklistService
 - 事务化更新：category 删除/重命名先构建完整新状态，批量持久化成功后才赋 @State
 - EntryBackupAbility：onBackupEx/onRestoreEx 结构化返回，Preferences 框架自动备份
+- 上帝组件瘦身 Wave 1-2 已完成（纯计算下沉 + @Builder 提取），后续 Phase 5-9 见 `.planning/god-component-split/next_plan.md`
 - `CATEGORY_ALL`（哨兵 '全部'）/ `CATEGORY_FALLBACK`（受保护 '其他'）在 PackModels.ets
 
 ## ArkUI 避坑清单（54 条）

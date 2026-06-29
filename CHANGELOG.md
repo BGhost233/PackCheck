@@ -2,9 +2,15 @@
 
 > 详细 commit 历史见 `git log`。此处只保留近期版本摘要和早期版本一行概述。
 
+## v0.7.11 (2026-06-29)
+
+SheetContainer 重构：消灭 SheetOverlay "超级传话筒" 反模式。SheetOverlay（382 行，67 个绑定点）→ SheetContainer 纯壳容器（137 行，11 个接口点）。Index.ets trailing lambda 直接构建各子 Sheet，数据流从三跳变为一跳。新增 Sheet 改动点从 3 处降到 1 处。全局净减 ~245 行代码。
+
 ## v0.7.10 (2026-06-29)
 
 完整性修复：对抗性审计发现 23 个问题，分 6 阶段系统修复。模型层 clone helper 收口全部手写字面量（DayItinerary/RouteSegment/TicketInfo/ChecklistItem）；PackStore 升级为 singleton + 防抖 flush + 运行时验证 + 容量告警；category 删除/重命名事务化更新；全部 TextInput 加 maxLength + 数值输入范围校验；250+ 处 fontSize 硬编码替换为 Typography token；EntryBackupAbility 升级为 onBackupEx/onRestoreEx 结构化返回。新增 DEVELOPMENT_STANDARDS §4.6 内化模式 / §5.2.1 clone 铁律 / §5.2.2 事务模式 / §7.2 备份恢复。避坑清单 51→54 条。
+
+上帝组件瘦身 Wave 1-2（god-component split）：分 3 轮提取纯计算函数到 services、纯展示 @Builder 提为独立组件。GearService 新增 8 个纯函数（筛选/排序/统计/格式化），ChecklistService 新增 9 个纯函数（倒计时/分组/重量/日期显示）。组件行数变化：HomePage 1099→812（-26%），GearPage 2388→2063（-14%），Index 2388→2260（-5%）。后续瘦身方案 Phase 5-9 见 `.planning/god-component-split/next_plan.md`。
 
 ## v0.7.9 (2026-06-26)
 

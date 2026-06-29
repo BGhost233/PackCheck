@@ -14,7 +14,17 @@ import { EditItemPanel } from '../components/EditItemPanel';
 import { EditGearPanel } from '../components/EditGearPanel';
 import { GearFilterPanel } from '../components/GearFilterPanel';
 import { CategoryInputDialog } from '../components/CategoryInputDialog';
-import { SheetOverlay } from '../components/sheets/SheetOverlay';
+import { SheetContainer } from '../components/sheets/SheetContainer';
+import { GearFormSheet } from '../components/sheets/GearFormSheet';
+import { TripFormSheet } from '../components/sheets/TripFormSheet';
+import { ProfileEditSheet } from '../components/sheets/ProfileEditSheet';
+import { TempItemSheet } from '../components/sheets/TempItemSheet';
+import { ImportSheet } from '../components/sheets/ImportSheet';
+import { GearSortSheet } from '../components/sheets/GearSortSheet';
+import { GearPickerSheet } from '../components/sheets/GearPickerSheet';
+import { GearItemActionSheet } from '../components/sheets/GearItemActionSheet';
+import { DayFormSheet } from '../components/sheets/DayFormSheet';
+import { SegmentFormSheet } from '../components/sheets/SegmentFormSheet';
 import {
   CARD_BG,
   DANGER_COLOR,
@@ -172,6 +182,8 @@ struct Index {
   @State private sheetMode: string = SHEET_NONE;
   @State private sheetTranslateY: number = 800;
   @State private sheetOverlayOpacity: number = 0;
+  private currentSheetTitle: string = '';
+  private currentCloseButtonText: string = '关闭';
   private editingGearId: string = '';
   private gearName: string = '';
   private gearCategory: string = '其他';
@@ -214,13 +226,13 @@ struct Index {
   // ===== 新建行程仪式感 =====
   @State private showTripCeremony: boolean = false;
 
-  // ===== 行程日表单（全部为一次性初始值代理，SheetOverlay 每次打开时重建） =====
+  // ===== 行程日表单（全部为一次性初始值代理，SheetContainer 每次打开时重建） =====
   private editingDayId: string = '';
   private dayFormFrom: string = '';
   private dayFormTo: string = '';
   private dayFormDate: string = '';
   private dayFormNote: string = '';
-  // ===== 路段表单（全部为一次性初始值代理，SheetOverlay 每次打开时重建） =====
+  // ===== 路段表单（全部为一次性初始值代理，SheetContainer 每次打开时重建） =====
   private editingSegmentId: string = '';
   private editingSegDayId: string = '';  // 路段所属天 ID
   private segFormFrom: string = '';
@@ -383,6 +395,8 @@ struct Index {
   private openAddGear(): void {
     this.resetGearForm();
     this.returnToImportAfterGear = false;
+    this.currentSheetTitle = '添加装备';
+    this.currentCloseButtonText = '关闭';
     this.sheetMode = SHEET_GEAR;
     this.openSheetAnimated();
   }
@@ -390,6 +404,8 @@ struct Index {
   private openAddGearFromImport(): void {
     this.resetGearForm();
     this.returnToImportAfterGear = true;
+    this.currentSheetTitle = '添加装备';
+    this.currentCloseButtonText = '关闭';
     this.sheetMode = SHEET_GEAR;
     this.openSheetAnimated();
   }
@@ -712,6 +728,8 @@ struct Index {
   private openTripSheet(): void {
     this.tripTitle = '';
     this.tripDate = '';
+    this.currentSheetTitle = '新建行程';
+    this.currentCloseButtonText = '关闭';
     this.sheetMode = SHEET_TRIP;
     this.openSheetAnimated();
   }
@@ -926,6 +944,8 @@ struct Index {
   private openTempItemSheet(): void {
     this.tempItemName = '';
     this.tempItemGroup = '其他';
+    this.currentSheetTitle = '添加物品';
+    this.currentCloseButtonText = '完成';
     this.sheetMode = SHEET_TEMP_ITEM;
     this.openSheetAnimated();
   }
@@ -995,6 +1015,8 @@ struct Index {
     this.tripMaxAltitude = typeof checklist.maxAltitude === 'number' ? checklist.maxAltitude.toString() : '';
     this.tripAscentM = typeof checklist.ascentM === 'number' ? checklist.ascentM.toString() : '';
     this.tripDurationHours = typeof checklist.durationHours === 'number' ? checklist.durationHours.toString() : '';
+    this.currentSheetTitle = '编辑行程';
+    this.currentCloseButtonText = '关闭';
     this.sheetMode = SHEET_EDIT_TRIP;
     this.openSheetAnimated();
   }
@@ -1023,6 +1045,8 @@ struct Index {
     this.tripMaxAltitude = typeof checklist.maxAltitude === 'number' ? checklist.maxAltitude.toString() : '';
     this.tripAscentM = typeof checklist.ascentM === 'number' ? checklist.ascentM.toString() : '';
     this.tripDurationHours = typeof checklist.durationHours === 'number' ? checklist.durationHours.toString() : '';
+    this.currentSheetTitle = '编辑行程信息';
+    this.currentCloseButtonText = '关闭';
     this.sheetMode = SHEET_EDIT_PROFILE;
     this.openSheetAnimated();
   }
@@ -1110,6 +1134,8 @@ this.errorText = '';
   }
 
 private openImportSheet(): void {
+this.currentSheetTitle = '从装备库导入';
+this.currentCloseButtonText = '关闭';
 this.sheetMode = SHEET_IMPORT;
 this.openSheetAnimated();
 }
@@ -1118,12 +1144,16 @@ this.openSheetAnimated();
   private openGearPickerSheet(zone?: string): void {
     // zone 非空时记录预选分区，picker 据此排序高亮 + 预选临时新建分区（review I4）
     this.pickerPreselectZone = (zone !== undefined && zone.length > 0) ? zone : '';
+    this.currentSheetTitle = '选择装备';
+    this.currentCloseButtonText = '关闭';
     this.sheetMode = SHEET_GEAR_PICKER;
     this.openSheetAnimated();
   }
 
   private openGearItemActionSheet(item: ChecklistItem): void {
     this.actionSheetItem = item;
+    this.currentSheetTitle = '';
+    this.currentCloseButtonText = '关闭';
     this.sheetMode = SHEET_GEAR_ITEM_ACTION;
     this.openSheetAnimated();
   }
@@ -1429,6 +1459,8 @@ this.dayFormNote = '';
 
 private openAddDaySheet(): void {
 this.resetDayForm();
+this.currentSheetTitle = '添加一天';
+this.currentCloseButtonText = '关闭';
 this.sheetMode = SHEET_DAY_FORM;
 this.openSheetAnimated();
 }
@@ -1445,6 +1477,8 @@ this.dayFormFrom = day.from ?? '';
 this.dayFormTo = day.to ?? '';
 this.dayFormDate = day.date ?? '';
 this.dayFormNote = day.note ?? '';
+this.currentSheetTitle = '编辑行程日';
+this.currentCloseButtonText = '关闭';
 this.sheetMode = SHEET_DAY_FORM;
 this.openSheetAnimated();
 }
@@ -1491,6 +1525,8 @@ this.segFormTicketPrice = '';
 private openAddSegmentSheet(dayId: string): void {
 this.resetSegForm();
 this.editingSegDayId = dayId;
+this.currentSheetTitle = '添加路段';
+this.currentCloseButtonText = '关闭';
 this.sheetMode = SHEET_SEGMENT_FORM;
 this.openSheetAnimated();
 }
@@ -1523,6 +1559,8 @@ this.segFormTicketCode = '';
 this.segFormTicketSeat = '';
 this.segFormTicketPrice = '';
 }
+this.currentSheetTitle = '编辑路段';
+this.currentCloseButtonText = '关闭';
 this.sheetMode = SHEET_SEGMENT_FORM;
 this.openSheetAnimated();
 }
@@ -1849,6 +1887,8 @@ await this.updateItinerary(next);
                   this.openGearFilterPanel();
                 },
                 onOpenSort: () => {
+                  this.currentSheetTitle = '排序方式';
+                  this.currentCloseButtonText = '关闭';
                   this.sheetMode = SHEET_GEAR_SORT;
                   this.openSheetAnimated();
                 },
@@ -1997,144 +2037,189 @@ await this.updateItinerary(next);
 
       // 覆盖层：独立于 Navigation 层级，始终在 NavDestination 之上
       if (this.sheetMode !== SHEET_NONE) {
-        SheetOverlay({
-          sheetMode: this.sheetMode,
+        SheetContainer({
           sheetTranslateY: this.sheetTranslateY,
           sheetOverlayOpacity: this.sheetOverlayOpacity,
+          sheetTitle: this.currentSheetTitle,
+          showHeader: this.sheetMode !== SHEET_GEAR_PICKER,
+          closeButtonText: this.currentCloseButtonText,
+          headerActionText: (this.sheetMode === SHEET_IMPORT && this.gears.length > 0) ? '+ 添加装备' : '',
+          onHeaderAction: () => { this.openAddGearFromImport(); },
           errorText: this.errorText,
-          // GearSortSheet
-          gearSortMode: this.gearSortMode,
-          onClose: () => { this.closeSheet(); },
-          onSelectSort: (mode: string) => {
-            this.gearSortMode = mode;
-            this.closeSheet();
-          },
-          // GearFormSheet（§4.6 内化：只传初始值 + onSaveGear 带参回调）
-          editingGearId: this.editingGearId,
-          categories: this.presetCategories(),
-          gearInitialName: this.gearName,
-          gearInitialCategory: this.gearCategory,
-          gearInitialWeight: this.gearWeight,
-          gearInitialPrice: this.gearPrice,
-          gearInitialNote: this.gearNote,
-          onSaveGear: (name: string, category: string, weight: string, price: string, note: string) => {
-            this.saveGearWithData(name, category, weight, price, note);
-          },
-          onCategoryRename: (oldName: string, newName: string) => { this.handleCategoryRename(oldName, newName); },
-          onCategoryDelete: (category: string) => { this.handleCategoryDelete(category); },
-          onCategoryReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
-          onCategoryAdd: (_name: string) => { this.showCategoryInputPrompt('', true); },
-          // TripFormSheet（§4.6 内化：只传初始值 + onCreateTrip/onSaveTrip 带参回调）
-          tripInitialTitle: this.tripTitle,
-          tripInitialDate: this.tripDate,
-          tripInitialDestination: this.tripDestination,
-          tripInitialDistanceKm: this.tripDistanceKm,
-          tripInitialMaxAltitude: this.tripMaxAltitude,
-          tripInitialAscentM: this.tripAscentM,
-          tripInitialDurationHours: this.tripDurationHours,
-          onCreateTrip: (title: string, date: string, destination: string,
-            distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
-            this.createChecklistWithData(title, date, destination, distanceKm, maxAltitude, ascentM, durationHours);
-          },
-          onSaveTrip: (title: string, date: string, destination: string,
-            distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
-            this.saveTripInfo(title, date, destination, distanceKm, maxAltitude, ascentM, durationHours);
-          },
-          // ProfileEditSheet（§4.6 内化：只传初始值 + onSaveProfile 带参回调）
-          profileInitialDate: this.tripDate,
-          profileInitialDestination: this.tripDestination,
-          profileInitialDistanceKm: this.tripDistanceKm,
-          profileInitialMaxAltitude: this.tripMaxAltitude,
-          profileInitialAscentM: this.tripAscentM,
-          profileInitialDurationHours: this.tripDurationHours,
-          onSaveProfile: (date: string, destination: string,
-            distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
-            this.saveProfileInfo(date, destination, distanceKm, maxAltitude, ascentM, durationHours);
-          },
-          // TempItemSheet（§4.6 内化：只传初始值 + onAddTempItem 带参回调）
-          tempInitialName: this.tempItemName,
-          tempInitialGroup: this.tempItemGroup,
-          onAddTempItem: (name: string, group: string) => { this.addTempItem(name, group); },
-          // ImportSheet（§4.6 内化：不再传选中/筛选状态）
-          gears: this.gears,
-          onImportGears: (ids: string[]) => { this.importSelectedGear(ids); },
-          onAddGearFromImport: () => { this.openAddGearFromImport(); },
-          // GearPickerSheet
-          pickerSelectedIds: tripGearIds(this.currentChecklist()),
-          pickerPreselectZone: this.pickerPreselectZone,
-          onPickerToggleGear: (gear: GearItem) => { this.toggleGearInTrip(gear); },
-          onPickerAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => {
-            if (saveToLibrary) {
-              this.createGearAndAddToTrip(name, zone, weight, category);
-            } else {
-              this.addTempGearToTrip(name, zone, weight);
-            }
-          },
-          // GearItemActionSheet
-          actionItem: this.actionSheetItem,
-          onActionMoveToZone: (itemId: string, zone: string) => { this.moveItemToZone(itemId, zone); },
-          onActionViewDetail: (item: ChecklistItem) => {
-            this.errorText = '';
-            this.returnToImportAfterGear = false;
-            this.editingItemId = '';
-            this.getUIContext().animateTo({
-              curve: SPRING_PANEL_EXIT(),
-              onFinish: () => {
-                this.sheetMode = SHEET_NONE;
-                if (item.fromGearId !== undefined && item.fromGearId !== '') {
-                  this.expandedGearId = item.fromGearId;
-                  this.stopShakeListening();
-                  if (this.navPathStack.size() > 0) {
-                    this.getUIContext().animateTo({
-                      curve: SPRING_HERO_COLLAPSE()
-                    }, () => {
-                      this.navPathStack.pop(false);
-                    });
-                  }
-                  this.currentTabIndex = 1;
-                  this.tabsController.changeIndex(1);
-                }
+          onClose: () => { this.closeSheet(); }
+        }) {
+          if (this.sheetMode === SHEET_GEAR) {
+            GearFormSheet({
+              editingGearId: this.editingGearId,
+              categories: this.presetCategories(),
+              initialName: this.gearName,
+              initialCategory: this.gearCategory,
+              initialWeight: this.gearWeight,
+              initialPrice: this.gearPrice,
+              initialNote: this.gearNote,
+              onSave: (name: string, category: string, weight: string, price: string, note: string) => {
+                this.saveGearWithData(name, category, weight, price, note);
+              },
+              onRename: (oldName: string, newName: string) => { this.handleCategoryRename(oldName, newName); },
+              onDelete: (category: string) => { this.handleCategoryDelete(category); },
+              onReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
+              onAddCategory: (_name: string) => { this.showCategoryInputPrompt('', true); }
+            })
+          } else if (this.sheetMode === SHEET_TRIP) {
+            TripFormSheet({
+              isEditMode: false,
+              initialTitle: this.tripTitle,
+              initialDate: this.tripDate,
+              onConfirm: (title: string, date: string, destination: string,
+                distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
+                this.createChecklistWithData(title, date, destination, distanceKm, maxAltitude, ascentM, durationHours);
               }
-            }, () => {
-              this.sheetTranslateY = 800;
-              this.sheetOverlayOpacity = 0;
-              this.contentScale = 1.0;
-              this.contentBlur = 0;
-            });
-          },
-          onActionRemove: (itemId: string) => { this.removeItemFromTrip(itemId); },
-          // DayFormSheet
-          editingDayId: this.editingDayId,
-          dayFrom: this.dayFormFrom,
-          dayTo: this.dayFormTo,
-          dayDate: this.dayFormDate,
-          dayNote: this.dayFormNote,
-          onSubmitDay: (day: DayItinerary) => { this.handleSubmitNewDay(day); },
-          onSubmitEditDay: (dayId: string, from: string, to: string, date: string, note: string) => {
-            this.handleSubmitEditDay(dayId, from, to, date, note);
-          },
-          // SegmentFormSheet
-          editingSegmentId: this.editingSegmentId,
-          segFrom: this.segFormFrom,
-          segTo: this.segFormTo,
-          segTransport: this.segFormTransport,
-          segDepartTime: this.segFormDepartTime,
-          segArriveTime: this.segFormArriveTime,
-          segNote: this.segFormNote,
-          segAccommodation: this.segFormAccommodation,
-          ticketCode: this.segFormTicketCode,
-          ticketSeat: this.segFormTicketSeat,
-          ticketPrice: this.segFormTicketPrice,
-          onSubmitSegment: (segment: RouteSegment) => { this.handleSubmitSegment(segment); },
-          onDeleteDayFromSheet: () => {
-            this.handleDeleteDay(this.editingDayId);
-            this.closeSheet();
-          },
-          onDeleteSegmentFromSheet: () => {
-            this.handleDeleteSegment(this.editingSegDayId, this.editingSegmentId);
-            this.closeSheet();
+            })
+          } else if (this.sheetMode === SHEET_EDIT_TRIP) {
+            TripFormSheet({
+              isEditMode: true,
+              initialTitle: this.tripTitle,
+              initialDate: this.tripDate,
+              initialDestination: this.tripDestination,
+              initialDistanceKm: this.tripDistanceKm,
+              initialMaxAltitude: this.tripMaxAltitude,
+              initialAscentM: this.tripAscentM,
+              initialDurationHours: this.tripDurationHours,
+              onConfirm: (title: string, date: string, destination: string,
+                distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
+                this.saveTripInfo(title, date, destination, distanceKm, maxAltitude, ascentM, durationHours);
+              }
+            })
+          } else if (this.sheetMode === SHEET_EDIT_PROFILE) {
+            ProfileEditSheet({
+              initialDate: this.tripDate,
+              initialDestination: this.tripDestination,
+              initialDistanceKm: this.tripDistanceKm,
+              initialMaxAltitude: this.tripMaxAltitude,
+              initialAscentM: this.tripAscentM,
+              initialDurationHours: this.tripDurationHours,
+              onConfirm: (date: string, destination: string,
+                distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
+                this.saveProfileInfo(date, destination, distanceKm, maxAltitude, ascentM, durationHours);
+              }
+            })
+          } else if (this.sheetMode === SHEET_TEMP_ITEM) {
+            TempItemSheet({
+              initialName: this.tempItemName,
+              initialGroup: this.tempItemGroup,
+              categories: this.presetCategories(),
+              onConfirm: (name: string, group: string) => { this.addTempItem(name, group); },
+              onRename: (oldName: string, newName: string) => { this.handleCategoryRename(oldName, newName); },
+              onDelete: (category: string) => { this.handleCategoryDelete(category); },
+              onReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
+              onAddCategory: (_name: string) => { this.showCategoryInputPrompt('', true); }
+            })
+          } else if (this.sheetMode === SHEET_IMPORT) {
+            ImportSheet({
+              gears: this.gears,
+              categories: this.presetCategories(),
+              onImport: (ids: string[]) => { this.importSelectedGear(ids); },
+              onAddGearFromImport: () => { this.openAddGearFromImport(); }
+            })
+          } else if (this.sheetMode === SHEET_GEAR_SORT) {
+            GearSortSheet({
+              gearSortMode: this.gearSortMode,
+              onSelectSort: (mode: string) => {
+                this.gearSortMode = mode;
+                this.closeSheet();
+              }
+            })
+          } else if (this.sheetMode === SHEET_GEAR_PICKER) {
+            GearPickerSheet({
+              gears: this.gears,
+              categories: this.presetCategories(),
+              selectedItemIds: tripGearIds(this.currentChecklist()),
+              preselectZone: this.pickerPreselectZone,
+              onToggleGear: (gear: GearItem) => { this.toggleGearInTrip(gear); },
+              onAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => {
+                if (saveToLibrary) {
+                  this.createGearAndAddToTrip(name, zone, weight, category);
+                } else {
+                  this.addTempGearToTrip(name, zone, weight);
+                }
+              },
+              onClose: () => { this.closeSheet(); }
+            })
+              .layoutWeight(1)
+          } else if (this.sheetMode === SHEET_GEAR_ITEM_ACTION) {
+            GearItemActionSheet({
+              item: this.actionSheetItem,
+              displayName: resolveItemName(this.actionSheetItem, this.gears),
+              onMoveToZone: (itemId: string, zone: string) => { this.moveItemToZone(itemId, zone); },
+              onViewDetail: (item: ChecklistItem) => {
+                this.errorText = '';
+                this.returnToImportAfterGear = false;
+                this.editingItemId = '';
+                this.getUIContext().animateTo({
+                  curve: SPRING_PANEL_EXIT(),
+                  onFinish: () => {
+                    this.sheetMode = SHEET_NONE;
+                    if (item.fromGearId !== undefined && item.fromGearId !== '') {
+                      this.expandedGearId = item.fromGearId;
+                      this.stopShakeListening();
+                      if (this.navPathStack.size() > 0) {
+                        this.getUIContext().animateTo({
+                          curve: SPRING_HERO_COLLAPSE()
+                        }, () => {
+                          this.navPathStack.pop(false);
+                        });
+                      }
+                      this.currentTabIndex = 1;
+                      this.tabsController.changeIndex(1);
+                    }
+                  }
+                }, () => {
+                  this.sheetTranslateY = 800;
+                  this.sheetOverlayOpacity = 0;
+                  this.contentScale = 1.0;
+                  this.contentBlur = 0;
+                });
+              },
+              onRemove: (itemId: string) => { this.removeItemFromTrip(itemId); },
+              onClose: () => { this.closeSheet(); }
+            })
+          } else if (this.sheetMode === SHEET_DAY_FORM) {
+            DayFormSheet({
+              editingDayId: this.editingDayId,
+              initialFrom: this.dayFormFrom,
+              initialTo: this.dayFormTo,
+              initialDate: this.dayFormDate,
+              initialNote: this.dayFormNote,
+              onSubmitDay: (day: DayItinerary) => { this.handleSubmitNewDay(day); },
+              onSubmitEdit: (dayId: string, from: string, to: string, date: string, note: string) => {
+                this.handleSubmitEditDay(dayId, from, to, date, note);
+              },
+              onDeleteDay: () => {
+                this.handleDeleteDay(this.editingDayId);
+                this.closeSheet();
+              }
+            })
+          } else if (this.sheetMode === SHEET_SEGMENT_FORM) {
+            SegmentFormSheet({
+              editingSegmentId: this.editingSegmentId,
+              initialFrom: this.segFormFrom,
+              initialTo: this.segFormTo,
+              initialTransport: this.segFormTransport,
+              initialDepartTime: this.segFormDepartTime,
+              initialArriveTime: this.segFormArriveTime,
+              initialNote: this.segFormNote,
+              initialAccommodation: this.segFormAccommodation,
+              initialTicketCode: this.segFormTicketCode,
+              initialTicketSeat: this.segFormTicketSeat,
+              initialTicketPrice: this.segFormTicketPrice,
+              onSubmit: (segment: RouteSegment) => { this.handleSubmitSegment(segment); },
+              onDeleteSegment: () => {
+                this.handleDeleteSegment(this.editingSegDayId, this.editingSegmentId);
+                this.closeSheet();
+              }
+            })
           }
-        })
+        }
       }
       if (this.showEditItemPanel) {
         EditItemPanel({

@@ -44,7 +44,7 @@ grep -rl "关键词" "/Users/bghost233/Desktop/HarmonyOS-Docs/FAQ" | head -20
 entry/src/main/ets/
 ├── pages/Index.ets          — 唯一 Page，仅负责：Navigation 容器 + NavPathStack 路由 + 全局 State 声明
 ├── components/              — UI 组件（每个文件一个 @Component）
-│   └── sheets/              — Sheet 面板组件（统一通过 SheetOverlay 容器包装）
+│   └── sheets/              — Sheet 面板组件（统一通过 SheetContainer 纯壳容器包装）
 ├── constants/               — 纯常量导出（零逻辑）
 │   ├── Colors.ets           — 色彩 token
 │   ├── Typography.ets       — 字阶 token
@@ -59,7 +59,7 @@ entry/src/main/ets/
 │   └── HeadCollapseController.ets — 顶部折叠滚动数学内核（有状态 class，与业务无关）
 ├── services/                — 业务逻辑层（纯函数为主，PackStore 为 singleton class）
 │   ├── GearService.ets      — 装备计算（筛选/排序/统计）
-│   ├── ChecklistService.ets — 行程清单操作（增删改查，immutable 更新）
+│   ├── ChecklistService.ets — 行程清单操作（CRUD + clone + 倒计时/分组/重量/日期格式化纯函数）
 │   ├── ItineraryService.ets — 行程日程操作（DayItinerary/RouteSegment clone + CRUD）
 │   ├── CategoryService.ets  — 分组操作（增删改、rename 迁移、保护判定）
 │   └── PackStore.ets        — 持久化存储（singleton + 防抖 flush + 运行时验证）
@@ -94,7 +94,7 @@ Q4: 是否是常量/配置/token？
 ### 1.3 铁律
 
 - **Index.ets 不写业务逻辑**：所有计算委托给 services，所有 UI 委托给 components。Index.ets 只做状态声明、路由注册、组件组装。
-- **一个文件一个职责**：超过 300 行的组件必须考虑拆分。
+- **一个文件一个职责**：新组件超过 300 行必须考虑拆分。存量大组件（Index/GearPage/HomePage）受 §8.2「不该拆」约束，通过渐进式瘦身治理（见 `.planning/god-component-split/next_plan.md`）。
 - **Service 只导出纯函数**：禁止 class 包装，禁止依赖 this，入参出参明确。
 - **新增常量必须归入对应 token 文件**：禁止在组件中硬编码色值/尺寸/时长。
 - **Barrel re-export 保兼容**：拆分常量模块后，DesignTokens.ets 统一 re-export，旧 import 路径不断。
@@ -377,7 +377,7 @@ ForEach(items, (item, index) => {
 
 所有 Sheet 面板必须：
 
-1. 使用 `SheetOverlay` 作为容器（自带遮罩 + Spring 弹出/收回 + 手势下滑关闭）
+1. 使用 `SheetContainer` 作为容器（自带遮罩 + Spring 弹出/收回 + 手势下滑关闭）
 2. 通过 `SheetMode` 枚举切换
 3. 面板高度由内容决定，maxHeight 不超过 85%
 4. 进入时背景施加 `scale(0.94)` + `blur(12)` 消散效果
@@ -444,7 +444,7 @@ aboutToAppear() {
 | 页面级组件 | `XxxPage` | `HomePage`、`GearPage` |
 | 功能组件 | 名词性描述 | `WeightGauge`、`AssetTrendCard` |
 | Sheet 面板 | `XxxSheet` | `GearFormSheet`、`TripFormSheet` |
-| 工具/覆盖 | `XxxOverlay` / `XxxPanel` | `SheetOverlay`、`EditGearPanel` |
+| 工具/覆盖 | `XxxContainer` / `XxxPanel` | `SheetContainer`、`EditGearPanel` |
 
 ---
 
@@ -622,11 +622,11 @@ PackCheck 使用 `EntryBackupAbility`（BackupExtensionAbility）接入系统备
 
 ### 8.4 防封装与落地脱节
 
-项目已有的封装（`AnimationUtils`、`HeadCollapseController`、`SheetOverlay`、各 token 文件）是**唯一事实源**，禁止"绕过封装手写一份"：
+项目已有的封装（`AnimationUtils`、`HeadCollapseController`、`SheetContainer`、各 token 文件）是**唯一事实源**，禁止“绕过封装手写一份”：
 
 - 顶部随滚动折叠 → 必须走 `HeadCollapseController`，禁止各页面重写 scrollOffset→progress 数学（§4.3 + 避坑 #46）。
 - 按压 / 错落入场 / 数字滚动 / 面板转场 → 走 `AnimationUtils`，禁止各处手抄一遍 onTouch+scale 三段式。
-- Sheet 面板 → 走 `SheetOverlay` 容器，禁止裸写遮罩 + translateY。
+- Sheet 面板 → 走 `SheetContainer` 容器，禁止裸写遮罩 + translateY。
 - 色值 / 字号 / 间距 / 时长 / 曲线 → 走 constants/ token，禁止硬编码（§2、§3）。
 
 **反向约束**：封装层新增能力后，必须真的在落地点用上；只导出不消费的封装 = 死代码（见 8.5）。
@@ -654,7 +654,7 @@ PackCheck 使用 `EntryBackupAbility`（BackupExtensionAbility）接入系统备
 - [ ] 改动的组件没有突破 8.1 任一阈值？突破了有没有拆/下沉？
 - [ ] 该不该拆，对照 8.2 确认没有强拆动画状态机 / 转场两端 / 手势浮层？
 - [ ] 新增的函数/常量/UI 片段，grep 过没有重复实现？
-- [ ] 用的是现有封装（AnimationUtils/HeadCollapseController/SheetOverlay/token），没有绕过手写？
+- [ ] 用的是现有封装（AnimationUtils/HeadCollapseController/SheetContainer/token），没有绕过手写？
 - [ ] 本次改动没留死代码（孤儿 import、空方法、不可达分支、只导出不消费的封装）？
 - [ ] 新增文件放对目录了（对照 §1.1/§1.2），barrel re-export 补了？
 

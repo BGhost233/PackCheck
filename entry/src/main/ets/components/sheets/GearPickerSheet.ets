@@ -1,7 +1,7 @@
 // 配装系统 - 装备选择 Sheet
 // 职责：展示装备库全量列表，按品类分组可折叠展开，连续多选（点击即添加）
 // 新建装备为同层级内联态切换（列表态 ↔ 新建态），无弹窗/遮罩
-// GearPickerSheet 自管 head（标题随态 Spring 切换），SheetOverlay 不为它渲染统一 head
+// GearPickerSheet 自管 head（标题随态 Spring 切换），SheetContainer 不为它渲染统一 head
 
 import { LengthMetrics } from '@kit.ArkUI';
 import {
