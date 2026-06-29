@@ -30,7 +30,8 @@ import {
   FONT_SIZE_BODY_MEDIUM,
   FONT_SIZE_CAPTION,
   FONT_SIZE_BODY_SMALL,
-  FONT_SIZE_OVERLINE
+  FONT_SIZE_OVERLINE,
+  FONT_SIZE_PANEL_TITLE
 } from '../constants/Typography';
 import { CategoryTagGroup } from './CategoryTagGroup';
 
@@ -115,7 +116,7 @@ export struct EditGearPanel {
       Column({ space: ITEM_GAP }) {
         Row() {
           Text('编辑装备')
-            .fontSize(17)
+            .fontSize(FONT_SIZE_PANEL_TITLE)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
           Blank()

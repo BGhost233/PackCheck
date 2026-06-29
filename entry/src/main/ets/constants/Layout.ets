@@ -30,6 +30,7 @@ export const HOME_HEADER_COLLAPSED: number = 56;
 export const HOME_COLLAPSE_MAX: number = 200;
 
 // ============ 通用尺寸 ============
+export const ICON_SIZE_XS: number = 7;
 export const ICON_SIZE_S: number = 16;
 export const ICON_SIZE_M: number = 20;
 export const ICON_SIZE_L: number = 24;

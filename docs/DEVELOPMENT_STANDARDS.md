@@ -62,7 +62,9 @@ entry/src/main/ets/
 ├── services/                — 业务逻辑层（纯函数，无 class 包装）
 │   ├── GearService.ets      — 装备计算（筛选/排序/统计）
 │   ├── ChecklistService.ets — 行程清单操作（增删改查，immutable 更新）
-│   └── PackStore.ets        — 持久化存储
+│   ├── ItineraryService.ets — 行程日程操作（DayItinerary/RouteSegment clone + CRUD）
+│   ├── CategoryService.ets  — 分组操作（增删改、rename 迁移、保护判定）
+│   └── PackStore.ets        — 持久化存储（singleton + 防抖 flush + 运行时验证）
 └── models/                  — 数据类型定义
     └── PackModels.ets       — 所有 interface/class/enum
 ```
@@ -146,6 +148,16 @@ Q4: 是否是常量/配置/token？
 | Body Large | 16 | Regular (400) | 正文段落 |
 | Body Medium | 14 | Regular (400) | 正文默认 |
 | Caption | 12 | Regular (400) | 辅助说明、时间戳 |
+
+**项目扩展字阶（对应 Typography.ets）：**
+
+| 级别 | 字号 (fp) | 使用场景 |
+|------|-----------|----------|
+| Panel Title | 17 | 弹窗/面板/对话框标题 |
+| Page Title | 22 | 页面标题（Index/Profile/TripDetail） |
+| Body Small | 13 | 次级正文/列表描述/进度文字 |
+| Overline | 15 | 加强正文/按钮文字/DayCard 标题 |
+| Mini | 11 | 最小辅助文字/hint/tab 标签 |
 
 **排版规则：**
 
@@ -405,6 +417,28 @@ ForEach(items, (item, index) => {
 - 回调用 `() => void` 或明确参数类型，禁止 `Function`
 - 可选参数必须有合理默认值
 
+### 4.6 @Prop→@State 内化模式
+
+当子组件拥有表单编辑状态时，使用「内化模式」解耦父子：
+
+- **禁止** 父组件为子组件的每个表单字段持有 `@State` + `onChange` 回调（N 字段 = 2N 个 props = God Component）
+- **推荐** 子组件通过 `initialXxx` 普通 prop 接收初始值，`aboutToAppear()` 中赋给内部 `@State`，编辑过程完全自治
+- **提交** 通过一个参数化回调 `onSave: (field1, field2, ...) => void` 一次性传回所有编辑结果
+- **验证** 由子组件自行完成（如 `@State errorText`），父组件只关心最终合法数据
+
+```typescript
+// 子组件
+initialName: string = '';     // 普通 prop，非 @Prop
+@State name: string = '';     // 内部自治
+onSave: (name: string, weight: string) => void = () => {};
+
+aboutToAppear() {
+  this.name = this.initialName;
+}
+```
+
+适用场景：EditItemPanel、EditGearPanel、DayFormSheet、SegmentFormSheet、TripCeremonyCard。
+
 ### 4.5 组件命名规范
 
 | 类别 | 命名 | 示例 |
@@ -430,6 +464,32 @@ ForEach(items, (item, index) => {
 - 最小化 @State 数量 — 能计算得出的值用 getter，不声明 State
 - 深层对象变更必须创建新引用（immutable update），不直接修改属性
 - 状态变更集中在 animateTo 回调内（保证动画正确触发）
+
+### 5.2.1 clone helper 铁律
+
+对于含 3 个以上字段的 interface（DayItinerary、RouteSegment、TicketInfo、ChecklistItem、TripChecklist），**禁止手写对象字面量**，必须通过 clone helper 创建：
+
+- `cloneDayItinerary(source, overrides?)` / `cloneRouteSegment(source, overrides?)` / `cloneTicketInfo(source, overrides?)` — 在 ItineraryService.ets
+- `cloneChecklistItem(source, overrides?)` — 在 ChecklistService.ets
+- `createChecklist(title, date, dateAt, destination)` — 在 ChecklistService.ets
+
+**原因**：N 处手写字面量 + 新增字段 → 遗漏概率随 N 指数增长。clone helper 保证字段一处定义、全局一致。
+
+### 5.2.2 事务化更新模式
+
+涉及多个关联数据源的操作（如 category 删除需同步更新 categories + gears + checklists），必须使用「先构建完整新状态 → 批量持久化 → 全部成功后一次性赋值 @State」模式，中间任一 save 失败则 return 不更新 UI：
+
+```typescript
+// ✅ 正确：事务化
+const nextCategories = deleteCategory(categories, target);
+const nextGears = migrateGearsOnDelete(gears, target, fallback);
+try {
+  await store.saveCategories(nextCategories);
+  await store.saveGears(nextGears);
+} catch { return; } // 失败不更新 UI
+this.categories = nextCategories;
+this.gears = nextGears;
+```
 
 ### 5.3 命名规范
 
@@ -487,6 +547,7 @@ type = feat | fix | refactor | style | docs | chore
 - 不在修 bug 时顺手重构
 - 不 hardcode 色值/尺寸/时长
 - 不在 Index.ets 里写超过 10 行的业务逻辑函数
+- 不手写 DayItinerary/RouteSegment/TicketInfo/ChecklistItem 对象字面量（走 clone helper）
 
 ---
 
@@ -500,13 +561,19 @@ type = feat | fix | refactor | style | docs | chore
 - 关键布局参数定义在 Layout.ets（未来按 breakpoint 分档）
 - `position()` 定位的组件必须监听 `onAreaChange` 适配屏幕变化
 
-### 7.2 深色模式预留
+### 7.2 备份恢复
+
+PackCheck 使用 `EntryBackupAbility`（BackupExtensionAbility）接入系统备份恢复。数据全部存储在 Preferences（`packcheck_store`），位于 `el2/base/preferences/` 默认备份范围内，框架自动完成文件级备份恢复。`onBackupEx`/`onRestoreEx` 仅用于记录结构化日志和版本信息，不需要手动序列化数据。
+
+如未来迁移到 RDB 或其他存储，需在 `backup_config.json` 的 `includes` 中显式添加路径，并在 `onRestoreEx` 中实现数据迁移逻辑。
+
+### 7.3 深色模式预留
 
 - 色彩全部走 Colors.ets 常量（未来切换只改一处）
 - 已有 `resources/dark/element/color.json` 深色资源目录
 - 禁止在组件中直接写色值，确保未来一键切换
 
-### 7.3 无障碍
+### 7.4 无障碍
 
 - 可操作元素最小触控区域 48×48 vp
 - 图标按钮添加 `.accessibilityText()` 描述

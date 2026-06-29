@@ -44,7 +44,8 @@ import {
   WHITE
 } from '../constants/DesignTokens';
 import {
-  FONT_SIZE_MINI, FONT_SIZE_BODY_MEDIUM, FONT_SIZE_OVERLINE, FONT_SIZE_PAGE_TITLE
+  FONT_SIZE_MINI, FONT_SIZE_BODY_MEDIUM, FONT_SIZE_OVERLINE, FONT_SIZE_PAGE_TITLE,
+  FONT_SIZE_PANEL_TITLE
 } from '../constants/Typography';
 import {
   SPRING_GENERAL,
@@ -2463,7 +2464,7 @@ await this.updateItinerary(next);
       // 对话框 — 缩放 + 淡入 + 轻微上移
       Column({ space: 16 }) {
         Text(this.categoryDialogMode === 'add' ? '新增分组' : '重命名分组')
-          .fontSize(17)
+          .fontSize(FONT_SIZE_PANEL_TITLE)
           .fontWeight(FontWeight.Bold)
           .fontColor(TEXT_MAIN)
 

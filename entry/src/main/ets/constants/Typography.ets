@@ -14,6 +14,7 @@ export const FONT_SIZE_BODY_MEDIUM: number = 14;      // 正文默认
 export const FONT_SIZE_CAPTION: number = 12;          // 辅助说明/时间戳
 
 // --- 项目扩展字阶 ---
+export const FONT_SIZE_PANEL_TITLE: number = 17;      // 弹窗/面板/对话框标题
 export const FONT_SIZE_PAGE_TITLE: number = 22;       // 页面标题（Index/Profile/TripDetail）
 export const FONT_SIZE_BODY_SMALL: number = 13;       // 次级正文/列表描述/进度文字
 export const FONT_SIZE_OVERLINE: number = 15;         // 加强正文/按钮文字/DayCard 标题

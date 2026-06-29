@@ -31,6 +31,7 @@ import {
   FONT_SIZE_BODY_SMALL,
   FONT_SIZE_BODY_MEDIUM
 } from '../constants/Typography';
+import { ICON_SIZE_XS } from '../constants/Layout';
 import { CATEGORY_ALL } from '../models/PackModels';
 import { isProtectedCategory } from '../services/CategoryService';
 
@@ -321,7 +322,7 @@ export struct CategoryTagGroup {
       if (this.isEditing && !isProtectedCategory(category) && category !== CATEGORY_ALL) {
         Row() {
           SymbolGlyph($r('sys.symbol.xmark'))
-            .fontSize(7)
+            .fontSize(ICON_SIZE_XS)
             .fontColor([WHITE])
         }
         .width(18)

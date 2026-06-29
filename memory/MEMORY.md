@@ -32,10 +32,14 @@
 - 单 Page（Index.ets）+ Navigation NavPathStack，NavDestination：ChecklistDetail、ReviewPage
 - 统一核查清单：UnifiedChecklistView → ZoneShell → ZoneGridCell / FocusedZoneView → ChecklistRow
 - GearService(`GearCalc`) / ChecklistService(`CheckCalc`) / LoadoutService / ItineraryService / FootprintService / CategoryService
-- PackStore schema v1，`initFailed` 阻止写入；`makeId()` = `Date.now()` + 单调计数器
+- PackStore schema v2，singleton `getPackStore()` + 防抖 flush + 运行时验证 + 容量告警；`makeId()` = `Date.now()` + 单调计数器
+- @Prop→@State 内化模式：EditItemPanel/EditGearPanel/DayFormSheet/SegmentFormSheet/TripCeremonyCard
+- clone helper 铁律：DayItinerary/RouteSegment/TicketInfo 在 ItineraryService，ChecklistItem/TripChecklist 在 ChecklistService
+- 事务化更新：category 删除/重命名先构建完整新状态，批量持久化成功后才赋 @State
+- EntryBackupAbility：onBackupEx/onRestoreEx 结构化返回，Preferences 框架自动备份
 - `CATEGORY_ALL`（哨兵 '全部'）/ `CATEGORY_FALLBACK`（受保护 '其他'）在 PackModels.ets
 
-## ArkUI 避坑清单（51 条）
+## ArkUI 避坑清单（54 条）
 
 1. `linearGradient` 禁用 `Color.Transparent` — 用 `'#00FFFFFF'` 同色相只变 alpha
 2. Spring 曲线忽略 duration — 时间由 response 决定；错落用 `delay` 字段
@@ -88,6 +92,9 @@
 49. Tabs `onGestureSwipe` currentOffset 是 vp 位移非 progress — 除以 tabsWidth 归一化
 50. `build()` 裸 if/else 产生隐式 Column 居中 — 必须显式根容器
 51. TabContent keep-alive 下 onAppear 不再触发 — 靠 visibilityNonce @Watch 重播动画
+52. 子组件表单编辑禁止父组件持有 N 个 @State+onChange — 用 @Prop→@State 内化模式（initialXxx + aboutToAppear + onSave 回调）
+53. 禁止手写 DayItinerary/RouteSegment/TicketInfo/ChecklistItem 对象字面量 — 必须走 clone helper（新增字段遗漏概率随手写处数 N 指数增长）
+54. 多关联数据源操作必须事务化 — 先构建完整新状态 → 批量 save → 全成功后赋 @State，中间失败则 return
 
 ## 补充验证
 

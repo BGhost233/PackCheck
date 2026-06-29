@@ -53,7 +53,7 @@ import {
 import {
   FONT_SIZE_MINI, FONT_SIZE_CAPTION, FONT_SIZE_BODY_SMALL, FONT_SIZE_BODY_MEDIUM,
   FONT_SIZE_OVERLINE, FONT_SIZE_BODY_LARGE, FONT_SIZE_SUBTITLE_LARGE,
-  FONT_SIZE_TITLE_LARGE
+  FONT_SIZE_TITLE_LARGE, FONT_SIZE_PANEL_TITLE
 } from '../constants/Typography';
 import { getGroupColor } from '../utils/ColorUtils';
 import { GearEmptyState } from './gear/GearEmptyState';
@@ -1458,7 +1458,7 @@ export struct GearPage {
           .borderRadius(2)
           .backgroundColor(getGroupColor(item.category))
         Text(item.name)
-          .fontSize(17)
+          .fontSize(FONT_SIZE_PANEL_TITLE)
           .fontWeight(FontWeight.Bold)
           .fontColor(TEXT_MAIN)
           .maxLines(1)
