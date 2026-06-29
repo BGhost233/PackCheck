@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.7.9
+## 当前版本：v0.7.10
 
 ### 已实现功能
 
@@ -43,7 +43,7 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2660 行）
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2530 行）
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部）
@@ -85,7 +85,7 @@ entry/src/main/ets/
 │   │   └── GearFootprintRow.ets   — 足迹行组件
 ├── models/PackModels.ets    — 数据模型定义
 ├── services/                — 业务逻辑层
-│   ├── PackStore.ets        — Preferences 持久化封装（schema 版本化 + 安全解析）
+│   ├── PackStore.ets        — Preferences 持久化封装（singleton + 防抖 flush + 运行时验证 + 容量告警）
 │   ├── GearService.ets      — 装备业务逻辑（纯函数导出）
 │   ├── ChecklistService.ets — 清单业务逻辑（纯函数导出）
 │   ├── CategoryService.ets  — 分类管理（增删改查 + 重命名）
@@ -163,7 +163,8 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.7.6 | ✅ 已完成 | 行程详情页顶部体验收口（navbar 三元素居中对齐 + 删…菜单换核查图标 + 标题随折叠呼吸）+ 全屏沉浸 |
 | v0.7.7 | ✅ 已完成 | 装备库单品拖拽真机回归（拖拽避让丝滑让位 + 松手 optimistic 落位去卡顿 + 跨分组 spring-load 悬停自动展开） |
 | v0.7.8 | ✅ 已完成 | 行程编辑模块（Tabs 滑动切换 + ItineraryService CRUD + DayCard 手风琴 + 表单面板 + 动效审查优化） |
-| v0.7.9 | ✅ 当前 | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行） |
+| v0.7.9 | ✅ 已完成 | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行） |
+| v0.7.10 | ✅ 当前 | 完整性修复：23 项审计问题修复（clone helper + singleton PackStore + 事务化更新 + 全量 token 化） |
 | v0.8.0 | 📋 中期 | GearPage 组件瘦身（FabController/GroupDragController 提取） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 

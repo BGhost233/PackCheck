@@ -2,6 +2,10 @@
 
 > 详细 commit 历史见 `git log`。此处只保留近期版本摘要和早期版本一行概述。
 
+## v0.7.10 (2026-06-29)
+
+完整性修复：对抗性审计发现 23 个问题，分 6 阶段系统修复。模型层 clone helper 收口全部手写字面量（DayItinerary/RouteSegment/TicketInfo/ChecklistItem）；PackStore 升级为 singleton + 防抖 flush + 运行时验证 + 容量告警；category 删除/重命名事务化更新；全部 TextInput 加 maxLength + 数值输入范围校验；250+ 处 fontSize 硬编码替换为 Typography token；EntryBackupAbility 升级为 onBackupEx/onRestoreEx 结构化返回。新增 DEVELOPMENT_STANDARDS §4.6 内化模式 / §5.2.1 clone 铁律 / §5.2.2 事务模式 / §7.2 备份恢复。避坑清单 51→54 条。
+
 ## v0.7.9 (2026-06-26)
 
 多选功能全量删除：移除 GearPage 多选模式及关联状态/方法/回调（~600 行）、删除 GenerateTripSheet 与 MoveGroupSheet 组件、清理 SheetOverlay 路由分支与 SheetMode 常量。全项目净删 877 行。

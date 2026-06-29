@@ -34,8 +34,6 @@ grep -rl "关键词" "/Users/bghost233/Desktop/HarmonyOS-Docs/FAQ" | head -20
 
 典型流程：需求 → 判断知识域 → grep 检索 → Read 2-5 篇 → 基于文档出方案 → 写代码。性能优化优先查 `最佳实践/性能优化/`，状态管理优先查 `开发指南/...状态管理...` + `最佳实践/状态管理最佳实践`。
 
-详见 `memory/harmonyos-docs-first.md`。
-
 ---
 
 ## 一、架构规范
@@ -59,7 +57,7 @@ entry/src/main/ets/
 │   ├── ColorUtils.ets       — 颜色计算
 │   ├── AnimationUtils.ets   — 通用动画封装（Builder/函数）
 │   └── HeadCollapseController.ets — 顶部折叠滚动数学内核（有状态 class，与业务无关）
-├── services/                — 业务逻辑层（纯函数，无 class 包装）
+├── services/                — 业务逻辑层（纯函数为主，PackStore 为 singleton class）
 │   ├── GearService.ets      — 装备计算（筛选/排序/统计）
 │   ├── ChecklistService.ets — 行程清单操作（增删改查，immutable 更新）
 │   ├── ItineraryService.ets — 行程日程操作（DayItinerary/RouteSegment clone + CRUD）
@@ -644,7 +642,7 @@ PackCheck 使用 `EntryBackupAbility`（BackupExtensionAbility）接入系统备
 
 新增文件**先对照 §1.1 职责表 + §1.2 决策树定位**，放错位置即返工：
 
-- 纯计算 → `services/`（纯函数，无 class 包装、无 this 依赖）。
+- 纯计算 → `services/`（纯函数为主；PackStore 例外，为 singleton class）。
 - UI 组件 → `components/`，按页面域分子目录（`components/home/`、`components/gear/`、`components/sheets/`）。
 - 常量 → `constants/` 对应 token 文件 + `DesignTokens.ets` barrel re-export。
 - 工具 → `utils/`。类型 → `models/`。全局协调 → `pages/Index.ets`。
@@ -690,10 +688,10 @@ PackCheck 使用 `EntryBackupAbility`（BackupExtensionAbility）接入系统备
 
 提交组件代码前确认：
 
-- [ ] `build()` 有显式根容器吗？（禁止裸 `if/else`、裸 `@Builder` 调用、裸 `ForEach` 作为 build 根节点——隐式 Column 会导致内容居中，避坑 #51）
+- [ ] `build()` 有显式根容器吗？（禁止裸 `if/else`、裸 `@Builder` 调用、裸 `ForEach` 作为 build 根节点——隐式 Column 会导致内容居中，避坑 #50）
 - [ ] 箭头函数参数有类型标注吗？
 - [ ] 色值/尺寸从常量引用了吗？
 - [ ] @State 数量合理吗？（不超过 10 个）
 - [ ] props 不超过 8 个吗？
-- [ ] TabContent 内的子组件入场动画是否依赖 `onAppear`？（TabContent keep-alive 下 onAppear 不重触发，需用 nonce 驱动，避坑 #52）
+- [ ] TabContent 内的子组件入场动画是否依赖 `onAppear`？（TabContent keep-alive 下 onAppear 不重触发，需用 nonce 驱动，避坑 #51）
 - [ ] 构建通过了吗？
