@@ -21,29 +21,51 @@ import {
   PRESS_SCALE_REST
 } from '../../constants/AnimationTokens';
 
+/**
+ * 行程表单 Sheet — 新建/编辑行程。
+ *
+ * §4.6 内化模式：外部通过 initialXxx 传入初始值，内部 @State 持有编辑态，
+ * 提交时通过 onConfirm 回调将最终数据回传给父组件。
+ */
 @Component
 export struct TripFormSheet {
-  @Prop tripTitle: string = '';
-  @Prop tripDate: string = '';
   @Prop isEditMode: boolean = false;
-  // 行程画像字段（编辑模式可用）
-  @Prop tripDestination: string = '';
-  @Prop tripDistanceKm: string = '';
-  @Prop tripMaxAltitude: string = '';
-  @Prop tripAscentM: string = '';
-  @Prop tripDurationHours: string = '';
 
-  onTitleChange: (value: string) => void = (value: string): void => {};
-  onDateChange: (value: string) => void = (value: string): void => {};
-  onDestinationChange: (value: string) => void = (value: string): void => {};
-  onDistanceKmChange: (value: string) => void = (value: string): void => {};
-  onMaxAltitudeChange: (value: string) => void = (value: string): void => {};
-  onAscentMChange: (value: string) => void = (value: string): void => {};
-  onDurationHoursChange: (value: string) => void = (value: string): void => {};
-  onConfirm: () => void = (): void => {};
+  // 初始值 props（外部传入，仅用于 aboutToAppear 初始化）
+  initialTitle: string = '';
+  initialDate: string = '';
+  // 行程画像字段（编辑模式可用）
+  initialDestination: string = '';
+  initialDistanceKm: string = '';
+  initialMaxAltitude: string = '';
+  initialAscentM: string = '';
+  initialDurationHours: string = '';
+
+  // 表单字段 — 内部状态
+  @State private tripTitle: string = '';
+  @State private tripDate: string = '';
+  @State private tripDestination: string = '';
+  @State private tripDistanceKm: string = '';
+  @State private tripMaxAltitude: string = '';
+  @State private tripAscentM: string = '';
+  @State private tripDurationHours: string = '';
+
+  // 回调：提交表单数据
+  onConfirm: (title: string, date: string, destination: string,
+    distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => void = () => {};
 
   @State private buttonPressed: boolean = false;
   @State private dateRowPressed: boolean = false;
+
+  aboutToAppear(): void {
+    this.tripTitle = this.initialTitle;
+    this.tripDate = this.initialDate;
+    this.tripDestination = this.initialDestination;
+    this.tripDistanceKm = this.initialDistanceKm;
+    this.tripMaxAltitude = this.initialMaxAltitude;
+    this.tripAscentM = this.initialAscentM;
+    this.tripDurationHours = this.initialDurationHours;
+  }
 
   build() {
     Column({ space: 12 }) {
@@ -58,7 +80,7 @@ export struct TripFormSheet {
         .borderRadius(12)
         .padding({ left: 12, right: 12 })
         .onChange((value: string) => {
-          this.onTitleChange(value);
+          this.tripTitle = value;
         })
       this.DatePickerField('出发日期（可选）', this.tripDate)
 
@@ -78,7 +100,7 @@ export struct TripFormSheet {
             .backgroundColor(INPUT_BG)
             .borderRadius(10)
             .padding({ left: 12, right: 12 })
-            .onChange((value: string) => { this.onDestinationChange(value); })
+            .onChange((value: string) => { this.tripDestination = value; })
           Row({ space: 8 }) {
             TextInput({ placeholder: '里程 km', text: this.tripDistanceKm })
               .height(44)
@@ -91,7 +113,7 @@ export struct TripFormSheet {
               .padding({ left: 12, right: 12 })
               .type(InputType.Number)
               .layoutWeight(1)
-              .onChange((value: string) => { this.onDistanceKmChange(value); })
+              .onChange((value: string) => { this.tripDistanceKm = value; })
             TextInput({ placeholder: '海拔 m', text: this.tripMaxAltitude })
               .height(44)
               .maxLength(20)
@@ -103,7 +125,7 @@ export struct TripFormSheet {
               .padding({ left: 12, right: 12 })
               .type(InputType.Number)
               .layoutWeight(1)
-              .onChange((value: string) => { this.onMaxAltitudeChange(value); })
+              .onChange((value: string) => { this.tripMaxAltitude = value; })
           }
           .width('100%')
           Row({ space: 8 }) {
@@ -118,7 +140,7 @@ export struct TripFormSheet {
               .padding({ left: 12, right: 12 })
               .type(InputType.Number)
               .layoutWeight(1)
-              .onChange((value: string) => { this.onAscentMChange(value); })
+              .onChange((value: string) => { this.tripAscentM = value; })
             TextInput({ placeholder: '时长 h', text: this.tripDurationHours })
               .height(44)
               .maxLength(20)
@@ -130,7 +152,7 @@ export struct TripFormSheet {
               .padding({ left: 12, right: 12 })
               .type(InputType.Number)
               .layoutWeight(1)
-              .onChange((value: string) => { this.onDurationHoursChange(value); })
+              .onChange((value: string) => { this.tripDurationHours = value; })
           }
           .width('100%')
         }
@@ -156,7 +178,8 @@ export struct TripFormSheet {
           }
         })
         .onClick(() => {
-          this.onConfirm();
+          this.onConfirm(this.tripTitle, this.tripDate, this.tripDestination,
+            this.tripDistanceKm, this.tripMaxAltitude, this.tripAscentM, this.tripDurationHours);
         })
     }
   }
@@ -198,7 +221,7 @@ export struct TripFormSheet {
           const month = value.getMonth() + 1;
           const day = value.getDate();
           const yearPrefix = year !== new Date().getFullYear() ? year.toString() + '\u5e74' : '';
-          this.onDateChange(yearPrefix + month.toString() + '\u6708' + day.toString() + '\u65e5');
+          this.tripDate = yearPrefix + month.toString() + '\u6708' + day.toString() + '\u65e5';
         }
       });
     })

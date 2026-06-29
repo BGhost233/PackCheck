@@ -25,20 +25,46 @@ import {
 } from '../../services/GearService';
 import { CategoryTagGroup } from '../CategoryTagGroup';
 
+/**
+ * 装备导入 Sheet — 从装备库选择装备导入到行程清单。
+ *
+ * §4.6 内化模式：选中状态和筛选分类在组件内部管理，
+ * 提交时通过 onImport(ids) 回调将选中 ID 列表回传。
+ */
 @Component
 export struct ImportSheet {
   @Prop gears: GearItem[] = [];
-  @Prop importGearIds: string[] = [];
-  @Prop importGearCategory: string = CATEGORY_ALL;
   @Prop categories: string[] = [];
-  onCategoryChange: (value: string) => void = (value: string): void => {};
-  onToggleSelection: (id: string, checked: boolean) => void = (id: string, checked: boolean): void => {};
-  onImport: () => void = (): void => {};
+
+  // 内部状态
+  @State private importGearIds: string[] = [];
+  @State private importGearCategory: string = CATEGORY_ALL;
+
+  // 回调
+  onImport: (ids: string[]) => void = () => {};
   onAddGearFromImport: () => void = (): void => {};
 
   @State private buttonPressed: boolean = false;
   @State private addButtonPressed: boolean = false;
   @State private pressedGearId: string = '';
+
+  aboutToAppear(): void {
+    this.importGearIds = [];
+    this.importGearCategory = CATEGORY_ALL;
+  }
+
+  private toggleSelection(id: string, checked: boolean): void {
+    const nextIds: string[] = [];
+    for (let index = 0; index < this.importGearIds.length; index++) {
+      if (this.importGearIds[index] !== id) {
+        nextIds.push(this.importGearIds[index]);
+      }
+    }
+    if (checked) {
+      nextIds.push(id);
+    }
+    this.importGearIds = nextIds;
+  }
 
   build() {
     Column({ space: 12 }) {
@@ -83,7 +109,7 @@ export struct ImportSheet {
           showAllOption: true,
           editable: false,
           onSelect: (category: string) => {
-            this.onCategoryChange(category);
+            this.importGearCategory = category;
           }
         })
 
@@ -94,7 +120,7 @@ export struct ImportSheet {
                 Checkbox()
                   .select(this.importGearIds.indexOf(item.id) >= 0)
                   .onChange((checked: boolean) => {
-                    this.onToggleSelection(item.id, checked);
+                    this.toggleSelection(item.id, checked);
                   })
                 Column({ space: 4 }) {
                   Text(item.name)
@@ -148,7 +174,7 @@ export struct ImportSheet {
           }
         })
         .onClick(() => {
-          this.onImport();
+          this.onImport(this.importGearIds);
         })
     }
     .height('100%')

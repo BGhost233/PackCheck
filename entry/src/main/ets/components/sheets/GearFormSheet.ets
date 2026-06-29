@@ -19,27 +19,49 @@ import {
 } from '../../constants/AnimationTokens';
 import { CategoryTagGroup } from '../CategoryTagGroup';
 
+/**
+ * 装备表单 Sheet — 新建/编辑装备。
+ *
+ * §4.6 内化模式：外部通过 initialXxx 传入初始值，内部 @State 持有编辑态，
+ * 提交时通过 onSave 回调将最终数据回传给父组件。
+ */
 @Component
 export struct GearFormSheet {
-  @Prop gearName: string = '';
-  @Prop gearCategory: string = '其他';
-  @Prop gearWeight: string = '';
-  @Prop gearPrice: string = '';
-  @Prop gearNote: string = '';
+  // 编辑模式标识（非空 = 编辑已有装备）
   @Prop editingGearId: string = '';
+
+  // 初始值 props（外部传入，仅用于 aboutToAppear 初始化）
+  initialName: string = '';
+  initialCategory: string = '其他';
+  initialWeight: string = '';
+  initialPrice: string = '';
+  initialNote: string = '';
   @Prop categories: string[] = [];
-  onNameChange: (value: string) => void = (value: string): void => {};
-  onCategoryChange: (value: string) => void = (value: string): void => {};
-  onWeightChange: (value: string) => void = (value: string): void => {};
-  onPriceChange: (value: string) => void = (value: string): void => {};
-  onNoteChange: (value: string) => void = (value: string): void => {};
-  onSave: () => void = (): void => {};
+
+  // 表单字段 — 内部状态
+  @State private gearName: string = '';
+  @State private gearCategory: string = '其他';
+  @State private gearWeight: string = '';
+  @State private gearPrice: string = '';
+  @State private gearNote: string = '';
+
+  // 回调：提交表单数据
+  onSave: (name: string, category: string, weight: string, price: string, note: string) => void = () => {};
+  // 分组管理回调（操作全局分类，非表单本地状态）
   onRename: (oldName: string, newName: string) => void = () => {};
   onDelete: (category: string) => void = () => {};
   onReorder: (categories: string[]) => void = () => {};
   onAddCategory: (name: string) => void = () => {};
 
   @State private buttonPressed: boolean = false;
+
+  aboutToAppear(): void {
+    this.gearName = this.initialName;
+    this.gearCategory = this.initialCategory;
+    this.gearWeight = this.initialWeight;
+    this.gearPrice = this.initialPrice;
+    this.gearNote = this.initialNote;
+  }
 
   build() {
     Scroll() {
@@ -55,7 +77,7 @@ export struct GearFormSheet {
           .borderRadius(12)
           .padding({ left: 12, right: 12 })
           .onChange((value: string) => {
-            this.onNameChange(value);
+            this.gearName = value;
           })
         Text('选择分组')
           .fontSize(FONT_SIZE_CAPTION)
@@ -67,7 +89,7 @@ export struct GearFormSheet {
           mode: 'single',
           editable: true,
           onSelect: (category: string) => {
-            this.onCategoryChange(category);
+            this.gearCategory = category;
           },
           onRename: (oldName: string, newName: string) => {
             this.onRename(oldName, newName);
@@ -94,7 +116,7 @@ export struct GearFormSheet {
             .borderRadius(12)
             .padding({ left: 12, right: 12 })
             .onChange((value: string) => {
-              this.onWeightChange(value);
+              this.gearWeight = value;
             })
           TextInput({ placeholder: '价格(¥)', text: this.gearPrice })
             .type(InputType.Number)
@@ -107,7 +129,7 @@ export struct GearFormSheet {
             .borderRadius(12)
             .padding({ left: 12, right: 12 })
             .onChange((value: string) => {
-              this.onPriceChange(value);
+              this.gearPrice = value;
             })
         }
         TextInput({ placeholder: '备注（一行，可选）', text: this.gearNote })
@@ -121,7 +143,7 @@ export struct GearFormSheet {
           .borderRadius(12)
           .padding({ left: 12, right: 12 })
           .onChange((value: string) => {
-            this.onNoteChange(value);
+            this.gearNote = value;
           })
         Button(this.editingGearId.length === 0 ? '确认添加' : '确认保存')
           .height(48)
@@ -141,7 +163,7 @@ export struct GearFormSheet {
             }
           })
           .onClick(() => {
-            this.onSave();
+            this.onSave(this.gearName, this.gearCategory, this.gearWeight, this.gearPrice, this.gearNote);
           })
       }
     }

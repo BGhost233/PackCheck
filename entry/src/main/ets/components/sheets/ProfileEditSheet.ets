@@ -16,25 +16,45 @@ import {
   PRESS_SCALE_REST
 } from '../../constants/AnimationTokens';
 
+/**
+ * 行程画像编辑 Sheet。
+ *
+ * §4.6 内化模式：外部通过 initialXxx 传入初始值，内部 @State 持有编辑态，
+ * 提交时通过 onConfirm 回调将最终数据回传给父组件。
+ */
 @Component
 export struct ProfileEditSheet {
-  @Prop tripDate: string = '';
-  @Prop tripDestination: string = '';
-  @Prop tripDistanceKm: string = '';
-  @Prop tripMaxAltitude: string = '';
-  @Prop tripAscentM: string = '';
-  @Prop tripDurationHours: string = '';
+  // 初始值 props（外部传入，仅用于 aboutToAppear 初始化）
+  initialDate: string = '';
+  initialDestination: string = '';
+  initialDistanceKm: string = '';
+  initialMaxAltitude: string = '';
+  initialAscentM: string = '';
+  initialDurationHours: string = '';
 
-  onDateChange: (value: string) => void = (value: string): void => {};
-  onDestinationChange: (value: string) => void = (value: string): void => {};
-  onDistanceKmChange: (value: string) => void = (value: string): void => {};
-  onMaxAltitudeChange: (value: string) => void = (value: string): void => {};
-  onAscentMChange: (value: string) => void = (value: string): void => {};
-  onDurationHoursChange: (value: string) => void = (value: string): void => {};
-  onConfirm: () => void = (): void => {};
+  // 表单字段 — 内部状态
+  @State private tripDate: string = '';
+  @State private tripDestination: string = '';
+  @State private tripDistanceKm: string = '';
+  @State private tripMaxAltitude: string = '';
+  @State private tripAscentM: string = '';
+  @State private tripDurationHours: string = '';
+
+  // 回调：提交表单数据
+  onConfirm: (date: string, destination: string,
+    distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => void = () => {};
 
   @State private buttonPressed: boolean = false;
   @State private dateRowPressed: boolean = false;
+
+  aboutToAppear(): void {
+    this.tripDate = this.initialDate;
+    this.tripDestination = this.initialDestination;
+    this.tripDistanceKm = this.initialDistanceKm;
+    this.tripMaxAltitude = this.initialMaxAltitude;
+    this.tripAscentM = this.initialAscentM;
+    this.tripDurationHours = this.initialDurationHours;
+  }
 
   build() {
     Column({ space: 12 }) {
@@ -74,7 +94,7 @@ export struct ProfileEditSheet {
             const month = value.getMonth() + 1;
             const day = value.getDate();
             const dateStr = year.toString() + '年' + month.toString() + '月' + day.toString() + '日';
-            this.onDateChange(dateStr);
+            this.tripDate = dateStr;
           }
         });
       })
@@ -89,19 +109,19 @@ export struct ProfileEditSheet {
         .backgroundColor(INPUT_BG)
         .borderRadius(10)
         .padding({ left: 12, right: 12 })
-        .onChange((value: string) => { this.onDestinationChange(value); })
+        .onChange((value: string) => { this.tripDestination = value; })
 
       // 里程 + 海拔（2 列）
       Row({ space: 8 }) {
-        this.FieldInput('里程 km', this.tripDistanceKm, (v: string) => { this.onDistanceKmChange(v); })
-        this.FieldInput('最高海拔 m', this.tripMaxAltitude, (v: string) => { this.onMaxAltitudeChange(v); })
+        this.FieldInput('里程 km', this.tripDistanceKm, (v: string) => { this.tripDistanceKm = v; })
+        this.FieldInput('最高海拔 m', this.tripMaxAltitude, (v: string) => { this.tripMaxAltitude = v; })
       }
       .width('100%')
 
       // 爬升 + 时长（2 列）
       Row({ space: 8 }) {
-        this.FieldInput('累计爬升 m', this.tripAscentM, (v: string) => { this.onAscentMChange(v); })
-        this.FieldInput('时长 h', this.tripDurationHours, (v: string) => { this.onDurationHoursChange(v); })
+        this.FieldInput('累计爬升 m', this.tripAscentM, (v: string) => { this.tripAscentM = v; })
+        this.FieldInput('时长 h', this.tripDurationHours, (v: string) => { this.tripDurationHours = v; })
       }
       .width('100%')
 
@@ -124,7 +144,8 @@ export struct ProfileEditSheet {
           }
         })
         .onClick(() => {
-          this.onConfirm();
+          this.onConfirm(this.tripDate, this.tripDestination,
+            this.tripDistanceKm, this.tripMaxAltitude, this.tripAscentM, this.tripDurationHours);
         })
     }
   }

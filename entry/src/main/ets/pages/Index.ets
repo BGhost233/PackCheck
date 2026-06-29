@@ -183,8 +183,6 @@ struct Index {
   @State private tripDurationHours: string = '';
   @State private tempItemName: string = '';
   @State private tempItemGroup: string = '其他';
-  @State private importGearIds: string[] = [];
-  @State private importGearCategory: string = CATEGORY_ALL;
   @State private actionSheetItem: ChecklistItem = createEmptyChecklistItem();
   // 从空格子进入 GearPicker 时的预选 Zone（空串 = 无预选，向后兼容），review I4
   @State private pickerPreselectZone: string = '';
@@ -199,7 +197,6 @@ struct Index {
   @State private showEditItemPanel: boolean = false;
   @State private showEditGearPanel: boolean = false;
   @State private showCompletionToast: boolean = false;
-  @State private showTempAddNotice: boolean = false;
   @State private reviewIndex: number = 0;
   @State private reviewFinished: boolean = false;
   // D-2：聚焦态「逐项核查本区」。非空时 Review 只展示 group===zone 的 item。
@@ -425,15 +422,6 @@ struct Index {
     this.showEditGearPanel = false;
     this.resetGearForm();
     this.errorText = '';
-  }
-
-  private async saveGear(): Promise<void> {
-    const name = this.gearName.trim();
-    if (name.length === 0) {
-      this.errorText = '装备名称不能为空';
-      return;
-    }
-    await this.saveGearWithData(name, this.gearCategory, this.gearWeight, this.gearPrice, this.gearNote);
   }
 
   private async saveGearWithData(nameStr: string, categoryStr: string, weightStr: string,
@@ -783,11 +771,6 @@ struct Index {
     });
   }
 
-  private async createChecklist(): Promise<void> {
-    await this.createChecklistWithData(this.tripTitle, this.tripDate, this.tripDestination,
-      this.tripDistanceKm, this.tripMaxAltitude, this.tripAscentM, this.tripDurationHours);
-  }
-
   private async createChecklistWithData(title: string, date: string, destination: string,
     distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string): Promise<void> {
     const trimmedTitle = title.trim();
@@ -963,7 +946,6 @@ struct Index {
   private openTempItemSheet(): void {
     this.tempItemName = '';
     this.tempItemGroup = '其他';
-    this.showTempAddNotice = false;
     this.sheetMode = SHEET_TEMP_ITEM;
     this.openSheetAnimated();
   }
@@ -1037,21 +1019,22 @@ struct Index {
     this.openSheetAnimated();
   }
 
-  private async saveTripInfo(): Promise<void> {
+  private async saveTripInfo(titleStr: string, dateStr: string, destinationStr: string,
+    distanceKmStr: string, maxAltitudeStr: string, ascentMStr: string, durationHoursStr: string): Promise<void> {
     const checklist = this.currentChecklist();
-    const title = this.tripTitle.trim();
+    const title = titleStr.trim();
     if (checklist === undefined || title.length === 0) {
       this.errorText = '行程名称不能为空';
       return;
     }
     const profile: TripProfileUpdate = {
-      destination: this.tripDestination.trim().length > 0 ? this.tripDestination.trim() : undefined,
-      distanceKm: clampNumber(this.tripDistanceKm, 0, 100000),
-      maxAltitude: clampNumber(this.tripMaxAltitude, -500, 9000),
-      ascentM: clampNumber(this.tripAscentM, 0, 50000),
-      durationHours: clampNumber(this.tripDurationHours, 0, 8760)
+      destination: destinationStr.trim().length > 0 ? destinationStr.trim() : undefined,
+      distanceKm: clampNumber(distanceKmStr, 0, 100000),
+      maxAltitude: clampNumber(maxAltitudeStr, -500, 9000),
+      ascentM: clampNumber(ascentMStr, 0, 50000),
+      durationHours: clampNumber(durationHoursStr, 0, 8760)
     };
-    await this.updateChecklistInfo(checklist.id, title, this.tripDate.trim(), parseTripDateAt(this.tripDate), profile);
+    await this.updateChecklistInfo(checklist.id, title, dateStr.trim(), parseTripDateAt(dateStr), profile);
     this.closeSheet();
   }
 
@@ -1070,19 +1053,21 @@ struct Index {
     this.openSheetAnimated();
   }
 
-  private async saveProfileInfo(): Promise<void> {
+  private async saveProfileInfo(dateStr: string, destinationStr: string,
+    distanceKmStr: string, maxAltitudeStr: string, ascentMStr: string, durationHoursStr: string): Promise<void> {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
       return;
     }
     const profile: TripProfileUpdate = {
-      destination: this.tripDestination.trim().length > 0 ? this.tripDestination.trim() : undefined,
-      distanceKm: clampNumber(this.tripDistanceKm, 0, 100000),
-      maxAltitude: clampNumber(this.tripMaxAltitude, -500, 9000),
-      ascentM: clampNumber(this.tripAscentM, 0, 50000),
-      durationHours: clampNumber(this.tripDurationHours, 0, 8760)
+      destination: destinationStr.trim().length > 0 ? destinationStr.trim() : undefined,
+      distanceKm: clampNumber(distanceKmStr, 0, 100000),
+      maxAltitude: clampNumber(maxAltitudeStr, -500, 9000),
+      ascentM: clampNumber(ascentMStr, 0, 50000),
+      durationHours: clampNumber(durationHoursStr, 0, 8760)
     };
-    await this.updateChecklistInfo(checklist.id, checklist.title, this.tripDate.trim(), parseTripDateAt(this.tripDate), profile);
+    const date = dateStr.trim();
+    await this.updateChecklistInfo(checklist.id, checklist.title, date, parseTripDateAt(date), profile);
     this.closeSheet();
   }
 
@@ -1110,32 +1095,25 @@ struct Index {
   }
 
 
-  private async addTempItem(): Promise<void> {
-    const checklist = this.currentChecklist();
-    const name = this.tempItemName.trim();
-    const group = this.tempItemGroup.trim().length === 0 ? '其他' : this.tempItemGroup.trim();
-    if (checklist === undefined || name.length === 0) {
-      this.errorText = '物品名称不能为空';
-      return;
-    }
-    const item: ChecklistItem = {
-      id: makeId('item'),
-      name: name,
-      group: group,
-      checked: false
-    };
-    const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, [item]);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
-    await this.ensureCategory(group);
-    this.tempItemName = '';
-    this.showTempAddNotice = true;
-    this.errorText = '';
-    this.pendingTimers.push(setTimeout(() => {
-      if (this.sheetMode === SHEET_TEMP_ITEM) {
-        this.showTempAddNotice = false;
-      }
-    }, 500));
+private async addTempItem(nameStr: string, groupStr: string): Promise<void> {
+const checklist = this.currentChecklist();
+const name = nameStr.trim();
+const group = groupStr.trim().length === 0 ? '其他' : groupStr.trim();
+if (checklist === undefined || name.length === 0) {
+this.errorText = '物品名称不能为空';
+return;
+}
+const item: ChecklistItem = {
+id: makeId('item'),
+name: name,
+group: group,
+checked: false
+};
+const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, [item]);
+this.applyChecklistState(nextChecklists);
+await this.store.saveChecklists(nextChecklists);
+await this.ensureCategory(group);
+this.errorText = '';
   }
 
   private async saveEditedItemWithData(name: string, group: string, weightStr: string, priceStr: string): Promise<void> {
@@ -1163,12 +1141,10 @@ struct Index {
     await this.store.saveChecklists(nextChecklists);
   }
 
-  private openImportSheet(): void {
-    this.importGearIds = [];
-    this.importGearCategory = CATEGORY_ALL;
-    this.sheetMode = SHEET_IMPORT;
-    this.openSheetAnimated();
-  }
+private openImportSheet(): void {
+this.sheetMode = SHEET_IMPORT;
+this.openSheetAnimated();
+}
 
 
   private openGearPickerSheet(zone?: string): void {
@@ -1413,35 +1389,18 @@ struct Index {
     this.closeSheet();
   }
 
-  private hasImportSelection(id: string): boolean {
-    return this.importGearIds.indexOf(id) >= 0;
-  }
-
-  private toggleImportSelection(id: string, checked: boolean): void {
-    const nextIds: string[] = [];
-    for (let index = 0; index < this.importGearIds.length; index++) {
-      if (this.importGearIds[index] !== id) {
-        nextIds.push(this.importGearIds[index]);
-      }
-    }
-    if (checked) {
-      nextIds.push(id);
-    }
-    this.importGearIds = nextIds;
-  }
-
-  private async importSelectedGear(): Promise<void> {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined || this.importGearIds.length === 0) {
-      this.errorText = '请选择装备';
-      return;
-    }
-    const items = buildItemsFromGears(this.gears, this.importGearIds);
-    const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, items);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
-    this.closeSheet();
-  }
+private async importSelectedGear(selectedIds: string[]): Promise<void> {
+const checklist = this.currentChecklist();
+if (checklist === undefined || selectedIds.length === 0) {
+this.errorText = '请选择装备';
+return;
+}
+const items = buildItemsFromGears(this.gears, selectedIds);
+const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, items);
+this.applyChecklistState(nextChecklists);
+await this.store.saveChecklists(nextChecklists);
+this.closeSheet();
+}
 
 
 
@@ -1762,8 +1721,7 @@ await this.updateItinerary(next);
     this.errorText = '';
     this.returnToImportAfterGear = false;
     this.editingItemId = '';
-    this.showTempAddNotice = false;
-    // 防御性重置所有表单状态，避免残留脏数据
+    // §4.6 内化后 sheet 自管编辑状态，关闭时只需重置 staging 初始值
     this.resetGearForm();
     this.resetTripForm();
     this.resetDayForm();
@@ -2209,59 +2167,64 @@ await this.updateItinerary(next);
           sheetTranslateY: this.sheetTranslateY,
           sheetOverlayOpacity: this.sheetOverlayOpacity,
           errorText: this.errorText,
+          // GearSortSheet
           gearSortMode: this.gearSortMode,
-          gearName: this.gearName,
-          gearCategory: this.gearCategory,
-          gearWeight: this.gearWeight,
-          gearPrice: this.gearPrice,
-          gearNote: this.gearNote,
-          editingGearId: this.editingGearId,
-          categories: this.presetCategories(),
-          tripTitle: this.tripTitle,
-          tripDate: this.tripDate,
-          tripDestination: this.tripDestination,
-          tripDistanceKm: this.tripDistanceKm,
-          tripMaxAltitude: this.tripMaxAltitude,
-          tripAscentM: this.tripAscentM,
-          tripDurationHours: this.tripDurationHours,
-          tempItemName: this.tempItemName,
-          tempItemGroup: this.tempItemGroup,
-          showTempAddNotice: this.showTempAddNotice,
-          gears: this.gears,
-          importGearIds: this.importGearIds,
-          importGearCategory: this.importGearCategory,
           onClose: () => { this.closeSheet(); },
           onSelectSort: (mode: string) => {
             this.gearSortMode = mode;
             this.closeSheet();
           },
-          onGearNameChange: (value: string) => { this.gearName = value; },
-          onGearCategoryChange: (value: string) => { this.gearCategory = value; },
-          onGearWeightChange: (value: string) => { this.gearWeight = value; },
-          onGearPriceChange: (value: string) => { this.gearPrice = value; },
-          onGearNoteChange: (value: string) => { this.gearNote = value; },
-          onSaveGear: () => { this.saveGear(); },
-          onTripTitleChange: (value: string) => { this.tripTitle = value; },
-          onTripDateChange: (value: string) => { this.tripDate = value; },
-          onTripDestinationChange: (value: string) => { this.tripDestination = value; },
-          onTripDistanceKmChange: (value: string) => { this.tripDistanceKm = value; },
-          onTripMaxAltitudeChange: (value: string) => { this.tripMaxAltitude = value; },
-          onTripAscentMChange: (value: string) => { this.tripAscentM = value; },
-          onTripDurationHoursChange: (value: string) => { this.tripDurationHours = value; },
-          onCreateTrip: () => { this.createChecklist(); },
-          onSaveTrip: () => { this.saveTripInfo(); },
-          onSaveProfile: () => { this.saveProfileInfo(); },
-          onTempItemNameChange: (value: string) => { this.tempItemName = value; },
-          onTempItemGroupChange: (value: string) => { this.tempItemGroup = value; },
-          onAddTempItem: () => { this.addTempItem(); },
-          onImportCategoryChange: (value: string) => { this.importGearCategory = value; },
-          onToggleImportSelection: (id: string, checked: boolean) => { this.toggleImportSelection(id, checked); },
-          onImportSelectedGear: () => { this.importSelectedGear(); },
-          onAddGearFromImport: () => { this.openAddGearFromImport(); },
+          // GearFormSheet（§4.6 内化：只传初始值 + onSaveGear 带参回调）
+          editingGearId: this.editingGearId,
+          categories: this.presetCategories(),
+          gearInitialName: this.gearName,
+          gearInitialCategory: this.gearCategory,
+          gearInitialWeight: this.gearWeight,
+          gearInitialPrice: this.gearPrice,
+          gearInitialNote: this.gearNote,
+          onSaveGear: (name: string, category: string, weight: string, price: string, note: string) => {
+            this.saveGearWithData(name, category, weight, price, note);
+          },
           onCategoryRename: (oldName: string, newName: string) => { this.handleCategoryRename(oldName, newName); },
           onCategoryDelete: (category: string) => { this.handleCategoryDelete(category); },
           onCategoryReorder: (categories: string[]) => { this.executeCategoryReorder(categories); },
           onCategoryAdd: (_name: string) => { this.showCategoryInputPrompt('', true); },
+          // TripFormSheet（§4.6 内化：只传初始值 + onCreateTrip/onSaveTrip 带参回调）
+          tripInitialTitle: this.tripTitle,
+          tripInitialDate: this.tripDate,
+          tripInitialDestination: this.tripDestination,
+          tripInitialDistanceKm: this.tripDistanceKm,
+          tripInitialMaxAltitude: this.tripMaxAltitude,
+          tripInitialAscentM: this.tripAscentM,
+          tripInitialDurationHours: this.tripDurationHours,
+          onCreateTrip: (title: string, date: string, destination: string,
+            distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
+            this.createChecklistWithData(title, date, destination, distanceKm, maxAltitude, ascentM, durationHours);
+          },
+          onSaveTrip: (title: string, date: string, destination: string,
+            distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
+            this.saveTripInfo(title, date, destination, distanceKm, maxAltitude, ascentM, durationHours);
+          },
+          // ProfileEditSheet（§4.6 内化：只传初始值 + onSaveProfile 带参回调）
+          profileInitialDate: this.tripDate,
+          profileInitialDestination: this.tripDestination,
+          profileInitialDistanceKm: this.tripDistanceKm,
+          profileInitialMaxAltitude: this.tripMaxAltitude,
+          profileInitialAscentM: this.tripAscentM,
+          profileInitialDurationHours: this.tripDurationHours,
+          onSaveProfile: (date: string, destination: string,
+            distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
+            this.saveProfileInfo(date, destination, distanceKm, maxAltitude, ascentM, durationHours);
+          },
+          // TempItemSheet（§4.6 内化：只传初始值 + onAddTempItem 带参回调）
+          tempInitialName: this.tempItemName,
+          tempInitialGroup: this.tempItemGroup,
+          onAddTempItem: (name: string, group: string) => { this.addTempItem(name, group); },
+          // ImportSheet（§4.6 内化：不再传选中/筛选状态）
+          gears: this.gears,
+          onImportGears: (ids: string[]) => { this.importSelectedGear(ids); },
+          onAddGearFromImport: () => { this.openAddGearFromImport(); },
+          // GearPickerSheet
           pickerSelectedIds: this.currentTripGearIds(),
           pickerPreselectZone: this.pickerPreselectZone,
           onPickerToggleGear: (gear: GearItem) => { this.toggleGearInTrip(gear); },
@@ -2272,20 +2235,17 @@ await this.updateItinerary(next);
               this.addTempGearToTrip(name, zone, weight);
             }
           },
+          // GearItemActionSheet
           actionItem: this.actionSheetItem,
           onActionMoveToZone: (itemId: string, zone: string) => { this.moveItemToZone(itemId, zone); },
           onActionViewDetail: (item: ChecklistItem) => {
-            // 返回首页 → 切换到装备库 Tab → 展开对应装备卡片
-            // 序列化：先关闭 Sheet 动画完成后再执行 Tab 切换，避免 Spring 竞争
             this.errorText = '';
             this.returnToImportAfterGear = false;
             this.editingItemId = '';
-            this.showTempAddNotice = false;
             this.getUIContext().animateTo({
               curve: SPRING_PANEL_EXIT(),
               onFinish: () => {
                 this.sheetMode = SHEET_NONE;
-                // Sheet 关闭完毕后执行导航
                 if (item.fromGearId !== undefined && item.fromGearId !== '') {
                   this.expandedGearId = item.fromGearId;
                   this.stopShakeListening();
@@ -2308,7 +2268,7 @@ await this.updateItinerary(next);
             });
           },
           onActionRemove: (itemId: string) => { this.removeItemFromTrip(itemId); },
-          // DayForm
+          // DayFormSheet
           editingDayId: this.editingDayId,
           dayFrom: this.dayFormFrom,
           dayTo: this.dayFormTo,
@@ -2318,7 +2278,7 @@ await this.updateItinerary(next);
           onSubmitEditDay: (dayId: string, from: string, to: string, date: string, note: string) => {
             this.handleSubmitEditDay(dayId, from, to, date, note);
           },
-          // SegmentForm
+          // SegmentFormSheet
           editingSegmentId: this.editingSegmentId,
           segFrom: this.segFormFrom,
           segTo: this.segFormTo,

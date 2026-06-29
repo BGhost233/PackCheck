@@ -5,7 +5,6 @@ import {
   FONT_SIZE_BODY_SMALL,
   FONT_SIZE_CAPTION
 } from '../../constants/Typography';
-// Note: RouteSegment still needed for SegmentForm
 import { resolveItemName } from '../../services/ChecklistService';
 import {
   CARD_BG,
@@ -44,89 +43,78 @@ import { SegmentFormSheet } from './SegmentFormSheet';
 
 @Component
 export struct SheetOverlay {
+  // ===== 通用控制 =====
   @Prop sheetMode: string = '';
   @Prop sheetTranslateY: number = 800;
   @Prop sheetOverlayOpacity: number = 0;
   @Prop errorText: string = '';
-  // Gear form
-  @Prop gearSortMode: string = '';
-  @Prop gearName: string = '';
-  @Prop gearCategory: string = '其他';
-  @Prop gearWeight: string = '';
-  @Prop gearPrice: string = '';
-  @Prop gearNote: string = '';
+  onClose: () => void = (): void => {};
+
+  // ===== GearFormSheet（§4.6 内化后只传初始值） =====
   @Prop editingGearId: string = '';
   @Prop categories: string[] = [];
-  // Trip form
-  @Prop tripTitle: string = '';
-  @Prop tripDate: string = '';
-  @Prop tripDestination: string = '';
-  @Prop tripDistanceKm: string = '';
-  @Prop tripMaxAltitude: string = '';
-  @Prop tripAscentM: string = '';
-  @Prop tripDurationHours: string = '';
-  // Temp item
-  @Prop tempItemName: string = '';
-  @Prop tempItemGroup: string = '其他';
-  @Prop showTempAddNotice: boolean = false;
-  // Import
-  @Prop gears: GearItem[] = [];
-  @Prop importGearIds: string[] = [];
-  @Prop importGearCategory: string = CATEGORY_ALL;
-  // Callbacks
-  onClose: () => void = (): void => {};
-  onSelectSort: (mode: string) => void = (mode: string): void => {};
-  // Gear form callbacks
-  onGearNameChange: (value: string) => void = (value: string): void => {};
-  onGearCategoryChange: (value: string) => void = (value: string): void => {};
-  onGearWeightChange: (value: string) => void = (value: string): void => {};
-  onGearPriceChange: (value: string) => void = (value: string): void => {};
-  onGearNoteChange: (value: string) => void = (value: string): void => {};
-  onSaveGear: () => void = (): void => {};
-  // Trip form callbacks
-  onTripTitleChange: (value: string) => void = (value: string): void => {};
-  onTripDateChange: (value: string) => void = (value: string): void => {};
-  onTripDestinationChange: (value: string) => void = (value: string): void => {};
-  onTripDistanceKmChange: (value: string) => void = (value: string): void => {};
-  onTripMaxAltitudeChange: (value: string) => void = (value: string): void => {};
-  onTripAscentMChange: (value: string) => void = (value: string): void => {};
-  onTripDurationHoursChange: (value: string) => void = (value: string): void => {};
-  onCreateTrip: () => void = (): void => {};
-  onSaveTrip: () => void = (): void => {};
-  onSaveProfile: () => void = (): void => {};
-  // Temp item callbacks
-  onTempItemNameChange: (value: string) => void = (value: string): void => {};
-  onTempItemGroupChange: (value: string) => void = (value: string): void => {};
-  onAddTempItem: () => void = (): void => {};
-  // Import callbacks
-  onImportCategoryChange: (value: string) => void = (value: string): void => {};
-  onToggleImportSelection: (id: string, checked: boolean) => void = (id: string, checked: boolean): void => {};
-  onImportSelectedGear: () => void = (): void => {};
-  onAddGearFromImport: () => void = (): void => {};
-  // Swipe-to-dismiss gesture
-  @State private sheetDragOffset: number = 0;
-  @State private cardHeight: number = 600; // 默认值，onAreaChange 实时更新
-
-  // Category editing callbacks
+  @Prop gearInitialName: string = '';
+  @Prop gearInitialCategory: string = '其他';
+  @Prop gearInitialWeight: string = '';
+  @Prop gearInitialPrice: string = '';
+  @Prop gearInitialNote: string = '';
+  onSaveGear: (name: string, category: string, weight: string, price: string, note: string) => void = () => {};
+  // Category editing callbacks (shared by GearForm / TempItem)
   onCategoryRename: (oldName: string, newName: string) => void = () => {};
   onCategoryDelete: (category: string) => void = () => {};
   onCategoryReorder: (categories: string[]) => void = () => {};
   onCategoryAdd: (name: string) => void = () => {};
 
-  // GearPicker callbacks
+  // ===== TripFormSheet（§4.6 内化后只传初始值） =====
+  @Prop tripInitialTitle: string = '';
+  @Prop tripInitialDate: string = '';
+  @Prop tripInitialDestination: string = '';
+  @Prop tripInitialDistanceKm: string = '';
+  @Prop tripInitialMaxAltitude: string = '';
+  @Prop tripInitialAscentM: string = '';
+  @Prop tripInitialDurationHours: string = '';
+  onCreateTrip: (title: string, date: string, destination: string,
+    distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => void = () => {};
+  onSaveTrip: (title: string, date: string, destination: string,
+    distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => void = () => {};
+
+  // ===== ProfileEditSheet（§4.6 内化后只传初始值） =====
+  @Prop profileInitialDate: string = '';
+  @Prop profileInitialDestination: string = '';
+  @Prop profileInitialDistanceKm: string = '';
+  @Prop profileInitialMaxAltitude: string = '';
+  @Prop profileInitialAscentM: string = '';
+  @Prop profileInitialDurationHours: string = '';
+  onSaveProfile: (date: string, destination: string,
+    distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => void = () => {};
+
+  // ===== TempItemSheet（§4.6 内化后只传初始值） =====
+  @Prop tempInitialName: string = '';
+  @Prop tempInitialGroup: string = '其他';
+  onAddTempItem: (name: string, group: string) => void = () => {};
+
+  // ===== ImportSheet（§4.6 内化后不需传选中/筛选状态） =====
+  @Prop gears: GearItem[] = [];
+  onImportGears: (ids: string[]) => void = () => {};
+  onAddGearFromImport: () => void = (): void => {};
+
+  // ===== GearSortSheet =====
+  @Prop gearSortMode: string = '';
+  onSelectSort: (mode: string) => void = (mode: string): void => {};
+
+  // ===== GearPickerSheet =====
   @Prop pickerSelectedIds: string[] = [];
-  // 从空格子进入时的预选 Zone（空串 = 无预选，向后兼容），review I4
   @Prop pickerPreselectZone: string = '';
-onPickerToggleGear: (gear: GearItem) => void = () => {};
-// P3：新建装备统一回调（saveToLibrary 决定入库还是本次行程临时，入库时携带 category）
-onPickerAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => void = () => {};
-  // GearItemAction callbacks
+  onPickerToggleGear: (gear: GearItem) => void = () => {};
+  onPickerAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => void = () => {};
+
+  // ===== GearItemActionSheet =====
   @Prop actionItem: ChecklistItem = { id: '', name: '', group: '', checked: false };
   onActionMoveToZone: (itemId: string, zone: string) => void = () => {};
   onActionViewDetail: (item: ChecklistItem) => void = () => {};
   onActionRemove: (itemId: string) => void = () => {};
 
-  // DayForm props & callbacks（子组件自持编辑状态，仅传初始值）
+  // ===== DayFormSheet（已内化，只传初始值） =====
   @Prop editingDayId: string = '';
   @Prop dayFrom: string = '';
   @Prop dayTo: string = '';
@@ -136,7 +124,7 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
   onSubmitEditDay: (dayId: string, from: string, to: string, date: string, note: string) => void = () => {};
   onDeleteDayFromSheet: () => void = () => {};
 
-  // SegmentForm props & callbacks（子组件自持编辑状态，仅传初始值）
+  // ===== SegmentFormSheet（已内化，只传初始值） =====
   @Prop editingSegmentId: string = '';
   @Prop segFrom: string = '';
   @Prop segTo: string = '';
@@ -150,6 +138,10 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
   @Prop ticketPrice: string = '';
   onSubmitSegment: (segment: RouteSegment) => void = () => {};
   onDeleteSegmentFromSheet: () => void = () => {};
+
+  // ===== Swipe-to-dismiss gesture =====
+  @State private sheetDragOffset: number = 0;
+  @State private cardHeight: number = 600;
 
   build() {
     Column() {
@@ -193,18 +185,13 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
         }
         if (this.sheetMode === SHEET_GEAR) {
           GearFormSheet({
-            gearName: this.gearName,
-            gearCategory: this.gearCategory,
-            gearWeight: this.gearWeight,
-            gearPrice: this.gearPrice,
-            gearNote: this.gearNote,
             editingGearId: this.editingGearId,
             categories: this.categories,
-            onNameChange: this.onGearNameChange,
-            onCategoryChange: this.onGearCategoryChange,
-            onWeightChange: this.onGearWeightChange,
-            onPriceChange: this.onGearPriceChange,
-            onNoteChange: this.onGearNoteChange,
+            initialName: this.gearInitialName,
+            initialCategory: this.gearInitialCategory,
+            initialWeight: this.gearInitialWeight,
+            initialPrice: this.gearInitialPrice,
+            initialNote: this.gearInitialNote,
             onSave: this.onSaveGear,
             onRename: this.onCategoryRename,
             onDelete: this.onCategoryDelete,
@@ -213,56 +200,38 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
           })
         } else if (this.sheetMode === SHEET_TRIP) {
           TripFormSheet({
-            tripTitle: this.tripTitle,
-            tripDate: this.tripDate,
             isEditMode: false,
-            onTitleChange: this.onTripTitleChange,
-            onDateChange: this.onTripDateChange,
+            initialTitle: this.tripInitialTitle,
+            initialDate: this.tripInitialDate,
             onConfirm: this.onCreateTrip
           })
         } else if (this.sheetMode === SHEET_EDIT_PROFILE) {
           ProfileEditSheet({
-            tripDate: this.tripDate,
-            tripDestination: this.tripDestination,
-            tripDistanceKm: this.tripDistanceKm,
-            tripMaxAltitude: this.tripMaxAltitude,
-            tripAscentM: this.tripAscentM,
-            tripDurationHours: this.tripDurationHours,
-            onDateChange: this.onTripDateChange,
-            onDestinationChange: this.onTripDestinationChange,
-            onDistanceKmChange: this.onTripDistanceKmChange,
-            onMaxAltitudeChange: this.onTripMaxAltitudeChange,
-            onAscentMChange: this.onTripAscentMChange,
-            onDurationHoursChange: this.onTripDurationHoursChange,
+            initialDate: this.profileInitialDate,
+            initialDestination: this.profileInitialDestination,
+            initialDistanceKm: this.profileInitialDistanceKm,
+            initialMaxAltitude: this.profileInitialMaxAltitude,
+            initialAscentM: this.profileInitialAscentM,
+            initialDurationHours: this.profileInitialDurationHours,
             onConfirm: this.onSaveProfile
           })
         } else if (this.sheetMode === SHEET_EDIT_TRIP) {
           TripFormSheet({
-            tripTitle: this.tripTitle,
-            tripDate: this.tripDate,
             isEditMode: true,
-            tripDestination: this.tripDestination,
-            tripDistanceKm: this.tripDistanceKm,
-            tripMaxAltitude: this.tripMaxAltitude,
-            tripAscentM: this.tripAscentM,
-            tripDurationHours: this.tripDurationHours,
-            onTitleChange: this.onTripTitleChange,
-            onDateChange: this.onTripDateChange,
-            onDestinationChange: this.onTripDestinationChange,
-            onDistanceKmChange: this.onTripDistanceKmChange,
-            onMaxAltitudeChange: this.onTripMaxAltitudeChange,
-            onAscentMChange: this.onTripAscentMChange,
-            onDurationHoursChange: this.onTripDurationHoursChange,
+            initialTitle: this.tripInitialTitle,
+            initialDate: this.tripInitialDate,
+            initialDestination: this.tripInitialDestination,
+            initialDistanceKm: this.tripInitialDistanceKm,
+            initialMaxAltitude: this.tripInitialMaxAltitude,
+            initialAscentM: this.tripInitialAscentM,
+            initialDurationHours: this.tripInitialDurationHours,
             onConfirm: this.onSaveTrip
           })
         } else if (this.sheetMode === SHEET_TEMP_ITEM) {
           TempItemSheet({
-            tempItemName: this.tempItemName,
-            tempItemGroup: this.tempItemGroup,
-            showTempAddNotice: this.showTempAddNotice,
+            initialName: this.tempInitialName,
+            initialGroup: this.tempInitialGroup,
             categories: this.categories,
-            onNameChange: this.onTempItemNameChange,
-            onGroupChange: this.onTempItemGroupChange,
             onConfirm: this.onAddTempItem,
             onRename: this.onCategoryRename,
             onDelete: this.onCategoryDelete,
@@ -272,12 +241,8 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
         } else if (this.sheetMode === SHEET_IMPORT) {
           ImportSheet({
             gears: this.gears,
-            importGearIds: this.importGearIds,
-            importGearCategory: this.importGearCategory,
             categories: this.categories,
-            onCategoryChange: this.onImportCategoryChange,
-            onToggleSelection: this.onToggleImportSelection,
-            onImport: this.onImportSelectedGear,
+            onImport: this.onImportGears,
             onAddGearFromImport: this.onAddGearFromImport
           })
         } else if (this.sheetMode === SHEET_GEAR_SORT) {
@@ -286,9 +251,6 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
             onSelectSort: this.onSelectSort
           })
         } else if (this.sheetMode === SHEET_GEAR_PICKER) {
-          // 问题3 根因修复：GearPickerSheet 根节点 height('100%') 在外层 Column({space:14}) 里
-          // 无 layoutWeight 时高度计算异常，把搜索栏顶到上方、Scroll 撑到卡片底，中间留出大段空白。
-          // 加 .layoutWeight(1) 让它正确吃掉卡片剩余高度，分组紧贴汇总栏。
           GearPickerSheet({
             gears: this.gears,
             categories: this.categories,
@@ -350,17 +312,14 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
         PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 5 })
           .onActionUpdate((event: GestureEvent) => {
             if (event.offsetY > 0) {
-              // 边缘阻尼：位移 × 0.3，卡片"变重"
               this.sheetDragOffset = event.offsetY * 0.3;
             }
           })
           .onActionEnd((_event: GestureEvent) => {
             if (this.sheetDragOffset > this.cardHeight * 0.25) {
-              // 超过 25% 阈值 → 关闭
               this.sheetDragOffset = 0;
               this.onClose();
             } else {
-              // 未达阈值 → Spring 回弹
               this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
                 this.sheetDragOffset = 0;
               });
