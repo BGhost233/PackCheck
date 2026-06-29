@@ -1,6 +1,6 @@
 # PackCheck 路线图
 
-> 最后更新：2026-06-29 | 当前版本：v0.7.10
+> 最后更新：2026-06-29 | 当前版本：v0.7.11
 
 ---
 
@@ -21,7 +21,8 @@
 | v0.7.8 | ✅ | 行程编辑模块（Tabs 滑动 + CRUD + DayCard + 动效审查）|
 | v0.7.9 | ✅ | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行）|
 | v0.7.10 | ✅ | 完整性修复 + 上帝组件瘦身 Wave 1-2（纯计算下沉 services + GearPage/HomePage/Index 瘦身）|
-| v0.8.0 | 🟡 中期 | 上帝组件瘦身 Phase 5-9（@Builder 子组件化 → Sheet 解耦 → 状态分组 → 交互控制器 → 最终收口） |
+| v0.7.11 | ✅ | SheetContainer 重构：消灭 SheetOverlay 超级中继，trailing lambda 纯壳容器（原 Phase 6 Sheet 解耦，已完成）|
+| v0.8.0 | 🟡 中期 | 上帝组件瘦身 Phase 5/7/8/9（@Builder 子组件化 → 状态分组 → 交互控制器 → 最终收口） |
 | v1.0.0 | 🟣 远期 | 智能 PackCheck + 成就卡 + 深色模式 |
 
 ---
@@ -33,9 +34,10 @@
 
 ---
 
-## 🟡 中期（v0.8.0）—— 上帝组件瘦身（Phase 5-9）
+## 🟡 中期（v0.8.0）—— 上帝组件瘦身（Phase 5/7/8/9）
 
-> 已完成 Wave 1-2（纯计算下沉 + 纯展示 @Builder 提取），效果：HomePage 1099→812, GearPage 2388→2063, Index 2388→2260。
+> 已完成：Wave 1-2（纯计算下沉 + 纯展示 @Builder 提取） + Phase 6 SheetContainer 解耦（v0.7.11 已交付）。
+> 效果：HomePage 1099→812, GearPage 2388→2063, SheetOverlay 382行删除→SheetContainer 137行。
 > 完整方案见 `.planning/god-component-split/next_plan.md`。
 
 **Phase 5 — @Builder 子组件化**（低风险，带自己状态的 @Builder 提为独立 @Component）
@@ -43,9 +45,7 @@
 - [ ] Index.ets: ChecklistCard / EmptyHomeView / HeroContent
 - [ ] 预期：GearPage -200~300 行，Index -150~200 行
 
-**Phase 6 — SheetContainer 解耦**（Index 瘦身主力）
-- [ ] 抽取 SheetContainerManager 组件，收纳 12+ Sheet 分支逻辑
-- [ ] 预期：Index -300~400 行
+~~**Phase 6 — SheetContainer 解耦**~~ ✅ 已在 v0.7.11 完成（方式：trailing lambda 纯壳而非 Manager 组件，效果更优）
 
 **Phase 7 — 状态分组**（中风险，减 @State）
 - [ ] GearPage: DragState / FilterState 分组管理器

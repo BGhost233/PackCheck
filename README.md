@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.7.10
+## 当前版本：v0.7.11
 
 ### 已实现功能
 
@@ -43,7 +43,7 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2260 行）
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2345 行）
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表，~810 行）
 │   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部，~2060 行）
@@ -164,8 +164,9 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.7.7 | ✅ 已完成 | 装备库单品拖拽真机回归（拖拽避让丝滑让位 + 松手 optimistic 落位去卡顿 + 跨分组 spring-load 悬停自动展开） |
 | v0.7.8 | ✅ 已完成 | 行程编辑模块（Tabs 滑动切换 + ItineraryService CRUD + DayCard 手风琴 + 表单面板 + 动效审查优化） |
 | v0.7.9 | ✅ 已完成 | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行） |
-| v0.7.10 | ✅ 当前 | 完整性修复：23 项审计问题修复（clone helper + singleton PackStore + 事务化更新 + 全量 token 化） |
-| v0.8.0 | 📋 中期 | 上帝组件瘦身五阶段（@Builder 子组件化 → Sheet 解耦 → 状态分组 → 交互控制器 → 最终收口） |
+| v0.7.10 | ✅ 已完成 | 完整性修复：23 项审计问题修复（clone helper + singleton PackStore + 事务化更新 + 全量 token 化） |
+| v0.7.11 | ✅ 当前 | SheetContainer 重构：消灭 SheetOverlay 超级中继反模式，trailing lambda 纯壳容器 |
+| v0.8.0 | 📋 中期 | 上帝组件瘦身后续（@Builder 子组件化 → 状态分组 → 交互控制器 → 最终收口） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 
 ## 开发约定

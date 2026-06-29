@@ -1,8 +1,8 @@
 # PackCheck 后续瘦身计划（基于 Wave 2 纯计算提取完成后的审计）
 
-> **生成时间**: 2026-06-29  
-> **当前状态**: Wave 1A ✅ / Wave 1B 跳过 / Wave 1C 跳过 / Wave 2 纯计算提取 ✅  
-> **当前行数**: Index.ets 2388 | GearPage.ets 2211 | HomePage.ets 945
+> **生成时间**: 2026-06-29（更新于 v0.7.11 SheetContainer 重构后）  
+> **当前状态**: Wave 1A ✅ / Wave 1B 跳过→v0.7.11 SheetContainer 重构完成 / Wave 1C 跳过 / Wave 2 纯计算提取 ✅  
+> **当前行数**: Index.ets 2345 | GearPage.ets 2063 | HomePage.ets 812
 
 ---
 
@@ -15,7 +15,7 @@
 | GearPage.ets 行数 | 2211 | < 1800 | -411 |
 | HomePage.ets 行数 | 945 | < 700 | -245 |
 
-**核心矛盾**: Index.ets 还有 68 个 @State，其中 28 个是 Day/Segment 表单代理（Wave 1A 漏网），SheetOverlay 传参区 137 行纯信噪比为零。
+**核心矛盾**: Index.ets 还有 ~68 个 @State，其中 28 个是 Day/Segment 表单代理（Wave 1A 漏网）。SheetOverlay 传参区已由 v0.7.11 SheetContainer 重构消除。
 
 ---
 
@@ -31,7 +31,7 @@ Wave 1A 消除了 Gear/Trip/Profile/TempItem/Import 表单的代理 @State，但
 | 5.2 | SegmentFormSheet 表单 @State 内化 | `editingSegmentId`, `editingSegDayId`, `segFormFrom`...`segFormTicketPrice` (11个) | ~60 |
 | 5.3 | EditItemPanel 表单 @State 内化 | `editingItemId/Name/Group/Weight/Price`, `showEditItemPanel` (6个) | ~50 |
 | 5.4 | EditGearPanel 表单 @State 内化 | `editingGearId`, `gearName/Category/Weight/Price/Note`, `showEditGearPanel` (6+1个) | ~50 |
-| 5.5 | 从 Index.ets 删除已内化的 @State + 全部 resetXxxForm() + SheetOverlay 对应传参行 | — | 累计 ~200 |
+| 5.5 | 从 Index.ets 删除已内化的 @State + 全部 resetXxxForm() | — | 累计 ~200 |
 
 ---
 
@@ -121,9 +121,9 @@ Wave 1A 消除了 Gear/Trip/Profile/TempItem/Import 表单的代理 @State，但
 | GearPage.ets 行数 | 2211 | ~2162 | ~1820 | ~1820 | < 1800 |
 | HomePage.ets 行数 | 945 | ~912 | ~700 | ~700 | < 700 |
 
-**诚实评估**: Index.ets 的行数目标 < 800 在不做 SheetOverlay → SheetContainer 重构的前提下**不可达**。当前 NavDestinationMap @Builder（120 行）+ SheetOverlay 传参区（137 行）+ Tab 手势编排（60 行）+ build() 结构（200 行）= ~517 行纯 UI 壳不可删减。Phase 5-8 可将 Index.ets 压到 ~2030 行，但要达到 < 800 必须重新评估 SheetContainer 方案或将 NavDestination 路由拆分到独立 router。
+**诚实评估**（v0.7.11 更新）: SheetContainer 重构已完成，SheetOverlay 传参区 137 行已消除。Index.ets 当前 2345 行（SheetContainer trailing lambda 区约 80 行 + NavDestinationMap 120 行 + Tab 手势 60 行 + build() 200 行 = ~460 行纯 UI 壳）。Phase 5-8 可将 Index.ets 压到 ~1800-2000 行。< 800 仍不可达（需将 NavDestination 路由拆分到独立 router）。
 
-**建议**: 将 Index.ets 目标修正为 < 2000（合理）或 < 1500（激进，需 SheetContainer 重构）。GearPage < 1800 和 HomePage < 700 可达。
+**建议**: Index.ets 目标修正为 < 2000（合理）。GearPage < 1800 和 HomePage < 700 可达。
 
 ---
 
