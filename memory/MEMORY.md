@@ -39,6 +39,7 @@
 - 事务化更新：category 删除/重命名先构建完整新状态，批量持久化成功后才赋 @State
 - EntryBackupAbility：onBackupEx/onRestoreEx 结构化返回，Preferences 框架自动备份
 - 上帝组件瘦身 Wave 1-2 已完成（纯计算下沉 + @Builder 提取），后续 Phase 5-9 见 `.planning/god-component-split/next_plan.md`
+- `applyAndPersist(mutator)` helper（Index.ets）：封装「applyChecklistState + store.saveChecklists」常见对，18 处调用统一收口，复用模式“幺等操作+持久化”
 - `CATEGORY_ALL`（哨兵 '全部'）/ `CATEGORY_FALLBACK`（受保护 '其他'）在 PackModels.ets
 
 ## ArkUI 避坑清单（54 条）
@@ -106,6 +107,8 @@
 - **计划驱动开发**：复杂重构先写 `.planning/` 目录（task_plan + findings + 量化分析 + 方案对比），执行阶段近零返工
 - **编译可行性前置验证**：实施前在 findings.md 中做 ArkUI 语法验证（条件渲染 + @BuilderParam + @Prop 组合），避免实施中踩坑
 - **行数 ≠ 复杂度**：SheetContainer 重构后 Index.ets 行数反增（2260→2345），但改动点从 3→1、接口从 67→11 — 衡量标准是信息熵而非行数
+- **文件压缩的“硬底”概念**：Index.ets 2255 行是合理终态——剩余全为 @Builder 路由 map / Sheet 调度 / 动画编排，命中 §8.2 不可拆。进一步压缩需架构级重新设计（如状态管理框架化），收益/风险比已不值得
+- **死代码审计方法**：grep 方法名确认零调用点 → 追湯全链路（关联 @State、import、常量）→ 一并删除→ build 验证。单次清 7 个方法 + 8 个 import 的成功实践可复用
 
 ## 补充验证
 

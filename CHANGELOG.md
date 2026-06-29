@@ -2,6 +2,10 @@
 
 > 详细 commit 历史见 `git log`。此处只保留近期版本摘要和早期版本一行概述。
 
+## v0.7.12 (2026-06-29)
+
+Index.ets 文件压缩：2346→2255 行（-91 行）。引入 `applyAndPersist` helper 统一封装 18 处重复的 applyChecklistState+saveChecklists 调用对；删除 7 个死方法（代理/计算）+ 8 个死 import；提取 CompletionToast 为独立组件。审计结论：2255 为 Index.ets 合理终态——剩余行全为 @Builder 路由 map、Sheet 调度、动画编排，命中 §8.2 不可拆。
+
 ## v0.7.11 (2026-06-29)
 
 SheetContainer 重构：消灭 SheetOverlay "超级传话筒" 反模式。SheetOverlay（382 行，67 个绑定点）→ SheetContainer 纯壳容器（137 行，11 个接口点）。Index.ets trailing lambda 直接构建各子 Sheet，数据流从三跳变为一跳。新增 Sheet 改动点从 3 处降到 1 处。全局净减 ~245 行代码。

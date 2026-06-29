@@ -1,6 +1,6 @@
 # PackCheck 路线图
 
-> 最后更新：2026-06-29 | 当前版本：v0.7.11
+> 最后更新：2026-06-29 | 当前版本：v0.7.12
 
 ---
 
@@ -22,6 +22,7 @@
 | v0.7.9 | ✅ | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行）|
 | v0.7.10 | ✅ | 完整性修复 + 上帝组件瘦身 Wave 1-2（纯计算下沉 services + GearPage/HomePage/Index 瘦身）|
 | v0.7.11 | ✅ | SheetContainer 重构：消灭 SheetOverlay 超级中继，trailing lambda 纯壳容器（原 Phase 6 Sheet 解耦，已完成）|
+| v0.7.12 | ✅ | Index.ets 文件压缩（applyAndPersist + 死代码清理 + CompletionToast 提取，2346→2255）|
 | v0.8.0 | 🟡 中期 | 上帝组件瘦身 Phase 5/7/8/9（@Builder 子组件化 → 状态分组 → 交互控制器 → 最终收口） |
 | v1.0.0 | 🟣 远期 | 智能 PackCheck + 成就卡 + 深色模式 |
 
@@ -57,7 +58,7 @@
 - [ ] 必须对照 §8.2 「不该拆」清单
 
 **Phase 9 — 最终收口**
-- [ ] 目标：Index < 2000，GearPage < 1500，HomePage < 700
+- [ ] 目标：Index ≤ 2255（已达终态，剩余命中 §8.2），GearPage < 1500，HomePage < 700
 - [ ] 全量审计 + 文档同步
 
 ---

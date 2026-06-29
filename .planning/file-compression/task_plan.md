@@ -86,12 +86,12 @@
 
 ---
 
-## Phase 4: Index.ets 表单 @State 内化 + 纯计算下沉（低-中风险，-300 行）
+## Phase 4: Index.ets 死代码删除 + applyAndPersist 封装（低风险）
 
-**状态**: `next`  
-**目标文件**: `pages/Index.ets` (2345 → ~2000)  
-**方法**: 两步走 — ① 表单代理 @State 续扫内化（-200 行）② 纯计算方法下沉（-60 行）③ applyAndPersist 封装（-40 行）  
-**风险**: 低-中（表单内化需验证 onAppear 时序）
+**状态**: `done` ✅ (2346 → 2255, -91 行)  
+**实际结果**: applyAndPersist 统一封装替换 18 处重复调用对；删除 4 个死代理方法 + 3 个死计算方法 + 8 个死 import；提取 CompletionToast 独立组件。  
+**未执行**: 表单 @State 内化（审计发现 EditGearPanel/EditItemPanel 的字段是 plain fields 非 @State，仅做初始值代理；CategoryInputDialog 需保留 showCategoryDialog 在 Index 控制条件渲染）、纯计算方法下沉（currentTripGearIds 等依赖 this.trip 上下文无法纯函数化）。  
+**风险评估修正**: 原 <2050 目标不可达——剩余行都是 @Builder 路由 map、Sheet 调度、动画编排，全命中 §8.2。2255 为合理终态。
 
 | # | 任务 | 详情 | 状态 |
 |---|------|------|------|
@@ -112,11 +112,10 @@
 
 ---
 
-## Phase 5: 低风险子组件提取收尾（零风险，-150 行）
+## Phase 5: 低风险子组件提取收尾（零风险）
 
-**状态**: `pending`  
-**目标文件**: Index.ets + GearPage.ets + HomePage.ets  
-**方法**: 收割剩余独立性极高的 UI 碎片  
+**状态**: `done` ✅ (合并入 Phase 4 commit)  
+**实际结果**: CompletionToast 已提取（5.2）。CategoryInputDialog（5.1）审计后放弃——showCategoryDialog 必须留 Index 做条件渲染控制，categoryDialogMode/OldName 是 plain fields 无收益。HomeEmptyHero（5.3）和 headerBorderColor（5.4）未执行（当前重点是 Index，留后续低优）。  
 **风险**: 零
 
 | # | 任务 | 详情 | 状态 |
@@ -153,7 +152,7 @@
 | ChecklistService.ets | 1036 | ~350(主) | ~350 | ~350 | ~350 | ~350 |
 | GearPage.ets | 2063 | 2063 | ~1450 | ~1450 | ~1450 | ~1450 |
 | TripCeremonyCard.ets | 1231 | 1231 | 1231 | ~900 | ~900 | ~900 |
-| Index.ets | 2345 | 2345 | 2345 | 2345 | ~2045 | ~1950 |
+| Index.ets | 2346 | 2346 | 2346 | 2346 | **2255** ✅ | 2255 |
 | UnifiedChecklistView.ets | 1082 | 1082 | 1082 | 1082 | 1082 | 1082 |
 
 **总净减**: ~1700 行（从 7757 行 → ~6050 行，压缩率 22%）

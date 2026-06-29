@@ -13,7 +13,7 @@
 - 本地持久化：Preferences
 - 构建：hvigor
 
-## 当前版本：v0.7.11
+## 当前版本：v0.7.12
 
 ### 已实现功能
 
@@ -43,14 +43,15 @@
 
 ```
 entry/src/main/ets/
-├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2345 行）
+├── pages/Index.ets          — 应用主入口，路由 & 全局状态管理（中心状态管理器，~2255 行）
 ├── components/              — UI 组件
 │   ├── HomePage.ets         — 首页概览（折叠头部 + 清单列表，~810 行）
-│   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部，~2060 行）
+│   ├── GearPage.ets         — 装备库（分组折叠 + 沉浸式头部，~1834 行）
 │   ├── ProfilePage.ets      — 「我」Tab 人生足迹年报叙事
 │   ├── ReviewPage.ets       — 核查复盘
 │   ├── TripCeremonyCard.ets — 新建行程仪式卡片（翻转 + 滑动出发）
 │   ├── CategoryTagGroup.ets — 分类标签组（横向滚动 + 操作动效）
+│   ├── CompletionToast.ets  — 100% 完成庆祝 Toast
 │   ├── EditGearPanel.ets    — 装备编辑半屏面板
 │   ├── EditItemPanel.ets    — 清单项编辑面板
 │   ├── GearFilterPanel.ets  — 装备筛选面板
@@ -165,7 +166,8 @@ DEVECO_SDK_HOME=/Applications/DevEco-Studio.app/Contents/sdk \
 | v0.7.8 | ✅ 已完成 | 行程编辑模块（Tabs 滑动切换 + ItineraryService CRUD + DayCard 手风琴 + 表单面板 + 动效审查优化） |
 | v0.7.9 | ✅ 已完成 | 多选功能全量删除（GearPage 瘦身 -600 行，净删 877 行） |
 | v0.7.10 | ✅ 已完成 | 完整性修复：23 项审计问题修复（clone helper + singleton PackStore + 事务化更新 + 全量 token 化） |
-| v0.7.11 | ✅ 当前 | SheetContainer 重构：消灭 SheetOverlay 超级中继反模式，trailing lambda 纯壳容器 |
+| v0.7.11 | ✅ 已完成 | SheetContainer 重构：消灭 SheetOverlay 超级中继反模式，trailing lambda 纯壳容器 |
+| v0.7.12 | ✅ 当前 | Index.ets 文件压缩（applyAndPersist + 死代码清理 + CompletionToast 提取，2346→2255） |
 | v0.8.0 | 📋 中期 | 上帝组件瘦身后续（@Builder 子组件化 → 状态分组 → 交互控制器 → 最终收口） |
 | v1.0.0 | 📋 远期 | L2 智能 PackCheck + 轻量成就卡分享 + 深色模式 |
 
