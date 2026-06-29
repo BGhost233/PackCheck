@@ -1,5 +1,128 @@
 // 行程日程相关纯业务逻辑 — 数据派生、摘要提取、图标映射、CRUD 纯函数
-import { DayItinerary, DayPatch, makeId, RouteSegment, SegmentPatch, TransportMode } from '../models/PackModels';
+import { DayItinerary, DayPatch, makeId, RouteSegment, SegmentPatch, TicketInfo, TransportMode } from '../models/PackModels';
+
+// ─── 防腐 Helper：不可变克隆 ────────────────────────────────────────────
+// ArkTS 禁止 {...obj} 展开，所有字段逐一拷贝。
+// DayItinerary / RouteSegment / TicketInfo 新增 optional 字段，只需在此处补一行。
+
+/** TicketInfo 可覆盖字段 */
+export interface TicketInfoOverrides {
+  type?: string;
+  code?: string;
+  price?: number;
+  seat?: string;
+  note?: string;
+}
+
+/**
+ * 克隆 TicketInfo，用 overrides 覆盖指定字段。
+ * ⚠️ 唯一事实源：所有 TicketInfo 不可变更新必须走此函数。
+ */
+export function cloneTicketInfo(source: TicketInfo, overrides?: TicketInfoOverrides): TicketInfo {
+  return {
+    type: overrides?.type !== undefined ? overrides.type : source.type,
+    code: overrides?.code !== undefined ? overrides.code : source.code,
+    seat: overrides?.seat !== undefined ? overrides.seat : source.seat,
+    price: overrides?.price !== undefined ? overrides.price : source.price,
+    note: overrides?.note !== undefined ? overrides.note : source.note
+  };
+}
+
+/** RouteSegment 可覆盖字段（仅限不涉及"清空为 undefined"的场景） */
+export interface RouteSegmentOverrides {
+  from?: string;
+  to?: string;
+  transport?: TransportMode;
+  departTime?: string;
+  arriveTime?: string;
+  note?: string;
+  ticket?: TicketInfo;
+  accommodation?: string;
+}
+
+/**
+ * 克隆 RouteSegment，用 overrides 覆盖指定字段，其余原样保留。
+ * ⚠️ 唯一事实源：所有 RouteSegment 不可变更新必须走此函数或 cloneRouteSegmentFull。
+ */
+export function cloneRouteSegment(source: RouteSegment, overrides?: RouteSegmentOverrides): RouteSegment {
+  return {
+    id: source.id,
+    from: overrides?.from !== undefined ? overrides.from : source.from,
+    to: overrides?.to !== undefined ? overrides.to : source.to,
+    transport: overrides?.transport !== undefined ? overrides.transport : source.transport,
+    departTime: overrides?.departTime !== undefined ? overrides.departTime : source.departTime,
+    arriveTime: overrides?.arriveTime !== undefined ? overrides.arriveTime : source.arriveTime,
+    note: overrides?.note !== undefined ? overrides.note : source.note,
+    ticket: overrides?.ticket !== undefined ? overrides.ticket : source.ticket,
+    accommodation: overrides?.accommodation !== undefined ? overrides.accommodation : source.accommodation
+  };
+}
+
+/**
+ * 全字段克隆 RouteSegment：显式传入每个可选字段（含 undefined = 清空）。
+ * 用于 updateSegment 等需要逐字段 patch 的场景。
+ */
+export function cloneRouteSegmentFull(source: RouteSegment,
+  from: string, to: string, transport: TransportMode,
+  departTime: string | undefined, arriveTime: string | undefined,
+  note: string | undefined, ticket: TicketInfo | undefined,
+  accommodation: string | undefined): RouteSegment {
+  return {
+    id: source.id,
+    from: from,
+    to: to,
+    transport: transport,
+    departTime: departTime,
+    arriveTime: arriveTime,
+    note: note,
+    ticket: ticket,
+    accommodation: accommodation
+  };
+}
+
+/** DayItinerary 可覆盖字段（仅限不涉及"清空为 undefined"的场景） */
+export interface DayItineraryOverrides {
+  dayIndex?: number;
+  from?: string;
+  to?: string;
+  date?: string;
+  segments?: RouteSegment[];
+  note?: string;
+}
+
+/**
+ * 克隆 DayItinerary，用 overrides 覆盖指定字段，其余原样保留。
+ * ⚠️ 唯一事实源：所有 DayItinerary 不可变更新必须走此函数或 cloneDayItineraryFull。
+ */
+export function cloneDayItinerary(source: DayItinerary, overrides?: DayItineraryOverrides): DayItinerary {
+  return {
+    id: source.id,
+    dayIndex: overrides?.dayIndex !== undefined ? overrides.dayIndex : source.dayIndex,
+    from: overrides?.from !== undefined ? overrides.from : source.from,
+    to: overrides?.to !== undefined ? overrides.to : source.to,
+    date: overrides?.date !== undefined ? overrides.date : source.date,
+    segments: overrides?.segments !== undefined ? overrides.segments : source.segments,
+    note: overrides?.note !== undefined ? overrides.note : source.note
+  };
+}
+
+/**
+ * 全字段克隆 DayItinerary：显式传入每个可选字段（含 undefined = 清空）。
+ */
+export function cloneDayItineraryFull(source: DayItinerary,
+  dayIndex: number, from: string | undefined, to: string | undefined,
+  date: string | undefined, segments: RouteSegment[],
+  note: string | undefined): DayItinerary {
+  return {
+    id: source.id,
+    dayIndex: dayIndex,
+    from: from,
+    to: to,
+    date: date,
+    segments: segments,
+    note: note
+  };
+}
 
 /**
  * 日摘要数据（供 DayCard 收缩态展示）
@@ -108,16 +231,13 @@ export function updateDay(itinerary: DayItinerary[], dayId: string, patch: DayPa
     // from/to 为空字符串时视为 undefined（防御性忽略，不允许清空必填字段）
     const patchFrom = (patch.from !== undefined && patch.from.length > 0) ? patch.from : undefined;
     const patchTo = (patch.to !== undefined && patch.to.length > 0) ? patch.to : undefined;
-    const updated: DayItinerary = {
-      id: d.id,
-      dayIndex: d.dayIndex,
-      from: patchFrom !== undefined ? patchFrom : d.from,
-      to: patchTo !== undefined ? patchTo : d.to,
-      segments: d.segments,
-      date: patch.date !== undefined ? (patch.date.length > 0 ? patch.date : undefined) : d.date,
-      note: patch.note !== undefined ? (patch.note.length > 0 ? patch.note : undefined) : d.note
-    };
-    return updated;
+    return cloneDayItineraryFull(d, d.dayIndex,
+      patchFrom !== undefined ? patchFrom : d.from,
+      patchTo !== undefined ? patchTo : d.to,
+      patch.date !== undefined ? (patch.date.length > 0 ? patch.date : undefined) : d.date,
+      d.segments,
+      patch.note !== undefined ? (patch.note.length > 0 ? patch.note : undefined) : d.note
+    );
   });
 }
 
@@ -139,7 +259,7 @@ export function addSegment(
       ? afterIndex + 1
       : segs.length;
     segs.splice(insertAt, 0, segment);
-    return { id: d.id, dayIndex: d.dayIndex, from: d.from, to: d.to, date: d.date, note: d.note, segments: segs } as DayItinerary;
+    return cloneDayItinerary(d, { segments: segs });
   });
 }
 
@@ -152,7 +272,7 @@ export function removeSegment(itinerary: DayItinerary[], dayId: string, segmentI
       return d;
     }
     const segs = d.segments.filter((s) => s.id !== segmentId);
-    return { id: d.id, dayIndex: d.dayIndex, from: d.from, to: d.to, date: d.date, note: d.note, segments: segs } as DayItinerary;
+    return cloneDayItinerary(d, { segments: segs });
   });
 }
 
@@ -174,20 +294,18 @@ export function updateSegment(
         return s;
       }
       // patch 语义：undefined=不修改，''=显式清空，有值=新值
-      const updated: RouteSegment = {
-        id: s.id,
-        from: patch.from !== undefined ? patch.from : s.from,
-        to: patch.to !== undefined ? patch.to : s.to,
-        transport: patch.transport !== undefined ? patch.transport : s.transport,
-        departTime: patch.departTime !== undefined ? (patch.departTime.length > 0 ? patch.departTime : undefined) : s.departTime,
-        arriveTime: patch.arriveTime !== undefined ? (patch.arriveTime.length > 0 ? patch.arriveTime : undefined) : s.arriveTime,
-        note: patch.note !== undefined ? (patch.note.length > 0 ? patch.note : undefined) : s.note,
-        ticket: patch.ticket !== undefined ? patch.ticket : s.ticket,
-        accommodation: patch.accommodation !== undefined ? (patch.accommodation.length > 0 ? patch.accommodation : undefined) : s.accommodation
-      };
-      return updated;
+      return cloneRouteSegmentFull(s,
+        patch.from !== undefined ? patch.from : s.from,
+        patch.to !== undefined ? patch.to : s.to,
+        patch.transport !== undefined ? patch.transport : s.transport,
+        patch.departTime !== undefined ? (patch.departTime.length > 0 ? patch.departTime : undefined) : s.departTime,
+        patch.arriveTime !== undefined ? (patch.arriveTime.length > 0 ? patch.arriveTime : undefined) : s.arriveTime,
+        patch.note !== undefined ? (patch.note.length > 0 ? patch.note : undefined) : s.note,
+        patch.ticket !== undefined ? patch.ticket : s.ticket,
+        patch.accommodation !== undefined ? (patch.accommodation.length > 0 ? patch.accommodation : undefined) : s.accommodation
+      );
     });
-    return { id: d.id, dayIndex: d.dayIndex, from: d.from, to: d.to, date: d.date, note: d.note, segments: segs } as DayItinerary;
+    return cloneDayItinerary(d, { segments: segs });
   });
 }
 
@@ -210,7 +328,7 @@ function renumberDays(days: DayItinerary[]): DayItinerary[] {
     if (d.dayIndex === i) {
       return d;
     }
-    return { id: d.id, dayIndex: i, from: d.from, to: d.to, date: d.date, note: d.note, segments: d.segments } as DayItinerary;
+    return cloneDayItinerary(d, { dayIndex: i });
   });
 }
 

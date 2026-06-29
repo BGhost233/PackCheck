@@ -105,7 +105,11 @@ import {
   prependChecklist,
   findLatestChecklist,
   TripProfileUpdate,
-  resolveItemName
+  resolveItemName,
+  cloneChecklist,
+  cloneChecklistItem,
+  createChecklist as createChecklistFactory,
+  createEmptyChecklistItem
 } from '../services/ChecklistService';
 import { ProfilePage } from '../components/ProfilePage';
 import {
@@ -177,7 +181,7 @@ struct Index {
   @State private tempItemGroup: string = '其他';
   @State private importGearIds: string[] = [];
   @State private importGearCategory: string = CATEGORY_ALL;
-  @State private actionSheetItem: ChecklistItem = { id: '', name: '', group: '', checked: false };
+  @State private actionSheetItem: ChecklistItem = createEmptyChecklistItem();
   // 从空格子进入 GearPicker 时的预选 Zone（空串 = 无预选，向后兼容），review I4
   @State private pickerPreselectZone: string = '';
   @State private collapsedGroups: string[] = [];
@@ -769,19 +773,13 @@ struct Index {
       this.errorText = '行程名称不能为空';
       return;
     }
-    const created: TripChecklist = {
-      id: makeId('trip'),
-      title: title,
-      date: this.tripDate.trim(),
-      dateAt: parseTripDateAt(this.tripDate),
-      items: [],
-      createdAt: Date.now(),
-      destination: this.ceremonyDestination.trim().length > 0 ? this.ceremonyDestination.trim() : undefined,
-      distanceKm: normalizeNumber(this.ceremonyDistanceKm),
-      maxAltitude: normalizeNumber(this.ceremonyMaxAltitude),
-      ascentM: normalizeNumber(this.ceremonyAscentM),
-      durationHours: normalizeNumber(this.ceremonyDurationHours)
-    };
+    const created = createChecklistFactory(title, this.tripDate.trim(),
+      parseTripDateAt(this.tripDate),
+      this.ceremonyDestination.trim().length > 0 ? this.ceremonyDestination.trim() : undefined,
+      normalizeNumber(this.ceremonyDistanceKm),
+      normalizeNumber(this.ceremonyMaxAltitude),
+      normalizeNumber(this.ceremonyAscentM),
+      normalizeNumber(this.ceremonyDurationHours));
     const nextChecklists = prependChecklist(this.checklists, created);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
@@ -1252,15 +1250,7 @@ struct Index {
       if (targetItem === undefined) {
         return cl;
       }
-      const movedItem: ChecklistItem = {
-        id: targetItem.id,
-        name: targetItem.name,
-        group: zone,
-        checked: targetItem.checked,
-        weight: targetItem.weight,
-        price: targetItem.price,
-        fromGearId: targetItem.fromGearId
-      };
+      const movedItem = cloneChecklistItem(targetItem, { group: zone });
       // 从数组中移除原 item（immutable spread 副本，避坑 #38）
       const withoutMoved = cl.items.filter(item => item.id !== itemId);
       // F-1：落点对齐目标格顶部（unshift）。
@@ -1274,21 +1264,7 @@ struct Index {
       }
       const updatedItems = withoutMoved.slice();
       updatedItems.splice(insertAt, 0, movedItem);
-      const updated: TripChecklist = {
-        id: cl.id,
-        title: cl.title,
-        date: cl.date,
-        dateAt: cl.dateAt,
-        items: updatedItems,
-        createdAt: cl.createdAt,
-        destination: cl.destination,
-        distanceKm: cl.distanceKm,
-        maxAltitude: cl.maxAltitude,
-        ascentM: cl.ascentM,
-        durationHours: cl.durationHours,
-        itinerary: cl.itinerary
-      };
-      return updated;
+      return cloneChecklist(cl, { items: updatedItems });
     });
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
@@ -1334,21 +1310,7 @@ struct Index {
       if (!zoneInserted) {
         result.push(...reordered);
       }
-      const updated: TripChecklist = {
-        id: cl.id,
-        title: cl.title,
-        date: cl.date,
-        dateAt: cl.dateAt,
-        items: result,
-        createdAt: cl.createdAt,
-        destination: cl.destination,
-        distanceKm: cl.distanceKm,
-        maxAltitude: cl.maxAltitude,
-        ascentM: cl.ascentM,
-        durationHours: cl.durationHours,
-        itinerary: cl.itinerary
-      };
-      return updated;
+      return cloneChecklist(cl, { items: result });
     });
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
@@ -1401,34 +1363,11 @@ struct Index {
       // 将所有选中 items 的 group 改为目标 zone
       const updatedItems = cl.items.map(item => {
         if (itemIds.indexOf(item.id) >= 0) {
-          const moved: ChecklistItem = {
-            id: item.id,
-            name: item.name,
-            group: zone,
-            checked: item.checked,
-            weight: item.weight,
-            price: item.price,
-            fromGearId: item.fromGearId
-          };
-          return moved;
+          return cloneChecklistItem(item, { group: zone });
         }
         return item;
       });
-      const updated: TripChecklist = {
-        id: cl.id,
-        title: cl.title,
-        date: cl.date,
-        dateAt: cl.dateAt,
-        items: updatedItems,
-        createdAt: cl.createdAt,
-        destination: cl.destination,
-        distanceKm: cl.distanceKm,
-        maxAltitude: cl.maxAltitude,
-        ascentM: cl.ascentM,
-        durationHours: cl.durationHours,
-        itinerary: cl.itinerary
-      };
-      return updated;
+      return cloneChecklist(cl, { items: updatedItems });
     });
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
@@ -1550,33 +1489,12 @@ struct Index {
         for (let itemIndex = 0; itemIndex < source.items.length; itemIndex++) {
           const item = source.items[itemIndex];
           if (item.id === itemId) {
-            const updatedItem: ChecklistItem = {
-              id: item.id,
-              name: item.name,
-              group: item.group,
-              checked: checked,
-              weight: item.weight,
-              price: item.price,
-              fromGearId: item.fromGearId
-            };
-            nextItems.push(updatedItem);
+            nextItems.push(cloneChecklistItem(item, { checked: checked }));
           } else {
             nextItems.push(item);
           }
         }
-        const updatedChecklist: TripChecklist = {
-          id: source.id,
-          title: source.title,
-          date: source.date,
-          dateAt: source.dateAt,
-          items: nextItems,
-          createdAt: source.createdAt,
-          destination: source.destination,
-          distanceKm: source.distanceKm,
-          maxAltitude: source.maxAltitude,
-          ascentM: source.ascentM,
-          durationHours: source.durationHours
-        };
+        const updatedChecklist = cloneChecklist(source, { items: nextItems });
         updatedCurrent = updatedChecklist;
         nextChecklists.push(updatedChecklist);
       } else {
@@ -1658,21 +1576,7 @@ struct Index {
       if (c.id !== checklist.id) {
         return c;
       }
-      const updated: TripChecklist = {
-        id: c.id,
-        title: c.title,
-        items: c.items,
-        createdAt: c.createdAt,
-        date: c.date,
-        dateAt: c.dateAt,
-        destination: c.destination,
-        distanceKm: c.distanceKm,
-        maxAltitude: c.maxAltitude,
-        ascentM: c.ascentM,
-        durationHours: c.durationHours,
-        itinerary: nextItinerary
-      };
-      return updated;
+      return cloneChecklist(c, { itinerary: nextItinerary });
     });
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);

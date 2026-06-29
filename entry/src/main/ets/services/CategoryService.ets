@@ -1,6 +1,6 @@
 import { CATEGORY_FALLBACK, GearItem, ChecklistItem, TripChecklist } from '../models/PackModels';
 import { updateGear } from './GearService';
-import { cloneChecklistWithItems } from './ChecklistService';
+import { cloneChecklist, cloneChecklistItem } from './ChecklistService';
 
 /**
  * 分组标签 CRUD + 全局数据同步逻辑
@@ -88,22 +88,13 @@ export function migrateChecklistsOnDelete(checklists: TripChecklist[], deletedCa
     for (let j = 0; j < checklist.items.length; j++) {
       if (checklist.items[j].group === deletedCategory) {
         hasChange = true;
-        const updated: ChecklistItem = {
-          id: checklist.items[j].id,
-          name: checklist.items[j].name,
-          group: PROTECTED_CATEGORY,
-          checked: checklist.items[j].checked,
-          weight: checklist.items[j].weight,
-          price: checklist.items[j].price,
-          fromGearId: checklist.items[j].fromGearId
-        };
-        newItems.push(updated);
+        newItems.push(cloneChecklistItem(checklist.items[j], { group: PROTECTED_CATEGORY }));
       } else {
         newItems.push(checklist.items[j]);
       }
     }
     if (hasChange) {
-      result.push(cloneChecklistWithItems(checklist, newItems));
+      result.push(cloneChecklist(checklist, { items: newItems }));
     } else {
       result.push(checklist);
     }
@@ -167,22 +158,13 @@ export function renameChecklistsCategory(checklists: TripChecklist[], oldName: s
     for (let j = 0; j < checklist.items.length; j++) {
       if (checklist.items[j].group === oldName) {
         hasChange = true;
-        const updated: ChecklistItem = {
-          id: checklist.items[j].id,
-          name: checklist.items[j].name,
-          group: newName,
-          checked: checklist.items[j].checked,
-          weight: checklist.items[j].weight,
-          price: checklist.items[j].price,
-          fromGearId: checklist.items[j].fromGearId
-        };
-        newItems.push(updated);
+        newItems.push(cloneChecklistItem(checklist.items[j], { group: newName }));
       } else {
         newItems.push(checklist.items[j]);
       }
     }
     if (hasChange) {
-      result.push(cloneChecklistWithItems(checklist, newItems));
+      result.push(cloneChecklist(checklist, { items: newItems }));
     } else {
       result.push(checklist);
     }

@@ -1,28 +1,153 @@
-import { ChecklistItem, GearItem, makeId, TripChecklist, CATEGORY_FALLBACK } from '../models/PackModels';
+import { ChecklistItem, DayItinerary, GearItem, makeId, TripChecklist, CATEGORY_FALLBACK, normalizeNumber } from '../models/PackModels';
 import { gearById } from './GearService';
 
 /**
  * 清单相关纯业务逻辑 — 不依赖 UI 上下文
  */
 
+// ─── 防腐 Helper：不可变克隆 ────────────────────────────────────────────
+// ArkTS 禁止 {...obj} 展开，所有字段逐一拷贝。
+// 未来 TripChecklist / ChecklistItem 新增 optional 字段，只需在此处补一行。
+// 所有调用方通过 overrides 只指定要改的字段，默认从 source 原样保留。
+
+/** TripChecklist 可覆盖字段（仅限不涉及"清空为 undefined"的场景） */
+export interface ChecklistOverrides {
+  title?: string;
+  items?: ChecklistItem[];
+  itinerary?: DayItinerary[];
+}
+
 /**
- * 克隆一个 TripChecklist，仅替换其 items 列表，其余字段（meta/profile）原样保留。
- * 用于在不可变更新（toggle/remove/updateItem）中复用清单的完整字段拷贝。
+ * 克隆一个 TripChecklist，用 overrides 覆盖指定字段，其余原样保留。
+ * ⚠️ 唯一事实源：所有 TripChecklist 不可变更新必须走此函数或 cloneChecklistFull。
+ * 新增 TripChecklist 字段时只需在此处 + cloneChecklistFull 各补一行。
  */
-export function cloneChecklistWithItems(source: TripChecklist, items: ChecklistItem[]): TripChecklist {
+export function cloneChecklist(source: TripChecklist, overrides?: ChecklistOverrides): TripChecklist {
   return {
     id: source.id,
-    title: source.title,
+    title: overrides?.title !== undefined ? overrides.title : source.title,
     date: source.date,
     dateAt: source.dateAt,
-    items: items,
+    items: overrides?.items !== undefined ? overrides.items : source.items,
     createdAt: source.createdAt,
     destination: source.destination,
     distanceKm: source.distanceKm,
     maxAltitude: source.maxAltitude,
     ascentM: source.ascentM,
     durationHours: source.durationHours,
+    itinerary: overrides?.itinerary !== undefined ? overrides.itinerary : source.itinerary
+  };
+}
+
+/**
+ * 全字段克隆：显式传入每个可选字段的新值（含 undefined = 清空）。
+ * 用于 updateChecklistMeta 等需要"清空"可选字段的场景。
+ */
+export function cloneChecklistFull(source: TripChecklist, title: string,
+  date: string | undefined, dateAt: number | undefined,
+  destination: string | undefined, distanceKm: number | undefined,
+  maxAltitude: number | undefined, ascentM: number | undefined,
+  durationHours: number | undefined): TripChecklist {
+  return {
+    id: source.id,
+    title: title,
+    date: date,
+    dateAt: dateAt,
+    items: source.items,
+    createdAt: source.createdAt,
+    destination: destination,
+    distanceKm: distanceKm,
+    maxAltitude: maxAltitude,
+    ascentM: ascentM,
+    durationHours: durationHours,
     itinerary: source.itinerary
+  };
+}
+
+/** 向后兼容别名：克隆并替换 items */
+export function cloneChecklistWithItems(source: TripChecklist, items: ChecklistItem[]): TripChecklist {
+  return cloneChecklist(source, { items: items });
+}
+
+/**
+ * 工厂函数：创建新的 TripChecklist。
+ * ⚠️ 唯一入口：所有新建 checklist 必须走此函数，禁止手写字面量。
+ * 新增 TripChecklist 字段时只需在此处补一行。
+ */
+export function createChecklist(title: string, date: string, dateAt: number | undefined,
+  destination: string | undefined, distanceKm: number | undefined,
+  maxAltitude: number | undefined, ascentM: number | undefined,
+  durationHours: number | undefined): TripChecklist {
+  return {
+    id: makeId('trip'),
+    title: title,
+    date: date,
+    dateAt: dateAt,
+    items: [],
+    createdAt: Date.now(),
+    destination: destination,
+    distanceKm: distanceKm,
+    maxAltitude: maxAltitude,
+    ascentM: ascentM,
+    durationHours: durationHours
+  };
+}
+
+/**
+ * 工厂函数：创建空白 ChecklistItem。
+ * 用于 actionSheetItem 等初始化场景，禁止手写字面量。
+ */
+export function createEmptyChecklistItem(): ChecklistItem {
+  return {
+    id: '',
+    name: '',
+    group: '',
+    checked: false,
+    weight: undefined,
+    price: undefined,
+    fromGearId: undefined
+  };
+}
+
+/** ChecklistItem 可覆盖字段（仅限不涉及"清空为 undefined"的场景） */
+export interface ChecklistItemOverrides {
+  name?: string;
+  group?: string;
+  checked?: boolean;
+}
+
+/**
+ * 克隆一个 ChecklistItem，用 overrides 覆盖指定字段，其余原样保留。
+ * ⚠️ 唯一事实源：所有 ChecklistItem 不可变更新必须走此函数或 cloneChecklistItemFull。
+ * 新增 ChecklistItem 字段时只需在此处 + cloneChecklistItemFull 各补一行。
+ */
+export function cloneChecklistItem(source: ChecklistItem, overrides?: ChecklistItemOverrides): ChecklistItem {
+  return {
+    id: source.id,
+    name: overrides?.name !== undefined ? overrides.name : source.name,
+    group: overrides?.group !== undefined ? overrides.group : source.group,
+    checked: overrides?.checked !== undefined ? overrides.checked : source.checked,
+    weight: source.weight,
+    price: source.price,
+    fromGearId: source.fromGearId
+  };
+}
+
+/**
+ * 全字段克隆 ChecklistItem：显式传入每个可选字段的新值（含 undefined = 清空）。
+ * 用于 updateItemFields 等需要覆盖 weight/price/fromGearId 的场景。
+ */
+export function cloneChecklistItemFull(source: ChecklistItem, name: string, group: string,
+  checked: boolean, weight: number | undefined, price: number | undefined,
+  fromGearId: string | undefined): ChecklistItem {
+  return {
+    id: source.id,
+    name: name,
+    group: group,
+    checked: checked,
+    weight: weight,
+    price: price,
+    fromGearId: fromGearId
   };
 }
 
@@ -261,21 +386,7 @@ export function addItemsToChecklist(checklists: TripChecklist[], checklistId: st
       for (let newIndex = 0; newIndex < items.length; newIndex++) {
         nextItems.push(items[newIndex]);
       }
-      const updated: TripChecklist = {
-        id: checklist.id,
-        title: checklist.title,
-        date: checklist.date,
-        dateAt: checklist.dateAt,
-        items: nextItems,
-        createdAt: checklist.createdAt,
-        destination: checklist.destination,
-        distanceKm: checklist.distanceKm,
-        maxAltitude: checklist.maxAltitude,
-        ascentM: checklist.ascentM,
-        durationHours: checklist.durationHours,
-        itinerary: checklist.itinerary
-      };
-      nextChecklists.push(updated);
+      nextChecklists.push(cloneChecklist(checklist, { items: nextItems }));
     } else {
       nextChecklists.push(checklist);
     }
@@ -292,15 +403,16 @@ export function buildItemsFromGears(gears: GearItem[], gearIds: string[], zone?:
   for (let gearIndex = 0; gearIndex < gears.length; gearIndex++) {
     const gear = gears[gearIndex];
     if (gearIds.indexOf(gear.id) >= 0) {
-      const item: ChecklistItem = {
-        id: makeId('item'),
-        name: gear.name,
-        group: (zone !== undefined && zone.length > 0) ? zone : gear.category,
-        checked: false,
-        weight: gear.weight,
-        price: gear.price,
-        fromGearId: gear.id
-      };
+      // 通过 createEmptyChecklistItem 获取完整字段结构，再用 cloneChecklistItemFull 填充
+      const base = createEmptyChecklistItem();
+      base.id = makeId('item');
+      const item = cloneChecklistItemFull(base,
+        gear.name,
+        (zone !== undefined && zone.length > 0) ? zone : gear.category,
+        false,
+        gear.weight,
+        gear.price,
+        gear.id);
       items.push(item);
     }
   }
@@ -344,21 +456,12 @@ export function toggleItemInChecklists(checklists: TripChecklist[], checklistId:
       for (let itemIndex = 0; itemIndex < source.items.length; itemIndex++) {
         const item = source.items[itemIndex];
         if (item.id === itemId) {
-          const updated: ChecklistItem = {
-            id: item.id,
-            name: item.name,
-            group: item.group,
-            checked: !item.checked,
-            weight: item.weight,
-            price: item.price,
-            fromGearId: item.fromGearId
-          };
-          nextItems.push(updated);
+          nextItems.push(cloneChecklistItem(item, { checked: !item.checked }));
         } else {
           nextItems.push(item);
         }
       }
-      result.push(cloneChecklistWithItems(source, nextItems));
+      result.push(cloneChecklist(source, { items: nextItems }));
     } else {
       result.push(source);
     }
@@ -393,21 +496,12 @@ export function updateChecklistMeta(checklists: TripChecklist[], checklistId: st
   for (let index = 0; index < checklists.length; index++) {
     const source = checklists[index];
     if (source.id === checklistId) {
-      const updated: TripChecklist = {
-        id: source.id,
-        title: title,
-        date: date,
-        dateAt: dateAt,
-        items: source.items,
-        createdAt: source.createdAt,
-        destination: profile !== undefined ? profile.destination : source.destination,
-        distanceKm: profile !== undefined ? profile.distanceKm : source.distanceKm,
-        maxAltitude: profile !== undefined ? profile.maxAltitude : source.maxAltitude,
-        ascentM: profile !== undefined ? profile.ascentM : source.ascentM,
-        durationHours: profile !== undefined ? profile.durationHours : source.durationHours,
-        itinerary: source.itinerary
-      };
-      result.push(updated);
+      result.push(cloneChecklistFull(source, title, date, dateAt,
+        profile !== undefined ? profile.destination : source.destination,
+        profile !== undefined ? profile.distanceKm : source.distanceKm,
+        profile !== undefined ? profile.maxAltitude : source.maxAltitude,
+        profile !== undefined ? profile.ascentM : source.ascentM,
+        profile !== undefined ? profile.durationHours : source.durationHours));
     } else {
       result.push(source);
     }
@@ -437,21 +531,16 @@ export function updateItemFields(checklists: TripChecklist[], checklistId: strin
       for (let itemIndex = 0; itemIndex < source.items.length; itemIndex++) {
         const item = source.items[itemIndex];
         if (item.id === itemId) {
-          const updatedItem: ChecklistItem = {
-            id: item.id,
-            name: name,
-            group: group,
-            checked: item.checked,
-            weight: updateMetrics ? weight : item.weight,
-            price: updateMetrics ? price : item.price,
-            fromGearId: updateGearId ? fromGearId : item.fromGearId
-          };
-          nextItems.push(updatedItem);
+          nextItems.push(cloneChecklistItemFull(item,
+            name, group, item.checked,
+            updateMetrics ? weight : item.weight,
+            updateMetrics ? price : item.price,
+            updateGearId ? fromGearId : item.fromGearId));
         } else {
           nextItems.push(item);
         }
       }
-      result.push(cloneChecklistWithItems(source, nextItems));
+      result.push(cloneChecklist(source, { items: nextItems }));
     } else {
       result.push(source);
     }
