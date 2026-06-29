@@ -1,7 +1,7 @@
 # PackCheck 大文件压缩全盘计划
 
 > **目标**: 将 5 个超千行文件压缩到合理规模，同时零功能回归、零动画降级  
-> **当前行数**: Index.ets 2345 | GearPage.ets 2063 | TripCeremonyCard.ets 1231 | UnifiedChecklistView.ets 1082 | ChecklistService.ets 1036  
+> **当前行数**: Index.ets 2345 | GearPage.ets 1834 | TripCeremonyCard.ets 1175 | UnifiedChecklistView.ets 1082 | ChecklistService.ets ~70(主)+子模块  
 > **合理目标**: Index.ets < 2000 | GearPage.ets < 1500 | TripCeremonyCard.ets < 900 | ChecklistService.ets < 400(主文件) | UnifiedChecklistView.ets 不动（§8.2 全命中）  
 > **方法论**: 按"收益/风险比"排序，5 个 Phase 递进执行  
 > **红线**: UnifiedChecklistView 全文命中 §8.2（六态交互机 + geometryTransition + 拖拽坐标系），禁止拆分
@@ -10,7 +10,7 @@
 
 ## Phase 1: ChecklistService 文件拆分（零风险，纯重组织）
 
-**状态**: `pending`  
+**状态**: `done` ✅  
 **目标文件**: `services/ChecklistService.ets` (1036 → 主文件 ~350 + 3 子模块)  
 **方法**: 按职责域拆为 3 个子模块文件，主文件只做 re-export + 协调  
 **风险**: 零（纯文件拆分，不改逻辑，import 路径更新即可）
@@ -33,12 +33,12 @@
 
 ---
 
-## Phase 2: GearPage 子组件提取（中风险，高收益 -600 行）
+## Phase 2: GearPage 子组件提取（中风险，高收益）
 
-**状态**: `pending`  
-**目标文件**: `components/GearPage.ets` (2063 → ~1450)  
-**方法**: 提取 CollapsingHeader + GearRow 两大独立 UI 区块  
-**风险**: 中（CollapsingHeader 涉及 HeadCollapseController 传值，GearRow 需确保不切断拖拽状态机）
+**状态**: `done` ✅ (2063 → 1834, -229 行)  
+**实际结果**: 提取 GearFab + GearDetailPanel + GearPreviewCard 三组件。  
+**未执行**: CollapsingHeader（超级中继反模式：11@Prop+4回调+scroller跨组件）、GearGroupCard头部（手势链不可拆 §8.2）  
+**风险评估修正**: CollapsingHeader 内含 searchExpanded @Link 修改 + animateTo 作用域跨父子，强行提取反而劣化
 
 | # | 任务 | 详情 | 状态 |
 |---|------|------|------|
@@ -63,12 +63,12 @@
 
 ---
 
-## Phase 3: TripCeremonyCard 分层提取（低风险，-330 行）
+## Phase 3: TripCeremonyCard DRY 优化（实际为§8.2动画状态机）
 
-**状态**: `pending`  
-**目标文件**: `components/TripCeremonyCard.ets` (1231 → ~900)  
-**方法**: 将内部重复的仪式动画子元素提取为独立渲染组件  
-**风险**: 低（TripCeremonyCard 内部动画大多是独立 timeline，非跨组件状态机）
+**状态**: `done` ✅ (1231 → 1175, -56 行)  
+**实际结果**: ForEach 消除 5 个重复 TextInput 模板。  
+**未执行**: 里程碑/摘要/头部提取 — 审计发现全组件是连续动画状态机（contentStep编排 + ceremonyPhase三阶段 + 滑动手势链），命中 §8.2 红线。  
+**风险评估修正**: 非"独立 timeline"，而是全耦合状态机。目标 900 行不可达，1175 是合理终态。
 
 | # | 任务 | 详情 | 状态 |
 |---|------|------|------|
@@ -88,7 +88,7 @@
 
 ## Phase 4: Index.ets 表单 @State 内化 + 纯计算下沉（低-中风险，-300 行）
 
-**状态**: `pending`  
+**状态**: `next`  
 **目标文件**: `pages/Index.ets` (2345 → ~2000)  
 **方法**: 两步走 — ① 表单代理 @State 续扫内化（-200 行）② 纯计算方法下沉（-60 行）③ applyAndPersist 封装（-40 行）  
 **风险**: 低-中（表单内化需验证 onAppear 时序）
