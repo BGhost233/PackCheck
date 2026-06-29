@@ -98,6 +98,15 @@
 53. 禁止手写 DayItinerary/RouteSegment/TicketInfo/ChecklistItem 对象字面量 — 必须走 clone helper（新增字段遗漏概率随手写处数 N 指数增长）
 54. 多关联数据源操作必须事务化 — 先构建完整新状态 → 批量 save → 全成功后赋 @State，中间失败则 return
 
+## 重构决策模式（可复用经验）
+
+- **超级中继反模式判定**：中间组件 Props 中 >80% 是透传给子组件的 → 用 `@BuilderParam` trailing lambda 让调用者直接构建内容，消灭中间层
+- **维护税公式**：`新增 Feature 改动点数 × 每点行数 = 维护税`。改动点 ≥3 处且每处 ≥5 行 → 优先架构重构而非继续累加
+- **一刀切 vs 渐进迁移**：旧架构无法局部改良（中继层本身就是问题）→ 干净替换；旧架构只是膨胀（可拆子模块）→ 渐进瘦身
+- **计划驱动开发**：复杂重构先写 `.planning/` 目录（task_plan + findings + 量化分析 + 方案对比），执行阶段近零返工
+- **编译可行性前置验证**：实施前在 findings.md 中做 ArkUI 语法验证（条件渲染 + @BuilderParam + @Prop 组合），避免实施中踩坑
+- **行数 ≠ 复杂度**：SheetContainer 重构后 Index.ets 行数反增（2260→2345），但改动点从 3→1、接口从 67→11 — 衡量标准是信息熵而非行数
+
 ## 补充验证
 
 - vibrator 预设：`haptic.clock.timer`/`effect.soft`/`effect.hard`/`effect.sharp`
