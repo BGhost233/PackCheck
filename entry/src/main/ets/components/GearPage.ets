@@ -1,7 +1,7 @@
 import { common } from '@kit.AbilityKit';
 import { display } from '@kit.ArkUI';
 import {
-  SPRING_SWIPE_RESET, SPRING_FAB_SNAP, SPRING_GENERAL, SPRING_SEARCH,
+  SPRING_SWIPE_RESET, SPRING_GENERAL, SPRING_SEARCH,
   SPRING_CHEVRON, SPRING_PRESS, SPRING_CEREMONY_FLIP,
   SPRING_SCROLL, SPRING_REORDER,
   EASE_FADE, DURATION_OVERLAY_FADE,
@@ -18,11 +18,10 @@ import { getPackStore, PackStore } from '../services/PackStore';
 import { buildGearTripCountMap } from '../services/FootprintService';
 import {
   totalGearWeight, totalGearPrice, updateGear, formatKg,
-  splitByKeyword, companionDays, companionDaysLabel, gearSummaryText,
+  splitByKeyword, gearSummaryText,
   tempGearFilterText,
   buildGearGroups, overlayMenuTop, gearBottomSpacerHeight
 } from '../services/GearService';
-import { formatDateText } from '../services/ChecklistService';
 import {
   ARROW_COLOR,
   CARD_BG,
@@ -40,7 +39,6 @@ import {
   PAGE_BG,
   PAGE_PADDING,
   PRIMARY_COLOR,
-  PRIMARY_SHADOW,
   PRIMARY_TINT_COLOR,
   SHADOW_DEFAULT,
   SHADOW_MEDIUM,
@@ -53,12 +51,14 @@ import {
 } from '../constants/DesignTokens';
 import {
   FONT_SIZE_MINI, FONT_SIZE_CAPTION, FONT_SIZE_BODY_SMALL, FONT_SIZE_BODY_MEDIUM,
-  FONT_SIZE_OVERLINE, FONT_SIZE_BODY_LARGE, FONT_SIZE_SUBTITLE_LARGE,
-  FONT_SIZE_TITLE_LARGE, FONT_SIZE_PANEL_TITLE
+  FONT_SIZE_OVERLINE, FONT_SIZE_BODY_LARGE, FONT_SIZE_SUBTITLE_LARGE
 } from '../constants/Typography';
 import { getGroupColor, headerBorderColor } from '../utils/ColorUtils';
 import { GearEmptyState } from './gear/GearEmptyState';
 import { GearEmptyText } from './gear/GearEmptyText';
+import { GearFab } from './gear/GearFab';
+import { GearDetailPanel } from './gear/GearDetailPanel';
+import { GearPreviewCard } from './gear/GearPreviewCard';
 
 interface TripCardArea {
   id: string;
@@ -96,11 +96,6 @@ export struct GearPage {
 @State private swipedGearId: string = '';
 @State private swipeOffsetX: number = 0;
 @State private searchExpanded: boolean = false;
-  @State private fabX: number = -1; // -1 表示未初始化，使用默认右下角位置
-  @State private fabY: number = -1;
-  @State private fabDragging: boolean = false;
-  private fabStartX: number = 0;
-  private fabStartY: number = 0;
   // 全屏沉浸：状态栏高度由 EntryAbility/Index 通过 AppStorage 全局下发，折叠头顶部据此避让。
   @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   // head 折叠进度镜像（0=全展开，1=全折叠）。
@@ -255,9 +250,6 @@ export struct GearPage {
     }
     // 预计算出行次数
     this.refreshGearTripCounts();
-    // 初始位置：右下角
-    this.fabX = this.screenWidth - 50 - 16;
-    this.fabY = this.screenHeight - 50 - 160; // 留出 TabBar 空间
     // 恢复折叠状态 + 分组顺序
     this.loadCollapsedGroups();
     this.loadCategoryOrder();
@@ -339,23 +331,6 @@ export struct GearPage {
     }
   }
 
-  // FAB 吸附到最近的屏幕边缘
-  private snapFabToEdge(): void {
-    const fabSize = 50;
-    const centerX = this.fabX + fabSize / 2;
-    const targetX = centerX < this.screenWidth / 2 ? 16 : this.screenWidth - fabSize - 16;
-    // Clamp Y 在安全区域内
-    const minY = 80;
-    const maxY = this.screenHeight - fabSize - 140;
-    const targetY = Math.max(minY, Math.min(maxY, this.fabY));
-
-    this.getUIContext().animateTo({
-      curve: SPRING_FAB_SNAP()
-    }, () => {
-      this.fabX = targetX;
-      this.fabY = targetY;
-    });
-  }
 
   onSearchChange: (keyword: string) => void = (keyword: string): void => {};
   onOpenFilterPanel: () => void = (): void => {};
@@ -484,17 +459,6 @@ export struct GearPage {
       }
     });
     this.persistCollapsedGroups();
-  }
-
-  @Builder
-  private CompanionChip(text: string) {
-    Text(text)
-      .fontSize(FONT_SIZE_MINI)
-      .fontColor(TEXT_SECONDARY)
-      .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-      .backgroundColor(PRIMARY_TINT_COLOR)
-      .borderRadius(CHIP_RADIUS)
-      .margin({ bottom: 4 })
   }
 
   private gearTitleFontSize(): number {
@@ -657,7 +621,7 @@ export struct GearPage {
       .height('100%')
 
       this.CollapsingHeader();
-      this.Fab();
+      GearFab({ areaWidth: this.screenWidth, areaHeight: this.screenHeight, onTap: () => { this.onOpenAddGear(); } })
 
       // --- 分组拖拽浮动层 ---
       if (this.groupDragMode) {
@@ -683,21 +647,8 @@ export struct GearPage {
       }
       if (newWidth > 0 && newHeight > 0 &&
         (Math.abs(newWidth - this.screenWidth) > 1 || Math.abs(newHeight - this.screenHeight) > 1)) {
-        const oldWidth = this.screenWidth;
         this.screenWidth = newWidth;
         this.screenHeight = newHeight;
-        // 按比例映射 FAB X 到新屏幕宽度，保持相对边缘位置
-        const fabSize = 50;
-        const wasOnRight = (this.fabX + fabSize / 2) > oldWidth / 2;
-        const targetX = wasOnRight ? newWidth - fabSize - 16 : 16;
-        const maxY = newHeight - fabSize - 140;
-        const targetY = Math.max(80, Math.min(maxY, this.fabY));
-        this.getUIContext().animateTo({
-          curve: SPRING_GENERAL()
-        }, () => {
-          this.fabX = targetX;
-          this.fabY = targetY;
-        });
       }
     })
   }
@@ -1121,7 +1072,7 @@ export struct GearPage {
             }
           })
           if (this.expandedGearId === item.id) {
-            this.Detail(item);
+            GearDetailPanel({ item: item, tripCount: this.gearTripCount(item) })
           }
         }
         .width('100%')
@@ -1244,186 +1195,6 @@ export struct GearPage {
       )
     }
 
-  @Builder
-  private GearPreviewCard(item: GearItem) {
-    Column({ space: 12 }) {
-      Row({ space: 10 }) {
-        Row()
-          .width(4)
-          .height(28)
-          .borderRadius(2)
-          .backgroundColor(getGroupColor(item.category))
-        Text(item.name)
-          .fontSize(FONT_SIZE_PANEL_TITLE)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      Column({ space: 8 }) {
-        this.PreviewLine('分组', item.category)
-        this.PreviewLine('重量', item.weight === undefined ? '未填写' : item.weight.toString() + 'g')
-        this.PreviewLine('价格', item.price === undefined ? '未填写' : '¥' + item.price.toString())
-        this.PreviewLine('出行', this.gearTripCount(item) > 0 ? '×' + this.gearTripCount(item).toString() : '未出行')
-        if (item.note !== undefined && item.note.length > 0) {
-          this.PreviewLine('备注', item.note)
-        }
-        this.PreviewLine('添加', formatDateText(item.createdAt))
-      }
-      .width('100%')
-    }
-    .width('72%')
-    .constraintSize({ maxWidth: 320, minWidth: 240 })
-    .padding(20)
-    .backgroundColor(CARD_BG)
-    .borderRadius(20)
-    .shadow({ radius: 24, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 8 })
-  }
-
-  @Builder
-  private PreviewLine(label: string, value: string) {
-    Row() {
-      Text(label)
-        .fontSize(FONT_SIZE_BODY_SMALL)
-        .fontColor(TEXT_TERTIARY)
-        .width(40)
-      Text(value)
-        .fontSize(FONT_SIZE_BODY_SMALL)
-        .fontColor(TEXT_MAIN)
-        .layoutWeight(1)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-    }
-    .width('100%')
-    .alignItems(VerticalAlign.Top)
-  }
-
-  @Builder
-  private Detail(item: GearItem) {
-    Column({ space: 0 }) {
-      // ——— 属性区（packing：出行前看实用属性）———
-      Column({ space: 8 }) {
-        Divider()
-          .strokeWidth(1)
-          .color(DIVIDER_COLOR)
-        this.DetailLine('分组', item.category);
-        this.DetailLine('重量', item.weight === undefined ? '未填写' : item.weight.toString() + 'g');
-        if (item.brand !== undefined && item.brand.length > 0) {
-          this.DetailLine('品牌', item.brand);
-        }
-        this.DetailLine('价格', item.price === undefined ? '未填写' : '¥' + item.price.toString());
-        if (item.note !== undefined && item.note.length > 0) {
-          this.DetailLine('备注', item.note);
-        }
-      }
-      .width('100%')
-
-      // ——— 分隔 ———
-      Row()
-        .width('100%')
-        .height(1)
-        .backgroundColor(DIVIDER_COLOR)
-        .margin({ top: 12, bottom: 12 })
-
-      // ——— 陪伴区（archive：出行后看情感记录）———
-      Column({ space: 8 }) {
-        // 陪伴天数大数字
-        Row() {
-          Text(companionDays(item).toString())
-            .fontSize(FONT_SIZE_TITLE_LARGE)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(TEXT_MAIN)
-            .fontFeature("'tnum'")
-          Text(companionDaysLabel(item))
-            .fontSize(FONT_SIZE_BODY_SMALL)
-            .fontColor(TEXT_SECONDARY)
-            .margin({ bottom: 2 })
-        }
-        .alignItems(VerticalAlign.Bottom)
-
-        // 三 chip
-        Row({ space: 8 }) {
-          this.CompanionChip('同行 ' + this.gearTripCount(item).toString() + ' 次');
-          this.CompanionChip('相伴 ' + companionDays(item).toString() + ' 天');
-          this.CompanionChip('添加于 ' + formatDateText(item.createdAt));
-        }
-      }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-    }
-    .width('100%')
-    .padding({ top: 12 })
-    .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-  }
-
-  @Builder
-  private DetailLine(label: string, value: string) {
-    Row() {
-      Text(label + '：')
-        .fontSize(FONT_SIZE_CAPTION)
-        .fontColor(TEXT_TERTIARY)
-      Text(value)
-        .fontSize(FONT_SIZE_CAPTION)
-        .fontColor(TEXT_MAIN)
-        .layoutWeight(1)
-    }
-    .width('100%')
-  }
-
-  @Builder
-  private Fab() {
-    Column() {
-      SymbolGlyph($r('sys.symbol.plus'))
-        .fontSize(FONT_SIZE_TITLE_LARGE)
-        .fontColor([PRIMARY_COLOR])
-    }
-    .width(50)
-    .height(50)
-    .borderRadius(25)
-    .backgroundColor(GLASS_BG)
-    .backgroundBlurStyle(BlurStyle.COMPONENT_REGULAR, {
-      colorMode: ThemeColorMode.SYSTEM,
-      adaptiveColor: AdaptiveColor.DEFAULT
-    })
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .shadow({ radius: 16, color: PRIMARY_SHADOW, offsetX: 0, offsetY: 6 })
-    .position({ x: this.fabX, y: this.fabY })
-    .scale({ x: this.fabDragging ? 1.08 : 1, y: this.fabDragging ? 1.08 : 1 })
-    .gesture(
-      PanGesture({ fingers: 1, distance: 5 })
-        .onActionStart(() => {
-          this.fabStartX = this.fabX;
-          this.fabStartY = this.fabY;
-          this.getUIContext().animateTo({
-            curve: SPRING_PRESS()
-          }, () => {
-            this.fabDragging = true;
-          });
-        })
-        .onActionUpdate((event: GestureEvent) => {
-          this.fabX = this.fabStartX + event.offsetX;
-          this.fabY = this.fabStartY + event.offsetY;
-        })
-        .onActionEnd(() => {
-          this.getUIContext().animateTo({
-            curve: SPRING_GENERAL()
-          }, () => {
-            this.fabDragging = false;
-          });
-          this.snapFabToEdge();
-        })
-    )
-    .onClick(() => {
-      if (!this.fabDragging) {
-        this.onOpenAddGear();
-      }
-    })
-  }
-
   // --- 问题9：单品长按 overlay（菜单态 + 拖拽飞行胶囊）---
   @Builder
   private GearDragOverlay() {
@@ -1465,8 +1236,8 @@ export struct GearPage {
   @Builder
   private GearOverlayMenu(item: GearItem) {
     Column({ space: 10 }) {
-      // 预览卡（复用既有 GearPreviewCard）
-      this.GearPreviewCard(item)
+      // 预览卡
+      GearPreviewCard({ item: item, tripCount: this.gearTripCount(item) })
       // 菜单
       Column() {
         this.GearOverlayMenuItem('编辑', false, () => {
