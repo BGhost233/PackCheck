@@ -12,6 +12,7 @@ import { TripDetailPage } from '../components/gear/TripDetailPage';
 import { TripCeremonyCard } from '../components/TripCeremonyCard';
 import { EditItemPanel } from '../components/EditItemPanel';
 import { EditGearPanel } from '../components/EditGearPanel';
+import { CompletionToast } from '../components/CompletionToast';
 import { GearFilterPanel } from '../components/GearFilterPanel';
 import { CategoryInputDialog } from '../components/CategoryInputDialog';
 import { SheetContainer } from '../components/sheets/SheetContainer';
@@ -26,14 +27,10 @@ import { GearItemActionSheet } from '../components/sheets/GearItemActionSheet';
 import { DayFormSheet } from '../components/sheets/DayFormSheet';
 import { SegmentFormSheet } from '../components/sheets/SegmentFormSheet';
 import {
-  CARD_BG,
   DANGER_COLOR,
   GEAR_SORT_GROUP,
-  GLASS_BG_HEAVY,
   PAGE_BG,
   PRIMARY_COLOR,
-  PRIMARY_SHADOW_LIGHT,
-  SHADOW_DEFAULT,
   SHEET_EDIT_PROFILE,
   SHEET_EDIT_TRIP,
   SHEET_GEAR,
@@ -52,7 +49,7 @@ import {
   WHITE
 } from '../constants/DesignTokens';
 import {
-  FONT_SIZE_MINI, FONT_SIZE_BODY_MEDIUM, FONT_SIZE_PAGE_TITLE
+  FONT_SIZE_MINI, FONT_SIZE_PAGE_TITLE
 } from '../constants/Typography';
 import {
   SPRING_GENERAL,
@@ -65,10 +62,9 @@ import {
   SPRING_PANEL_EXIT,
   DURATION_RECOVER,
   DURATION_CEREMONY_SHAKE,
-  CURVE_DECELERATE,
-  PANEL_SCALE_START
+  CURVE_DECELERATE
 } from '../constants/AnimationTokens';
-import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, clampNumber, DayItinerary, DayPatch, GearItem, makeId, normalizeNumber, RouteSegment, SegmentPatch, TransportMode, TripChecklist } from '../models/PackModels';
+import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, clampNumber, DayItinerary, DayPatch, GearItem, makeId, RouteSegment, SegmentPatch, TransportMode, TripChecklist } from '../models/PackModels';
 import { allZones, zoneDisplayName } from '../services/LoadoutService';
 import { getPackStore, PackStore } from '../services/PackStore';
 import {
@@ -114,7 +110,6 @@ import {
   updateItemFields,
   buildItemsFromGears,
   prependChecklist,
-  findLatestChecklist,
   TripProfileUpdate,
   resolveItemName,
   cloneChecklist,
@@ -338,8 +333,10 @@ struct Index {
     updateState();
   }
 
-  private latestChecklist(): TripChecklist | undefined {
-    return findLatestChecklist(this.checklists);
+  /** applyChecklistState + 持久化的统一入口，消除重复二连调用 */
+  private async applyAndPersist(nextChecklists: TripChecklist[], animated: boolean = false): Promise<void> {
+    this.applyChecklistState(nextChecklists, animated);
+    await this.store.saveChecklists(nextChecklists);
   }
 
   private currentChecklist(): TripChecklist | undefined {
@@ -362,15 +359,6 @@ struct Index {
 
   private presetCategories(): string[] {
     return presetCategories(this.categories);
-  }
-
-
-  private checklistItemWeight(item: ChecklistItem): number | undefined {
-    return checklistItemWeight(item, this.gears);
-  }
-
-  private checklistItemPrice(item: ChecklistItem): number | undefined {
-    return checklistItemPrice(item, this.gears);
   }
 
   private resetGearForm(): void {
@@ -690,7 +678,6 @@ struct Index {
     });
   }
 
-
   // 问题9-B：单品拖拽落位——optimistic update。
   //   第一性原理：松手 = 视觉即时落位（同步当帧），持久化 = 后台事务。
   //   先同步回写 this.gears 让 UI 立即落位，saveGears 不 await（fire-and-forget 后台跑），
@@ -713,16 +700,6 @@ struct Index {
     this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
       this.expandedGearId = this.expandedGearId === id ? '' : id;
     });
-  }
-
-
-
-  private hasGearMarker(item: ChecklistItem): boolean {
-    return hasGearMarker(item);
-  }
-
-  private matchingGearForChecklistItem(item: ChecklistItem): GearItem | undefined {
-    return matchingGearForChecklistItem(item, this.gears);
   }
 
   private openTripSheet(): void {
@@ -785,8 +762,7 @@ struct Index {
       clampNumber(ascentM, 0, 50000),
       clampNumber(durationHours, 0, 8760));
     const nextChecklists = prependChecklist(this.checklists, created);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
     this.selectedChecklistId = created.id;
     this.closeSheet();
     this.startShakeListening();
@@ -919,8 +895,7 @@ struct Index {
       : this.selectedChecklistId;
     // 一次性更新 @State，消灭中间帧 selectedIndex 越界
     this.selectedChecklistId = nextSelectedId;
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
   }
 
   private confirmDeleteChecklist(item: TripChecklist): void {
@@ -954,8 +929,8 @@ struct Index {
     this.editingItemId = item.id;
     this.editingItemName = resolveItemName(item, this.gears);
     this.editingItemGroup = item.group;
-    this.editingItemWeight = numberInputText(this.checklistItemWeight(item));
-    this.editingItemPrice = numberInputText(this.checklistItemPrice(item));
+    this.editingItemWeight = numberInputText(checklistItemWeight(item, this.gears));
+    this.editingItemPrice = numberInputText(checklistItemPrice(item, this.gears));
     this.errorText = '';
     this.showEditItemPanel = true;
   }
@@ -971,7 +946,7 @@ struct Index {
   }
 
   private async saveChecklistItemToGear(item: ChecklistItem): Promise<void> {
-    if (this.hasGearMarker(item)) {
+    if (hasGearMarker(item)) {
       this.showToastMessage('已在装备库中');
       return;
     }
@@ -983,7 +958,7 @@ struct Index {
       return;
     }
 
-    const matchedGear = this.matchingGearForChecklistItem(item);
+    const matchedGear = matchingGearForChecklistItem(item, this.gears);
     if (matchedGear !== undefined) {
       await this.updateChecklistItem(item.id, name, group, matchedGear.id, true);
       this.showToastMessage('已在装备库中');
@@ -1066,8 +1041,7 @@ struct Index {
   private async updateChecklistInfo(checklistId: string, title: string, date: string,
     dateAt: number | undefined, profile?: TripProfileUpdate): Promise<void> {
     const nextChecklists = updateChecklistMeta(this.checklists, checklistId, title, date, dateAt, profile);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
   }
 
   private openDatePicker(): void {
@@ -1086,7 +1060,6 @@ struct Index {
     });
   }
 
-
 private async addTempItem(nameStr: string, groupStr: string): Promise<void> {
 const checklist = this.currentChecklist();
 const name = nameStr.trim();
@@ -1102,8 +1075,7 @@ group: group,
 checked: false
 };
 const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, [item]);
-this.applyChecklistState(nextChecklists);
-await this.store.saveChecklists(nextChecklists);
+await this.applyAndPersist(nextChecklists);
 await this.ensureCategory(group);
 this.errorText = '';
   }
@@ -1129,8 +1101,7 @@ this.errorText = '';
       return;
     }
     const nextChecklists = updateItemFields(this.checklists, checklist.id, itemId, name, group, fromGearId, updateGearId, weight, price, updateMetrics);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
   }
 
 private openImportSheet(): void {
@@ -1139,7 +1110,6 @@ this.currentCloseButtonText = '关闭';
 this.sheetMode = SHEET_IMPORT;
 this.openSheetAnimated();
 }
-
 
   private openGearPickerSheet(zone?: string): void {
     // zone 非空时记录预选分区，picker 据此排序高亮 + 预选临时新建分区（review I4）
@@ -1167,15 +1137,13 @@ this.openSheetAnimated();
     const existingIndex = checklist.items.findIndex(item => item.fromGearId === gear.id);
     if (existingIndex >= 0) {
       const nextChecklists = removeItemFromChecklists(this.checklists, checklist.id, checklist.items[existingIndex].id);
-      this.applyChecklistState(nextChecklists);
-      await this.store.saveChecklists(nextChecklists);
+      await this.applyAndPersist(nextChecklists);
     } else {
       // 透传 pickerPreselectZone：用户点的哪个格子，装备就直接进那个格子
       const zone = this.pickerPreselectZone.length > 0 ? this.pickerPreselectZone : undefined;
       const newItems = buildItemsFromGears(this.gears, [gear.id], zone);
       const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, newItems);
-      this.applyChecklistState(nextChecklists);
-      await this.store.saveChecklists(nextChecklists);
+      await this.applyAndPersist(nextChecklists);
     }
   }
 
@@ -1192,8 +1160,7 @@ this.openSheetAnimated();
       weight: weight
     };
     const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, [tempItem]);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
   }
 
   // P3：新建装备并存入装备库，同时加入当前行程。
@@ -1215,8 +1182,7 @@ this.openSheetAnimated();
     const targetZone = zone.length > 0 ? zone : undefined;
     const newItems = buildItemsFromGears(this.gears, [created.id], targetZone);
     const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, newItems);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
   }
 
   private async moveItemToZone(itemId: string, zone: string): Promise<void> {
@@ -1225,8 +1191,7 @@ this.openSheetAnimated();
       return;
     }
     const nextChecklists = moveChecklistItemToZone(this.checklists, checklist.id, itemId, zone);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
     this.closeSheet();
   }
 
@@ -1237,8 +1202,7 @@ this.openSheetAnimated();
       return;
     }
     const nextChecklists = reorderItemsInZone(this.checklists, checklist.id, zone, orderedIds);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
   }
 
   // #1：批量移动 — 打开 Zone 选择面板（复用 actionSheet 模式，存 batch ids）
@@ -1282,8 +1246,7 @@ this.openSheetAnimated();
       return;
     }
     const nextChecklists = batchMoveItems(this.checklists, checklist.id, itemIds, zone);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
     this.batchMoveItemIds = [];
     // 批量移动完成后关闭聚焦视图（触发 onActiveChange → 自动退出多选模式）
     if (this.focusedZone != null) {
@@ -1297,8 +1260,7 @@ this.openSheetAnimated();
       return;
     }
     const nextChecklists = removeItemFromChecklists(this.checklists, checklist.id, itemId);
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
     this.closeSheet();
   }
 
@@ -1310,12 +1272,9 @@ return;
 }
 const items = buildItemsFromGears(this.gears, selectedIds);
 const nextChecklists = addItemsToChecklist(this.checklists, checklist.id, items);
-this.applyChecklistState(nextChecklists);
-await this.store.saveChecklists(nextChecklists);
+await this.applyAndPersist(nextChecklists);
 this.closeSheet();
 }
-
-
 
 
   private currentReviewItem(): ChecklistItem | undefined {
@@ -1324,19 +1283,6 @@ this.closeSheet();
       return undefined;
     }
     return checklist.items[this.reviewIndex];
-  }
-
-  private currentReviewItemName(): string {
-    const item = this.currentReviewItem();
-    if (item === undefined) {
-      return '';
-    }
-    return resolveItemName(item, this.gears);
-  }
-
-  private currentReviewItemGroup(): string {
-    const item = this.currentReviewItem();
-    return item === undefined ? '' : item.group;
   }
 
   private async markReviewItem(checked: boolean): Promise<void> {
@@ -1368,8 +1314,7 @@ this.closeSheet();
     const beforeCount = checkedCount(checklist);
     const beforeTotal = checklist.items.length;
     const result = setItemChecked(this.checklists, checklist.id, itemId, checked);
-    this.applyChecklistState(result.checklists, true);
-    await this.store.saveChecklists(result.checklists);
+    await this.applyAndPersist(result.checklists, true);
     if (isJustCompleted(beforeCount, beforeTotal, result.updatedChecklist)) {
       this.showAchievement();
     }
@@ -1384,8 +1329,7 @@ this.closeSheet();
     const beforeTotal = checklist.items.length;
     const nextChecklists = toggleItemInChecklists(this.checklists, checklist.id, itemId);
     this.highlightedItemId = itemId;
-    this.applyChecklistState(nextChecklists, true);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists, true);
     this.pendingTimers.push(setTimeout(() => {
       if (this.highlightedItemId === itemId) {
         this.highlightedItemId = '';
@@ -1425,8 +1369,7 @@ this.closeSheet();
     }
     const nextChecklists = removeItemFromChecklists(this.checklists, checklist.id, itemId);
     // animated: true → ForEach 节点移除时播放退场动画（修复 #7 删除无即时反馈）
-    this.applyChecklistState(nextChecklists, true);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists, true);
   }
 
   // ============ Itinerary CRUD ============
@@ -1443,8 +1386,7 @@ this.closeSheet();
       }
       return cloneChecklist(c, { itinerary: nextItinerary });
     });
-    this.applyChecklistState(nextChecklists);
-    await this.store.saveChecklists(nextChecklists);
+    await this.applyAndPersist(nextChecklists);
   }
 
 // ===== 新建/编辑一天 =====
@@ -2275,7 +2217,7 @@ await this.updateItinerary(next);
         })
       }
       if (this.showCompletionToast) {
-        this.CompletionToast();
+        CompletionToast()
       }
       if (this.showCategoryDialog) {
         CategoryInputDialog({
@@ -2299,8 +2241,6 @@ await this.updateItinerary(next);
     .overlay(this.NoiseTextureLayer())
   }
 
-
-
   @Builder
   private NoiseTextureLayer() {
     Image($r('app.media.noise_64'))
@@ -2310,36 +2250,6 @@ await this.updateItinerary(next);
       .objectFit(ImageFit.None)
       .opacity(0.025)
       .hitTestBehavior(HitTestMode.None)
-  }
-
-  @Builder
-  private CompletionToast() {
-    // 克制高级：无 emoji 的白毛玻璃胶囊，轻量上移、Spring 进出，不阻断不遮挡内容
-    Column() {
-      Row({ space: 6 }) {
-        Circle({ width: 7, height: 7 })
-          .fill(PRIMARY_COLOR)
-        Text('全部就绪，出发吧')
-          .fontSize(FONT_SIZE_BODY_MEDIUM)
-          .fontWeight(FontWeight.Medium)
-          .fontColor(PRIMARY_COLOR)
-      }
-      .padding({ left: 18, right: 18, top: 10, bottom: 10 })
-      .backgroundColor(GLASS_BG_HEAVY)
-      .backdropBlur(20)
-      .borderRadius(20)
-      .shadow({ radius: 16, color: PRIMARY_SHADOW_LIGHT, offsetX: 0, offsetY: 4 })
-      .transition(TransitionEffect.OPACITY
-        .combine(TransitionEffect.translate({ y: -12 }))
-        .combine(TransitionEffect.scale({ x: PANEL_SCALE_START, y: PANEL_SCALE_START }))
-        .animation({ curve: SPRING_PANEL_ENTER() })
-      )
-    }
-    .width('100%')
-    .height('100%')
-    .padding({ top: 64 })
-    .alignItems(HorizontalAlign.Center)
-    .hitTestBehavior(HitTestMode.None)
   }
 
 }
