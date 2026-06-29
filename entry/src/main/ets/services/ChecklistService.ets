@@ -1,4 +1,4 @@
-import { ChecklistItem, DayItinerary, GearItem, makeId, TripChecklist, CATEGORY_FALLBACK, normalizeNumber } from '../models/PackModels';
+import { ChecklistItem, clampNumber, DayItinerary, GearItem, makeId, TripChecklist, CATEGORY_FALLBACK, normalizeNumber } from '../models/PackModels';
 import { gearById } from './GearService';
 
 /**
@@ -515,6 +515,20 @@ export interface TripProfileUpdate {
   maxAltitude?: number;
   ascentM?: number;
   durationHours?: number;
+}
+
+/**
+ * 从字符串输入构建 TripProfileUpdate（DRY：saveTripInfo / saveProfileInfo 共用）。
+ */
+export function buildTripProfile(destinationStr: string, distanceKmStr: string,
+  maxAltitudeStr: string, ascentMStr: string, durationHoursStr: string): TripProfileUpdate {
+  return {
+    destination: destinationStr.trim().length > 0 ? destinationStr.trim() : undefined,
+    distanceKm: clampNumber(distanceKmStr, 0, 100000),
+    maxAltitude: clampNumber(maxAltitudeStr, -500, 9000),
+    ascentM: clampNumber(ascentMStr, 0, 50000),
+    durationHours: clampNumber(durationHoursStr, 0, 8760)
+  };
 }
 
 /**

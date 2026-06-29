@@ -113,6 +113,7 @@ import {
   cloneChecklist,
   createChecklist as createChecklistFactory,
   createEmptyChecklistItem,
+  buildTripProfile,
   moveChecklistItemToZone,
   reorderItemsInZone,
   batchMoveItems,
@@ -1031,13 +1032,7 @@ struct Index {
       this.errorText = '行程名称不能为空';
       return;
     }
-    const profile: TripProfileUpdate = {
-      destination: destinationStr.trim().length > 0 ? destinationStr.trim() : undefined,
-      distanceKm: clampNumber(distanceKmStr, 0, 100000),
-      maxAltitude: clampNumber(maxAltitudeStr, -500, 9000),
-      ascentM: clampNumber(ascentMStr, 0, 50000),
-      durationHours: clampNumber(durationHoursStr, 0, 8760)
-    };
+    const profile = buildTripProfile(destinationStr, distanceKmStr, maxAltitudeStr, ascentMStr, durationHoursStr);
     await this.updateChecklistInfo(checklist.id, title, dateStr.trim(), parseTripDateAt(dateStr), profile);
     this.closeSheet();
   }
@@ -1063,13 +1058,7 @@ struct Index {
     if (checklist === undefined) {
       return;
     }
-    const profile: TripProfileUpdate = {
-      destination: destinationStr.trim().length > 0 ? destinationStr.trim() : undefined,
-      distanceKm: clampNumber(distanceKmStr, 0, 100000),
-      maxAltitude: clampNumber(maxAltitudeStr, -500, 9000),
-      ascentM: clampNumber(ascentMStr, 0, 50000),
-      durationHours: clampNumber(durationHoursStr, 0, 8760)
-    };
+    const profile = buildTripProfile(destinationStr, distanceKmStr, maxAltitudeStr, ascentMStr, durationHoursStr);
     const date = dateStr.trim();
     await this.updateChecklistInfo(checklist.id, checklist.title, date, parseTripDateAt(date), profile);
     this.closeSheet();
