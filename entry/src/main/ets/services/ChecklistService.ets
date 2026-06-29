@@ -1,5 +1,8 @@
 import { ChecklistItem, clampNumber, DayItinerary, GearItem, makeId, TripChecklist, CATEGORY_FALLBACK, normalizeNumber } from '../models/PackModels';
-import { gearById } from './GearService';
+import { formatKg, gearById } from './GearService';
+import {
+  AMBER_ACCENT, PRIMARY_COLOR, TEXT_SECONDARY, TEXT_TERTIARY
+} from '../constants/DesignTokens';
 
 /**
  * 清单相关纯业务逻辑 — 不依赖 UI 上下文
@@ -829,4 +832,205 @@ export function isJustCompleted(beforeCheckedCount: number, beforeTotal: number,
     return false;
   }
   return beforeCheckedCount === beforeTotal - 1 && checkedCount(updatedChecklist) === beforeTotal;
+}
+
+// ─── Wave 7.4：从 HomePage 提取的展示纯计算 ─────────────────────────────
+
+/**
+ * 首页状态文案（如 "2 个行程待出发" / "已完成 3 个行程"）。
+ */
+export function homeStatusText(checklists: TripChecklist[]): string {
+  if (checklists.length === 0) {
+    return '还没有行程，创建一个吧';
+  }
+  const futureCount = futureTrips(checklists).length;
+  if (futureCount > 0) {
+    return futureCount.toString() + ' 个行程待出发';
+  }
+  return '已完成 ' + pastTrips(checklists).length.toString() + ' 个行程';
+}
+
+/**
+ * HeroCard 副标题：目的地 · 日期 · 总重。
+ */
+export function heroSubtitleText(checklist: TripChecklist | undefined, gears: GearItem[]): string {
+  if (checklist === undefined) {
+    return '';
+  }
+  const parts: string[] = [];
+  if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
+    parts.push(checklist.destination.trim());
+  }
+  if (checklist.date !== undefined && checklist.date.length > 0) {
+    parts.push(checklist.date);
+  } else {
+    parts.push('未设置日期');
+  }
+  parts.push(formatKg(checklistTotalWeight(checklist, gears)));
+  return parts.join(' · ');
+}
+
+/**
+ * Hero 状态标签文本。
+ */
+export function heroStatusLabel(daysLeft: number | undefined): string {
+  if (daysLeft !== undefined && daysLeft >= 0) {
+    return '准备中';
+  }
+  return '已完成';
+}
+
+/**
+ * Hero 状态标签颜色。
+ */
+export function heroStatusColor(daysLeft: number | undefined): string {
+  if (daysLeft !== undefined && daysLeft >= 0) {
+    return PRIMARY_COLOR;
+  }
+  return TEXT_TERTIARY;
+}
+
+/**
+ * Hero 大字颜色（紧急=琥珀色，正常=主色，无日期=弱色）。
+ */
+export function heroLeadColor(daysLeft: number | undefined): string {
+  if (daysLeft === undefined) {
+    return TEXT_TERTIARY;
+  }
+  if (daysLeft <= 3 && daysLeft > 0) {
+    return AMBER_ACCENT;
+  }
+  return PRIMARY_COLOR;
+}
+
+/**
+ * 行程行日期颜色。
+ */
+export function rowDateColor(item: TripChecklist): string {
+  const dateAt = checklistDateAt(item);
+  if (dateAt === undefined) {
+    return TEXT_TERTIARY;
+  }
+  const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
+  if (dayDiff === 0) {
+    return PRIMARY_COLOR;
+  }
+  if (dayDiff >= 1 && dayDiff <= 3) {
+    return AMBER_ACCENT;
+  }
+  if (dayDiff > 3) {
+    return TEXT_SECONDARY;
+  }
+  return TEXT_TERTIARY;
+}
+
+/**
+ * 行程行日期字重。
+ */
+export function rowDateBold(item: TripChecklist): FontWeight {
+  const dateAt = checklistDateAt(item);
+  if (dateAt === undefined) {
+    return FontWeight.Normal;
+  }
+  const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
+  return dayDiff === 0 ? FontWeight.Bold : FontWeight.Normal;
+}
+
+/**
+ * 折叠头紧凑文本（latest 行程标题 + 天数信息）。
+ */
+export function compactHeaderText(latestChecklist: TripChecklist | undefined): string {
+  if (latestChecklist === undefined) {
+    return '';
+  }
+  const days = daysLeftCount(latestChecklist);
+  if (days === undefined) {
+    return '· ' + latestChecklist.title;
+  }
+  if (days > 0) {
+    return '· ' + latestChecklist.title + ' · ' + days.toString() + '天后';
+  }
+  if (days === 0) {
+    return '· ' + latestChecklist.title + ' · 今天出发';
+  }
+  return '· ' + latestChecklist.title;
+}
+
+/**
+ * 只取未来行程中最近的一个（dateAt >= 今天）。
+ */
+export function nearestFutureChecklist(checklists: TripChecklist[]): TripChecklist | undefined {
+  const today = startOfDay(new Date());
+  let nearest: TripChecklist | undefined = undefined;
+  for (let i = 0; i < checklists.length; i++) {
+    const dateAt = checklistDateAt(checklists[i]);
+    if (dateAt !== undefined && dateAt >= today) {
+      const nearestDateAt = nearest !== undefined ? checklistDateAt(nearest) : undefined;
+      if (nearest === undefined || (nearestDateAt !== undefined && dateAt < nearestDateAt)) {
+        nearest = checklists[i];
+      }
+    }
+  }
+  return nearest;
+}
+
+/**
+ * 快速核查按钮文案。
+ */
+export function quickReviewLabel(checklists: TripChecklist[]): string {
+  const target = nearestFutureChecklist(checklists);
+  if (target === undefined) {
+    return '';
+  }
+  if (target.items.length > 0 && checkedCount(target) === target.items.length) {
+    return '再检查一遍';
+  }
+  return '快速核查';
+}
+
+// ─── Wave 7.6：从 Index.ets 提取的纯计算 ────────────────────────────────
+
+/**
+ * 从行程清单中提取所有已绑定装备的 gearId 列表。
+ */
+export function tripGearIds(checklist: TripChecklist | undefined): string[] {
+  if (checklist === undefined) {
+    return [];
+  }
+  const ids: string[] = [];
+  for (let i = 0; i < checklist.items.length; i++) {
+    const gid = checklist.items[i].fromGearId;
+    if (gid !== undefined && gid !== '') {
+      ids.push(gid);
+    }
+  }
+  return ids;
+}
+
+/**
+ * 核查摘要文本：「已带 X 件，未带 Y 件」。
+ */
+export function reviewSummaryText(checklist: TripChecklist | undefined): string {
+  if (checklist === undefined) {
+    return '';
+  }
+  const checked = checkedCount(checklist);
+  return '已带 ' + checked.toString() + ' 件，未带 ' +
+    (checklist.items.length - checked).toString() + ' 件';
+}
+
+/**
+ * Tab 栏滑动视觉权重（0=未选中，1=完全选中，中间值=滑动过渡）。
+ */
+export function tabVisualWeight(index: number, currentTabIndex: number, swipeProgress: number): number {
+  const isCurrent = currentTabIndex === index;
+  if (isCurrent) {
+    return 1.0 - Math.min(1.0, Math.abs(swipeProgress));
+  }
+  const isSwipeTarget = (swipeProgress < 0 && index === currentTabIndex + 1) ||
+    (swipeProgress > 0 && index === currentTabIndex - 1);
+  if (isSwipeTarget) {
+    return Math.min(1.0, Math.abs(swipeProgress));
+  }
+  return 0.0;
 }

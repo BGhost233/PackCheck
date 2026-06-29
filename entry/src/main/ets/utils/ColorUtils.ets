@@ -1,4 +1,4 @@
-import { PRIMARY_COLOR, LIGHT_PRIMARY_COLOR, PRIMARY_TINT_COLOR, AMBER_TINT } from '../constants/Colors';
+import { PRIMARY_COLOR, LIGHT_PRIMARY_COLOR, PRIMARY_TINT_COLOR, AMBER_TINT, DIVIDER_COLOR } from '../constants/Colors';
 import { CATEGORY_FALLBACK } from '../models/PackModels';
 
 export function getGroupColor(group: string): string {
@@ -66,6 +66,17 @@ function hslToHex(h: number, s: number, l: number): string {
     return hex.length === 1 ? '0' + hex : hex;
   };
   return '#' + toHex(f(0)) + toHex(f(4)) + toHex(f(8));
+}
+
+/**
+ * 折叠 Header 底部分隔线颜色：alpha 随 progress 0→1 浮现（对齐 iOS Large Title hairline）。
+ * progress 在 [0, 0.5) 时全透明，在 [0.5, 1] 线性浮现至 DIVIDER_COLOR 全色。
+ */
+export function headerBorderColor(progress: number): string {
+  const t = progress < 0.5 ? 0 : Math.min(1, (progress - 0.5) * 2);
+  const alpha = Math.round(t * 0xFF);
+  const hex = alpha < 16 ? '0' + alpha.toString(16).toUpperCase() : alpha.toString(16).toUpperCase();
+  return '#' + hex + DIVIDER_COLOR.substring(1);
 }
 
 export function heroGradientStart(daysLeft: number | undefined): string {

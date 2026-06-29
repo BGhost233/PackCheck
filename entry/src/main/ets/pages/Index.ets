@@ -13,15 +13,13 @@ import { TripCeremonyCard } from '../components/TripCeremonyCard';
 import { EditItemPanel } from '../components/EditItemPanel';
 import { EditGearPanel } from '../components/EditGearPanel';
 import { GearFilterPanel } from '../components/GearFilterPanel';
+import { CategoryInputDialog } from '../components/CategoryInputDialog';
 import { SheetOverlay } from '../components/sheets/SheetOverlay';
 import {
   CARD_BG,
   DANGER_COLOR,
-  DIVIDER_COLOR,
   GEAR_SORT_GROUP,
   GLASS_BG_HEAVY,
-  GROUP_HEADER_BG,
-  OVERLAY_MASK,
   PAGE_BG,
   PRIMARY_COLOR,
   PRIMARY_SHADOW_LIGHT,
@@ -44,8 +42,7 @@ import {
   WHITE
 } from '../constants/DesignTokens';
 import {
-  FONT_SIZE_MINI, FONT_SIZE_BODY_MEDIUM, FONT_SIZE_OVERLINE, FONT_SIZE_PAGE_TITLE,
-  FONT_SIZE_PANEL_TITLE
+  FONT_SIZE_MINI, FONT_SIZE_BODY_MEDIUM, FONT_SIZE_PAGE_TITLE
 } from '../constants/Typography';
 import {
   SPRING_GENERAL,
@@ -118,7 +115,9 @@ import {
   reorderItemsInZone,
   batchMoveItems,
   setItemChecked,
-  isJustCompleted
+  isJustCompleted,
+  tripGearIds,
+  tabVisualWeight
 } from '../services/ChecklistService';
 import { ProfilePage } from '../components/ProfilePage';
 import {
@@ -173,32 +172,31 @@ struct Index {
   @State private sheetMode: string = SHEET_NONE;
   @State private sheetTranslateY: number = 800;
   @State private sheetOverlayOpacity: number = 0;
-  @State private editingGearId: string = '';
-  @State private gearName: string = '';
-  @State private gearCategory: string = '其他';
-  @State private gearWeight: string = '';
-  @State private gearPrice: string = '';
-  @State private gearNote: string = '';
-  @State private tripTitle: string = '';
-  @State private tripDate: string = '';
-  @State private tripDestination: string = '';
-  @State private tripDistanceKm: string = '';
-  @State private tripMaxAltitude: string = '';
-  @State private tripAscentM: string = '';
-  @State private tripDurationHours: string = '';
-  @State private tempItemName: string = '';
-  @State private tempItemGroup: string = '其他';
+  private editingGearId: string = '';
+  private gearName: string = '';
+  private gearCategory: string = '其他';
+  private gearWeight: string = '';
+  private gearPrice: string = '';
+  private gearNote: string = '';
+  private tripTitle: string = '';
+  private tripDate: string = '';
+  private tripDestination: string = '';
+  private tripDistanceKm: string = '';
+  private tripMaxAltitude: string = '';
+  private tripAscentM: string = '';
+  private tripDurationHours: string = '';
+  private tempItemName: string = '';
+  private tempItemGroup: string = '其他';
   @State private actionSheetItem: ChecklistItem = createEmptyChecklistItem();
   // 从空格子进入 GearPicker 时的预选 Zone（空串 = 无预选，向后兼容），review I4
   @State private pickerPreselectZone: string = '';
-  @State private collapsedGroups: string[] = [];
-  @State private returnToImportAfterGear: boolean = false;
+  private returnToImportAfterGear: boolean = false;
   @State private errorText: string = '';
-  @State private editingItemId: string = '';
-  @State private editingItemName: string = '';
-  @State private editingItemGroup: string = '其他';
-  @State private editingItemWeight: string = '';
-  @State private editingItemPrice: string = '';
+  private editingItemId: string = '';
+  private editingItemName: string = '';
+  private editingItemGroup: string = '其他';
+  private editingItemWeight: string = '';
+  private editingItemPrice: string = '';
   @State private showEditItemPanel: boolean = false;
   @State private showEditGearPanel: boolean = false;
   @State private showCompletionToast: boolean = false;
@@ -207,7 +205,7 @@ struct Index {
   // D-2：聚焦态「逐项核查本区」。非空时 Review 只展示 group===zone 的 item。
   @State private reviewZoneFilter: string | null = null;
   @State private reviewDragX: number = 0;
-  @State private highlightedItemId: string = '';
+  private highlightedItemId: string = '';
   // checklistRenderNonce：load-bearing 渲染强制刷新计数器。ArkUI 的 ForEach 对嵌套数组（checklist.items）
   // 的深层不可变更新存在 diff 失效问题——仅替换数组引用时部分 item 不会重渲染。该 nonce 被拼进
   // checklistItemRenderKey() 的 key，每次 applyChecklistState 自增以强制整段 ForEach 重建。
@@ -216,31 +214,30 @@ struct Index {
   // ===== 新建行程仪式感 =====
   @State private showTripCeremony: boolean = false;
 
-  // ===== 行程日表单（4 字段：出发地/目的地/日期/备注） =====
-  @State private editingDayId: string = '';
-  @State private dayFormFrom: string = '';
-  @State private dayFormTo: string = '';
-  @State private dayFormDate: string = '';
-  @State private dayFormNote: string = '';
-  // ===== 路段表单 =====
-  @State private editingSegmentId: string = '';
-  @State private editingSegDayId: string = '';  // 路段所属天 ID
-  @State private segFormFrom: string = '';
-  @State private segFormTo: string = '';
-  @State private segFormTransport: TransportMode = 'other';
-  @State private segFormDepartTime: string = '';
-  @State private segFormArriveTime: string = '';
-  @State private segFormNote: string = '';
-  @State private segFormAccommodation: string = '';
-  @State private segFormTicketCode: string = '';
-  @State private segFormTicketSeat: string = '';
-  @State private segFormTicketPrice: string = '';
+  // ===== 行程日表单（全部为一次性初始值代理，SheetOverlay 每次打开时重建） =====
+  private editingDayId: string = '';
+  private dayFormFrom: string = '';
+  private dayFormTo: string = '';
+  private dayFormDate: string = '';
+  private dayFormNote: string = '';
+  // ===== 路段表单（全部为一次性初始值代理，SheetOverlay 每次打开时重建） =====
+  private editingSegmentId: string = '';
+  private editingSegDayId: string = '';  // 路段所属天 ID
+  private segFormFrom: string = '';
+  private segFormTo: string = '';
+  private segFormTransport: TransportMode = 'other';
+  private segFormDepartTime: string = '';
+  private segFormArriveTime: string = '';
+  private segFormNote: string = '';
+  private segFormAccommodation: string = '';
+  private segFormTicketCode: string = '';
+  private segFormTicketSeat: string = '';
+  private segFormTicketPrice: string = '';
 
   // ===== 分组编辑 Dialog =====
   @State private showCategoryDialog: boolean = false;
-  @State private categoryDialogMode: string = 'add'; // 'add' | 'rename'
-  @State private categoryDialogOldName: string = '';
-  @State private categoryDialogInput: string = '';
+  private categoryDialogMode: string = 'add'; // 'add' | 'rename'
+  private categoryDialogOldName: string = '';
 
   private pendingTimers: number[] = [];
   private shakeListening: boolean = false;
@@ -355,21 +352,6 @@ struct Index {
     return presetCategories(this.categories);
   }
 
-  private toggleGroup(group: string): void {
-    const nextGroups: string[] = [];
-    let exists = false;
-    for (let index = 0; index < this.collapsedGroups.length; index++) {
-      if (this.collapsedGroups[index] === group) {
-        exists = true;
-      } else {
-        nextGroups.push(this.collapsedGroups[index]);
-      }
-    }
-    if (!exists) {
-      nextGroups.push(group);
-    }
-    this.collapsedGroups = nextGroups;
-  }
 
   private checklistItemWeight(item: ChecklistItem): number | undefined {
     return checklistItemWeight(item, this.gears);
@@ -648,18 +630,12 @@ struct Index {
   }
 
   private showCategoryInputPrompt(oldName: string, isAdd: boolean): void {
-    // 使用 promptAction.showDialog 不支持输入框
-    // 改用 @ohos.promptAction 的 showDialog 配合 TextInput
-    // ArkUI 限制：AlertDialog/promptAction 都不支持自定义输入框
-    // 方案：使用自定义 Dialog 状态
     if (isAdd) {
       this.categoryDialogMode = 'add';
       this.categoryDialogOldName = '';
-      this.categoryDialogInput = '';
     } else {
       this.categoryDialogMode = 'rename';
       this.categoryDialogOldName = oldName;
-      this.categoryDialogInput = oldName;
     }
     this.showCategoryDialog = true;
   }
@@ -801,7 +777,6 @@ struct Index {
 
   private openChecklist(checklistId: string): void {
     this.selectedChecklistId = checklistId;
-    this.collapsedGroups = [];
     this.startShakeListening();
     // 导航离开时收回清单页 swipeAction
     this.homeSwipeResetNonce++;
@@ -1153,21 +1128,6 @@ this.openSheetAnimated();
     this.openSheetAnimated();
   }
 
-  private currentTripGearIds(): string[] {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return [];
-    }
-    const ids: string[] = [];
-    for (let i = 0; i < checklist.items.length; i++) {
-      const gid = checklist.items[i].fromGearId;
-      if (gid !== undefined && gid !== '') {
-        ids.push(gid);
-      }
-    }
-    return ids;
-  }
-
   private async toggleGearInTrip(gear: GearItem): Promise<void> {
     const checklist = this.currentChecklist();
     if (checklist === undefined) {
@@ -1252,7 +1212,7 @@ this.openSheetAnimated();
   }
 
   // #1：批量移动 — 打开 Zone 选择面板（复用 actionSheet 模式，存 batch ids）
-  @State private batchMoveItemIds: string[] = [];
+  private batchMoveItemIds: string[] = [];
 
   private openBatchMoveSheet(itemIds: string[]): void {
     this.batchMoveItemIds = itemIds;
@@ -1347,15 +1307,6 @@ this.closeSheet();
   private currentReviewItemGroup(): string {
     const item = this.currentReviewItem();
     return item === undefined ? '' : item.group;
-  }
-
-  private reviewSummaryText(): string {
-    const checklist = this.currentChecklist();
-    if (checklist === undefined) {
-      return '';
-    }
-    return '已带 ' + checkedCount(checklist).toString() + ' 件，未带 ' +
-      (checklist.items.length - checkedCount(checklist)).toString() + ' 件';
   }
 
   private async markReviewItem(checked: boolean): Promise<void> {
@@ -1810,51 +1761,34 @@ await this.updateItinerary(next);
     }, 80));
   }
 
-  // 计算 tab 项的视觉权重：1.0 = 完全选中，0.0 = 完全未选中
-  private tabVisualWeight(index: number): number {
-    const isCurrent = this.currentTabIndex === index;
-    const progress = this.tabSwipeProgress; // 负值=向左滑（趋向 index+1），正值=向右滑（趋向 index-1）
-    if (isCurrent) {
-      // 当前选中项：随滑动逐渐"失去"选中态
-      return 1.0 - Math.min(1.0, Math.abs(progress));
-    }
-    // 非当前项：判断是否是滑动目标
-    const isSwipeTarget = (progress < 0 && index === this.currentTabIndex + 1) ||
-      (progress > 0 && index === this.currentTabIndex - 1);
-    if (isSwipeTarget) {
-      return Math.min(1.0, Math.abs(progress));
-    }
-    return 0.0;
-  }
-
   @Builder
   customTabBar(index: number, icon: Resource, label: string) {
     Column() {
       SymbolGlyph(icon)
         .fontSize(FONT_SIZE_PAGE_TITLE)
-        .fontColor([this.tabVisualWeight(index) > 0.5 ? PRIMARY_COLOR : TEXT_TERTIARY])
+        .fontColor([tabVisualWeight(index, this.currentTabIndex, this.tabSwipeProgress) > 0.5 ? PRIMARY_COLOR : TEXT_TERTIARY])
       Text(label)
         .fontSize(FONT_SIZE_MINI)
-        .fontWeight(this.tabVisualWeight(index) > 0.5 ? FontWeight.Medium : FontWeight.Regular)
-        .fontColor(this.tabVisualWeight(index) > 0.5 ? PRIMARY_COLOR : TEXT_TERTIARY)
+        .fontWeight(tabVisualWeight(index, this.currentTabIndex, this.tabSwipeProgress) > 0.5 ? FontWeight.Medium : FontWeight.Regular)
+        .fontColor(tabVisualWeight(index, this.currentTabIndex, this.tabSwipeProgress) > 0.5 ? PRIMARY_COLOR : TEXT_TERTIARY)
         .margin({ top: 2 })
       // 液态指示器小横条
       Row()
-        .width(18 * this.tabVisualWeight(index))
+        .width(18 * tabVisualWeight(index, this.currentTabIndex, this.tabSwipeProgress))
         .height(3)
         .borderRadius(1.5)
         .backgroundColor(PRIMARY_COLOR)
         .margin({ top: 3 })
-        .opacity(this.tabVisualWeight(index))
+        .opacity(tabVisualWeight(index, this.currentTabIndex, this.tabSwipeProgress))
     }
     .justifyContent(FlexAlign.Center)
     .width(64)
     .height(48)
     .scale({
-      x: 0.92 + 0.08 * this.tabVisualWeight(index),
-      y: 0.92 + 0.08 * this.tabVisualWeight(index)
+      x: 0.92 + 0.08 * tabVisualWeight(index, this.currentTabIndex, this.tabSwipeProgress),
+      y: 0.92 + 0.08 * tabVisualWeight(index, this.currentTabIndex, this.tabSwipeProgress)
     })
-    .opacity(0.6 + 0.4 * this.tabVisualWeight(index))
+    .opacity(0.6 + 0.4 * tabVisualWeight(index, this.currentTabIndex, this.tabSwipeProgress))
     .animation({ curve: SPRING_TAB_ICON() })
     .onClick(() => {
       if (this.currentTabIndex !== index) {
@@ -2126,7 +2060,7 @@ await this.updateItinerary(next);
           onImportGears: (ids: string[]) => { this.importSelectedGear(ids); },
           onAddGearFromImport: () => { this.openAddGearFromImport(); },
           // GearPickerSheet
-          pickerSelectedIds: this.currentTripGearIds(),
+          pickerSelectedIds: tripGearIds(this.currentChecklist()),
           pickerPreselectZone: this.pickerPreselectZone,
           onPickerToggleGear: (gear: GearItem) => { this.toggleGearInTrip(gear); },
           onPickerAddGear: (name: string, zone: string, weight: number | undefined, category: string, saveToLibrary: boolean) => {
@@ -2259,7 +2193,19 @@ await this.updateItinerary(next);
         this.CompletionToast();
       }
       if (this.showCategoryDialog) {
-        this.CategoryInputDialog();
+        CategoryInputDialog({
+          mode: this.categoryDialogMode,
+          initialOldName: this.categoryDialogOldName,
+          onConfirm: (input: string) => {
+            if (this.categoryDialogMode === 'add') {
+              this.executeCategoryAdd(input);
+            } else {
+              this.executeCategoryRename(this.categoryDialogOldName, input);
+            }
+            this.showCategoryDialog = false;
+          },
+          onClose: () => { this.showCategoryDialog = false; }
+        })
       }
     }
     .width('100%')
@@ -2311,78 +2257,4 @@ await this.updateItinerary(next);
     .hitTestBehavior(HitTestMode.None)
   }
 
-  @Builder
-  private CategoryInputDialog() {
-    Stack() {
-      // 半透明遮罩 — 淡入淡出
-      Column()
-        .width('100%')
-        .height('100%')
-        .backgroundColor(OVERLAY_MASK)
-        .onClick(() => { this.showCategoryDialog = false; })
-        .transition(TransitionEffect.OPACITY.animation({ curve: SPRING_PANEL_ENTER() }))
-
-      // 对话框 — 缩放 + 淡入 + 轻微上移
-      Column({ space: 16 }) {
-        Text(this.categoryDialogMode === 'add' ? '新增分组' : '重命名分组')
-          .fontSize(FONT_SIZE_PANEL_TITLE)
-          .fontWeight(FontWeight.Bold)
-          .fontColor(TEXT_MAIN)
-
-        TextInput({ text: this.categoryDialogInput, placeholder: '输入分组名称' })
-          .width('100%')
-          .height(44)
-          .maxLength(50)
-          .fontSize(FONT_SIZE_OVERLINE)
-          .borderRadius(10)
-          .backgroundColor(GROUP_HEADER_BG)
-          .onChange((value: string) => { this.categoryDialogInput = value; })
-
-        Row({ space: 12 }) {
-          Button('取消')
-            .fontSize(FONT_SIZE_OVERLINE)
-            .fontColor(TEXT_TERTIARY)
-            .backgroundColor(DIVIDER_COLOR)
-            .borderRadius(10)
-            .height(40)
-            .layoutWeight(1)
-            .onClick(() => { this.showCategoryDialog = false; })
-
-          Button('确认')
-            .fontSize(FONT_SIZE_OVERLINE)
-            .fontColor(WHITE)
-            .backgroundColor(PRIMARY_COLOR)
-            .borderRadius(10)
-            .height(40)
-            .layoutWeight(1)
-            .onClick(() => {
-              const input = this.categoryDialogInput.trim();
-              if (input.length === 0) {
-                return;
-              }
-              if (this.categoryDialogMode === 'add') {
-                this.executeCategoryAdd(input);
-              } else {
-                this.executeCategoryRename(this.categoryDialogOldName, input);
-              }
-              this.showCategoryDialog = false;
-            })
-        }
-        .width('100%')
-      }
-      .width('80%')
-      .padding(24)
-      .backgroundColor(CARD_BG)
-      .borderRadius(16)
-      .shadow({ radius: 20, color: SHADOW_DEFAULT, offsetX: 0, offsetY: 4 })
-      .transition(TransitionEffect.OPACITY
-        .combine(TransitionEffect.scale({ x: PANEL_SCALE_START, y: PANEL_SCALE_START }))
-        .combine(TransitionEffect.translate({ y: 8 }))
-        .animation({ curve: SPRING_PANEL_ENTER() })
-      )
-    }
-    .width('100%')
-    .height('100%')
-    .alignContent(Alignment.Center)
-  }
 }

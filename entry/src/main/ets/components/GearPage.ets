@@ -17,9 +17,10 @@ import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { getPackStore, PackStore } from '../services/PackStore';
 import { buildGearTripCountMap } from '../services/FootprintService';
 import {
-  numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice, updateGear, formatKg,
+  totalGearWeight, totalGearPrice, updateGear, formatKg,
   splitByKeyword, companionDays, companionDaysLabel, gearSummaryText,
-  normalizeGearCategories, tempGearFilterText
+  tempGearFilterText,
+  buildGearGroups, overlayMenuTop, gearBottomSpacerHeight
 } from '../services/GearService';
 import { formatDateText } from '../services/ChecklistService';
 import {
@@ -33,11 +34,6 @@ import {
   GEAR_HEADER_COLLAPSED,
   GEAR_HEADER_EXPANDED,
   GEAR_SORT_GROUP,
-  GEAR_SORT_PRICE,
-  GEAR_SORT_TIME,
-  GEAR_SORT_TRIP_COUNT,
-  GEAR_SORT_VALUE,
-  GEAR_SORT_WEIGHT,
   GLASS_BG,
   GROUP_HEADER_BG,
   OVERLAY_DIM,
@@ -60,7 +56,7 @@ import {
   FONT_SIZE_OVERLINE, FONT_SIZE_BODY_LARGE, FONT_SIZE_SUBTITLE_LARGE,
   FONT_SIZE_TITLE_LARGE, FONT_SIZE_PANEL_TITLE
 } from '../constants/Typography';
-import { getGroupColor } from '../utils/ColorUtils';
+import { getGroupColor, headerBorderColor } from '../utils/ColorUtils';
 import { GearEmptyState } from './gear/GearEmptyState';
 import { GearEmptyText } from './gear/GearEmptyText';
 
@@ -213,69 +209,12 @@ export struct GearPage {
 
   /** 一次性计算 filtered → sorted → 分组，结果写入缓存供 build 读取 */
   private rebuildGearCache(): void {
-    // 1. 筛选 + 排序
-    const filtered: GearItem[] = [];
-    const keyword = this.gearSearchKeyword.trim().toLowerCase();
-    const activeCategories = normalizeGearCategories(this.selectedGearCategories);
-    const showAllCategories = activeCategories.indexOf(CATEGORY_ALL) >= 0;
-    for (let index = 0; index < this.gears.length; index++) {
-      const item = this.gears[index];
-      const note = item.note === undefined ? '' : item.note;
-      const categoryMatched = showAllCategories || activeCategories.indexOf(item.category) >= 0;
-      const keywordMatched = keyword.length === 0 ||
-        item.name.toLowerCase().indexOf(keyword) >= 0 ||
-        item.category.toLowerCase().indexOf(keyword) >= 0 ||
-        note.toLowerCase().indexOf(keyword) >= 0;
-      if (categoryMatched && keywordMatched) {
-        filtered.push(item);
-      }
-    }
-    this.cachedFilteredGears = this.sortedGears(filtered);
-
-    // 2. 分组列表
-    const groups: string[] = [];
-    for (let index = 0; index < this.cachedFilteredGears.length; index++) {
-      const group = this.gearSortMode === GEAR_SORT_GROUP
-        ? this.cachedFilteredGears[index].category
-        : gearSortLabel(this.gearSortMode);
-      if (groups.indexOf(group) < 0) {
-        groups.push(group);
-      }
-    }
-    if (this.gearSortMode === GEAR_SORT_GROUP && this.categoryOrder.length > 0) {
-      groups.sort((a: string, b: string): number => {
-        const ai = this.categoryOrder.indexOf(a);
-        const bi = this.categoryOrder.indexOf(b);
-        const aIdx = ai >= 0 ? ai : 9999;
-        const bIdx = bi >= 0 ? bi : 9999;
-        if (aIdx !== bIdx) {
-          return aIdx - bIdx;
-        }
-        return a.localeCompare(b);
-      });
-    }
-    this.cachedGearGroups = groups;
-
-    // 3. 按分组分桶
-    const byGroup = new Map<string, GearItem[]>();
-    if (this.gearSortMode !== GEAR_SORT_GROUP) {
-      // 非分组模式：只有一个虚拟组，所有 items 在同一桶
-      for (let i = 0; i < groups.length; i++) {
-        byGroup.set(groups[i], this.cachedFilteredGears);
-      }
-    } else {
-      for (let i = 0; i < groups.length; i++) {
-        byGroup.set(groups[i], []);
-      }
-      for (let i = 0; i < this.cachedFilteredGears.length; i++) {
-        const cat = this.cachedFilteredGears[i].category;
-        const bucket = byGroup.get(cat);
-        if (bucket !== undefined) {
-          bucket.push(this.cachedFilteredGears[i]);
-        }
-      }
-    }
-    this.cachedGearsByGroup = byGroup;
+    const result = buildGearGroups(this.gears, this.gearSearchKeyword,
+      this.selectedGearCategories, this.gearSortMode,
+      this.categoryOrder, this.gearTripCountMap);
+    this.cachedFilteredGears = result.filteredGears;
+    this.cachedGearGroups = result.groups;
+    this.cachedGearsByGroup = result.byGroup;
   }
 
   private onSwipeResetNonceChange(): void {
@@ -432,57 +371,6 @@ export struct GearPage {
   private gearTripCount(item: GearItem): number {
     return this.gearTripCountMap.get(item.id) ?? 0;
   }
-
-  private sortedGears(items: GearItem[]): GearItem[] {
-    const sorted: GearItem[] = [];
-    for (let index = 0; index < items.length; index++) {
-      sorted.push(items[index]);
-    }
-    sorted.sort((left: GearItem, right: GearItem): number => {
-      if (this.gearSortMode === GEAR_SORT_PRICE) {
-        return numberOrZero(right.price) - numberOrZero(left.price);
-      }
-      if (this.gearSortMode === GEAR_SORT_WEIGHT) {
-        return numberOrZero(right.weight) - numberOrZero(left.weight);
-      }
-      if (this.gearSortMode === GEAR_SORT_TIME) {
-        return right.createdAt - left.createdAt;
-      }
-      if (this.gearSortMode === GEAR_SORT_VALUE) {
-        return gearValueRatio(right) - gearValueRatio(left);
-      }
-      if (this.gearSortMode === GEAR_SORT_TRIP_COUNT) {
-        return this.gearTripCount(right) - this.gearTripCount(left);
-      }
-      if (left.category === right.category) {
-        // 问题9：同分类内优先按手动拖动排序权重 order 升序；无 order 的旧数据回退 createdAt 倒序。
-        //   一方有 order 一方无：有 order 的排前（手动整理过的优先稳定在前）。
-        const lo = left.order;
-        const ro = right.order;
-        if (lo !== undefined && ro !== undefined) {
-          return lo - ro;
-        }
-        if (lo !== undefined) {
-          return -1;
-        }
-        if (ro !== undefined) {
-          return 1;
-        }
-        return right.createdAt - left.createdAt;
-      }
-      // 按 categoryOrder 自定义顺序排
-      const leftIdx = this.categoryOrder.indexOf(left.category);
-      const rightIdx = this.categoryOrder.indexOf(right.category);
-      const li = leftIdx >= 0 ? leftIdx : 9999;
-      const ri = rightIdx >= 0 ? rightIdx : 9999;
-      if (li !== ri) {
-        return li - ri;
-      }
-      return left.category.localeCompare(right.category);
-    });
-    return sorted;
-  }
-
 
   /** 返回缓存的筛选+排序结果（rebuildGearCache 预算）。O(1) 读取。 */
   private filteredGears(): GearItem[] {
@@ -662,8 +550,6 @@ export struct GearPage {
 
   // 动态底部 spacer：确保内容少时仍可折叠 header，内容多时仅保留 TabBar 避让
   private bottomSpacerHeight(): number {
-    const collapseRange = GEAR_HEADER_EXPANDED - GEAR_HEADER_COLLAPSED;
-    // 每个装备行约 52vp (44 content + 4*2 padding)，分组标题 28vp + 卡片间距 16vp
     const groups = this.filteredGearGroups();
     // Bug1 修复：只计算可见（未折叠）分组中的装备数量
     let visibleItemCount = 0;
@@ -672,25 +558,15 @@ export struct GearPage {
         visibleItemCount += this.filteredGearsByGroup(groups[g]).length;
       }
     }
-    const estimatedContentHeight = visibleItemCount * 52 + groups.length * 44;
-    // 如果内容自身足够多，不需要额外空间来触发折叠
-    if (estimatedContentHeight > collapseRange) {
-      return 80; // 仅 TabBar 避让
-    }
-    // 内容不够时，补足让 scroll 范围 ≥ collapseRange
-    return collapseRange - estimatedContentHeight + 80;
+    return gearBottomSpacerHeight(GEAR_HEADER_EXPANDED, GEAR_HEADER_COLLAPSED,
+      groups, visibleItemCount);
   }
 
-  // 折叠态底部 hairline 分隔线：alpha 随 progress 0→1 浮现（对齐 iOS Large Title）
   private gearHeaderBorderColor(): string {
     if (this.searchExpanded) {
-      return '#00' + DIVIDER_COLOR.substring(1); // 搜索态不显示分隔线
+      return headerBorderColor(0); // 搜索态不显示分隔线
     }
-    const p = this.gearScrollProgress();
-    const t = p < 0.5 ? 0 : Math.min(1, (p - 0.5) * 2);
-    const alpha = Math.round(t * 0xFF);
-    const hex = alpha < 16 ? '0' + alpha.toString(16).toUpperCase() : alpha.toString(16).toUpperCase();
-    return '#' + hex + DIVIDER_COLOR.substring(1); // DIVIDER_COLOR with dynamic alpha
+    return headerBorderColor(this.gearScrollProgress());
   }
 
   // Header 动态高度：跟随滚动从 EXPANDED 收缩到 COLLAPSED
@@ -1633,32 +1509,8 @@ export struct GearPage {
 
   // 菜单定位：以长按锚点为基准，底部空间不足时翻转到锚点上方弹出。
   private gearOverlayMenuTop(): number {
-    const anchorLocalY = this.gearLongPressGlobalY - this.gearOverlayOriginY;
-    const menuH = this.gearMenuMeasuredHeight; // onAreaChange 动态采集
-    const tabBarReserve = 84; // TabBar 56vp + 底部安全距离 28vp
-    const topSafe = 60; // 顶部安全距离（状态栏 + 余量）
-    const availableBelow = this.screenHeight - anchorLocalY - tabBarReserve;
-
-    if (availableBelow >= menuH) {
-      // 正常向下：锚点略上移 20vp，避免被手指遮挡
-      let top = anchorLocalY - 20;
-      // clamp 底部：菜单底边不超出安全区
-      const maxTop = this.screenHeight - tabBarReserve - menuH;
-      if (top > maxTop) {
-        top = maxTop;
-      }
-      if (top < topSafe) {
-        top = topSafe;
-      }
-      return top;
-    } else {
-      // 翻转到上方：菜单底边对齐锚点位置（锚点上方 20vp 余量）
-      let top = anchorLocalY - menuH - 20;
-      if (top < topSafe) {
-        top = topSafe;
-      }
-      return top;
-    }
+    return overlayMenuTop(this.gearLongPressGlobalY, this.gearOverlayOriginY,
+      this.gearMenuMeasuredHeight, this.screenHeight);
   }
 
   @Builder

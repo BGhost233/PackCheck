@@ -1,12 +1,9 @@
-import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
-import { formatKg } from '../services/GearService';
+import { GearItem, TripChecklist } from '../models/PackModels';
 import {
   checkedCount,
   progressText,
   progressTotal,
   isChecklistDone,
-  startOfDay,
-  checklistDateAt,
   findLatestChecklist,
   daysLeftCount,
   countdownLead,
@@ -14,11 +11,18 @@ import {
   rowDateText,
   futureTrips,
   pastTrips,
-  checklistItemWeight,
-  checklistTotalWeight
+  homeStatusText,
+  heroSubtitleText,
+  heroStatusLabel,
+  heroStatusColor,
+  heroLeadColor,
+  rowDateColor,
+  rowDateBold,
+  compactHeaderText,
+  nearestFutureChecklist,
+  quickReviewLabel
 } from '../services/ChecklistService';
 import {
-  AMBER_ACCENT,
   CARD_BG,
   CARD_BORDER_BOTTOM_COLOR,
   CARD_BORDER_BOTTOM_WIDTH,
@@ -51,7 +55,7 @@ import {
   STAGGER_OFFSET_Y,
   staggerDelay
 } from '../constants/AnimationTokens';
-import { heroGradientStart } from '../utils/ColorUtils';
+import { heroGradientStart, headerBorderColor } from '../utils/ColorUtils';
 import { HeadCollapseController } from '../utils/HeadCollapseController';
 import { hdsEffect } from '@kit.UIDesignKit';
 import {
@@ -268,38 +272,6 @@ export struct HomePage {
     return this.cachedLatest;
   }
 
-  private homeStatusText(): string {
-    if (this.checklists.length === 0) {
-      return '还没有行程，创建一个吧';
-    }
-    const futureCount = futureTrips(this.checklists).length;
-    if (futureCount > 0) {
-      return futureCount.toString() + ' 个行程待出发';
-    }
-    return '已完成 ' + pastTrips(this.checklists).length.toString() + ' 个行程';
-  }
-
-  private heroSubtitleText(): string {
-    const checklist = this.latestChecklist();
-    if (checklist === undefined) {
-      return '';
-    }
-    const parts: string[] = [];
-    // 目的地（优先展示）
-    if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
-      parts.push(checklist.destination.trim());
-    }
-    // 日期
-    if (checklist.date !== undefined && checklist.date.length > 0) {
-      parts.push(checklist.date);
-    } else {
-      parts.push('未设置日期');
-    }
-    // 总重
-    parts.push(formatKg(checklistTotalWeight(checklist, this.gears)));
-    return parts.join(' · ');
-  }
-
   // ===== HeroCard 安全辅助方法（消灭所有 forced unwrap） =====
 
   private heroTitle(): string {
@@ -320,22 +292,6 @@ export struct HomePage {
     return daysLeftCount(c);
   }
 
-  private heroStatusLabel(): string {
-    const days = this.heroDaysLeftSafe();
-    if (days !== undefined && days >= 0) {
-      return '准备中';
-    }
-    return '已完成';
-  }
-
-  private heroStatusColor(): string {
-    const days = this.heroDaysLeftSafe();
-    if (days !== undefined && days >= 0) {
-      return PRIMARY_COLOR;
-    }
-    return TEXT_TERTIARY;
-  }
-
   private heroLeadText(): string {
     const c = this.latestChecklist();
     if (c === undefined) {
@@ -347,17 +303,6 @@ export struct HomePage {
   private heroLeadFontSize(): number {
     const days = this.heroDaysLeftSafe();
     return days === 0 ? FONT_SIZE_STAT_LARGE : FONT_SIZE_EMOJI_LARGE;
-  }
-
-  private heroLeadColor(): string {
-    const days = this.heroDaysLeftSafe();
-    if (days === undefined) {
-      return TEXT_TERTIARY;
-    }
-    if (days <= 3 && days > 0) {
-      return AMBER_ACCENT;
-    }
-    return PRIMARY_COLOR;
   }
 
   private heroSuffixText(): string {
@@ -384,34 +329,6 @@ export struct HomePage {
     return c.items.length.toString();
   }
 
-  private rowDateColor(item: TripChecklist): string {
-    const dateAt = checklistDateAt(item);
-    if (dateAt === undefined) {
-      return TEXT_TERTIARY;
-    }
-    const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
-    if (dayDiff === 0) {
-      return PRIMARY_COLOR;
-    }
-    if (dayDiff >= 1 && dayDiff <= 3) {
-      return AMBER_ACCENT;
-    }
-    if (dayDiff > 3) {
-      return TEXT_SECONDARY;
-    }
-    // dayDiff < 0，历史行程
-    return TEXT_TERTIARY;
-  }
-
-  private rowDateBold(item: TripChecklist): FontWeight {
-    const dateAt = checklistDateAt(item);
-    if (dateAt === undefined) {
-      return FontWeight.Normal;
-    }
-    const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
-    return dayDiff === 0 ? FontWeight.Bold : FontWeight.Normal;
-  }
-
   private checkCelebration(): void {
     if (this.wasLatestChecklistDone) {
       return;
@@ -436,24 +353,6 @@ export struct HomePage {
         });
       }, 600);
     }
-  }
-
-  private compactHeaderText(): string {
-    const latest = this.latestChecklist();
-    if (latest === undefined) {
-      return '';
-    }
-    const days = daysLeftCount(latest);
-    if (days === undefined) {
-      return '· ' + latest.title;
-    }
-    if (days > 0) {
-      return '· ' + latest.title + ' · ' + days.toString() + '天后';
-    }
-    if (days === 0) {
-      return '· ' + latest.title + ' · 今天出发';
-    }
-    return '· ' + latest.title;
   }
 
   build() {
@@ -507,13 +406,8 @@ export struct HomePage {
     .backgroundColor(PAGE_BG)
   }
 
-  // 折叠态底部 hairline 分隔线：alpha 随 progress 0→1 浮现（对齐 iOS Large Title）
   private homeHeaderBorderColor(): string {
-    const p = this.scrollProgress();
-    const t = p < 0.5 ? 0 : Math.min(1, (p - 0.5) * 2);
-    const alpha = Math.round(t * 0xFF);
-    const hex = alpha < 16 ? '0' + alpha.toString(16).toUpperCase() : alpha.toString(16).toUpperCase();
-    return '#' + hex + DIVIDER_COLOR.substring(1); // DIVIDER_COLOR with dynamic alpha
+    return headerBorderColor(this.scrollProgress());
   }
 
   @Builder
@@ -525,7 +419,7 @@ export struct HomePage {
         .fontColor(TEXT_MAIN)
         .animation({ curve: SPRING_SCROLL() })
       if (this.latestChecklist() !== undefined) {
-        Text(this.compactHeaderText())
+        Text(compactHeaderText(this.latestChecklist()))
           .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_TERTIARY)
           .maxLines(1)
@@ -536,7 +430,7 @@ export struct HomePage {
       }
       Blank()
       if (this.scrollProgress() < 0.6) {
-        Text(this.homeStatusText())
+        Text(homeStatusText(this.checklists))
           .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_TERTIARY)
           .opacity(1 - this.scrollProgress() * 2)
@@ -562,9 +456,9 @@ export struct HomePage {
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
-          Text(this.heroStatusLabel())
+          Text(heroStatusLabel(this.heroDaysLeftSafe()))
             .fontSize(FONT_SIZE_BODY_SMALL)
-            .fontColor(this.heroStatusColor())
+            .fontColor(heroStatusColor(this.heroDaysLeftSafe()))
         }
         .width('100%')
 
@@ -572,7 +466,7 @@ export struct HomePage {
           Text(this.heroLeadText())
             .fontSize(this.heroLeadFontSize())
             .fontWeight(FontWeight.Bold)
-            .fontColor(this.heroLeadColor())
+            .fontColor(heroLeadColor(this.heroDaysLeftSafe()))
             .fontFeature(FONT_FEATURE_TNUM)
           Text(this.heroSuffixText())
             .fontSize(FONT_SIZE_BODY_LARGE)
@@ -586,7 +480,7 @@ export struct HomePage {
         })
 
         Row() {
-          Text(this.heroSubtitleText())
+          Text(heroSubtitleText(this.latestChecklist(), this.gears))
             .fontSize(FONT_SIZE_BODY_SMALL)
             .fontColor(TEXT_TERTIARY)
             .layoutWeight(1)
@@ -703,33 +597,6 @@ export struct HomePage {
     .shadow({ radius: 12, color: SHADOW_MICRO, offsetX: 0, offsetY: 2 })
   }
 
-  // 只取未来行程中最近的一个（dateAt >= 今天）
-  private nearestFutureChecklist(): TripChecklist | undefined {
-    const today = startOfDay(new Date());
-    let nearest: TripChecklist | undefined = undefined;
-    for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = checklistDateAt(this.checklists[i]);
-      if (dateAt !== undefined && dateAt >= today) {
-        const nearestDateAt = nearest !== undefined ? checklistDateAt(nearest) : undefined;
-        if (nearest === undefined || (nearestDateAt !== undefined && dateAt < nearestDateAt)) {
-          nearest = this.checklists[i];
-        }
-      }
-    }
-    return nearest;
-  }
-
-  private quickReviewLabel(): string {
-    const target = this.nearestFutureChecklist();
-    if (target === undefined) {
-      return '';
-    }
-    if (target.items.length > 0 && checkedCount(target) === target.items.length) {
-      return '再检查一遍';
-    }
-    return '快速核查';
-  }
-
   @Builder
   private QuickEntries() {
     Row({ space: 12 }) {
@@ -740,10 +607,10 @@ export struct HomePage {
         color: PRIMARY_COLOR,
         action: () => { this.onOpenTrip(); }
       });
-      if (this.nearestFutureChecklist() !== undefined) {
+      if (nearestFutureChecklist(this.checklists) !== undefined) {
         HomeQuickEntry({
           icon: $r('sys.symbol.checkmark_shield'),
-          title: this.quickReviewLabel(),
+          title: quickReviewLabel(this.checklists),
           bg: CARD_BG,
           color: TEXT_MAIN,
           action: () => { this.handleQuickReview(); }
@@ -754,7 +621,7 @@ export struct HomePage {
   }
 
   private handleQuickReview(): void {
-    const target = this.nearestFutureChecklist();
+    const target = nearestFutureChecklist(this.checklists);
     if (target === undefined) {
       return;
     }
@@ -900,8 +767,8 @@ export struct HomePage {
         }
         Text(rowDateText(item))
           .fontSize(FONT_SIZE_CAPTION)
-          .fontColor(this.rowDateColor(item))
-          .fontWeight(this.rowDateBold(item))
+          .fontColor(rowDateColor(item))
+          .fontWeight(rowDateBold(item))
           .fontFeature(FONT_FEATURE_TNUM)
       }
       .alignItems(HorizontalAlign.Start)

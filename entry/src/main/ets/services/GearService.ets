@@ -353,3 +353,185 @@ export function gearSummaryText(gears: GearItem[]): string {
     ' · ¥' + totalGearPrice(gears).toString();
 }
 
+// ─── Wave 7.5：从 GearPage 提取的纯计算 ─────────────────────────────────
+
+/** buildGearGroups 的返回结构。 */
+export interface GearGroupsResult {
+  filteredGears: GearItem[];
+  groups: string[];
+  byGroup: Map<string, GearItem[]>;
+}
+
+/**
+ * 带 categoryOrder + manual order + tripCount 的完整排序。
+ * tripCountMap 为 undefined 时 GEAR_SORT_TRIP_COUNT 回退为时间排序。
+ */
+export function sortGearsWithOrder(items: GearItem[], sortMode: string,
+  categoryOrder: string[], tripCountMap: Map<string, number> | undefined): GearItem[] {
+  const sorted: GearItem[] = [];
+  for (let i = 0; i < items.length; i++) {
+    sorted.push(items[i]);
+  }
+  sorted.sort((left: GearItem, right: GearItem): number => {
+    if (sortMode === GEAR_SORT_PRICE) {
+      return numberOrZero(right.price) - numberOrZero(left.price);
+    }
+    if (sortMode === GEAR_SORT_WEIGHT) {
+      return numberOrZero(right.weight) - numberOrZero(left.weight);
+    }
+    if (sortMode === GEAR_SORT_TIME) {
+      return right.createdAt - left.createdAt;
+    }
+    if (sortMode === GEAR_SORT_VALUE) {
+      return gearValueRatio(right) - gearValueRatio(left);
+    }
+    if (sortMode === GEAR_SORT_TRIP_COUNT) {
+      if (tripCountMap !== undefined) {
+        const lc = tripCountMap.get(left.id) ?? 0;
+        const rc = tripCountMap.get(right.id) ?? 0;
+        return rc - lc;
+      }
+      return right.createdAt - left.createdAt;
+    }
+    // GEAR_SORT_GROUP: 同分类内按手动 order 升序，不同分类按 categoryOrder
+    if (left.category === right.category) {
+      const lo = left.order;
+      const ro = right.order;
+      if (lo !== undefined && ro !== undefined) {
+        return lo - ro;
+      }
+      if (lo !== undefined) {
+        return -1;
+      }
+      if (ro !== undefined) {
+        return 1;
+      }
+      return right.createdAt - left.createdAt;
+    }
+    const leftIdx = categoryOrder.indexOf(left.category);
+    const rightIdx = categoryOrder.indexOf(right.category);
+    const li = leftIdx >= 0 ? leftIdx : 9999;
+    const ri = rightIdx >= 0 ? rightIdx : 9999;
+    if (li !== ri) {
+      return li - ri;
+    }
+    return left.category.localeCompare(right.category);
+  });
+  return sorted;
+}
+
+/**
+ * 一次性完成 筛选 → 排序 → 分组，返回结构化结果。
+ * 等价于 GearPage.rebuildGearCache() 的纯函数版。
+ */
+export function buildGearGroups(gears: GearItem[], keyword: string,
+  selectedCategories: string[], sortMode: string,
+  categoryOrder: string[], tripCountMap: Map<string, number> | undefined): GearGroupsResult {
+  // 1. 筛选
+  const filtered: GearItem[] = [];
+  const lowerKeyword = keyword.trim().toLowerCase();
+  const activeCategories = normalizeGearCategories(selectedCategories);
+  const showAllCategories = activeCategories.indexOf(CATEGORY_ALL) >= 0;
+  for (let i = 0; i < gears.length; i++) {
+    const item = gears[i];
+    const note = item.note === undefined ? '' : item.note;
+    const categoryMatched = showAllCategories || activeCategories.indexOf(item.category) >= 0;
+    const keywordMatched = lowerKeyword.length === 0 ||
+      item.name.toLowerCase().indexOf(lowerKeyword) >= 0 ||
+      item.category.toLowerCase().indexOf(lowerKeyword) >= 0 ||
+      note.toLowerCase().indexOf(lowerKeyword) >= 0;
+    if (categoryMatched && keywordMatched) {
+      filtered.push(item);
+    }
+  }
+
+  // 2. 排序
+  const sortedItems = sortGearsWithOrder(filtered, sortMode, categoryOrder, tripCountMap);
+
+  // 3. 分组列表
+  const groups: string[] = [];
+  for (let i = 0; i < sortedItems.length; i++) {
+    const group = sortMode === GEAR_SORT_GROUP
+      ? sortedItems[i].category
+      : gearSortLabel(sortMode);
+    if (groups.indexOf(group) < 0) {
+      groups.push(group);
+    }
+  }
+  if (sortMode === GEAR_SORT_GROUP && categoryOrder.length > 0) {
+    groups.sort((a: string, b: string): number => {
+      const ai = categoryOrder.indexOf(a);
+      const bi = categoryOrder.indexOf(b);
+      const aIdx = ai >= 0 ? ai : 9999;
+      const bIdx = bi >= 0 ? bi : 9999;
+      if (aIdx !== bIdx) {
+        return aIdx - bIdx;
+      }
+      return a.localeCompare(b);
+    });
+  }
+
+  // 4. 分桶
+  const byGroup = new Map<string, GearItem[]>();
+  if (sortMode !== GEAR_SORT_GROUP) {
+    for (let i = 0; i < groups.length; i++) {
+      byGroup.set(groups[i], sortedItems);
+    }
+  } else {
+    for (let i = 0; i < groups.length; i++) {
+      byGroup.set(groups[i], []);
+    }
+    for (let i = 0; i < sortedItems.length; i++) {
+      const cat = sortedItems[i].category;
+      const bucket = byGroup.get(cat);
+      if (bucket !== undefined) {
+        bucket.push(sortedItems[i]);
+      }
+    }
+  }
+
+  return { filteredGears: sortedItems, groups: groups, byGroup: byGroup };
+}
+
+/**
+ * 菜单覆盖层定位计算：以长按锚点为基准，底部空间不足时翻转到上方。
+ */
+export function overlayMenuTop(anchorGlobalY: number, overlayOriginY: number,
+  menuHeight: number, screenHeight: number): number {
+  const anchorLocalY = anchorGlobalY - overlayOriginY;
+  const tabBarReserve = 84;
+  const topSafe = 60;
+  const availableBelow = screenHeight - anchorLocalY - tabBarReserve;
+
+  if (availableBelow >= menuHeight) {
+    let top = anchorLocalY - 20;
+    const maxTop = screenHeight - tabBarReserve - menuHeight;
+    if (top > maxTop) {
+      top = maxTop;
+    }
+    if (top < topSafe) {
+      top = topSafe;
+    }
+    return top;
+  } else {
+    let top = anchorLocalY - menuHeight - 20;
+    if (top < topSafe) {
+      top = topSafe;
+    }
+    return top;
+  }
+}
+
+/**
+ * 动态底部 spacer 高度计算。
+ */
+export function gearBottomSpacerHeight(headerExpanded: number, headerCollapsed: number,
+  groups: string[], visibleItemCount: number): number {
+  const collapseRange = headerExpanded - headerCollapsed;
+  const estimatedContentHeight = visibleItemCount * 52 + groups.length * 44;
+  if (estimatedContentHeight > collapseRange) {
+    return 80;
+  }
+  return collapseRange - estimatedContentHeight + 80;
+}
+
