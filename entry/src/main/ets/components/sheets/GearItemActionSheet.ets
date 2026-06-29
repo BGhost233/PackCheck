@@ -3,6 +3,11 @@
 
 import { LengthMetrics } from '@kit.ArkUI';
 import {
+  FONT_SIZE_BODY_LARGE,
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_OVERLINE
+} from '../../constants/Typography';
+import {
   TEXT_MAIN,
   TEXT_SECONDARY,
   TEXT_TERTIARY,
@@ -44,7 +49,7 @@ export struct GearItemActionSheet {
       if (!this.showZoneSelector) {
         // 标题
         Text(this.displayName.length > 0 ? this.displayName : this.item.name)
-          .fontSize(16)
+          .fontSize(FONT_SIZE_BODY_LARGE)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
           .width('100%')
@@ -56,11 +61,11 @@ export struct GearItemActionSheet {
         // 移动到其他区域
         Row() {
           Text('移动到其他区域')
-            .fontSize(15)
+            .fontSize(FONT_SIZE_OVERLINE)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
           SymbolGlyph($r('sys.symbol.chevron_right'))
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor([TEXT_TERTIARY])
         }
         .width('100%')
@@ -78,7 +83,7 @@ export struct GearItemActionSheet {
         // 查看装备详情
         Row() {
           Text('查看装备详情')
-            .fontSize(15)
+            .fontSize(FONT_SIZE_OVERLINE)
             .fontColor(TEXT_MAIN)
         }
         .width('100%')
@@ -96,7 +101,7 @@ export struct GearItemActionSheet {
         // 从行程移除（红色）
         Row() {
           Text('从行程移除')
-            .fontSize(15)
+            .fontSize(FONT_SIZE_OVERLINE)
             .fontColor(DANGER_COLOR)
         }
         .width('100%')
@@ -114,7 +119,7 @@ export struct GearItemActionSheet {
         // 取消
         Row() {
           Text('取消')
-            .fontSize(15)
+            .fontSize(FONT_SIZE_OVERLINE)
             .fontColor(TEXT_SECONDARY)
         }
         .width('100%')
@@ -130,7 +135,7 @@ export struct GearItemActionSheet {
       } else {
         // Zone 选择器
         Text('移动到')
-          .fontSize(16)
+          .fontSize(FONT_SIZE_BODY_LARGE)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
           .width('100%')
@@ -140,7 +145,7 @@ export struct GearItemActionSheet {
         Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(10), cross: LengthMetrics.vp(10) } }) {
           ForEach(allZones(), (zone: string) => {
             Text(zoneDisplayName(zone))
-              .fontSize(14)
+              .fontSize(FONT_SIZE_BODY_MEDIUM)
               .fontColor(this.item.group === zone ? CARD_BG : TEXT_MAIN)
               .backgroundColor(this.item.group === zone ? this.getZoneColor(zone) : INPUT_BG)
               .borderRadius(16)
@@ -162,7 +167,7 @@ export struct GearItemActionSheet {
         // 返回
         Row() {
           Text('取消')
-            .fontSize(15)
+            .fontSize(FONT_SIZE_OVERLINE)
             .fontColor(TEXT_SECONDARY)
         }
         .width('100%')

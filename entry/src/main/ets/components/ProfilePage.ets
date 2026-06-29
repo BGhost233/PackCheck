@@ -7,6 +7,12 @@ import {
   WHITE_SECONDARY, WHITE_SEMI_TRANSPARENT, PRIMARY_TINT_COLOR, LIGHT_PRIMARY_COLOR
 } from '../constants/Colors';
 import { PAGE_PADDING, CARD_RADIUS, CARD_PADDING, CHIP_RADIUS, FONT_FEATURE_TNUM } from '../constants/Layout';
+import {
+  FONT_SIZE_MINI, FONT_SIZE_CAPTION, FONT_SIZE_BODY_SMALL, FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_OVERLINE, FONT_SIZE_BODY_LARGE, FONT_SIZE_SUBTITLE_LARGE,
+  FONT_SIZE_PAGE_TITLE, FONT_SIZE_TITLE_LARGE, FONT_SIZE_HERO_NUMBER,
+  FONT_SIZE_STAT_LARGE, FONT_SIZE_AVATAR_FALLBACK
+} from '../constants/Typography';
 import { counterAnimate, stopCounterAnimate, CounterTimerHandle } from '../utils/AnimationUtils';
 import {
   SPRING_GENERAL, SPRING_PRESS, STAGGER_OFFSET_Y, staggerDelay,
@@ -269,26 +275,26 @@ export struct ProfilePage {
         // ═══════════════════════════════════════════════
         Column() {
           Text('这一路走来')
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(WHITE_SECONDARY)
             .margin({ bottom: 12 })
 
           if (this.footprint.totalDistanceKm > 0) {
             Row() {
               Text(`${this.animDistance}`)
-                .fontSize(56)
+                .fontSize(FONT_SIZE_AVATAR_FALLBACK)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(CARD_BG)
                 .fontFeature(FONT_FEATURE_TNUM)
               Text(' 公里')
-                .fontSize(16)
+                .fontSize(FONT_SIZE_BODY_LARGE)
                 .fontColor(WHITE_SECONDARY)
                 .margin({ bottom: 10 })
             }
             .alignItems(VerticalAlign.Bottom)
           } else {
             Text('每一步都算数')
-              .fontSize(22)
+              .fontSize(FONT_SIZE_PAGE_TITLE)
               .fontWeight(FontWeight.Medium)
               .fontColor(CARD_BG)
           }
@@ -323,7 +329,7 @@ export struct ProfilePage {
         // ═══════════════════════════════════════════════
         Column() {
           Text('你的足迹')
-            .fontSize(18)
+            .fontSize(FONT_SIZE_SUBTITLE_LARGE)
             .fontWeight(FontWeight.Medium)
             .fontColor(TEXT_MAIN)
             .margin({ bottom: 20 })
@@ -357,18 +363,18 @@ export struct ProfilePage {
                   Column() {
                     Row() {
                       Text(trip.dateLabel)
-                        .fontSize(12)
+                        .fontSize(FONT_SIZE_CAPTION)
                         .fontColor(TEXT_TERTIARY)
                       if (trip.destination.length > 0) {
                         Text(` · ${trip.destination}`)
-                          .fontSize(12)
+                          .fontSize(FONT_SIZE_CAPTION)
                           .fontColor(TEXT_SECONDARY)
                       }
                     }
                     .margin({ bottom: 4 })
 
                     Text(trip.title)
-                      .fontSize(15)
+                      .fontSize(FONT_SIZE_OVERLINE)
                       .fontWeight(FontWeight.Medium)
                       .fontColor(TEXT_MAIN)
                       .maxLines(1)
@@ -378,17 +384,17 @@ export struct ProfilePage {
                     Row({ space: 12 }) {
                       if (trip.distanceKm !== undefined && trip.distanceKm > 0) {
                         Text(`${trip.distanceKm}km`)
-                          .fontSize(11)
+                          .fontSize(FONT_SIZE_MINI)
                           .fontColor(TEXT_TERTIARY)
                       }
                       if (trip.ascentM !== undefined && trip.ascentM > 0) {
                         Text(`${trip.ascentM}m↑`)
-                          .fontSize(11)
+                          .fontSize(FONT_SIZE_MINI)
                           .fontColor(TEXT_TERTIARY)
                       }
                       if (trip.gearCount > 0) {
                         Text(`${trip.gearCount}件装备`)
-                          .fontSize(11)
+                          .fontSize(FONT_SIZE_MINI)
                           .fontColor(TEXT_TERTIARY)
                       }
                     }
@@ -408,7 +414,7 @@ export struct ProfilePage {
             // 空数据态
             Column() {
               Text('第一次出发，从这里开始')
-                .fontSize(14)
+                .fontSize(FONT_SIZE_BODY_MEDIUM)
                 .fontColor(TEXT_TERTIARY)
             }
             .width('100%')
@@ -428,23 +434,23 @@ export struct ProfilePage {
         if (this.footprint.longestCompanion !== undefined) {
           Column() {
             Text('相伴最久')
-              .fontSize(13)
+              .fontSize(FONT_SIZE_BODY_SMALL)
               .fontColor(TEXT_TERTIARY)
               .margin({ bottom: 12 })
 
             Text(`「${this.footprint.longestCompanion.name}」`)
-              .fontSize(24)
+              .fontSize(FONT_SIZE_TITLE_LARGE)
               .fontWeight(FontWeight.Bold)
               .fontColor(TEXT_MAIN)
 
             Row() {
               Text(`${this.animDays}`)
-                .fontSize(36)
+                .fontSize(FONT_SIZE_STAT_LARGE)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(PRIMARY_COLOR)
                 .fontFeature(FONT_FEATURE_TNUM)
               Text(' 天了')
-                .fontSize(15)
+                .fontSize(FONT_SIZE_OVERLINE)
                 .fontColor(TEXT_SECONDARY)
                 .margin({ bottom: 6 })
             }
@@ -452,7 +458,7 @@ export struct ProfilePage {
             .margin({ top: 8 })
 
             Text('它一直在你身边')
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor(TEXT_TERTIARY)
               .margin({ top: 16 })
               .opacity(0.8)
@@ -543,7 +549,7 @@ export struct ProfilePage {
         // ═══════════════════════════════════════════════
         Column() {
           Text('故事都在你心里')
-            .fontSize(13)
+            .fontSize(FONT_SIZE_BODY_SMALL)
             .fontColor(TEXT_TERTIARY)
             .opacity(0.6)
         }
@@ -568,7 +574,7 @@ export struct ProfilePage {
   @Builder
   footprintChip(text: string) {
     Text(text)
-      .fontSize(12)
+      .fontSize(FONT_SIZE_CAPTION)
       .fontColor(CARD_BG)
       .padding({ left: 12, right: 12, top: 6, bottom: 6 })
       .backgroundColor(WHITE_SEMI_TRANSPARENT)
@@ -579,12 +585,12 @@ export struct ProfilePage {
   StatCell(value: string, label: string, index: number) {
     Column() {
       Text(value)
-        .fontSize(28)
+        .fontSize(FONT_SIZE_HERO_NUMBER)
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
         .fontFeature(FONT_FEATURE_TNUM)
       Text(label)
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor(TEXT_TERTIARY)
         .margin({ top: 6 })
     }

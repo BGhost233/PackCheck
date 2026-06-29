@@ -1,5 +1,9 @@
 import { CATEGORY_ALL, GearItem } from '../../models/PackModels';
 import {
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_CAPTION
+} from '../../constants/Typography';
+import {
   FONT_FEATURE_TNUM,
   PAGE_BG,
   PRIMARY_COLOR,
@@ -41,15 +45,15 @@ export struct ImportSheet {
       if (this.gears.length === 0) {
         Column({ space: 10 }) {
           Text('装备库还是空的')
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(TEXT_MAIN)
           Text('添加你的第一件装备吧')
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_SECONDARY)
           Button('添加装备')
             .width(160)
             .height(44)
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(WHITE)
             .backgroundColor(PRIMARY_COLOR)
             .borderRadius(12)
@@ -94,11 +98,11 @@ export struct ImportSheet {
                   })
                 Column({ space: 4 }) {
                   Text(item.name)
-                    .fontSize(14)
+                    .fontSize(FONT_SIZE_BODY_MEDIUM)
                     .fontColor(TEXT_MAIN)
                   if (importGearMetaText(item).length > 0) {
                     Text(importGearMetaText(item))
-                      .fontSize(12)
+                      .fontSize(FONT_SIZE_CAPTION)
                       .fontColor(TEXT_SECONDARY)
                       .fontFeature(FONT_FEATURE_TNUM)
                   }
@@ -128,7 +132,7 @@ export struct ImportSheet {
       }
       Button('导入选中 (' + this.importGearIds.length.toString() + ')')
         .height(48)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(WHITE)
         .backgroundColor(this.importGearIds.length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')

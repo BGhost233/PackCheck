@@ -11,6 +11,11 @@ import {
 SPRING_GENERAL,
 SPRING_PANEL_EXIT
 } from '../constants/AnimationTokens';
+import {
+  FONT_SIZE_BODY_LARGE,
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_CAPTION
+} from '../constants/Typography';
 import { CATEGORY_ALL, GearItem } from '../models/PackModels';
 import { normalizeGearCategories, allGearFilterCategories, gearCategoryCount, tempGearFilterText } from '../services/GearService';
 import { CategoryTagGroup } from './CategoryTagGroup';
@@ -119,12 +124,12 @@ export struct GearFilterPanel {
       Column({ space: 8 }) {
         Row() {
           Text('分组筛选')
-            .fontSize(16)
+            .fontSize(FONT_SIZE_BODY_LARGE)
             .fontWeight(FontWeight.Medium)
             .fontColor(TEXT_MAIN)
           Blank()
           Text('清除')
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(TEXT_TERTIARY)
             .height(32)
             .padding({ left: 10, right: 10 })
@@ -133,7 +138,7 @@ export struct GearFilterPanel {
             })
           Button('确认')
             .height(32)
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(WHITE)
             .backgroundColor(PRIMARY_COLOR)
             .borderRadius(16)
@@ -147,7 +152,7 @@ export struct GearFilterPanel {
         .alignItems(VerticalAlign.Center)
 
         Text('已选：' + this.filterText() + ' · 共' + this.filteredGearCount().toString() + '件')
-          .fontSize(12)
+          .fontSize(FONT_SIZE_CAPTION)
           .fontColor(TEXT_TERTIARY)
           .width('100%')
           .padding({ left: 16, right: 16 })

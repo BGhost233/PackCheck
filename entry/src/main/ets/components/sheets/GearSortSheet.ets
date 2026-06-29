@@ -10,6 +10,7 @@ import {
   PRIMARY_COLOR,
   TEXT_MAIN
 } from '../../constants/DesignTokens';
+import { FONT_SIZE_BODY_MEDIUM } from '../../constants/Typography';
 import {
   SPRING_PRESS,
   SPRING_GENERAL,
@@ -50,13 +51,13 @@ export struct GearSortSheet {
   private SortOption(title: string, mode: string) {
     Row() {
       Text(title)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(this.gearSortMode === mode ? PRIMARY_COLOR : TEXT_MAIN)
         .fontWeight(this.gearSortMode === mode ? FontWeight.Bold : FontWeight.Normal)
         .layoutWeight(1)
       if (this.gearSortMode === mode) {
         SymbolGlyph($r('sys.symbol.checkmark'))
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor([PRIMARY_COLOR])
       }
     }

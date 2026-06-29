@@ -5,6 +5,7 @@ import {
   TEXT_SECONDARY,
   TEXT_TERTIARY
 } from '../../constants/DesignTokens';
+import { FONT_SIZE_BODY_MEDIUM } from '../../constants/Typography';
 import {
   WHITE,
   DISABLED_COLOR,
@@ -63,7 +64,7 @@ export struct DayFormSheet {
           .type(InputType.Normal)
           .maxLength(100)
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -79,7 +80,7 @@ export struct DayFormSheet {
           .type(InputType.Normal)
           .maxLength(100)
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -93,7 +94,7 @@ export struct DayFormSheet {
         // 日期（可选，点击弹出 DatePickerDialog）
         Row() {
           Text(this.dayDate.length > 0 ? this.dayDate : '选择日期（可选）')
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(this.dayDate.length > 0 ? TEXT_MAIN : TEXT_TERTIARY)
         }
         .height(48)
@@ -130,7 +131,7 @@ export struct DayFormSheet {
           .type(InputType.Normal)
           .maxLength(500)
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -144,7 +145,7 @@ export struct DayFormSheet {
         // 提交按钮
         Button(this.editingDayId.length === 0 ? '添加一天' : '保存修改')
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(WHITE)
           .backgroundColor(this.isFormValid() ? PRIMARY_COLOR : DISABLED_COLOR)
           .width('100%')
@@ -189,7 +190,7 @@ export struct DayFormSheet {
         if (this.editingDayId.length > 0) {
           Button('删除此天')
             .height(44)
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(DANGER_COLOR)
             .backgroundColor(Color.Transparent)
             .width('100%')

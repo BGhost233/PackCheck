@@ -20,6 +20,11 @@ import {
   SPRING_SCROLL,
   SPRING_HEAD_FOLLOW
 } from '../../constants/AnimationTokens';
+import {
+  FONT_SIZE_PAGE_TITLE,
+  FONT_SIZE_CAPTION,
+  FONT_SIZE_MINI
+} from '../../constants/Typography';
 import { ChecklistItem, DayItinerary, GearItem, TripChecklist } from '../../models/PackModels';
 import { UnifiedChecklistView } from './UnifiedChecklistView';
 import { ItineraryView } from './ItineraryView';
@@ -361,7 +366,7 @@ export struct TripDetailPage {
       // 返回按钮：SymbolGlyph 字形居中，与标题同线
       Row() {
         SymbolGlyph($r('sys.symbol.chevron_left'))
-          .fontSize(22)
+          .fontSize(FONT_SIZE_PAGE_TITLE)
           .fontColor([TEXT_MAIN])
       }
       .width(40)
@@ -432,7 +437,7 @@ export struct TripDetailPage {
       // 逐项核查入口：与首页核查图标统一（checkmark_shield）
       Row() {
         SymbolGlyph($r('sys.symbol.checkmark_shield'))
-          .fontSize(22)
+          .fontSize(FONT_SIZE_PAGE_TITLE)
           .fontColor([TEXT_MAIN])
       }
       .width(40)
@@ -470,17 +475,17 @@ export struct TripDetailPage {
           // 段间分隔点（仅非首段前插入）：META_SEPARATOR 明确弱于 plain 文字、又清晰可见，给并列段轻量切分
           if (index > 0) {
             Text(' · ')
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor(META_SEPARATOR)
           }
           // 海拔段三角点睛
           if (seg.showPeak) {
             Text('▲ ')
-              .fontSize(11)
+              .fontSize(FONT_SIZE_MINI)
               .fontColor(AMBER_ACCENT)
           }
           Text(seg.text)
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(seg.kind === 'data' ? AMBER_ACCENT : TEXT_TERTIARY)
             .fontWeight(seg.kind === 'data' ? FontWeight.Medium : FontWeight.Normal)
             .fontFeature(FONT_FEATURE_TNUM)

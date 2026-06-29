@@ -5,6 +5,10 @@ import {
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
 import {
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_CAPTION
+} from '../../constants/Typography';
+import {
   WHITE,
   DISABLED_COLOR
 } from '../../constants/Colors';
@@ -44,7 +48,7 @@ export struct GearFormSheet {
           .type(InputType.Normal)
           .maxLength(100)
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -54,7 +58,7 @@ export struct GearFormSheet {
             this.onNameChange(value);
           })
         Text('选择分组')
-          .fontSize(12)
+          .fontSize(FONT_SIZE_CAPTION)
           .fontColor(TEXT_SECONDARY)
           .width('100%')
         CategoryTagGroup({
@@ -83,7 +87,7 @@ export struct GearFormSheet {
             .type(InputType.Number)
             .maxLength(20)
             .height(48)
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(TEXT_MAIN)
             .placeholderColor(TEXT_SECONDARY)
             .backgroundColor(PAGE_BG)
@@ -96,7 +100,7 @@ export struct GearFormSheet {
             .type(InputType.Number)
             .maxLength(20)
             .height(48)
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(TEXT_MAIN)
             .placeholderColor(TEXT_SECONDARY)
             .backgroundColor(PAGE_BG)
@@ -110,7 +114,7 @@ export struct GearFormSheet {
           .type(InputType.Normal)
           .maxLength(500)
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -121,7 +125,7 @@ export struct GearFormSheet {
           })
         Button(this.editingGearId.length === 0 ? '确认添加' : '确认保存')
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(WHITE)
           .backgroundColor(this.gearName.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
           .width('100%')

@@ -5,6 +5,10 @@ import {
   TEXT_SECONDARY,
   PLACEHOLDER_COLOR
 } from '../../constants/DesignTokens';
+import {
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_SUBTITLE_LARGE
+} from '../../constants/Typography';
 import { WHITE } from '../../constants/Colors';
 import {
   SPRING_PRESS,
@@ -37,11 +41,11 @@ export struct ProfileEditSheet {
       // 出行时间（点击弹出日期选择器）
       Row() {
         Text(this.tripDate.length > 0 ? this.tripDate : '出发日期')
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(this.tripDate.length > 0 ? TEXT_MAIN : PLACEHOLDER_COLOR)
           .layoutWeight(1)
         SymbolGlyph($r('sys.symbol.calendar'))
-          .fontSize(18)
+          .fontSize(FONT_SIZE_SUBTITLE_LARGE)
           .fontColor([TEXT_SECONDARY])
       }
       .width('100%')
@@ -79,7 +83,7 @@ export struct ProfileEditSheet {
       TextInput({ placeholder: '目的地', text: this.tripDestination })
         .height(44)
         .maxLength(100)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(TEXT_MAIN)
         .placeholderColor(TEXT_SECONDARY)
         .backgroundColor(INPUT_BG)
@@ -104,7 +108,7 @@ export struct ProfileEditSheet {
       // 保存按钮
       Button('保存')
         .height(44)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .width('100%')
@@ -130,7 +134,7 @@ export struct ProfileEditSheet {
     TextInput({ placeholder: placeholder, text: text })
       .height(44)
       .maxLength(20)
-      .fontSize(14)
+      .fontSize(FONT_SIZE_BODY_MEDIUM)
       .fontColor(TEXT_MAIN)
       .placeholderColor(TEXT_SECONDARY)
       .backgroundColor(INPUT_BG)

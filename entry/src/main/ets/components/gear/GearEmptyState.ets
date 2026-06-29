@@ -1,5 +1,11 @@
 import { SPRING_GENERAL } from '../../constants/AnimationTokens';
 import {
+  FONT_SIZE_EMPTY_ICON,
+  FONT_SIZE_BODY_LARGE,
+  FONT_SIZE_BODY_SMALL,
+  FONT_SIZE_BODY_MEDIUM
+} from '../../constants/Typography';
+import {
   PRIMARY_COLOR,
   PRIMARY_TINT_COLOR,
   TEXT_MAIN,
@@ -21,7 +27,7 @@ export struct GearEmptyState {
       // 图标：轻量圆形背景 + 系统图标
       Row() {
         SymbolGlyph($r('sys.symbol.bag'))
-          .fontSize(32)
+          .fontSize(FONT_SIZE_EMPTY_ICON)
           .fontColor([PRIMARY_COLOR])
       }
       .width(64)
@@ -36,11 +42,11 @@ export struct GearEmptyState {
       // 文案
       Column({ space: 6 }) {
         Text('装备库空空如也')
-          .fontSize(16)
+          .fontSize(FONT_SIZE_BODY_LARGE)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
         Text('添加你的第一件装备，开始记录户外家当')
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_TERTIARY)
       }
       .alignItems(HorizontalAlign.Center)
@@ -48,7 +54,7 @@ export struct GearEmptyState {
       // 行动按钮
       Button('添加装备')
         .height(40)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontWeight(FontWeight.Medium)
         .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)

@@ -44,6 +44,11 @@ import {
 import { heroGradientStart } from '../utils/ColorUtils';
 import { HeadCollapseController } from '../utils/HeadCollapseController';
 import { hdsEffect } from '@kit.UIDesignKit';
+import {
+  FONT_SIZE_CAPTION, FONT_SIZE_BODY_SMALL, FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_OVERLINE, FONT_SIZE_BODY_LARGE, FONT_SIZE_TITLE_LARGE,
+  FONT_SIZE_STAT_LARGE, FONT_SIZE_EMOJI_LARGE
+} from '../constants/Typography';
 import { HomeQuickEntry } from './home/HomeQuickEntry';
 
 
@@ -436,7 +441,7 @@ export struct HomePage {
 
   private heroLeadFontSize(): number {
     const days = this.heroDaysLeftSafe();
-    return days === 0 ? 36 : 48;
+    return days === 0 ? FONT_SIZE_STAT_LARGE : FONT_SIZE_EMOJI_LARGE;
   }
 
   private heroLeadColor(): string {
@@ -680,7 +685,7 @@ export struct HomePage {
         .animation({ curve: SPRING_SCROLL() })
       if (this.latestChecklist() !== undefined) {
         Text(this.compactHeaderText())
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_TERTIARY)
           .maxLines(1)
           .margin({ left: 8 })
@@ -691,7 +696,7 @@ export struct HomePage {
       Blank()
       if (this.scrollProgress() < 0.6) {
         Text(this.homeStatusText())
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_TERTIARY)
           .opacity(1 - this.scrollProgress() * 2)
           .animation({ curve: SPRING_SCROLL() })
@@ -712,12 +717,12 @@ export struct HomePage {
       Column({ space: 16 }) {
         Row() {
           Text(this.heroTitle())
-            .fontSize(24)
+            .fontSize(FONT_SIZE_TITLE_LARGE)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
           Text(this.heroStatusLabel())
-            .fontSize(13)
+            .fontSize(FONT_SIZE_BODY_SMALL)
             .fontColor(this.heroStatusColor())
         }
         .width('100%')
@@ -729,7 +734,7 @@ export struct HomePage {
             .fontColor(this.heroLeadColor())
             .fontFeature(FONT_FEATURE_TNUM)
           Text(this.heroSuffixText())
-            .fontSize(16)
+            .fontSize(FONT_SIZE_BODY_LARGE)
             .fontColor(TEXT_SECONDARY)
             .margin({ bottom: 8 })
         }
@@ -741,7 +746,7 @@ export struct HomePage {
 
         Row() {
           Text(this.heroSubtitleText())
-            .fontSize(13)
+            .fontSize(FONT_SIZE_BODY_SMALL)
             .fontColor(TEXT_TERTIARY)
             .layoutWeight(1)
           this.RingProgress();
@@ -807,7 +812,7 @@ export struct HomePage {
         .style({ strokeWidth: 5, enableSmoothEffect: true })
         .animation({ curve: SPRING_GENERAL() })
       Text(this.progressNumeratorDisplay.toString() + '/' + this.heroItemCountText())
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.ringCelebrateColor)
         .fontFeature(FONT_FEATURE_TNUM)
@@ -825,11 +830,11 @@ export struct HomePage {
   private EmptyHero() {
     Column({ space: 8 }) {
       Text('点击下方开始你的第一次出发')
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(TEXT_TERTIARY)
       Button('创建第一个行程')
         .height(44)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .borderRadius(22)
@@ -929,13 +934,13 @@ export struct HomePage {
   private HistoryTimeline() {
     Column({ space: 12 }) {
       Text('我的行程')
-        .fontSize(16)
+        .fontSize(FONT_SIZE_BODY_LARGE)
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
         .width('100%')
       if (this.checklists.length === 0) {
         Text('暂无行程，创建一个吧')
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_TERTIARY)
           .width('100%')
           .height(64)
@@ -945,7 +950,7 @@ export struct HomePage {
           if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
             ListItem() {
               Text('即将启程')
-                .fontSize(13)
+                .fontSize(FONT_SIZE_BODY_SMALL)
                 .fontWeight(FontWeight.Medium)
                 .fontColor(TEXT_SECONDARY)
                 .letterSpacing(1)
@@ -978,7 +983,7 @@ export struct HomePage {
           if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
             ListItem() {
               Text('走过的路')
-                .fontSize(13)
+                .fontSize(FONT_SIZE_BODY_SMALL)
                 .fontWeight(FontWeight.Medium)
                 .fontColor(TEXT_SECONDARY)
                 .letterSpacing(1)
@@ -1044,16 +1049,16 @@ export struct HomePage {
       Column({ space: 2 }) {
         Row({ space: 8 }) {
           Text(item.title)
-            .fontSize(15)
+            .fontSize(FONT_SIZE_OVERLINE)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
           Text(progressText(item))
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_TERTIARY)
             .fontFeature(FONT_FEATURE_TNUM)
         }
         Text(this.rowDateText(item))
-          .fontSize(12)
+          .fontSize(FONT_SIZE_CAPTION)
           .fontColor(this.rowDateColor(item))
           .fontWeight(this.rowDateBold(item))
           .fontFeature(FONT_FEATURE_TNUM)
@@ -1084,7 +1089,7 @@ export struct HomePage {
   private HistoryDeleteAction(item: TripChecklist) {
     Row() {
       Text('删除')
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(WHITE)
     }
     .height(52)

@@ -25,6 +25,13 @@ import {
   CARD_RADIUS,
   SMALL_CARD_RADIUS
 } from '../constants/Layout';
+import {
+  FONT_SIZE_TITLE_MEDIUM,
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_CAPTION,
+  FONT_SIZE_BODY_SMALL,
+  FONT_SIZE_OVERLINE
+} from '../constants/Typography';
 import { CategoryTagGroup } from './CategoryTagGroup';
 
 // 问题10：紧凑高密度面板——单行输入框降至 40vp（Apple 表单单行标准），
@@ -104,7 +111,7 @@ export struct EditGearPanel {
           Blank()
           Row() {
             SymbolGlyph($r('sys.symbol.xmark'))
-              .fontSize(20)
+              .fontSize(FONT_SIZE_TITLE_MEDIUM)
               .fontColor([TEXT_SECONDARY])
           }
           .width(36)
@@ -132,7 +139,7 @@ export struct EditGearPanel {
           .type(InputType.Normal)
           .height(FIELD_HEIGHT)
           .maxLength(100)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -143,7 +150,7 @@ export struct EditGearPanel {
           })
 
         Text('选择分组')
-          .fontSize(12)
+          .fontSize(FONT_SIZE_CAPTION)
           .fontColor(TEXT_SECONDARY)
           .width('100%')
           .margin({ top: -SUB_GAP })
@@ -191,7 +198,7 @@ export struct EditGearPanel {
           .type(InputType.Normal)
           .height(FIELD_HEIGHT)
           .maxLength(500)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -203,14 +210,14 @@ export struct EditGearPanel {
 
         if (this.errorText.length > 0) {
           Text(this.errorText)
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(DANGER_COLOR)
             .width('100%')
         }
 
         Button('保存修改')
           .height(44)
-          .fontSize(15)
+          .fontSize(FONT_SIZE_OVERLINE)
           .fontWeight(FontWeight.Medium)
           .fontColor(WHITE)
           .backgroundColor(this.gearName.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
@@ -248,14 +255,14 @@ export struct EditGearPanel {
   private MetricInput(label: string, textValue: string, unit: string, onValueChange: (value: string) => void) {
     Column({ space: SUB_GAP }) {
       Text(label)
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor(TEXT_SECONDARY)
         .width('100%')
       Row({ space: SUB_GAP }) {
         TextInput({ placeholder: '可选', text: textValue })
           .type(InputType.Number)
           .maxLength(20)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(TRANSPARENT)
@@ -264,7 +271,7 @@ export struct EditGearPanel {
             onValueChange(value);
           })
         Text(unit)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_SECONDARY)
       }
       .height(FIELD_HEIGHT)

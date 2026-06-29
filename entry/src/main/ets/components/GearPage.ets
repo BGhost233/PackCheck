@@ -50,6 +50,11 @@ import {
   TRANSPARENT,
   WHITE
 } from '../constants/DesignTokens';
+import {
+  FONT_SIZE_MINI, FONT_SIZE_CAPTION, FONT_SIZE_BODY_SMALL, FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_OVERLINE, FONT_SIZE_BODY_LARGE, FONT_SIZE_SUBTITLE_LARGE,
+  FONT_SIZE_TITLE_LARGE
+} from '../constants/Typography';
 import { getGroupColor } from '../utils/ColorUtils';
 import { GearEmptyState } from './gear/GearEmptyState';
 import { GearEmptyText } from './gear/GearEmptyText';
@@ -648,7 +653,7 @@ export struct GearPage {
   @Builder
   private CompanionChip(text: string) {
     Text(text)
-      .fontSize(11)
+      .fontSize(FONT_SIZE_MINI)
       .fontColor(TEXT_SECONDARY)
       .padding({ left: 10, right: 10, top: 4, bottom: 4 })
       .backgroundColor(PRIMARY_TINT_COLOR)
@@ -891,7 +896,7 @@ export struct GearPage {
                 .fontColor(TEXT_MAIN)
                 .animation({ curve: SPRING_GENERAL() })
               Text(this.gearSummaryText())
-                .fontSize(13)
+                .fontSize(FONT_SIZE_BODY_SMALL)
                 .fontColor(TEXT_TERTIARY)
                 .fontFeature(FONT_FEATURE_TNUM)
                 .maxLines(1)
@@ -912,7 +917,7 @@ export struct GearPage {
                 TextInput({ placeholder: '搜索装备', text: this.gearSearchKeyword })
                   .height(32)
                   .maxLength(50)
-                  .fontSize(15)
+                  .fontSize(FONT_SIZE_OVERLINE)
                   .fontColor(TEXT_MAIN)
                   .placeholderColor(TEXT_TERTIARY)
                   .backgroundColor(TRANSPARENT)
@@ -923,7 +928,7 @@ export struct GearPage {
                     this.onSearchChange(value);
                   })
                 Text('取消')
-                  .fontSize(14)
+                  .fontSize(FONT_SIZE_BODY_MEDIUM)
                   .fontColor(TEXT_SECONDARY)
                   .padding({ left: 10, right: 4 })
                   .scale({ x: this.pressedCancelText ? PRESS_SCALE_DOWN : 1.0,
@@ -986,7 +991,7 @@ export struct GearPage {
             if (!this.searchExpanded) {
               Row() {
                 SymbolGlyph($r('sys.symbol.arrow_up_and_down_square_portrait'))
-                  .fontSize(18)
+                  .fontSize(FONT_SIZE_SUBTITLE_LARGE)
                   .fontColor([TEXT_SECONDARY])
               }
               .width(36)
@@ -1021,12 +1026,12 @@ export struct GearPage {
                 // 分类筛选 pill
                 Row({ space: 4 }) {
                   Text(this.activeCategoryText())
-                    .fontSize(14)
+                    .fontSize(FONT_SIZE_BODY_MEDIUM)
                     .fontWeight(FontWeight.Medium)
                     .fontColor(PRIMARY_COLOR)
                     .maxLines(1)
                   SymbolGlyph($r('sys.symbol.chevron_down'))
-                    .fontSize(12)
+                    .fontSize(FONT_SIZE_CAPTION)
                     .fontColor([PRIMARY_COLOR])
                 }
                 .height(32)
@@ -1051,7 +1056,7 @@ export struct GearPage {
 
                 // 轻量统计摘要
                 Text(this.gearSummaryText())
-                  .fontSize(12)
+                  .fontSize(FONT_SIZE_CAPTION)
                   .fontColor(TEXT_TERTIARY)
                   .fontFeature(FONT_FEATURE_TNUM)
               }
@@ -1090,16 +1095,16 @@ export struct GearPage {
           .backgroundColor(this.gearSortMode === GEAR_SORT_GROUP ? getGroupColor(group) : PRIMARY_COLOR)
           .borderRadius(1.5)
         Text(group)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_SECONDARY)
           .layoutWeight(1)
         Text(this.gearGroupCount(group).toString())
-          .fontSize(12)
+          .fontSize(FONT_SIZE_CAPTION)
           .fontColor(TEXT_TERTIARY)
           .fontFeature(FONT_FEATURE_TNUM)
         SymbolGlyph($r('sys.symbol.chevron_down'))
-          .fontSize(12)
+          .fontSize(FONT_SIZE_CAPTION)
           .fontColor([TEXT_TERTIARY])
           .rotate({ angle: this.isGearGroupCollapsed(group) ? -90 : 0 })
           .animation({ curve: SPRING_CHEVRON() })
@@ -1196,7 +1201,7 @@ export struct GearPage {
   private GearNameText(name: string) {
     if (this.gearSearchKeyword.trim().length === 0) {
       Text(name)
-        .fontSize(15)
+        .fontSize(FONT_SIZE_OVERLINE)
         .fontWeight(FontWeight.Medium)
         .fontColor(TEXT_MAIN)
         .layoutWeight(1)
@@ -1207,12 +1212,12 @@ export struct GearPage {
         ForEach(this.splitByKeyword(name, this.gearSearchKeyword.trim()), (segment: string, index: number) => {
           if (segment.toLowerCase() === this.gearSearchKeyword.trim().toLowerCase()) {
             Span(segment)
-              .fontSize(15)
+              .fontSize(FONT_SIZE_OVERLINE)
               .fontWeight(FontWeight.Bold)
               .fontColor(PRIMARY_COLOR)
           } else {
             Span(segment)
-              .fontSize(15)
+              .fontSize(FONT_SIZE_OVERLINE)
               .fontWeight(FontWeight.Medium)
               .fontColor(TEXT_MAIN)
           }
@@ -1255,10 +1260,10 @@ export struct GearPage {
         if (this.swipedGearId === item.id) {
           Column({ space: 2 }) {
             SymbolGlyph($r('sys.symbol.trash'))
-              .fontSize(16)
+              .fontSize(FONT_SIZE_BODY_LARGE)
               .fontColor([WHITE])
             Text('删除')
-              .fontSize(11)
+              .fontSize(FONT_SIZE_MINI)
               .fontColor(WHITE)
           }
           .width(80)
@@ -1291,12 +1296,12 @@ export struct GearPage {
             this.GearNameText(item.name)
             if (item.weight !== undefined && item.weight > 0) {
               Text(item.weight.toString() + 'g')
-                .fontSize(12)
+                .fontSize(FONT_SIZE_CAPTION)
                 .fontColor(TEXT_TERTIARY)
                 .fontFeature(FONT_FEATURE_TNUM)
             }
             SymbolGlyph($r('sys.symbol.chevron_down'))
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor([ARROW_COLOR])
               .rotate({ angle: this.expandedGearId === item.id ? 180 : 0 })
               .animation({ curve: SPRING_CHEVRON() })
@@ -1486,11 +1491,11 @@ export struct GearPage {
   private PreviewLine(label: string, value: string) {
     Row() {
       Text(label)
-        .fontSize(13)
+        .fontSize(FONT_SIZE_BODY_SMALL)
         .fontColor(TEXT_TERTIARY)
         .width(40)
       Text(value)
-        .fontSize(13)
+        .fontSize(FONT_SIZE_BODY_SMALL)
         .fontColor(TEXT_MAIN)
         .layoutWeight(1)
         .maxLines(2)
@@ -1532,12 +1537,12 @@ export struct GearPage {
         // 陪伴天数大数字
         Row() {
           Text(this.companionDaysText(item))
-            .fontSize(24)
+            .fontSize(FONT_SIZE_TITLE_LARGE)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .fontFeature("'tnum'")
           Text(this.companionDaysLabel(item))
-            .fontSize(13)
+            .fontSize(FONT_SIZE_BODY_SMALL)
             .fontColor(TEXT_SECONDARY)
             .margin({ bottom: 2 })
         }
@@ -1562,10 +1567,10 @@ export struct GearPage {
   private DetailLine(label: string, value: string) {
     Row() {
       Text(label + '：')
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor(TEXT_TERTIARY)
       Text(value)
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor(TEXT_MAIN)
         .layoutWeight(1)
     }
@@ -1576,7 +1581,7 @@ export struct GearPage {
   private Fab() {
     Column() {
       SymbolGlyph($r('sys.symbol.plus'))
-        .fontSize(24)
+        .fontSize(FONT_SIZE_TITLE_LARGE)
         .fontColor([PRIMARY_COLOR])
     }
     .width(50)
@@ -1740,7 +1745,7 @@ export struct GearPage {
   private GearOverlayMenuItem(label: string, danger: boolean, onTap: () => void) {
     Row() {
       Text(label)
-        .fontSize(15)
+        .fontSize(FONT_SIZE_OVERLINE)
         .fontColor(danger ? DANGER_COLOR : TEXT_MAIN)
         .layoutWeight(1)
     }
@@ -1763,7 +1768,7 @@ export struct GearPage {
           .borderRadius(1.5)
           .backgroundColor(getGroupColor(this.gearDropCategory.length > 0 ? this.gearDropCategory : item.category))
         Text(item.name)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
           .maxLines(1)
@@ -1773,7 +1778,7 @@ export struct GearPage {
       // 跨分类移动时显示目标分类
       if (this.gearDropCategory.length > 0 && this.gearDropCategory !== item.category) {
         Text('→ ' + this.gearDropCategory)
-          .fontSize(11)
+          .fontSize(FONT_SIZE_MINI)
           .fontColor(PRIMARY_COLOR)
       }
     }
@@ -2258,16 +2263,16 @@ export struct GearPage {
         .backgroundColor(getGroupColor(this.groupDragGroup))
         .borderRadius(1.5)
       Text(this.groupDragGroup)
-        .fontSize(13)
+        .fontSize(FONT_SIZE_BODY_SMALL)
         .fontWeight(FontWeight.Medium)
         .fontColor(TEXT_SECONDARY)
         .layoutWeight(1)
       Text(this.gearGroupCount(this.groupDragGroup).toString())
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor(TEXT_TERTIARY)
         .fontFeature(FONT_FEATURE_TNUM)
       SymbolGlyph($r('sys.symbol.chevron_down'))
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor([TEXT_TERTIARY])
     }
     .width('100%')

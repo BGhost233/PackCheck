@@ -19,6 +19,13 @@ import {
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST
 } from '../constants/AnimationTokens';
+import {
+  FONT_SIZE_SUBTITLE_LARGE,
+  FONT_SIZE_TITLE_MEDIUM,
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_CAPTION,
+  FONT_SIZE_BODY_SMALL
+} from '../constants/Typography';
 import { CategoryTagGroup } from './CategoryTagGroup';
 
 @Component
@@ -94,13 +101,13 @@ export struct EditItemPanel {
       Column({ space: 16 }) {
         Row() {
           Text('编辑物品')
-            .fontSize(18)
+            .fontSize(FONT_SIZE_SUBTITLE_LARGE)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
           Blank()
           Row() {
             SymbolGlyph($r('sys.symbol.xmark'))
-              .fontSize(20)
+              .fontSize(FONT_SIZE_TITLE_MEDIUM)
               .fontColor([TEXT_SECONDARY])
           }
           .width(36)
@@ -128,7 +135,7 @@ export struct EditItemPanel {
           .type(InputType.Normal)
           .height(48)
           .maxLength(100)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -139,7 +146,7 @@ export struct EditItemPanel {
           })
 
         Text('所属分组')
-          .fontSize(12)
+          .fontSize(FONT_SIZE_CAPTION)
           .fontColor(TEXT_SECONDARY)
           .width('100%')
 
@@ -179,14 +186,14 @@ export struct EditItemPanel {
 
         if (this.errorText.length > 0) {
           Text(this.errorText)
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(DANGER_COLOR)
             .width('100%')
         }
 
         Button('保存修改')
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(WHITE)
           .backgroundColor(this.editingItemName.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
           .width('100%')
@@ -222,14 +229,14 @@ export struct EditItemPanel {
   private MetricInput(label: string, textValue: string, unit: string, onValueChange: (value: string) => void) {
     Column({ space: 6 }) {
       Text(label)
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor(TEXT_SECONDARY)
         .width('100%')
       Row({ space: 6 }) {
         TextInput({ placeholder: '可选', text: textValue })
           .type(InputType.Number)
           .maxLength(20)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(TRANSPARENT)
@@ -238,7 +245,7 @@ export struct EditItemPanel {
             onValueChange(value);
           })
         Text(unit)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_SECONDARY)
       }
       .height(48)

@@ -44,6 +44,9 @@ import {
   WHITE
 } from '../constants/DesignTokens';
 import {
+  FONT_SIZE_MINI, FONT_SIZE_BODY_MEDIUM, FONT_SIZE_OVERLINE, FONT_SIZE_PAGE_TITLE
+} from '../constants/Typography';
+import {
   SPRING_GENERAL,
   SPRING_CHEVRON,
   SPRING_TAB_BREATHE,
@@ -1967,10 +1970,10 @@ await this.updateItinerary(next);
   customTabBar(index: number, icon: Resource, label: string) {
     Column() {
       SymbolGlyph(icon)
-        .fontSize(22)
+        .fontSize(FONT_SIZE_PAGE_TITLE)
         .fontColor([this.tabVisualWeight(index) > 0.5 ? PRIMARY_COLOR : TEXT_TERTIARY])
       Text(label)
-        .fontSize(11)
+        .fontSize(FONT_SIZE_MINI)
         .fontWeight(this.tabVisualWeight(index) > 0.5 ? FontWeight.Medium : FontWeight.Regular)
         .fontColor(this.tabVisualWeight(index) > 0.5 ? PRIMARY_COLOR : TEXT_TERTIARY)
         .margin({ top: 2 })
@@ -2489,7 +2492,7 @@ await this.updateItinerary(next);
         Circle({ width: 7, height: 7 })
           .fill(PRIMARY_COLOR)
         Text('全部就绪，出发吧')
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontWeight(FontWeight.Medium)
           .fontColor(PRIMARY_COLOR)
       }
@@ -2533,14 +2536,14 @@ await this.updateItinerary(next);
           .width('100%')
           .height(44)
           .maxLength(50)
-          .fontSize(15)
+          .fontSize(FONT_SIZE_OVERLINE)
           .borderRadius(10)
           .backgroundColor(GROUP_HEADER_BG)
           .onChange((value: string) => { this.categoryDialogInput = value; })
 
         Row({ space: 12 }) {
           Button('取消')
-            .fontSize(15)
+            .fontSize(FONT_SIZE_OVERLINE)
             .fontColor(TEXT_TERTIARY)
             .backgroundColor(DIVIDER_COLOR)
             .borderRadius(10)
@@ -2549,7 +2552,7 @@ await this.updateItinerary(next);
             .onClick(() => { this.showCategoryDialog = false; })
 
           Button('确认')
-            .fontSize(15)
+            .fontSize(FONT_SIZE_OVERLINE)
             .fontColor(WHITE)
             .backgroundColor(PRIMARY_COLOR)
             .borderRadius(10)

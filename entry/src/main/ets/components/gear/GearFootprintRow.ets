@@ -6,6 +6,7 @@ import {
   SHADOW_MICRO,
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
+import { FONT_SIZE_MINI } from '../../constants/Typography';
 
 /**
  * 人生足迹精简聚合行（装备库顶部黄金区，提纲 §3.4）。
@@ -38,7 +39,7 @@ export struct GearFootprintRow {
   @Builder
   private FootprintChip(text: string) {
     Text(text)
-      .fontSize(11)
+      .fontSize(FONT_SIZE_MINI)
       .fontColor(TEXT_SECONDARY)
       .fontWeight(FontWeight.Medium)
       .fontFeature(FONT_FEATURE_TNUM)

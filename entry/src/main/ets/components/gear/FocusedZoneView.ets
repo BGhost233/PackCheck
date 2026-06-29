@@ -20,6 +20,7 @@ import {
   FONT_SIZE_TITLE_MEDIUM,
   FONT_SIZE_BODY_LARGE,
   FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_SUBTITLE_LARGE,
   FONT_WEIGHT_MEDIUM
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
@@ -409,7 +410,7 @@ export struct FocusedZoneView {
   private buildAddRow() {
     Row({ space: 8 }) {
       SymbolGlyph($r('sys.symbol.plus'))
-        .fontSize(18)
+        .fontSize(FONT_SIZE_SUBTITLE_LARGE)
         .fontColor([this.zoneColor])
         .fontWeight(FontWeight.Medium)
 
@@ -627,7 +628,7 @@ export struct FocusedZoneView {
   private buildTrailing() {
     Row({ space: 4 }) {
       SymbolGlyph($r('sys.symbol.checkmark_circle'))
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor([this.zoneColor])
       Text('核查')
         .fontSize(FONT_SIZE_BODY_MEDIUM)

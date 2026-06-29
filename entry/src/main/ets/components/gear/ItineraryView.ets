@@ -19,6 +19,10 @@ import {
   STAGGER_OFFSET_Y
 } from '../../constants/AnimationTokens';
 import { HeadCollapseController } from '../../utils/HeadCollapseController';
+import {
+  FONT_SIZE_BODY_LARGE,
+  FONT_SIZE_BODY_MEDIUM
+} from '../../constants/Typography';
 
 @Component
 export struct ItineraryView {
@@ -112,18 +116,18 @@ export struct ItineraryView {
       .margin({ bottom: 24 })
 
       Text('还没有行程安排')
-        .fontSize(16)
+        .fontSize(FONT_SIZE_BODY_LARGE)
         .fontWeight(FontWeight.Medium)
         .fontColor(TEXT_SECONDARY)
 
       Text('记录每天的路线，出发时不再手忙脚乱')
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(TEXT_TERTIARY)
         .margin({ top: 4 })
 
       // CTA 填充按钮
       Button('添加第一天')
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(WHITE)
         .fontWeight(FontWeight.Medium)
         .backgroundColor(PRIMARY_COLOR)
@@ -191,7 +195,7 @@ export struct ItineraryView {
 
         // 底部添加一天按钮
         Text('+ 添加一天')
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(PRIMARY_COLOR)
           .fontWeight(FontWeight.Medium)
           .textAlign(TextAlign.Center)

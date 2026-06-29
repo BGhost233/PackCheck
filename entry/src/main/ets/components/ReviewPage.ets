@@ -23,6 +23,12 @@ import {
   PANEL_SCALE_START,
   STAGGER_OFFSET_Y
 } from '../constants/AnimationTokens';
+import {
+  FONT_SIZE_BODY_SMALL,
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_TITLE_LARGE,
+  FONT_SIZE_CAPTION
+} from '../constants/Typography';
 
 /** 核查卡片宽度百分比 — 保持卡片不贴边但有呼吸感 */
 const REVIEW_CARD_WIDTH: string = '78%';
@@ -227,7 +233,7 @@ export struct ReviewPage {
       if (this.reviewZoneFilter !== null && this.reviewZoneFilter.length > 0) {
         Row() {
           Text(this.reviewTitle())
-            .fontSize(13)
+            .fontSize(FONT_SIZE_BODY_SMALL)
             .fontColor(TEXT_TERTIARY)
         }
         .width('100%')
@@ -236,16 +242,16 @@ export struct ReviewPage {
       }
       Row({ space: 12 }) {
         SymbolGlyph($r('sys.symbol.chevron_left'))
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor([TEXT_TERTIARY])
         Text('左滑未带')
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_TERTIARY)
         Text('右滑已带')
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_TERTIARY)
         SymbolGlyph($r('sys.symbol.chevron_right'))
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor([TEXT_TERTIARY])
       }
       .padding({ top: 72, bottom: 40 })
@@ -282,12 +288,12 @@ export struct ReviewPage {
         // 顶层当前卡
         Column({ space: 18 }) {
           Text(this.currentReviewItemName())
-            .fontSize(24)
+            .fontSize(FONT_SIZE_TITLE_LARGE)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .textAlign(TextAlign.Center)
           Text(this.currentReviewItemGroup())
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_TERTIARY)
         }
         .width('78%')
@@ -329,14 +335,14 @@ export struct ReviewPage {
       .height(240)
       .alignContent(Alignment.Center)
       Text((this.reviewIndex + 1).toString() + ' / ' + this.currentChecklistItemCount().toString())
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(TEXT_TERTIARY)
         .fontFeature(FONT_FEATURE_TNUM)
         .padding({ top: 28, bottom: 18 })
       Row({ space: 12 }) {
         Button('未带')
           .height(44)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .backgroundColor(CARD_BG)
           .borderRadius(22)
@@ -356,7 +362,7 @@ export struct ReviewPage {
           })
         Button('已带')
           .height(44)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(WHITE)
           .backgroundColor(PRIMARY_COLOR)
           .borderRadius(22)
@@ -377,7 +383,7 @@ export struct ReviewPage {
       }
       Button('退出核查模式')
         .height(44)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(TEXT_TERTIARY)
         .backgroundColor(TRANSPARENT)
         .scale({ x: this.exitBtnPressed ? PRESS_SCALE_DOWN : PRESS_SCALE_REST,
@@ -400,18 +406,18 @@ export struct ReviewPage {
   private Summary() {
     Column({ space: 16 }) {
       Text('核查完成')
-        .fontSize(24)
+        .fontSize(FONT_SIZE_TITLE_LARGE)
         .fontWeight(FontWeight.Bold)
         .fontColor(TEXT_MAIN)
       if (this.reviewSummaryText().length > 0) {
         Text(this.reviewSummaryText())
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_TERTIARY)
           .fontFeature(FONT_FEATURE_TNUM)
       }
       Button('返回行程')
         .height(46)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(WHITE)
         .backgroundColor(PRIMARY_COLOR)
         .borderRadius(23)

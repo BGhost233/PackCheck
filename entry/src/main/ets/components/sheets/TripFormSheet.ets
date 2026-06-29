@@ -7,6 +7,11 @@ import {
   TEXT_TERTIARY
 } from '../../constants/DesignTokens';
 import {
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_CAPTION,
+  FONT_SIZE_SUBTITLE_LARGE
+} from '../../constants/Typography';
+import {
   WHITE,
   DISABLED_COLOR
 } from '../../constants/Colors';
@@ -46,7 +51,7 @@ export struct TripFormSheet {
         .type(InputType.Normal)
         .maxLength(50)
         .height(48)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(TEXT_MAIN)
         .placeholderColor(TEXT_SECONDARY)
         .backgroundColor(PAGE_BG)
@@ -61,13 +66,13 @@ export struct TripFormSheet {
       if (this.isEditMode) {
         Column({ space: 8 }) {
           Text('行程信息')
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_TERTIARY)
             .margin({ top: 4 })
           TextInput({ placeholder: '目的地', text: this.tripDestination })
             .height(44)
             .maxLength(100)
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(TEXT_MAIN)
             .placeholderColor(TEXT_SECONDARY)
             .backgroundColor(INPUT_BG)
@@ -78,7 +83,7 @@ export struct TripFormSheet {
             TextInput({ placeholder: '里程 km', text: this.tripDistanceKm })
               .height(44)
               .maxLength(20)
-              .fontSize(14)
+              .fontSize(FONT_SIZE_BODY_MEDIUM)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
               .backgroundColor(INPUT_BG)
@@ -90,7 +95,7 @@ export struct TripFormSheet {
             TextInput({ placeholder: '海拔 m', text: this.tripMaxAltitude })
               .height(44)
               .maxLength(20)
-              .fontSize(14)
+              .fontSize(FONT_SIZE_BODY_MEDIUM)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
               .backgroundColor(INPUT_BG)
@@ -105,7 +110,7 @@ export struct TripFormSheet {
             TextInput({ placeholder: '爬升 m', text: this.tripAscentM })
               .height(44)
               .maxLength(20)
-              .fontSize(14)
+              .fontSize(FONT_SIZE_BODY_MEDIUM)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
               .backgroundColor(INPUT_BG)
@@ -117,7 +122,7 @@ export struct TripFormSheet {
             TextInput({ placeholder: '时长 h', text: this.tripDurationHours })
               .height(44)
               .maxLength(20)
-              .fontSize(14)
+              .fontSize(FONT_SIZE_BODY_MEDIUM)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
               .backgroundColor(INPUT_BG)
@@ -135,7 +140,7 @@ export struct TripFormSheet {
 
       Button(this.isEditMode ? '确认保存' : '创建')
         .height(48)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(WHITE)
         .backgroundColor(this.tripTitle.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')
@@ -160,11 +165,11 @@ export struct TripFormSheet {
   private DatePickerField(placeholder: string, dateText: string) {
     Row() {
       Text(dateText.length > 0 ? dateText : placeholder)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(dateText.length > 0 ? TEXT_MAIN : TEXT_SECONDARY)
         .layoutWeight(1)
       SymbolGlyph($r('sys.symbol.calendar'))
-        .fontSize(18)
+        .fontSize(FONT_SIZE_SUBTITLE_LARGE)
         .fontColor([TEXT_TERTIARY])
     }
     .width('100%')

@@ -9,6 +9,10 @@ import {
   DIVIDER_COLOR
 } from '../../constants/Colors';
 import { SPRING_COUNTER, SPRING_PRESS, DURATION_COUNTER } from '../../constants/AnimationTokens';
+import {
+  FONT_SIZE_BODY_SMALL,
+  FONT_SIZE_CAPTION
+} from '../../constants/Typography';
 
 @Component
 export struct LoadoutProgressBar {
@@ -53,16 +57,16 @@ export struct LoadoutProgressBar {
       // 文案行
       Row() {
         Text(this.isComplete() ? '准备出发' : '已装包')
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontWeight(FontWeight.Medium)
           .fontColor(this.isComplete() ? PRIMARY_COLOR : TEXT_MAIN)
         Text(' ' + this.displayChecked.toString() + '/' + this.total.toString())
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(this.isComplete() ? PRIMARY_COLOR : TEXT_SECONDARY)
         Blank()
         if (this.total > 0) {
           Text(Math.round(this.percentage()).toString() + '%')
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_TERTIARY)
         }
       }

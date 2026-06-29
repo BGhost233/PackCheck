@@ -19,6 +19,7 @@ import {
   FONT_SIZE_BODY_MEDIUM,
   FONT_SIZE_BODY_LARGE,
   FONT_SIZE_CAPTION,
+  FONT_SIZE_TITLE_MEDIUM,
   FONT_WEIGHT_MEDIUM,
   FONT_WEIGHT_BOLD
 } from '../../constants/Typography';
@@ -112,7 +113,7 @@ export struct GearItemContextMenu {
       ForEach(this.menuItems, (menuItem: ContextMenuItem, index: number) => {
         Row({ space: 12 }) {
           SymbolGlyph(menuItem.icon)
-            .fontSize(20)
+            .fontSize(FONT_SIZE_TITLE_MEDIUM)
             .fontColor([menuItem.destructive === true ? DANGER_COLOR : TEXT_MAIN])
 
           Text(menuItem.label)

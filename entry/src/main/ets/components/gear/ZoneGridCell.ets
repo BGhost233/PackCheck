@@ -14,7 +14,8 @@ import {
   ZONE_MISC_FILL
 } from '../../constants/Colors';
 import {
-  FONT_SIZE_CAPTION
+  FONT_SIZE_CAPTION,
+  FONT_SIZE_SUBTITLE_LARGE
 } from '../../constants/Typography';
 import { CARD_RADIUS } from '../../constants/Layout';
 import { SPRING_PRESS, PRESS_SCALE_DOWN, SPRING_GENERAL } from '../../constants/AnimationTokens';
@@ -279,7 +280,7 @@ export struct ZoneGridCell {
     Column() {
       Column({ space: 4 }) {
         SymbolGlyph($r('sys.symbol.plus'))
-          .fontSize(18)
+          .fontSize(FONT_SIZE_SUBTITLE_LARGE)
           .fontColor([PLACEHOLDER_COLOR])
 
         Text(zoneDisplayName(this.zone))

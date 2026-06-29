@@ -1,4 +1,10 @@
 import { CATEGORY_ALL, ChecklistItem, GearItem, TransportMode, DayItinerary, RouteSegment } from '../../models/PackModels';
+import {
+  FONT_SIZE_BODY_LARGE,
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_BODY_SMALL,
+  FONT_SIZE_CAPTION
+} from '../../constants/Typography';
 // Note: RouteSegment still needed for SegmentForm
 import { resolveItemName } from '../../services/ChecklistService';
 import {
@@ -171,13 +177,13 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
         if (this.sheetMode !== SHEET_GEAR_PICKER) {
           Row() {
             Text(this.sheetTitle())
-              .fontSize(16)
+              .fontSize(FONT_SIZE_BODY_LARGE)
               .fontWeight(FontWeight.Medium)
               .fontColor(TEXT_MAIN)
               .layoutWeight(1)
             if (this.sheetMode === SHEET_IMPORT && this.gears.length > 0) {
               Button('+ 添加装备')
-                .fontSize(14)
+                .fontSize(FONT_SIZE_BODY_MEDIUM)
                 .fontColor(PRIMARY_COLOR)
                 .backgroundColor(TRANSPARENT)
                 .onClick(() => {
@@ -185,7 +191,7 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
                 })
             }
             Button(this.sheetMode === SHEET_TEMP_ITEM ? '完成' : '关闭')
-              .fontSize(13)
+              .fontSize(FONT_SIZE_BODY_SMALL)
               .fontColor(TEXT_SECONDARY)
               .backgroundColor(TRANSPARENT)
               .onClick(() => {
@@ -195,7 +201,7 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
         }
         if (this.errorText.length > 0) {
           Text(this.errorText)
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(DANGER_COLOR)
             .width('100%')
         }

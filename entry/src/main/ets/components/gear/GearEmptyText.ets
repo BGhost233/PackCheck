@@ -1,4 +1,5 @@
 import { CARD_BG, TEXT_TERTIARY } from '../../constants/DesignTokens';
+import { FONT_SIZE_BODY_MEDIUM } from '../../constants/Typography';
 
 /**
  * 装备库轻量空提示 — 如「未找到相关装备」。纯展示，仅一行文案卡片。
@@ -9,7 +10,7 @@ export struct GearEmptyText {
 
   build() {
     Text(this.message)
-      .fontSize(14)
+      .fontSize(FONT_SIZE_BODY_MEDIUM)
       .fontColor(TEXT_TERTIARY)
       .textAlign(TextAlign.Center)
       .width('100%')

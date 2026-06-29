@@ -25,6 +25,12 @@ import {
   PRESS_SCALE_REST,
   DURATION_CEREMONY_SHAKE
 } from '../constants/AnimationTokens';
+import {
+  FONT_SIZE_CAPTION,
+  FONT_SIZE_MINI,
+  FONT_SIZE_BODY_SMALL,
+  FONT_SIZE_BODY_MEDIUM
+} from '../constants/Typography';
 import { CATEGORY_ALL } from '../models/PackModels';
 import { isProtectedCategory } from '../services/CategoryService';
 
@@ -200,18 +206,18 @@ export struct CategoryTagGroup {
       if (this.isEditing) {
         Row({ space: 6 }) {
           Text('编辑分组')
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontWeight(FontWeight.Medium)
             .fontColor(PRIMARY_COLOR)
           Text('·')
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_TERTIARY)
           Text('修改将影响所有行程')
-            .fontSize(11)
+            .fontSize(FONT_SIZE_MINI)
             .fontColor(TEXT_TERTIARY)
           Blank()
           Text('完成')
-            .fontSize(13)
+            .fontSize(FONT_SIZE_BODY_SMALL)
             .fontWeight(FontWeight.Medium)
             .fontColor(PRIMARY_COLOR)
             .padding({ left: 10, right: 6, top: 6, bottom: 6 })
@@ -265,13 +271,13 @@ export struct CategoryTagGroup {
       // 标签主体 — 绑定 onTouch/onClick/LongPress
       Row({ space: 4 }) {
         Text(category)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontWeight(this.isSelected(category) ? FontWeight.Medium : FontWeight.Normal)
           .fontColor(this.isSelected(category) ? WHITE : (this.isEditing ? TEXT_MAIN : TEXT_SECONDARY))
           .maxLines(1)
         if (this.showCount && this.chipCount(category) > 0) {
           Text(this.chipCount(category).toString())
-            .fontSize(11)
+            .fontSize(FONT_SIZE_MINI)
             .fontColor(this.isSelected(category) ? WHITE_SECONDARY : TEXT_TERTIARY)
         }
       }
@@ -347,10 +353,10 @@ export struct CategoryTagGroup {
   private AddChip() {
     Row({ space: 4 }) {
       SymbolGlyph($r('sys.symbol.plus'))
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor([TEXT_TERTIARY])
       Text('新增')
-        .fontSize(13)
+        .fontSize(FONT_SIZE_BODY_SMALL)
         .fontColor(TEXT_TERTIARY)
     }
     .height(32)

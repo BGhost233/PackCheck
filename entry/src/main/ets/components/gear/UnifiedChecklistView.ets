@@ -38,6 +38,7 @@ import { LoadoutProgressBar } from './LoadoutProgressBar';
 import { GearItemContextMenu, ContextMenuItem } from './GearItemContextMenu';
 import { GearDetailSheet } from './GearDetailSheet';
 import { HeadCollapseController } from '../../utils/HeadCollapseController';
+import { FONT_SIZE_BODY_MEDIUM } from '../../constants/Typography';
 
 // 双列网格中走常规单列的 zone（杂项单独跨列渲染在末尾）。spec §2.1.2 F-5
 const GRID_SINGLE_ZONES: string[] = [
@@ -1023,7 +1024,7 @@ this.computeCellHeight();
         Text(this.batchDragIds.length > 1
           ? `${this.batchDragIds.length} 件装备`
           : resolveItemName(this.overlayItem!, this.gears))
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })

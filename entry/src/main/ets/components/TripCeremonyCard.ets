@@ -28,6 +28,10 @@ import {
   WHITE_TRANSPARENT
 } from '../constants/Colors';
 import { CHIP_RADIUS } from '../constants/Layout';
+import {
+  FONT_SIZE_MINI, FONT_SIZE_CAPTION, FONT_SIZE_BODY_SMALL, FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_TITLE_MEDIUM
+} from '../constants/Typography';
 
 @Component
 export struct TripCeremonyCard {
@@ -781,12 +785,12 @@ return this.trackWidth - this.SLIDER_WIDTH;
   private ChipTag(label: string, index: number) {
     Row({ space: 4 }) {
       Text(label)
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor(this.activeChips[index] || this.isChipFilled(index) ? PRIMARY_COLOR : TEXT_SECONDARY)
         .fontWeight(this.activeChips[index] ? FontWeight.Medium : FontWeight.Normal)
       if (this.isChipFilled(index) && this.chipUnits[index].length > 0) {
         Text(this.getChipValue(index) + this.chipUnits[index])
-          .fontSize(11)
+          .fontSize(FONT_SIZE_MINI)
           .fontColor(PRIMARY_COLOR)
           .fontWeight(FontWeight.Medium)
       }
@@ -858,7 +862,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .width('100%')
           .height(40)
           .maxLength(100)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_MAIN)
           .placeholderColor(PLACEHOLDER_COLOR)
           .backgroundColor(INPUT_BG)
@@ -872,7 +876,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .width('100%')
           .height(40)
           .maxLength(20)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_MAIN)
           .placeholderColor(PLACEHOLDER_COLOR)
           .backgroundColor(INPUT_BG)
@@ -887,7 +891,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .width('100%')
           .height(40)
           .maxLength(20)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_MAIN)
           .placeholderColor(PLACEHOLDER_COLOR)
           .backgroundColor(INPUT_BG)
@@ -902,7 +906,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .width('100%')
           .height(40)
           .maxLength(20)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_MAIN)
           .placeholderColor(PLACEHOLDER_COLOR)
           .backgroundColor(INPUT_BG)
@@ -917,7 +921,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .width('100%')
           .height(40)
           .maxLength(20)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_MAIN)
           .placeholderColor(PLACEHOLDER_COLOR)
           .backgroundColor(INPUT_BG)
@@ -940,7 +944,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
         .width('100%')
         .height(48)
         .maxLength(50)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(TEXT_MAIN)
         .placeholderColor(PLACEHOLDER_COLOR)
         .backgroundColor(INPUT_BG)
@@ -954,7 +958,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
     } else {
       Row() {
         Text(text.length > 0 ? text : placeholder)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(text.length > 0 ? TEXT_MAIN : PLACEHOLDER_COLOR)
           .layoutWeight(1)
       }
@@ -975,12 +979,12 @@ return this.trackWidth - this.SLIDER_WIDTH;
   private CeremonyCardBack() {
     Column({ space: 8 }) {
       Text('PackCheck')
-        .fontSize(20)
+        .fontSize(FONT_SIZE_TITLE_MEDIUM)
         .fontWeight(FontWeight.Bold)
         .fontColor(WHITE)
         .opacity(0.9)
       Text('装备就绪 · 轻装出发')
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor(WHITE)
         .opacity(0.6)
     }
@@ -1005,7 +1009,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
             .fill(PRIMARY_FILL_SUBTLE)
             .margin({ left: 4 })
           Text('新的冒险即将开始')
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .margin({ left: 10, right: 10 })
@@ -1025,7 +1029,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
             .fill(PRIMARY_COLOR)
             .margin({ left: 4 })
           Text('新的冒险即将开始')
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontWeight(FontWeight.Bold)
             .fontColor(PRIMARY_COLOR)
             .margin({ left: 10, right: 10 })
@@ -1061,7 +1065,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       // 日期选择 — 直接内联避免 @Builder 回调 this 丢失
       Row() {
         Text(this.tripDate.length > 0 ? this.tripDate : '什么时候出发？')
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(this.tripDate.length > 0 ? TEXT_MAIN : PLACEHOLDER_COLOR)
           .layoutWeight(1)
       }
@@ -1120,13 +1124,13 @@ return this.trackWidth - this.SLIDER_WIDTH;
         // ② 文案（双层叠加，支持仪式感文字切换）
         Stack() {
           Text('滑动出发')
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontWeight(FontWeight.Medium)
             .fontColor(PRIMARY_HALF)
             .opacity(this.trackTextOpacity)
             .animation({ curve: SPRING_GENERAL() })
           Text('准备出发！')
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontWeight(FontWeight.Bold)
             .fontColor(PRIMARY_COLOR)
             .opacity(this.readyTextOpacity)
@@ -1165,7 +1169,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
             .animation({ curve: SPRING_GENERAL() })
 
           SymbolGlyph($r('sys.symbol.airplane'))
-            .fontSize(20)
+            .fontSize(FONT_SIZE_TITLE_MEDIUM)
             .fontColor([WHITE])
             .rotate({ angle: this.airplaneRotate })
             .animation({ curve: SPRING_COUNTER() })

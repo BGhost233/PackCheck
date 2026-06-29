@@ -5,6 +5,15 @@
 
 import { LengthMetrics } from '@kit.ArkUI';
 import {
+  FONT_SIZE_BODY_LARGE,
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_BODY_SMALL,
+  FONT_SIZE_CAPTION,
+  FONT_SIZE_MINI,
+  FONT_SIZE_OVERLINE,
+  FONT_SIZE_EMOJI_LARGE
+} from '../../constants/Typography';
+import {
   PRIMARY_COLOR,
   LIGHT_PRIMARY_COLOR,
   TEXT_MAIN,
@@ -116,12 +125,12 @@ export struct GearPickerSheet {
       // Head：标题 + 关闭（紧凑，高 36vp）
       Row() {
         Text(this.headerTitle)
-          .fontSize(16)
+          .fontSize(FONT_SIZE_BODY_LARGE)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
           .layoutWeight(1)
         Button('关闭')
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_SECONDARY)
           .backgroundColor(TRANSPARENT)
           .onClick(() => {
@@ -145,17 +154,17 @@ export struct GearPickerSheet {
               })
               .layoutWeight(1)
               .height(36)
-              .fontSize(14)
+              .fontSize(FONT_SIZE_BODY_MEDIUM)
               .backgroundColor(INPUT_BG)
               .borderRadius(10)
               .padding({ left: 12, right: 12 })
 
             Row({ space: 4 }) {
               SymbolGlyph($r('sys.symbol.plus'))
-                .fontSize(14)
+                .fontSize(FONT_SIZE_BODY_MEDIUM)
                 .fontColor([CARD_BG])
               Text('新建')
-                .fontSize(13)
+                .fontSize(FONT_SIZE_BODY_SMALL)
                 .fontWeight(FontWeight.Medium)
                 .fontColor(CARD_BG)
             }
@@ -181,7 +190,7 @@ export struct GearPickerSheet {
           // 已选汇总（紧凑）— 使用乐观态实时反馈
           if (this.optimisticSelectedIds.length > 0) {
             Text('已添加 ' + this.optimisticSelectedIds.length.toString() + ' 件装备')
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontWeight(FontWeight.Medium)
               .fontColor(PRIMARY_COLOR)
               .margin({ top: 6 })
@@ -242,7 +251,7 @@ export struct GearPickerSheet {
           // 「同时存入装备库」Toggle
           Row() {
             Text('同时存入装备库')
-              .fontSize(14)
+              .fontSize(FONT_SIZE_BODY_MEDIUM)
               .fontColor(TEXT_MAIN)
             Blank()
             Toggle({ type: ToggleType.Switch, isOn: this.tempSaveToLibrary })
@@ -261,14 +270,14 @@ export struct GearPickerSheet {
           // 名称输入
           Column({ space: 6 }) {
             Text('名称')
-              .fontSize(13)
+              .fontSize(FONT_SIZE_BODY_SMALL)
               .fontColor(TEXT_SECONDARY)
             TextInput({ placeholder: '输入装备名称', text: this.tempName })
               .onChange((value: string) => {
                 this.tempName = value;
               })
               .height(42)
-              .fontSize(15)
+              .fontSize(FONT_SIZE_OVERLINE)
               .backgroundColor(INPUT_BG)
               .borderRadius(10)
               .padding({ left: 14, right: 14 })
@@ -279,12 +288,12 @@ export struct GearPickerSheet {
           // 入库时品类选择（Spring 展开）
           Column({ space: 8 }) {
             Text('品类')
-              .fontSize(13)
+              .fontSize(FONT_SIZE_BODY_SMALL)
               .fontColor(TEXT_SECONDARY)
             Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
               ForEach(this.categoryOptions(), (cat: string) => {
                 Text(cat)
-                  .fontSize(13)
+                  .fontSize(FONT_SIZE_BODY_SMALL)
                   .fontWeight(this.tempCategory === cat ? FontWeight.Medium : FontWeight.Normal)
                   .fontColor(this.tempCategory === cat ? CARD_BG : TEXT_MAIN)
                   .backgroundColor(this.tempCategory === cat ? PRIMARY_COLOR : INPUT_BG)
@@ -317,12 +326,12 @@ export struct GearPickerSheet {
           // 归属区域
           Column({ space: 8 }) {
             Text('归属区域')
-              .fontSize(13)
+              .fontSize(FONT_SIZE_BODY_SMALL)
               .fontColor(TEXT_SECONDARY)
             Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
               ForEach(allZones(), (zone: string) => {
                 Text(zoneDisplayName(zone))
-                  .fontSize(13)
+                  .fontSize(FONT_SIZE_BODY_SMALL)
                   .fontWeight(this.tempZone === zone ? FontWeight.Medium : FontWeight.Normal)
                   .fontColor(this.tempZone === zone ? CARD_BG : TEXT_MAIN)
                   .backgroundColor(this.tempZone === zone ? this.getZoneColor(zone) : INPUT_BG)
@@ -351,7 +360,7 @@ export struct GearPickerSheet {
           // 重量（可选）
           Column({ space: 6 }) {
             Text('重量（可选）')
-              .fontSize(13)
+              .fontSize(FONT_SIZE_BODY_SMALL)
               .fontColor(TEXT_SECONDARY)
             Row({ space: 6 }) {
               TextInput({ placeholder: '0', text: this.tempWeight })
@@ -360,13 +369,13 @@ export struct GearPickerSheet {
                 })
                 .width(90)
                 .height(42)
-                .fontSize(15)
+                .fontSize(FONT_SIZE_OVERLINE)
                 .backgroundColor(INPUT_BG)
                 .borderRadius(10)
                 .padding({ left: 14, right: 14 })
                 .type(InputType.Number)
               Text('g')
-                .fontSize(14)
+                .fontSize(FONT_SIZE_BODY_MEDIUM)
                 .fontColor(TEXT_TERTIARY)
             }
           }
@@ -381,7 +390,7 @@ export struct GearPickerSheet {
 
       // 底部固定按钮
       Button(this.tempSaveToLibrary ? '入库并添加' : '添加到' + zoneDisplayName(this.tempZone))
-        .fontSize(15)
+        .fontSize(FONT_SIZE_OVERLINE)
         .fontWeight(FontWeight.Medium)
         .fontColor(CARD_BG)
         .backgroundColor(PRIMARY_COLOR)
@@ -423,16 +432,16 @@ export struct GearPickerSheet {
           .backgroundColor(PRIMARY_COLOR)
 
         Text(group.category)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontWeight(FontWeight.Bold)
           .fontColor(TEXT_MAIN)
         Text(group.gears.length.toString())
-          .fontSize(12)
+          .fontSize(FONT_SIZE_CAPTION)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_TERTIARY)
         Blank()
         SymbolGlyph($r('sys.symbol.chevron_right'))
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor([TEXT_TERTIARY])
           .rotate({ angle: this.isCategoryExpanded(group.category) ? 90 : 0 })
           .animation({ curve: SPRING_CHEVRON() })
@@ -477,19 +486,19 @@ export struct GearPickerSheet {
     Row({ space: 8 }) {
       Column({ space: 2 }) {
         Text(gear.name)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         Row({ space: 6 }) {
           if (gear.brand !== undefined && gear.brand.length > 0) {
             Text(gear.brand)
-              .fontSize(11)
+              .fontSize(FONT_SIZE_MINI)
               .fontColor(TEXT_TERTIARY)
           }
           if (gear.weight !== undefined && gear.weight > 0) {
             Text(gear.weight.toString() + 'g')
-              .fontSize(11)
+              .fontSize(FONT_SIZE_MINI)
               .fontColor(TEXT_TERTIARY)
           }
         }
@@ -500,10 +509,10 @@ export struct GearPickerSheet {
       if (this.isSelected(gear.id)) {
         Row({ space: 4 }) {
           SymbolGlyph($r('sys.symbol.checkmark'))
-            .fontSize(11)
+            .fontSize(FONT_SIZE_MINI)
             .fontColor([CARD_BG])
           Text('已添加')
-            .fontSize(11)
+            .fontSize(FONT_SIZE_MINI)
             .fontColor(CARD_BG)
         }
         .padding({ left: 8, right: 8, top: 4, bottom: 4 })
@@ -534,16 +543,16 @@ export struct GearPickerSheet {
   private buildEmptyState() {
     Column({ space: 12 }) {
       SymbolGlyph($r('sys.symbol.bag'))
-        .fontSize(48)
+        .fontSize(FONT_SIZE_EMOJI_LARGE)
         .fontColor([TEXT_TERTIARY])
       Text('装备库还是空的')
-        .fontSize(15)
+        .fontSize(FONT_SIZE_OVERLINE)
         .fontColor(TEXT_SECONDARY)
       Text('新建一件装备开始吧')
-        .fontSize(13)
+        .fontSize(FONT_SIZE_BODY_SMALL)
         .fontColor(TEXT_TERTIARY)
       Button('+ 新建装备')
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(CARD_BG)
         .backgroundColor(PRIMARY_COLOR)
         .borderRadius(8)
@@ -562,10 +571,10 @@ export struct GearPickerSheet {
   private buildSearchEmpty() {
     Column({ space: 12 }) {
       Text('没有找到匹配的装备')
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(TEXT_SECONDARY)
       Button('+ 创建「' + this.searchText.trim() + '」')
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(CARD_BG)
         .backgroundColor(PRIMARY_COLOR)
         .borderRadius(8)

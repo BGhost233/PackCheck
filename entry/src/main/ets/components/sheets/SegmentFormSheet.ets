@@ -1,5 +1,10 @@
 import { LengthMetrics } from '@kit.ArkUI';
 import {
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_BODY_SMALL,
+  FONT_SIZE_CAPTION
+} from '../../constants/Typography';
+import {
   PAGE_BG,
   PRIMARY_COLOR,
   TEXT_MAIN,
@@ -116,7 +121,7 @@ export struct SegmentFormSheet {
           .type(InputType.Normal)
           .maxLength(100)
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -132,7 +137,7 @@ export struct SegmentFormSheet {
           .type(InputType.Normal)
           .maxLength(100)
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -145,13 +150,13 @@ export struct SegmentFormSheet {
 
         // 交通方式 Chip 选择器
         Text('交通方式')
-          .fontSize(12)
+          .fontSize(FONT_SIZE_CAPTION)
           .fontColor(TEXT_SECONDARY)
           .width('100%')
         Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
           ForEach(TRANSPORT_OPTIONS, (mode: TransportMode) => {
             Text(transportLabel(mode))
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor(this.segTransport === mode ? WHITE : TEXT_MAIN)
               .backgroundColor(this.segTransport === mode ? PRIMARY_COLOR : CHIP_BG_DEFAULT)
               .borderRadius(16)
@@ -167,7 +172,7 @@ export struct SegmentFormSheet {
             .type(InputType.Normal)
             .maxLength(5)
             .height(48)
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(TEXT_MAIN)
             .placeholderColor(TEXT_SECONDARY)
             .backgroundColor(PAGE_BG)
@@ -182,7 +187,7 @@ export struct SegmentFormSheet {
             .type(InputType.Normal)
             .maxLength(5)
             .height(48)
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(TEXT_MAIN)
             .placeholderColor(TEXT_SECONDARY)
             .backgroundColor(PAGE_BG)
@@ -198,11 +203,11 @@ export struct SegmentFormSheet {
         // 票务信息（折叠区）
         Row() {
           Text('票务信息')
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_SECONDARY)
           Blank()
           Text(this.showTicket ? '收起' : '展开')
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_TERTIARY)
             .onClick(() => {
               this.getUIContext().animateTo({ curve: SPRING_GENERAL() }, () => {
@@ -219,7 +224,7 @@ export struct SegmentFormSheet {
               .type(InputType.Normal)
               .maxLength(100)
               .height(44)
-              .fontSize(13)
+              .fontSize(FONT_SIZE_BODY_SMALL)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
               .backgroundColor(PAGE_BG)
@@ -234,7 +239,7 @@ export struct SegmentFormSheet {
               .type(InputType.Normal)
               .maxLength(100)
               .height(44)
-              .fontSize(13)
+              .fontSize(FONT_SIZE_BODY_SMALL)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
               .backgroundColor(PAGE_BG)
@@ -249,7 +254,7 @@ export struct SegmentFormSheet {
               .type(InputType.Number)
               .maxLength(20)
               .height(44)
-              .fontSize(13)
+              .fontSize(FONT_SIZE_BODY_SMALL)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
               .backgroundColor(PAGE_BG)
@@ -276,7 +281,7 @@ export struct SegmentFormSheet {
           .type(InputType.Normal)
           .maxLength(100)
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -292,7 +297,7 @@ export struct SegmentFormSheet {
           .type(InputType.Normal)
           .maxLength(500)
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
           .backgroundColor(PAGE_BG)
@@ -306,7 +311,7 @@ export struct SegmentFormSheet {
         // 提交按钮
         Button(this.editingSegmentId.length === 0 ? '添加路段' : '保存修改')
           .height(48)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(WHITE)
           .backgroundColor(this.isFormValid() ? PRIMARY_COLOR : DISABLED_COLOR)
           .width('100%')
@@ -328,7 +333,7 @@ export struct SegmentFormSheet {
         if (this.editingSegmentId.length > 0) {
           Button('删除此路段')
             .height(48)
-            .fontSize(14)
+            .fontSize(FONT_SIZE_BODY_MEDIUM)
             .fontColor(DANGER_COLOR)
             .backgroundColor(Color.Transparent)
             .width('100%')

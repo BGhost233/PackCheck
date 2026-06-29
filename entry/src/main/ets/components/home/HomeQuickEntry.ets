@@ -7,6 +7,10 @@ import {
   PRESS_SCALE_DOWN,
   PRESS_SCALE_REST
 } from '../../constants/AnimationTokens';
+import {
+  FONT_SIZE_PAGE_TITLE,
+  FONT_SIZE_BODY_MEDIUM
+} from '../../constants/Typography';
 
 // 首页快捷入口胶囊：纯展示 + 自包含按压态。
 //   原 HomePage.QuickEntry Builder 剥离而来，按压互斥由组件自管 @State，消除父级 quickEntryPressed 字段。
@@ -23,10 +27,10 @@ export struct HomeQuickEntry {
   build() {
     Column({ space: 5 }) {
       SymbolGlyph(this.icon)
-        .fontSize(22)
+        .fontSize(FONT_SIZE_PAGE_TITLE)
         .fontColor([this.color])
       Text(this.title)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontWeight(FontWeight.Medium)
         .fontColor(this.color)
     }

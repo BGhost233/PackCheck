@@ -5,6 +5,10 @@ import {
   TEXT_SECONDARY
 } from '../../constants/DesignTokens';
 import {
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_CAPTION
+} from '../../constants/Typography';
+import {
   WHITE,
   DISABLED_COLOR
 } from '../../constants/Colors';
@@ -37,7 +41,7 @@ export struct TempItemSheet {
         .type(InputType.Normal)
         .maxLength(100)
         .height(48)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(TEXT_MAIN)
         .placeholderColor(TEXT_SECONDARY)
         .backgroundColor(PAGE_BG)
@@ -47,7 +51,7 @@ export struct TempItemSheet {
           this.onNameChange(value);
         })
       Text('选择分组')
-        .fontSize(12)
+        .fontSize(FONT_SIZE_CAPTION)
         .fontColor(TEXT_SECONDARY)
         .width('100%')
       CategoryTagGroup({
@@ -74,17 +78,17 @@ export struct TempItemSheet {
       if (this.showTempAddNotice) {
         Row({ space: 4 }) {
           SymbolGlyph($r('sys.symbol.checkmark'))
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor([PRIMARY_COLOR])
           Text('已添加')
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(PRIMARY_COLOR)
         }
         .width('100%')
       }
       Button('确认添加')
         .height(48)
-        .fontSize(14)
+        .fontSize(FONT_SIZE_BODY_MEDIUM)
         .fontColor(WHITE)
         .backgroundColor(this.tempItemName.trim().length === 0 ? DISABLED_COLOR : PRIMARY_COLOR)
         .width('100%')

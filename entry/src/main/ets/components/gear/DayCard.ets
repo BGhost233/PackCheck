@@ -26,6 +26,14 @@ import {
   PRESS_SCALE_REST,
   staggerDelay
 } from '../../constants/AnimationTokens';
+import {
+  FONT_SIZE_OVERLINE,
+  FONT_SIZE_CAPTION,
+  FONT_SIZE_BODY_MEDIUM,
+  FONT_SIZE_BODY_LARGE,
+  FONT_SIZE_BODY_SMALL,
+  FONT_SIZE_MINI
+} from '../../constants/Typography';
 
 @Component
 export struct DayCard {
@@ -130,13 +138,13 @@ export struct DayCard {
       // 第一行：Day N · 日期
       Row({ space: 6 }) {
         Text(`Day ${this.day.dayIndex + 1}`)
-          .fontSize(15)
+          .fontSize(FONT_SIZE_OVERLINE)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
 
         if (this.day.date !== undefined && this.day.date.length > 0) {
           Text(this.day.date)
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_TERTIARY)
         }
 
@@ -144,7 +152,7 @@ export struct DayCard {
 
         // 展开/收起指示器
         SymbolGlyph($r('sys.symbol.chevron_down'))
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor([TEXT_TERTIARY])
           .rotate({ angle: this.isExpanded ? 180 : 0 })
           .animation({ curve: SPRING_GENERAL() })
@@ -155,7 +163,7 @@ export struct DayCard {
       // 第二行：起点 ──icon──→ 终点
       Row({ space: 8 }) {
         Text(this.cachedSummary.from)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
           .constraintSize({ maxWidth: '35%' })
@@ -164,16 +172,16 @@ export struct DayCard {
 
         // 交通图标
         SymbolGlyph(getTransportIcon(this.cachedSummary.mainTransport))
-          .fontSize(16)
+          .fontSize(FONT_SIZE_BODY_LARGE)
           .fontColor([TEXT_SECONDARY])
 
         // 箭头
         Text('→')
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontColor(TEXT_TERTIARY)
 
         Text(this.cachedSummary.to)
-          .fontSize(14)
+          .fontSize(FONT_SIZE_BODY_MEDIUM)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
           .constraintSize({ maxWidth: '35%' })
@@ -188,17 +196,17 @@ export struct DayCard {
         Row({ space: 12 }) {
           if (this.cachedSummary.departTime !== undefined) {
             Text(this.cachedSummary.departTime)
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor(TEXT_TERTIARY)
           }
           if (this.cachedSummary.departTime !== undefined && this.cachedSummary.arriveTime !== undefined) {
             Text('–')
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor(TEXT_TERTIARY)
           }
           if (this.cachedSummary.arriveTime !== undefined) {
             Text(this.cachedSummary.arriveTime)
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor(TEXT_TERTIARY)
           }
         }
@@ -207,7 +215,7 @@ export struct DayCard {
       // 第四行：当天备注（可选，单行截断）
       if (this.day.note !== undefined && this.day.note.length > 0) {
         Text(this.day.note)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(TEXT_TERTIARY)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -238,7 +246,7 @@ export struct DayCard {
         .alignItems(HorizontalAlign.Center)
 
         Text('+ 添加路段')
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontColor(PRIMARY_COLOR)
           .fontWeight(FontWeight.Medium)
       }
@@ -300,29 +308,29 @@ export struct DayCard {
       Column({ space: 2 }) {
         // 起点 → 终点
         Text(`${seg.from} → ${seg.to}`)
-          .fontSize(13)
+          .fontSize(FONT_SIZE_BODY_SMALL)
           .fontWeight(FontWeight.Medium)
           .fontColor(TEXT_MAIN)
 
         // 交通方式 + 时间
         Row({ space: 6 }) {
           SymbolGlyph(getTransportIcon(seg.transport))
-            .fontSize(13)
+            .fontSize(FONT_SIZE_BODY_SMALL)
             .fontColor([TEXT_TERTIARY])
 
           if (seg.departTime !== undefined) {
             Text(seg.departTime)
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor(TEXT_TERTIARY)
           }
           if (seg.departTime !== undefined && seg.arriveTime !== undefined) {
             Text('–')
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor(TEXT_TERTIARY)
           }
           if (seg.arriveTime !== undefined) {
             Text(seg.arriveTime)
-              .fontSize(12)
+              .fontSize(FONT_SIZE_CAPTION)
               .fontColor(TEXT_TERTIARY)
           }
         }
@@ -331,7 +339,7 @@ export struct DayCard {
         // 票务信息 Chip（如果有）
         if (seg.ticket !== undefined) {
           Text(this.formatTicket(seg))
-            .fontSize(11)
+            .fontSize(FONT_SIZE_MINI)
             .fontColor(TEXT_SECONDARY)
             .backgroundColor(CHIP_BG_DEFAULT)
             .borderRadius(8)
@@ -342,7 +350,7 @@ export struct DayCard {
         // 住宿（如果有）
         if (seg.accommodation !== undefined && seg.accommodation.length > 0) {
           Text(`🏨 ${seg.accommodation}`)
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_TERTIARY)
             .margin({ top: 2 })
         }
@@ -350,7 +358,7 @@ export struct DayCard {
         // 备注（如果有）
         if (seg.note !== undefined && seg.note.length > 0) {
           Text(seg.note)
-            .fontSize(12)
+            .fontSize(FONT_SIZE_CAPTION)
             .fontColor(TEXT_TERTIARY)
             .fontStyle(FontStyle.Italic)
             .margin({ top: 2 })
