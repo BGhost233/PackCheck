@@ -42,6 +42,7 @@ export struct GearFormSheet {
       Column({ space: 12 }) {
         TextInput({ placeholder: '装备名称（必填）', text: this.gearName })
           .type(InputType.Normal)
+          .maxLength(100)
           .height(48)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
@@ -80,6 +81,7 @@ export struct GearFormSheet {
         Row({ space: 12 }) {
           TextInput({ placeholder: '重量(g)', text: this.gearWeight })
             .type(InputType.Number)
+            .maxLength(20)
             .height(48)
             .fontSize(14)
             .fontColor(TEXT_MAIN)
@@ -92,6 +94,7 @@ export struct GearFormSheet {
             })
           TextInput({ placeholder: '价格(¥)', text: this.gearPrice })
             .type(InputType.Number)
+            .maxLength(20)
             .height(48)
             .fontSize(14)
             .fontColor(TEXT_MAIN)
@@ -105,6 +108,7 @@ export struct GearFormSheet {
         }
         TextInput({ placeholder: '备注（一行，可选）', text: this.gearNote })
           .type(InputType.Normal)
+          .maxLength(500)
           .height(48)
           .fontSize(14)
           .fontColor(TEXT_MAIN)

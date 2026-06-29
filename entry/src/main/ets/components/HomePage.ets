@@ -263,7 +263,8 @@ export struct HomePage {
     for (let i = 0; i < this.checklists.length; i++) {
       const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt >= today) {
-        if (nearestFuture === undefined || dateAt < checklistDateAt(nearestFuture)!) {
+        const nearestDateAt = nearestFuture !== undefined ? checklistDateAt(nearestFuture) : undefined;
+        if (nearestFuture === undefined || (nearestDateAt !== undefined && dateAt < nearestDateAt)) {
           nearestFuture = this.checklists[i];
         }
       }
@@ -276,7 +277,8 @@ export struct HomePage {
     for (let i = 0; i < this.checklists.length; i++) {
       const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt < today) {
-        if (latestPast === undefined || dateAt > checklistDateAt(latestPast)!) {
+        const latestDateAt = latestPast !== undefined ? checklistDateAt(latestPast) : undefined;
+        if (latestPast === undefined || (latestDateAt !== undefined && dateAt > latestDateAt)) {
           latestPast = this.checklists[i];
         }
       }
@@ -368,7 +370,10 @@ export struct HomePage {
   }
 
   private heroSubtitleText(): string {
-    const checklist = this.latestChecklist()!;
+    const checklist = this.latestChecklist();
+    if (checklist === undefined) {
+      return '';
+    }
     const parts: string[] = [];
     // 目的地（优先展示）
     if (checklist.destination !== undefined && checklist.destination.trim().length > 0) {
@@ -383,6 +388,90 @@ export struct HomePage {
     // 总重
     parts.push(this.formatKg(this.checklistTotalWeight(checklist)));
     return parts.join(' · ');
+  }
+
+  // ===== HeroCard 安全辅助方法（消灭所有 forced unwrap） =====
+
+  private heroTitle(): string {
+    const c = this.latestChecklist();
+    return c !== undefined ? c.title : '';
+  }
+
+  private heroId(): string {
+    const c = this.latestChecklist();
+    return c !== undefined ? c.id : '';
+  }
+
+  private heroDaysLeftSafe(): number | undefined {
+    const c = this.latestChecklist();
+    if (c === undefined) {
+      return undefined;
+    }
+    return this.daysLeft(c);
+  }
+
+  private heroStatusLabel(): string {
+    const days = this.heroDaysLeftSafe();
+    if (days !== undefined && days >= 0) {
+      return '准备中';
+    }
+    return '已完成';
+  }
+
+  private heroStatusColor(): string {
+    const days = this.heroDaysLeftSafe();
+    if (days !== undefined && days >= 0) {
+      return PRIMARY_COLOR;
+    }
+    return TEXT_TERTIARY;
+  }
+
+  private heroLeadText(): string {
+    const c = this.latestChecklist();
+    if (c === undefined) {
+      return '';
+    }
+    return this.getAnimatedHeroLead(c);
+  }
+
+  private heroLeadFontSize(): number {
+    const days = this.heroDaysLeftSafe();
+    return days === 0 ? 36 : 48;
+  }
+
+  private heroLeadColor(): string {
+    const days = this.heroDaysLeftSafe();
+    if (days === undefined) {
+      return TEXT_TERTIARY;
+    }
+    if (days <= 3 && days > 0) {
+      return AMBER_ACCENT;
+    }
+    return PRIMARY_COLOR;
+  }
+
+  private heroSuffixText(): string {
+    const c = this.latestChecklist();
+    if (c === undefined) {
+      return '';
+    }
+    return this.countdownSuffix(c);
+  }
+
+  private heroProgressTotal(): number {
+    const c = this.latestChecklist();
+    if (c === undefined) {
+      return 1;
+    }
+    return progressTotal(c);
+  }
+
+  private heroItemCountText(): string {
+    const c = this.latestChecklist();
+    if (c === undefined) {
+      return '0';
+    }
+    return c.items.length.toString();
   }
 
   private rowDateText(item: TripChecklist): string {
@@ -437,8 +526,13 @@ export struct HomePage {
         result.push(this.checklists[i]);
       }
     }
-    // 按 dateAt 升序排列（最近的在前）
-    result.sort((a: TripChecklist, b: TripChecklist) => checklistDateAt(a)! - checklistDateAt(b)!);
+    // 按 dateAt 升序排列（最近的在前）— 已过滤确保 dateAt 非空
+    result.sort((a: TripChecklist, b: TripChecklist) => {
+      const da = checklistDateAt(a);
+      const db = checklistDateAt(b);
+      if (da === undefined || db === undefined) { return 0; }
+      return da - db;
+    });
     return result;
   }
 
@@ -455,9 +549,21 @@ export struct HomePage {
       }
     }
     // 有日期的按 dateAt 降序（最近的在前），无日期的按 createdAt 降序排后面
-    withDate.sort((a: TripChecklist, b: TripChecklist) => checklistDateAt(b)! - checklistDateAt(a)!);
+    withDate.sort((a: TripChecklist, b: TripChecklist) => {
+      const da = checklistDateAt(a);
+      const db = checklistDateAt(b);
+      if (da === undefined || db === undefined) { return 0; }
+      return db - da;
+    });
     noDate.sort((a: TripChecklist, b: TripChecklist) => b.createdAt - a.createdAt);
-    return [...withDate, ...noDate];
+    const combined: TripChecklist[] = [];
+    for (let i = 0; i < withDate.length; i++) {
+      combined.push(withDate[i]);
+    }
+    for (let i = 0; i < noDate.length; i++) {
+      combined.push(noDate[i]);
+    }
+    return combined;
   }
 
   private checkCelebration(): void {
@@ -605,25 +711,24 @@ export struct HomePage {
     if (this.latestChecklist() !== undefined) {
       Column({ space: 16 }) {
         Row() {
-          Text(this.latestChecklist()!.title)
+          Text(this.heroTitle())
             .fontSize(24)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .layoutWeight(1)
-          Text(this.daysLeft(this.latestChecklist()!) !== undefined && this.daysLeft(this.latestChecklist()!)! >= 0 ? '准备中' : '已完成')
+          Text(this.heroStatusLabel())
             .fontSize(13)
-            .fontColor(this.daysLeft(this.latestChecklist()!) !== undefined && this.daysLeft(this.latestChecklist()!)! >= 0 ? PRIMARY_COLOR : TEXT_TERTIARY)
+            .fontColor(this.heroStatusColor())
         }
         .width('100%')
 
         Row() {
-          Text(this.getAnimatedHeroLead(this.latestChecklist()!))
-            .fontSize(this.daysLeft(this.latestChecklist()!) === 0 ? 36 : 48)
+          Text(this.heroLeadText())
+            .fontSize(this.heroLeadFontSize())
             .fontWeight(FontWeight.Bold)
-            .fontColor(this.daysLeft(this.latestChecklist()!) === undefined ? TEXT_TERTIARY :
-              (this.daysLeft(this.latestChecklist()!)! <= 3 && this.daysLeft(this.latestChecklist()!)! > 0 ? AMBER_ACCENT : PRIMARY_COLOR))
+            .fontColor(this.heroLeadColor())
             .fontFeature(FONT_FEATURE_TNUM)
-          Text(this.countdownSuffix(this.latestChecklist()!))
+          Text(this.heroSuffixText())
             .fontSize(16)
             .fontColor(TEXT_SECONDARY)
             .margin({ bottom: 8 })
@@ -650,10 +755,10 @@ export struct HomePage {
       .borderRadius(CARD_RADIUS)
       .linearGradient({
         angle: 135,
-        colors: [[heroGradientStart(this.daysLeft(this.latestChecklist()!)), 0], [CARD_BG, 1]]
+        colors: [[heroGradientStart(this.heroDaysLeftSafe()), 0], [CARD_BG, 1]]
       })
       .shadow({ radius: 12, color: SHADOW_SUBTLE, offsetX: 0, offsetY: 2 })
-      .geometryTransition('trip-' + this.latestChecklist()!.id)
+      .geometryTransition('trip-' + this.heroId())
       .transition(TransitionEffect.opacity(0.99))
       .opacity(this.heroOpacity())
       .scale({
@@ -675,7 +780,10 @@ export struct HomePage {
       })
       .onClick(() => {
         if (this.heroOpacity() > 0.3) {
-          this.onOpenChecklist(this.latestChecklist()!.id);
+          const latest = this.latestChecklist();
+          if (latest !== undefined) {
+            this.onOpenChecklist(latest.id);
+          }
         }
       })
     }
@@ -690,7 +798,7 @@ export struct HomePage {
         .strokeWidth(5)
       Progress({
         value: this.progressNumeratorDisplay,
-        total: this.latestChecklist() !== undefined ? progressTotal(this.latestChecklist()!) : 1,
+        total: this.heroProgressTotal(),
         type: ProgressType.Ring
       })
         .width(52)
@@ -698,8 +806,7 @@ export struct HomePage {
         .color(this.ringCelebrateColor)
         .style({ strokeWidth: 5, enableSmoothEffect: true })
         .animation({ curve: SPRING_GENERAL() })
-      Text(this.progressNumeratorDisplay.toString() + '/' +
-        (this.latestChecklist() !== undefined ? this.latestChecklist()!.items.length.toString() : '0'))
+      Text(this.progressNumeratorDisplay.toString() + '/' + this.heroItemCountText())
         .fontSize(12)
         .fontWeight(FontWeight.Bold)
         .fontColor(this.ringCelebrateColor)
@@ -757,7 +864,8 @@ export struct HomePage {
     for (let i = 0; i < this.checklists.length; i++) {
       const dateAt = checklistDateAt(this.checklists[i]);
       if (dateAt !== undefined && dateAt >= today) {
-        if (nearest === undefined || dateAt < checklistDateAt(nearest)!) {
+        const nearestDateAt = nearest !== undefined ? checklistDateAt(nearest) : undefined;
+        if (nearest === undefined || (nearestDateAt !== undefined && dateAt < nearestDateAt)) {
           nearest = this.checklists[i];
         }
       }

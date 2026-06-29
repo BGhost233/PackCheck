@@ -335,6 +335,13 @@ export struct GearPage {
       clearTimeout(this.timerIds[i]);
     }
     this.timerIds = [];
+    // 重置 overlay 状态，防止组件销毁时残留
+    this.gearOverlayPhase = OverlayPhase.IDLE;
+    this.gearOverlayItem = null;
+    this.gearOverlayVisible = false;
+    this.gearDragTempExpanded = [];
+    this.gearDropCategory = '';
+    this.gearDropIndex = -1;
   }
 
   private async loadCollapsedGroups(): Promise<void> {
@@ -904,6 +911,7 @@ export struct GearPage {
               if (this.searchExpanded) {
                 TextInput({ placeholder: '搜索装备', text: this.gearSearchKeyword })
                   .height(32)
+                  .maxLength(50)
                   .fontSize(15)
                   .fontColor(TEXT_MAIN)
                   .placeholderColor(TEXT_TERTIARY)

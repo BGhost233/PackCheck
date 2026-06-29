@@ -61,6 +61,7 @@ export struct DayFormSheet {
         // 出发地（必填）
         TextInput({ placeholder: '从哪里出发（必填）', text: this.dayFrom })
           .type(InputType.Normal)
+          .maxLength(100)
           .height(48)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
@@ -76,6 +77,7 @@ export struct DayFormSheet {
         // 目的地（必填）
         TextInput({ placeholder: '到达哪里（必填）', text: this.dayTo })
           .type(InputType.Normal)
+          .maxLength(100)
           .height(48)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
@@ -126,6 +128,7 @@ export struct DayFormSheet {
         // 备注（可选）
         TextInput({ placeholder: '当天备注（可选）', text: this.dayNote })
           .type(InputType.Normal)
+          .maxLength(500)
           .height(48)
           .fontSize(14)
           .fontColor(TEXT_MAIN)

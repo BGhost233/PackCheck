@@ -114,6 +114,7 @@ export struct SegmentFormSheet {
         // 出发地（必填）
         TextInput({ placeholder: '出发地（必填）', text: this.segFrom })
           .type(InputType.Normal)
+          .maxLength(100)
           .height(48)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
@@ -129,6 +130,7 @@ export struct SegmentFormSheet {
         // 到达地（必填）
         TextInput({ placeholder: '到达地（必填）', text: this.segTo })
           .type(InputType.Normal)
+          .maxLength(100)
           .height(48)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
@@ -163,6 +165,7 @@ export struct SegmentFormSheet {
         Row({ space: 12 }) {
           TextInput({ placeholder: '出发 HH:mm', text: this.segDepartTime })
             .type(InputType.Normal)
+            .maxLength(5)
             .height(48)
             .fontSize(14)
             .fontColor(TEXT_MAIN)
@@ -177,6 +180,7 @@ export struct SegmentFormSheet {
             .onChange((value: string) => { this.onDepartTimeChange(value); })
           TextInput({ placeholder: '到达 HH:mm', text: this.segArriveTime })
             .type(InputType.Normal)
+            .maxLength(5)
             .height(48)
             .fontSize(14)
             .fontColor(TEXT_MAIN)
@@ -213,6 +217,7 @@ export struct SegmentFormSheet {
           Row({ space: 8 }) {
             TextInput({ placeholder: '车次/航班号', text: this.ticketCode })
               .type(InputType.Normal)
+              .maxLength(100)
               .height(44)
               .fontSize(13)
               .fontColor(TEXT_MAIN)
@@ -227,6 +232,7 @@ export struct SegmentFormSheet {
               .onChange((v: string) => { this.onTicketCodeChange(v); })
             TextInput({ placeholder: '座位', text: this.ticketSeat })
               .type(InputType.Normal)
+              .maxLength(100)
               .height(44)
               .fontSize(13)
               .fontColor(TEXT_MAIN)
@@ -241,6 +247,7 @@ export struct SegmentFormSheet {
               .onChange((v: string) => { this.onTicketSeatChange(v); })
             TextInput({ placeholder: '¥', text: this.ticketPrice })
               .type(InputType.Number)
+              .maxLength(20)
               .height(44)
               .fontSize(13)
               .fontColor(TEXT_MAIN)
@@ -267,6 +274,7 @@ export struct SegmentFormSheet {
         // 住宿
         TextInput({ placeholder: '住宿信息（可选）', text: this.segAccommodation })
           .type(InputType.Normal)
+          .maxLength(100)
           .height(48)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
@@ -282,6 +290,7 @@ export struct SegmentFormSheet {
         // 备注
         TextInput({ placeholder: '备注（可选）', text: this.segNote })
           .type(InputType.Normal)
+          .maxLength(500)
           .height(48)
           .fontSize(14)
           .fontColor(TEXT_MAIN)

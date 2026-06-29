@@ -78,6 +78,7 @@ export struct ProfileEditSheet {
       // 目的地（全宽）
       TextInput({ placeholder: '目的地', text: this.tripDestination })
         .height(44)
+        .maxLength(100)
         .fontSize(14)
         .fontColor(TEXT_MAIN)
         .placeholderColor(TEXT_SECONDARY)
@@ -128,6 +129,7 @@ export struct ProfileEditSheet {
   private FieldInput(placeholder: string, text: string, onChange: (value: string) => void) {
     TextInput({ placeholder: placeholder, text: text })
       .height(44)
+      .maxLength(20)
       .fontSize(14)
       .fontColor(TEXT_MAIN)
       .placeholderColor(TEXT_SECONDARY)

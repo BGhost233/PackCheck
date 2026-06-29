@@ -131,6 +131,7 @@ export struct EditGearPanel {
         TextInput({ placeholder: '装备名称（必填）', text: this.gearName })
           .type(InputType.Normal)
           .height(FIELD_HEIGHT)
+          .maxLength(100)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
@@ -189,6 +190,7 @@ export struct EditGearPanel {
         TextInput({ placeholder: '备注（一行，可选）', text: this.gearNote })
           .type(InputType.Normal)
           .height(FIELD_HEIGHT)
+          .maxLength(500)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
@@ -252,6 +254,7 @@ export struct EditGearPanel {
       Row({ space: SUB_GAP }) {
         TextInput({ placeholder: '可选', text: textValue })
           .type(InputType.Number)
+          .maxLength(20)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)

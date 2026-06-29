@@ -57,7 +57,7 @@ import {
   CURVE_DECELERATE,
   PANEL_SCALE_START
 } from '../constants/AnimationTokens';
-import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, DayItinerary, DayPatch, GearItem, makeId, normalizeNumber, RouteSegment, SegmentPatch, TransportMode, TripChecklist } from '../models/PackModels';
+import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, clampNumber, DayItinerary, DayPatch, GearItem, makeId, normalizeNumber, RouteSegment, SegmentPatch, TransportMode, TripChecklist } from '../models/PackModels';
 import { allZones, zoneDisplayName } from '../services/LoadoutService';
 import { getPackStore, PackStore } from '../services/PackStore';
 import {
@@ -389,6 +389,16 @@ struct Index {
     this.gearCategory = '其他';
   }
 
+  private resetTripForm(): void {
+    this.tripTitle = '';
+    this.tripDate = '';
+    this.tripDestination = '';
+    this.tripDistanceKm = '';
+    this.tripMaxAltitude = '';
+    this.tripAscentM = '';
+    this.tripDurationHours = '';
+  }
+
   private openAddGear(): void {
     this.resetGearForm();
     this.returnToImportAfterGear = false;
@@ -432,7 +442,7 @@ struct Index {
       const nextGears: GearItem[] = [];
       let updated = false;
       let oldPrice: number | undefined = undefined;
-      const newPrice = normalizeNumber(this.gearPrice);
+      const newPrice = clampNumber(this.gearPrice, 0, 9999999);
       for (let index = 0; index < this.gears.length; index++) {
         const item = this.gears[index];
         if (item.id === this.editingGearId) {
@@ -440,7 +450,7 @@ struct Index {
           const edited = updateGear(item, {
             name: name,
             category: category,
-            weight: normalizeNumber(this.gearWeight),
+            weight: clampNumber(this.gearWeight, 0, 100000),
             price: newPrice,
             note: this.gearNote.trim()
           });
@@ -455,7 +465,7 @@ struct Index {
         const created = createGear({
           name: name,
           category: category,
-          weight: normalizeNumber(this.gearWeight),
+          weight: clampNumber(this.gearWeight, 0, 100000),
           price: newPrice,
           note: this.gearNote.trim()
         });
@@ -782,10 +792,10 @@ struct Index {
     const created = createChecklistFactory(title, this.tripDate.trim(),
       parseTripDateAt(this.tripDate),
       this.ceremonyDestination.trim().length > 0 ? this.ceremonyDestination.trim() : undefined,
-      normalizeNumber(this.ceremonyDistanceKm),
-      normalizeNumber(this.ceremonyMaxAltitude),
-      normalizeNumber(this.ceremonyAscentM),
-      normalizeNumber(this.ceremonyDurationHours));
+      clampNumber(this.ceremonyDistanceKm, 0, 100000),
+      clampNumber(this.ceremonyMaxAltitude, -500, 9000),
+      clampNumber(this.ceremonyAscentM, 0, 50000),
+      clampNumber(this.ceremonyDurationHours, 0, 8760));
     const nextChecklists = prependChecklist(this.checklists, created);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
@@ -1030,10 +1040,10 @@ struct Index {
     }
     const profile: TripProfileUpdate = {
       destination: this.tripDestination.trim().length > 0 ? this.tripDestination.trim() : undefined,
-      distanceKm: normalizeNumber(this.tripDistanceKm),
-      maxAltitude: normalizeNumber(this.tripMaxAltitude),
-      ascentM: normalizeNumber(this.tripAscentM),
-      durationHours: normalizeNumber(this.tripDurationHours)
+      distanceKm: clampNumber(this.tripDistanceKm, 0, 100000),
+      maxAltitude: clampNumber(this.tripMaxAltitude, -500, 9000),
+      ascentM: clampNumber(this.tripAscentM, 0, 50000),
+      durationHours: clampNumber(this.tripDurationHours, 0, 8760)
     };
     await this.updateChecklistInfo(checklist.id, title, this.tripDate.trim(), parseTripDateAt(this.tripDate), profile);
     this.closeSheet();
@@ -1061,10 +1071,10 @@ struct Index {
     }
     const profile: TripProfileUpdate = {
       destination: this.tripDestination.trim().length > 0 ? this.tripDestination.trim() : undefined,
-      distanceKm: normalizeNumber(this.tripDistanceKm),
-      maxAltitude: normalizeNumber(this.tripMaxAltitude),
-      ascentM: normalizeNumber(this.tripAscentM),
-      durationHours: normalizeNumber(this.tripDurationHours)
+      distanceKm: clampNumber(this.tripDistanceKm, 0, 100000),
+      maxAltitude: clampNumber(this.tripMaxAltitude, -500, 9000),
+      ascentM: clampNumber(this.tripAscentM, 0, 50000),
+      durationHours: clampNumber(this.tripDurationHours, 0, 8760)
     };
     await this.updateChecklistInfo(checklist.id, checklist.title, this.tripDate.trim(), parseTripDateAt(this.tripDate), profile);
     this.closeSheet();
@@ -1125,8 +1135,8 @@ struct Index {
   private async saveEditedItem(): Promise<void> {
     const name = this.editingItemName.trim();
     const group = this.editingItemGroup.trim().length === 0 ? '其他' : this.editingItemGroup.trim();
-    const weight = normalizeNumber(this.editingItemWeight);
-    const price = normalizeNumber(this.editingItemPrice);
+    const weight = clampNumber(this.editingItemWeight, 0, 100000);
+    const price = clampNumber(this.editingItemPrice, 0, 9999999);
     if (this.editingItemId.length === 0 || name.length === 0) {
       this.errorText = '物品名称不能为空';
       return;
@@ -1748,7 +1758,9 @@ await this.updateItinerary(next);
     this.returnToImportAfterGear = false;
     this.editingItemId = '';
     this.showTempAddNotice = false;
-    // 防御性重置表单状态，避免残留脏数据
+    // 防御性重置所有表单状态，避免残留脏数据
+    this.resetGearForm();
+    this.resetTripForm();
     this.resetDayForm();
     this.resetSegForm();
     this.getUIContext().animateTo({
@@ -2520,6 +2532,7 @@ await this.updateItinerary(next);
         TextInput({ text: this.categoryDialogInput, placeholder: '输入分组名称' })
           .width('100%')
           .height(44)
+          .maxLength(50)
           .fontSize(15)
           .borderRadius(10)
           .backgroundColor(GROUP_HEADER_BG)

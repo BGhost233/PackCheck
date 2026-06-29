@@ -44,6 +44,7 @@ export struct TripFormSheet {
     Column({ space: 12 }) {
       TextInput({ placeholder: '行程名称', text: this.tripTitle })
         .type(InputType.Normal)
+        .maxLength(50)
         .height(48)
         .fontSize(14)
         .fontColor(TEXT_MAIN)
@@ -65,6 +66,7 @@ export struct TripFormSheet {
             .margin({ top: 4 })
           TextInput({ placeholder: '目的地', text: this.tripDestination })
             .height(44)
+            .maxLength(100)
             .fontSize(14)
             .fontColor(TEXT_MAIN)
             .placeholderColor(TEXT_SECONDARY)
@@ -75,6 +77,7 @@ export struct TripFormSheet {
           Row({ space: 8 }) {
             TextInput({ placeholder: '里程 km', text: this.tripDistanceKm })
               .height(44)
+              .maxLength(20)
               .fontSize(14)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
@@ -86,6 +89,7 @@ export struct TripFormSheet {
               .onChange((value: string) => { this.onDistanceKmChange(value); })
             TextInput({ placeholder: '海拔 m', text: this.tripMaxAltitude })
               .height(44)
+              .maxLength(20)
               .fontSize(14)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
@@ -100,6 +104,7 @@ export struct TripFormSheet {
           Row({ space: 8 }) {
             TextInput({ placeholder: '爬升 m', text: this.tripAscentM })
               .height(44)
+              .maxLength(20)
               .fontSize(14)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)
@@ -111,6 +116,7 @@ export struct TripFormSheet {
               .onChange((value: string) => { this.onAscentMChange(value); })
             TextInput({ placeholder: '时长 h', text: this.tripDurationHours })
               .height(44)
+              .maxLength(20)
               .fontSize(14)
               .fontColor(TEXT_MAIN)
               .placeholderColor(TEXT_SECONDARY)

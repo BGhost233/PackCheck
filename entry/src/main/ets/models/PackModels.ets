@@ -138,3 +138,18 @@ export function normalizeNumber(value: string): number | undefined {
   }
   return parsed;
 }
+
+/**
+ * 带范围约束的数值解析。解析后 clamp 到 [min, max]。
+ * 空串/非数字仍返回 undefined（语义=「用户未填」）。
+ * @param value - 输入字符串
+ * @param min - 最小值（默认 0，即非负）
+ * @param max - 最大值（默认 999999）
+ */
+export function clampNumber(value: string, min: number = 0, max: number = 999999): number | undefined {
+  const n = normalizeNumber(value);
+  if (n === undefined) {
+    return undefined;
+  }
+  return Math.min(Math.max(n, min), max);
+}

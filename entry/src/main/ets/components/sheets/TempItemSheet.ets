@@ -35,6 +35,7 @@ export struct TempItemSheet {
     Column({ space: 12 }) {
       TextInput({ placeholder: '输入物品名称', text: this.tempItemName })
         .type(InputType.Normal)
+        .maxLength(100)
         .height(48)
         .fontSize(14)
         .fontColor(TEXT_MAIN)

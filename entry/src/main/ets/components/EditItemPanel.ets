@@ -127,6 +127,7 @@ export struct EditItemPanel {
         TextInput({ placeholder: '物品名称', text: this.editingItemName })
           .type(InputType.Normal)
           .height(48)
+          .maxLength(100)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
@@ -227,6 +228,7 @@ export struct EditItemPanel {
       Row({ space: 6 }) {
         TextInput({ placeholder: '可选', text: textValue })
           .type(InputType.Number)
+          .maxLength(20)
           .fontSize(14)
           .fontColor(TEXT_MAIN)
           .placeholderColor(TEXT_SECONDARY)
