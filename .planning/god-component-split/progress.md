@@ -72,3 +72,45 @@
 - Wave 1B: SheetOverlay → SheetContainer（4+1 成员），将进一步消除 staging @State 的透传需求
 - Wave 1C: 基础设施清理
 - Waves 2-4: 业务逻辑提取、子组件、nonce 治理、验证
+
+---
+
+## 2026-06-29 — 会话 3: Wave 2 纯计算提取完成（跳过 Wave 1B/1C）
+
+### 已完成
+
+- [x] Wave 2A.1-2: ChecklistService 新增 5 个纯函数 + 1 个接口 + 1 个 helper:
+  - `moveChecklistItemToZone` / `reorderItemsInZone` / `batchMoveItems` / `setItemChecked` + `SetItemCheckedResult` / `isJustCompleted`
+  - Index.ets 5 个方法委托给 service，`toggleChecklistItem` 使用 `isJustCompleted` 检测完成
+- [x] Wave 2A.2 DRY: `formatKg` 统一到 GearService 版本（2 位小数 <10kg），GearPage/HomePage 删除私有副本
+- [x] Wave 2A.3: `buildTripProfile` 提取到 ChecklistService（含 `TripProfileUpdate` 接口 + `clampNumber` 引入）
+- [x] Wave 2B: GearPage 纯计算提取 — 新增 4 个函数到 GearService (`splitByKeyword`, `companionDays`, `companionDaysLabel`, `gearSummaryText`)；删除 7 个 private 方法；DRY 修复 `activeCategories`≡`normalizeGearCategories` / `activeCategoryText`≡`tempGearFilterText`
+- [x] Wave 2C: HomePage 纯计算提取 — ChecklistService 新增 7 个函数 (`daysLeftCount`, `futureTrips`, `pastTrips`, `countdownLead`, `countdownSuffix`, `rowDateText`, `countdownLead`)；删除 9 个 private 方法
+- [x] 4 次 `devecocli build` 全部通过，零错误
+- [x] 4 次 commit: `48fbde5` → `b378f8d` → `f55b570` → `15318db`
+
+### 行数变化
+
+| 文件 | 会话前 | 会话后 | 净变化 |
+|------|--------|--------|--------|
+| Index.ets | ~2478 | 2388 | -90 |
+| GearPage.ets | ~2229 | 2211 | -18 |
+| HomePage.ets | ~1099 | 945 | -154 |
+| ChecklistService.ets | — | +118 行新增 | +118 |
+| GearService.ets | — | +30 行新增 | +30 |
+| **净计** | | | **-114** |
+
+### 关键发现
+
+| 发现 | 影响 |
+|------|------|
+| `formatKg` 有 3 个实现，GearService 版精度更高 | 统一为 GearService 版（<10kg 显示 2 位小数） |
+| `activeCategories`/`activeCategoryText` 与 GearService 已有函数完全重复 | 直接复用，无需重新提取 |
+| HomePage `checklistItemWeight` 与 ChecklistService 版有行为分歧 | item.weight 优先 vs fromGearId 优先 — 已统一为 ChecklistService 版（优先 item.weight） |
+| 子组件提取（2B.1-2B.3, 2C.2-2C.4, 2D）风险较高 | 涉及 §8.2 约束和动画状态机，建议独立会话处理 |
+
+### 下一步
+
+- Wave 2 剩余子组件提取（可选，中风险）: GearPage CollapsingHeader/GearFab/GearRowCard、HomePage EmptyHero/RingProgress/HistoryRow、ProfilePage StatCell/Timeline
+- Wave 3: nonce 治理 + ViewModel 评估
+- Wave 4: 验证收尾
