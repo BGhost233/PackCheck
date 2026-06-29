@@ -59,7 +59,7 @@ import {
 } from '../constants/AnimationTokens';
 import { CATEGORY_ALL, CATEGORY_FALLBACK, ChecklistItem, DayItinerary, DayPatch, GearItem, makeId, normalizeNumber, RouteSegment, SegmentPatch, TransportMode, TripChecklist } from '../models/PackModels';
 import { allZones, zoneDisplayName } from '../services/LoadoutService';
-import { PackStore } from '../services/PackStore';
+import { getPackStore, PackStore } from '../services/PackStore';
 import {
   normalizeGearCategories,
   presetCategories,
@@ -126,7 +126,7 @@ import {
 @Entry
 @Component
 struct Index {
-  private store: PackStore = new PackStore();
+  private store: PackStore = getPackStore();
 
   @State private gears: GearItem[] = [];
   @State private checklists: TripChecklist[] = [];

@@ -14,7 +14,7 @@ import { HeadCollapseController } from '../utils/HeadCollapseController';
 import { hapticTime } from '../utils/HapticUtils';
 import { hdsEffect } from '@kit.UIDesignKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
-import { PackStore } from '../services/PackStore';
+import { getPackStore, PackStore } from '../services/PackStore';
 import { buildGearTripCountMap } from '../services/FootprintService';
 import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice, updateGear } from '../services/GearService';
 import {
@@ -162,7 +162,7 @@ export struct GearPage {
   private gearMenuMeasuredHeight: number = 320;
 
   @Prop @Watch('onGearDataChange') checklists: TripChecklist[] = [];
-  private store: PackStore = new PackStore();
+  private store: PackStore = getPackStore();
   private gearListScroller: Scroller = new Scroller();
 
   // 统一折叠控制器（overlay 范式：header 定高浮在 List 上、靠内部元素变形）。
