@@ -16,7 +16,12 @@ import { hdsEffect } from '@kit.UIDesignKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { getPackStore, PackStore } from '../services/PackStore';
 import { buildGearTripCountMap } from '../services/FootprintService';
-import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice, updateGear, formatKg } from '../services/GearService';
+import {
+  numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice, updateGear, formatKg,
+  splitByKeyword, companionDays, companionDaysLabel, gearSummaryText,
+  normalizeGearCategories, tempGearFilterText
+} from '../services/GearService';
+import { formatDateText } from '../services/ChecklistService';
 import {
   ARROW_COLOR,
   CARD_BG,
@@ -211,7 +216,7 @@ export struct GearPage {
     // 1. 筛选 + 排序
     const filtered: GearItem[] = [];
     const keyword = this.gearSearchKeyword.trim().toLowerCase();
-    const activeCategories = this.activeCategories();
+    const activeCategories = normalizeGearCategories(this.selectedGearCategories);
     const showAllCategories = activeCategories.indexOf(CATEGORY_ALL) >= 0;
     for (let index = 0; index < this.gears.length; index++) {
       const item = this.gears[index];
@@ -478,36 +483,6 @@ export struct GearPage {
     return sorted;
   }
 
-  private activeCategories(): string[] {
-    if (this.selectedGearCategories.length === 0 || this.selectedGearCategories.indexOf(CATEGORY_ALL) >= 0) {
-      return [CATEGORY_ALL];
-    }
-    const categories: string[] = [];
-    for (let index = 0; index < this.selectedGearCategories.length; index++) {
-      const category = this.selectedGearCategories[index];
-      if (category.length > 0 && categories.indexOf(category) < 0) {
-        categories.push(category);
-      }
-    }
-    if (categories.length === 0) {
-      return [CATEGORY_ALL];
-    }
-    return categories;
-  }
-
-  private activeCategoryText(): string {
-    const categories = this.activeCategories();
-    if (categories.length === 0 || categories.indexOf(CATEGORY_ALL) >= 0) {
-      return CATEGORY_ALL;
-    }
-    if (categories.length === 1) {
-      return categories[0];
-    }
-    if (categories.length === 2) {
-      return categories[0] + ' +1';
-    }
-    return categories.length.toString() + '个分组';
-  }
 
   /** 返回缓存的筛选+排序结果（rebuildGearCache 预算）。O(1) 读取。 */
   private filteredGears(): GearItem[] {
@@ -623,25 +598,6 @@ export struct GearPage {
     this.persistCollapsedGroups();
   }
 
-  private formatDateText(timestamp: number): string {
-    const date = new Date(timestamp);
-    return date.getFullYear().toString() + '-' + (date.getMonth() + 1).toString() + '-' + date.getDate().toString();
-  }
-
-  private companionDaysText(item: GearItem): string {
-    const start: number = typeof item.acquiredAt === 'number' ? item.acquiredAt : item.createdAt;
-    const days = Math.max(0, Math.floor((Date.now() - start) / 86400000));
-    return days.toString();
-  }
-
-  // 陪伴天数来源标签：有 acquiredAt 不显示前缀；无 acquiredAt 时提示「大约」表示 fallback
-  private companionDaysLabel(item: GearItem): string {
-    if (typeof item.acquiredAt === 'number') {
-      return ' 天';
-    }
-    return ' 天左右';
-  }
-
   @Builder
   private CompanionChip(text: string) {
     Text(text)
@@ -651,11 +607,6 @@ export struct GearPage {
       .backgroundColor(PRIMARY_TINT_COLOR)
       .borderRadius(CHIP_RADIUS)
       .margin({ bottom: 4 })
-  }
-
-  private gearSummaryText(): string {
-    return this.gears.length.toString() + '件 · ' + formatKg(totalGearWeight(this.gears)) +
-      ' · ¥' + totalGearPrice(this.gears).toString();
   }
 
   private gearTitleFontSize(): number {
@@ -887,7 +838,7 @@ export struct GearPage {
                 .fontWeight(FontWeight.Bold)
                 .fontColor(TEXT_MAIN)
                 .animation({ curve: SPRING_GENERAL() })
-              Text(this.gearSummaryText())
+              Text(gearSummaryText(this.gears))
                 .fontSize(FONT_SIZE_BODY_SMALL)
                 .fontColor(TEXT_TERTIARY)
                 .fontFeature(FONT_FEATURE_TNUM)
@@ -1017,7 +968,7 @@ export struct GearPage {
               Row() {
                 // 分类筛选 pill
                 Row({ space: 4 }) {
-                  Text(this.activeCategoryText())
+                  Text(tempGearFilterText(this.selectedGearCategories))
                     .fontSize(FONT_SIZE_BODY_MEDIUM)
                     .fontWeight(FontWeight.Medium)
                     .fontColor(PRIMARY_COLOR)
@@ -1047,7 +998,7 @@ export struct GearPage {
                 Blank()
 
                 // 轻量统计摘要
-                Text(this.gearSummaryText())
+                Text(gearSummaryText(this.gears))
                   .fontSize(FONT_SIZE_CAPTION)
                   .fontColor(TEXT_TERTIARY)
                   .fontFeature(FONT_FEATURE_TNUM)
@@ -1201,7 +1152,7 @@ export struct GearPage {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
     } else {
       Text() {
-        ForEach(this.splitByKeyword(name, this.gearSearchKeyword.trim()), (segment: string, index: number) => {
+        ForEach(splitByKeyword(name, this.gearSearchKeyword.trim()), (segment: string, index: number) => {
           if (segment.toLowerCase() === this.gearSearchKeyword.trim().toLowerCase()) {
             Span(segment)
               .fontSize(FONT_SIZE_OVERLINE)
@@ -1219,29 +1170,6 @@ export struct GearPage {
       .maxLines(1)
       .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
-  }
-
-  private splitByKeyword(text: string, keyword: string): string[] {
-    if (keyword.length === 0) {
-      return [text];
-    }
-    const parts: string[] = [];
-    const lowerText = text.toLowerCase();
-    const lowerKey = keyword.toLowerCase();
-    let startIndex = 0;
-    while (startIndex < text.length) {
-      const foundIndex = lowerText.indexOf(lowerKey, startIndex);
-      if (foundIndex < 0) {
-        parts.push(text.substring(startIndex));
-        break;
-      }
-      if (foundIndex > startIndex) {
-        parts.push(text.substring(startIndex, foundIndex));
-      }
-      parts.push(text.substring(foundIndex, foundIndex + keyword.length));
-      startIndex = foundIndex + keyword.length;
-    }
-    return parts;
   }
 
   @Builder
@@ -1467,7 +1395,7 @@ export struct GearPage {
         if (item.note !== undefined && item.note.length > 0) {
           this.PreviewLine('备注', item.note)
         }
-        this.PreviewLine('添加', this.formatDateText(item.createdAt))
+        this.PreviewLine('添加', formatDateText(item.createdAt))
       }
       .width('100%')
     }
@@ -1528,12 +1456,12 @@ export struct GearPage {
       Column({ space: 8 }) {
         // 陪伴天数大数字
         Row() {
-          Text(this.companionDaysText(item))
+          Text(companionDays(item).toString())
             .fontSize(FONT_SIZE_TITLE_LARGE)
             .fontWeight(FontWeight.Bold)
             .fontColor(TEXT_MAIN)
             .fontFeature("'tnum'")
-          Text(this.companionDaysLabel(item))
+          Text(companionDaysLabel(item))
             .fontSize(FONT_SIZE_BODY_SMALL)
             .fontColor(TEXT_SECONDARY)
             .margin({ bottom: 2 })
@@ -1543,8 +1471,8 @@ export struct GearPage {
         // 三 chip
         Row({ space: 8 }) {
           this.CompanionChip('同行 ' + this.gearTripCount(item).toString() + ' 次');
-          this.CompanionChip('相伴 ' + this.companionDaysText(item) + ' 天');
-          this.CompanionChip('添加于 ' + this.formatDateText(item.createdAt));
+          this.CompanionChip('相伴 ' + companionDays(item).toString() + ' 天');
+          this.CompanionChip('添加于 ' + formatDateText(item.createdAt));
         }
       }
       .width('100%')

@@ -299,3 +299,57 @@ export function tempGearFilterText(categories: string[]): string {
   return normalized.length.toString() + '个分组';
 }
 
+// ─── Wave 2B：从 GearPage 提取的纯计算 ─────────────────────────────────
+
+/**
+ * 按关键字将文本切分为交替的 [普通, 高亮, 普通, ...] 段（大小写不敏感）。
+ */
+export function splitByKeyword(text: string, keyword: string): string[] {
+  if (keyword.length === 0) {
+    return [text];
+  }
+  const parts: string[] = [];
+  const lowerText = text.toLowerCase();
+  const lowerKey = keyword.toLowerCase();
+  let startIndex = 0;
+  while (startIndex < text.length) {
+    const foundIndex = lowerText.indexOf(lowerKey, startIndex);
+    if (foundIndex < 0) {
+      parts.push(text.substring(startIndex));
+      break;
+    }
+    if (foundIndex > startIndex) {
+      parts.push(text.substring(startIndex, foundIndex));
+    }
+    parts.push(text.substring(foundIndex, foundIndex + keyword.length));
+    startIndex = foundIndex + keyword.length;
+  }
+  return parts;
+}
+
+/**
+ * 陪伴天数（从入手日期或创建日期算起）。
+ */
+export function companionDays(item: GearItem): number {
+  const start: number = typeof item.acquiredAt === 'number' ? item.acquiredAt : item.createdAt;
+  return Math.max(0, Math.floor((Date.now() - start) / 86400000));
+}
+
+/**
+ * 陪伴天数后缀：有明确入手日期 → " 天"，否则 → " 天左右"。
+ */
+export function companionDaysLabel(item: GearItem): string {
+  if (typeof item.acquiredAt === 'number') {
+    return ' 天';
+  }
+  return ' 天左右';
+}
+
+/**
+ * 装备库概要：「N件 · Xkg · ¥Y」。
+ */
+export function gearSummaryText(gears: GearItem[]): string {
+  return gears.length.toString() + '件 · ' + formatKg(totalGearWeight(gears)) +
+    ' · ¥' + totalGearPrice(gears).toString();
+}
+
