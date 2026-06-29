@@ -743,6 +743,7 @@ this.onFinish(this.tripTitle, this.tripDate, this.tripDestination,
   // ============================================================
   private chipLabels: string[] = ['目的地', '里程', '海拔', '爬升', '时长'];
   private chipUnits: string[] = ['', 'km', 'm', 'm', 'h'];
+  private chipPlaceholders: string[] = ['目的地', '预计里程 km', '最高海拔 m', '累计爬升 m', '预计时长 h'];
 
   private toggleChip(index: number): void {
     const next = [...this.activeChips];
@@ -853,80 +854,23 @@ this.onFinish(this.tripTitle, this.tripDate, this.tripDestination,
       .translate({ y: this.contentStep >= 3 ? 0 : 8 })
 
       // 展开的输入框（仅激活的 chip 显示）
-      if (this.activeChips[0]) {
-        TextInput({ placeholder: '目的地', text: this.tripDestination })
-          .width('100%')
-          .height(40)
-          .maxLength(100)
-          .fontSize(FONT_SIZE_BODY_SMALL)
-          .fontColor(TEXT_MAIN)
-          .placeholderColor(PLACEHOLDER_COLOR)
-          .backgroundColor(INPUT_BG)
-          .borderRadius(10)
-          .padding({ left: 12, right: 12 })
-          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.tripDestination = value; })
-      }
-      if (this.activeChips[1]) {
-        TextInput({ placeholder: '预计里程 km', text: this.tripDistanceKm })
-          .width('100%')
-          .height(40)
-          .maxLength(20)
-          .fontSize(FONT_SIZE_BODY_SMALL)
-          .fontColor(TEXT_MAIN)
-          .placeholderColor(PLACEHOLDER_COLOR)
-          .backgroundColor(INPUT_BG)
-          .borderRadius(10)
-          .padding({ left: 12, right: 12 })
-          .type(InputType.Number)
-          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.tripDistanceKm = value; })
-      }
-      if (this.activeChips[2]) {
-        TextInput({ placeholder: '最高海拔 m', text: this.tripMaxAltitude })
-          .width('100%')
-          .height(40)
-          .maxLength(20)
-          .fontSize(FONT_SIZE_BODY_SMALL)
-          .fontColor(TEXT_MAIN)
-          .placeholderColor(PLACEHOLDER_COLOR)
-          .backgroundColor(INPUT_BG)
-          .borderRadius(10)
-          .padding({ left: 12, right: 12 })
-          .type(InputType.Number)
-          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.tripMaxAltitude = value; })
-      }
-      if (this.activeChips[3]) {
-        TextInput({ placeholder: '累计爬升 m', text: this.tripAscentM })
-          .width('100%')
-          .height(40)
-          .maxLength(20)
-          .fontSize(FONT_SIZE_BODY_SMALL)
-          .fontColor(TEXT_MAIN)
-          .placeholderColor(PLACEHOLDER_COLOR)
-          .backgroundColor(INPUT_BG)
-          .borderRadius(10)
-          .padding({ left: 12, right: 12 })
-          .type(InputType.Number)
-          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.tripAscentM = value; })
-      }
-      if (this.activeChips[4]) {
-        TextInput({ placeholder: '预计时长 h', text: this.tripDurationHours })
-          .width('100%')
-          .height(40)
-          .maxLength(20)
-          .fontSize(FONT_SIZE_BODY_SMALL)
-          .fontColor(TEXT_MAIN)
-          .placeholderColor(PLACEHOLDER_COLOR)
-          .backgroundColor(INPUT_BG)
-          .borderRadius(10)
-          .padding({ left: 12, right: 12 })
-          .type(InputType.Number)
-          .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.tripDurationHours = value; })
-      }
+      ForEach([0, 1, 2, 3, 4], (index: number) => {
+        if (this.activeChips[index]) {
+          TextInput({ placeholder: this.chipPlaceholders[index], text: this.getChipValue(index) })
+            .width('100%')
+            .height(40)
+            .maxLength(index === 0 ? 100 : 20)
+            .fontSize(FONT_SIZE_BODY_SMALL)
+            .fontColor(TEXT_MAIN)
+            .placeholderColor(PLACEHOLDER_COLOR)
+            .backgroundColor(INPUT_BG)
+            .borderRadius(10)
+            .padding({ left: 12, right: 12 })
+            .type(index === 0 ? InputType.Normal : InputType.Number)
+            .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
+            .onChange((value: string) => { this.onChipValueChange(index, value); })
+        }
+      })
     }
     .width('100%')
   }
