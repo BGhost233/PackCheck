@@ -212,13 +212,6 @@ struct Index {
   @State private checklistRenderNonce: number = 0;
   // ===== 新建行程仪式感 =====
   @State private showTripCeremony: boolean = false;
-  @State private ceremonyTripTitle: string = '';
-  @State private ceremonyTripDate: string = '';
-  @State private ceremonyDestination: string = '';
-  @State private ceremonyDistanceKm: string = '';
-  @State private ceremonyMaxAltitude: string = '';
-  @State private ceremonyAscentM: string = '';
-  @State private ceremonyDurationHours: string = '';
 
   // ===== 行程日表单（4 字段：出发地/目的地/日期/备注） =====
   @State private editingDayId: string = '';
@@ -434,18 +427,27 @@ struct Index {
   }
 
   private async saveGear(): Promise<void> {
+    const name = this.gearName.trim();
+    if (name.length === 0) {
+      this.errorText = '装备名称不能为空';
+      return;
+    }
+    await this.saveGearWithData(name, this.gearCategory, this.gearWeight, this.gearPrice, this.gearNote);
+  }
+
+  private async saveGearWithData(nameStr: string, categoryStr: string, weightStr: string,
+    priceStr: string, noteStr: string): Promise<void> {
     try {
-      const name = this.gearName.trim();
-      const category = this.gearCategory.trim().length === 0 ? '其他' : this.gearCategory.trim();
+      const name = nameStr.trim();
+      const category = categoryStr.trim().length === 0 ? '其他' : categoryStr.trim();
       if (name.length === 0) {
-        this.errorText = '装备名称不能为空';
         return;
       }
 
       const nextGears: GearItem[] = [];
       let updated = false;
       let oldPrice: number | undefined = undefined;
-      const newPrice = clampNumber(this.gearPrice, 0, 9999999);
+      const newPrice = clampNumber(priceStr, 0, 9999999);
       for (let index = 0; index < this.gears.length; index++) {
         const item = this.gears[index];
         if (item.id === this.editingGearId) {
@@ -453,9 +455,9 @@ struct Index {
           const edited = updateGear(item, {
             name: name,
             category: category,
-            weight: clampNumber(this.gearWeight, 0, 100000),
+            weight: clampNumber(weightStr, 0, 100000),
             price: newPrice,
-            note: this.gearNote.trim()
+            note: noteStr.trim()
           });
           nextGears.push(edited);
           updated = true;
@@ -468,9 +470,9 @@ struct Index {
         const created = createGear({
           name: name,
           category: category,
-          weight: clampNumber(this.gearWeight, 0, 100000),
+          weight: clampNumber(weightStr, 0, 100000),
           price: newPrice,
-          note: this.gearNote.trim()
+          note: noteStr.trim()
         });
         nextGears.unshift(created);
       }
@@ -746,13 +748,6 @@ struct Index {
 
   // ===== 新建行程仪式感方法 =====
   private startTripCeremony(): void {
-    this.ceremonyTripTitle = '';
-    this.ceremonyTripDate = '';
-    this.ceremonyDestination = '';
-    this.ceremonyDistanceKm = '';
-    this.ceremonyMaxAltitude = '';
-    this.ceremonyAscentM = '';
-    this.ceremonyDurationHours = '';
     this.errorText = '';
     this.showTripCeremony = true;
     // 背景下沉 + 模糊，营造空间纵深
@@ -764,10 +759,11 @@ struct Index {
     });
   }
 
-  private async finishTripCeremony(): Promise<void> {
-    this.tripTitle = this.ceremonyTripTitle;
-    this.tripDate = this.ceremonyTripDate;
-    await this.createChecklist();
+  private async finishTripCeremony(title: string, date: string, destination: string,
+    distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string): Promise<void> {
+    this.tripTitle = title;
+    this.tripDate = date;
+    await this.createChecklistWithData(title, date, destination, distanceKm, maxAltitude, ascentM, durationHours);
     this.showTripCeremony = false;
   }
 
@@ -787,18 +783,24 @@ struct Index {
   }
 
   private async createChecklist(): Promise<void> {
-    const title = this.tripTitle.trim();
-    if (title.length === 0) {
+    await this.createChecklistWithData(this.tripTitle, this.tripDate, this.tripDestination,
+      this.tripDistanceKm, this.tripMaxAltitude, this.tripAscentM, this.tripDurationHours);
+  }
+
+  private async createChecklistWithData(title: string, date: string, destination: string,
+    distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string): Promise<void> {
+    const trimmedTitle = title.trim();
+    if (trimmedTitle.length === 0) {
       this.errorText = '行程名称不能为空';
       return;
     }
-    const created = createChecklistFactory(title, this.tripDate.trim(),
-      parseTripDateAt(this.tripDate),
-      this.ceremonyDestination.trim().length > 0 ? this.ceremonyDestination.trim() : undefined,
-      clampNumber(this.ceremonyDistanceKm, 0, 100000),
-      clampNumber(this.ceremonyMaxAltitude, -500, 9000),
-      clampNumber(this.ceremonyAscentM, 0, 50000),
-      clampNumber(this.ceremonyDurationHours, 0, 8760));
+    const created = createChecklistFactory(trimmedTitle, date.trim(),
+      parseTripDateAt(date),
+      destination.trim().length > 0 ? destination.trim() : undefined,
+      clampNumber(distanceKm, 0, 100000),
+      clampNumber(maxAltitude, -500, 9000),
+      clampNumber(ascentM, 0, 50000),
+      clampNumber(durationHours, 0, 8760));
     const nextChecklists = prependChecklist(this.checklists, created);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
@@ -1135,17 +1137,16 @@ struct Index {
     }, 500));
   }
 
-  private async saveEditedItem(): Promise<void> {
-    const name = this.editingItemName.trim();
-    const group = this.editingItemGroup.trim().length === 0 ? '其他' : this.editingItemGroup.trim();
-    const weight = clampNumber(this.editingItemWeight, 0, 100000);
-    const price = clampNumber(this.editingItemPrice, 0, 9999999);
-    if (this.editingItemId.length === 0 || name.length === 0) {
-      this.errorText = '物品名称不能为空';
+  private async saveEditedItemWithData(name: string, group: string, weightStr: string, priceStr: string): Promise<void> {
+    const trimmedName = name.trim();
+    const finalGroup = group.trim().length === 0 ? '其他' : group.trim();
+    const weight = clampNumber(weightStr, 0, 100000);
+    const price = clampNumber(priceStr, 0, 9999999);
+    if (this.editingItemId.length === 0 || trimmedName.length === 0) {
       return;
     }
-    await this.updateChecklistItem(this.editingItemId, name, group, undefined, false, weight, price, true);
-    await this.ensureCategory(group);
+    await this.updateChecklistItem(this.editingItemId, trimmedName, finalGroup, undefined, false, weight, price, true);
+    await this.ensureCategory(finalGroup);
     this.closeEditItemPanel();
   }
 
@@ -2312,10 +2313,6 @@ await this.updateItinerary(next);
           dayTo: this.dayFormTo,
           dayDate: this.dayFormDate,
           dayNote: this.dayFormNote,
-          onDayFromChange: (v: string) => { this.dayFormFrom = v; },
-          onDayToChange: (v: string) => { this.dayFormTo = v; },
-          onDayDateChange: (v: string) => { this.dayFormDate = v; },
-          onDayNoteChange: (v: string) => { this.dayFormNote = v; },
           onSubmitDay: (day: DayItinerary) => { this.handleSubmitNewDay(day); },
           onSubmitEditDay: (dayId: string, from: string, to: string, date: string, note: string) => {
             this.handleSubmitEditDay(dayId, from, to, date, note);
@@ -2332,16 +2329,6 @@ await this.updateItinerary(next);
           ticketCode: this.segFormTicketCode,
           ticketSeat: this.segFormTicketSeat,
           ticketPrice: this.segFormTicketPrice,
-          onSegFromChange: (v: string) => { this.segFormFrom = v; },
-          onSegToChange: (v: string) => { this.segFormTo = v; },
-          onSegTransportChange: (v: TransportMode) => { this.segFormTransport = v; },
-          onSegDepartTimeChange: (v: string) => { this.segFormDepartTime = v; },
-          onSegArriveTimeChange: (v: string) => { this.segFormArriveTime = v; },
-          onSegNoteChange: (v: string) => { this.segFormNote = v; },
-          onSegAccommodationChange: (v: string) => { this.segFormAccommodation = v; },
-          onTicketCodeChange: (v: string) => { this.segFormTicketCode = v; },
-          onTicketSeatChange: (v: string) => { this.segFormTicketSeat = v; },
-          onTicketPriceChange: (v: string) => { this.segFormTicketPrice = v; },
           onSubmitSegment: (segment: RouteSegment) => { this.handleSubmitSegment(segment); },
           onDeleteDayFromSheet: () => {
             this.handleDeleteDay(this.editingDayId);
@@ -2355,25 +2342,16 @@ await this.updateItinerary(next);
       }
       if (this.showEditItemPanel) {
         EditItemPanel({
-          editingItemName: this.editingItemName,
-          editingItemGroup: this.editingItemGroup,
-          editingItemWeight: this.editingItemWeight,
-          editingItemPrice: this.editingItemPrice,
-          errorText: this.errorText,
+          initialName: this.editingItemName,
+          initialGroup: this.editingItemGroup,
+          initialWeight: this.editingItemWeight,
+          initialPrice: this.editingItemPrice,
           categories: this.categories,
-          onNameChange: (value: string) => { this.editingItemName = value; },
-          onGroupChange: (value: string) => { this.editingItemGroup = value; },
-          onWeightChange: (value: string) => { this.editingItemWeight = value; },
-          onPriceChange: (value: string) => { this.editingItemPrice = value; },
-          onSave: () => { this.saveEditedItem(); },
+          onSave: (name: string, group: string, weight: string, price: string) => {
+            this.saveEditedItemWithData(name, group, weight, price);
+          },
           onClose: () => {
-            this.showEditItemPanel = false;
-            this.editingItemId = '';
-            this.editingItemName = '';
-            this.editingItemGroup = '其他';
-            this.editingItemWeight = '';
-            this.editingItemPrice = '';
-            this.errorText = '';
+            this.closeEditItemPanel();
           },
           onRename: (oldName: string, _newName: string) => { this.handleCategoryRename(oldName, ''); },
           onDelete: (category: string) => { this.handleCategoryDelete(category); },
@@ -2383,30 +2361,14 @@ await this.updateItinerary(next);
       }
       if (this.showEditGearPanel) {
         EditGearPanel({
-          gearName: this.gearName,
-          gearCategory: this.gearCategory,
-          gearWeight: this.gearWeight,
-          gearPrice: this.gearPrice,
-          gearNote: this.gearNote,
-          errorText: this.errorText,
+          initialName: this.gearName,
+          initialCategory: this.gearCategory,
+          initialWeight: this.gearWeight,
+          initialPrice: this.gearPrice,
+          initialNote: this.gearNote,
           categories: this.categories,
-          onNameChange: (value: string) => {
-            this.gearName = value;
-          },
-          onCategoryChange: (value: string) => {
-            this.gearCategory = value;
-          },
-          onWeightChange: (value: string) => {
-            this.gearWeight = value;
-          },
-          onPriceChange: (value: string) => {
-            this.gearPrice = value;
-          },
-          onNoteChange: (value: string) => {
-            this.gearNote = value;
-          },
-          onSave: () => {
-            this.saveGear();
+          onSave: (name: string, category: string, weight: string, price: string, note: string) => {
+            this.saveGearWithData(name, category, weight, price, note);
           },
           onClose: () => {
             this.closeEditGearPanel();
@@ -2419,36 +2381,9 @@ await this.updateItinerary(next);
       }
       if (this.showTripCeremony) {
         TripCeremonyCard({
-          tripTitle: this.ceremonyTripTitle,
-          tripDate: this.ceremonyTripDate,
-          tripDestination: this.ceremonyDestination,
-          tripDistanceKm: this.ceremonyDistanceKm,
-          tripMaxAltitude: this.ceremonyMaxAltitude,
-          tripAscentM: this.ceremonyAscentM,
-          tripDurationHours: this.ceremonyDurationHours,
-          onTitleChange: (value: string) => {
-            this.ceremonyTripTitle = value;
-          },
-          onDateChange: (value: string) => {
-            this.ceremonyTripDate = value;
-          },
-          onDestinationChange: (value: string) => {
-            this.ceremonyDestination = value;
-          },
-          onDistanceChange: (value: string) => {
-            this.ceremonyDistanceKm = value;
-          },
-          onAltitudeChange: (value: string) => {
-            this.ceremonyMaxAltitude = value;
-          },
-          onAscentChange: (value: string) => {
-            this.ceremonyAscentM = value;
-          },
-          onDurationChange: (value: string) => {
-            this.ceremonyDurationHours = value;
-          },
-          onFinish: () => {
-            this.finishTripCeremony();
+          onFinish: (title: string, date: string, destination: string,
+            distanceKm: string, maxAltitude: string, ascentM: string, durationHours: string) => {
+            this.finishTripCeremony(title, date, destination, distanceKm, maxAltitude, ascentM, durationHours);
           },
           onDismiss: () => {
             this.dismissTripCeremony();

@@ -35,22 +35,17 @@ import {
 
 @Component
 export struct TripCeremonyCard {
-  @Prop tripTitle: string = '';
-  @Prop tripDate: string = '';
-  @Prop tripDestination: string = '';
-  @Prop tripDistanceKm: string = '';
-  @Prop tripMaxAltitude: string = '';
-  @Prop tripAscentM: string = '';
-  @Prop tripDurationHours: string = '';
+  // 表单状态（组件自持，不再由 Index 传入）
+  @State tripTitle: string = '';
+  @State tripDate: string = '';
+  @State tripDestination: string = '';
+  @State tripDistanceKm: string = '';
+  @State tripMaxAltitude: string = '';
+  @State tripAscentM: string = '';
+  @State tripDurationHours: string = '';
 
-  onTitleChange: (value: string) => void = () => {};
-  onDateChange: (value: string) => void = () => {};
-  onDestinationChange: (value: string) => void = () => {};
-  onDistanceChange: (value: string) => void = () => {};
-  onAltitudeChange: (value: string) => void = () => {};
-  onAscentChange: (value: string) => void = () => {};
-  onDurationChange: (value: string) => void = () => {};
-  onFinish: () => void = () => {};
+  onFinish: (title: string, date: string, destination: string, distanceKm: string,
+    maxAltitude: string, ascentM: string, durationHours: string) => void = () => {};
   onDismiss: () => void = () => {};
   onExitStart: () => void = () => {};
 
@@ -542,8 +537,9 @@ return this.trackWidth - this.SLIDER_WIDTH;
     // 推力振动
     this.vibratePreset('haptic.effect.hard');
 
-    // 数据创建
-    this.onFinish();
+// 数据创建 — 将表单数据传递给 Index
+this.onFinish(this.tripTitle, this.tripDate, this.tripDestination,
+  this.tripDistanceKm, this.tripMaxAltitude, this.tripAscentM, this.tripDurationHours);
 
     // 100ms 后飞走
     let id = setTimeout(() => {
@@ -772,11 +768,11 @@ return this.trackWidth - this.SLIDER_WIDTH;
 
   private onChipValueChange(index: number, value: string): void {
     switch (index) {
-      case 0: this.onDestinationChange(value); break;
-      case 1: this.onDistanceChange(value); break;
-      case 2: this.onAltitudeChange(value); break;
-      case 3: this.onAscentChange(value); break;
-      case 4: this.onDurationChange(value); break;
+      case 0: this.tripDestination = value; break;
+      case 1: this.tripDistanceKm = value; break;
+      case 2: this.tripMaxAltitude = value; break;
+      case 3: this.tripAscentM = value; break;
+      case 4: this.tripDurationHours = value; break;
       default: break;
     }
   }
@@ -869,7 +865,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .borderRadius(10)
           .padding({ left: 12, right: 12 })
           .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.onDestinationChange(value); })
+          .onChange((value: string) => { this.tripDestination = value; })
       }
       if (this.activeChips[1]) {
         TextInput({ placeholder: '预计里程 km', text: this.tripDistanceKm })
@@ -884,7 +880,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .padding({ left: 12, right: 12 })
           .type(InputType.Number)
           .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.onDistanceChange(value); })
+          .onChange((value: string) => { this.tripDistanceKm = value; })
       }
       if (this.activeChips[2]) {
         TextInput({ placeholder: '最高海拔 m', text: this.tripMaxAltitude })
@@ -899,7 +895,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .padding({ left: 12, right: 12 })
           .type(InputType.Number)
           .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.onAltitudeChange(value); })
+          .onChange((value: string) => { this.tripMaxAltitude = value; })
       }
       if (this.activeChips[3]) {
         TextInput({ placeholder: '累计爬升 m', text: this.tripAscentM })
@@ -914,7 +910,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .padding({ left: 12, right: 12 })
           .type(InputType.Number)
           .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.onAscentChange(value); })
+          .onChange((value: string) => { this.tripAscentM = value; })
       }
       if (this.activeChips[4]) {
         TextInput({ placeholder: '预计时长 h', text: this.tripDurationHours })
@@ -929,7 +925,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
           .padding({ left: 12, right: 12 })
           .type(InputType.Number)
           .transition(TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: -6 })))
-          .onChange((value: string) => { this.onDurationChange(value); })
+          .onChange((value: string) => { this.tripDurationHours = value; })
       }
     }
     .width('100%')
@@ -1049,7 +1045,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
       // 行程名称输入
       Column() {
         this.InsetInput('给这次旅途取个名字吧', this.tripTitle, false, 2,
-          (value: string) => { this.onTitleChange(value); })
+          (value: string) => { this.tripTitle = value; })
       }
       .translate({ x: this.titleShakeX })
       .border({
@@ -1087,7 +1083,7 @@ return this.trackWidth - this.SLIDER_WIDTH;
             const month = value.getMonth() + 1;
             const day = value.getDate();
             const dateStr = year.toString() + '年' + month.toString() + '月' + day.toString() + '日';
-            this.onDateChange(dateStr);
+            this.tripDate = dateStr;
           }
         });
       })

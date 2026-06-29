@@ -11,7 +11,6 @@ export interface TicketInfoOverrides {
   code?: string;
   price?: number;
   seat?: string;
-  note?: string;
 }
 
 /**
@@ -23,8 +22,7 @@ export function cloneTicketInfo(source: TicketInfo, overrides?: TicketInfoOverri
     type: overrides?.type !== undefined ? overrides.type : source.type,
     code: overrides?.code !== undefined ? overrides.code : source.code,
     seat: overrides?.seat !== undefined ? overrides.seat : source.seat,
-    price: overrides?.price !== undefined ? overrides.price : source.price,
-    note: overrides?.note !== undefined ? overrides.note : source.note
+    price: overrides?.price !== undefined ? overrides.price : source.price
   };
 }
 

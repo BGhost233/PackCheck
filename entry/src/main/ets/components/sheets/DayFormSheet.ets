@@ -30,17 +30,19 @@ export struct DayFormSheet {
   // 编辑模式标识（非空 = 编辑已有天）
   @Prop editingDayId: string = '';
 
-  // 表单字段 — 受控模式，由外部传入
-  @Prop dayFrom: string = '';
-  @Prop dayTo: string = '';
-  @Prop dayDate: string = '';
-  @Prop dayNote: string = '';
+  // 初始值 props（由外部传入，仅用于初始化）
+  initialFrom: string = '';
+  initialTo: string = '';
+  initialDate: string = '';
+  initialNote: string = '';
+
+  // 表单字段 — 内部状态
+  @State dayFrom: string = '';
+  @State dayTo: string = '';
+  @State dayDate: string = '';
+  @State dayNote: string = '';
 
   // 回调
-  onFromChange: (v: string) => void = () => {};
-  onToChange: (v: string) => void = () => {};
-  onDateChange: (v: string) => void = () => {};
-  onNoteChange: (v: string) => void = () => {};
   // 新建模式：提交完整 DayItinerary（segments 为空，天级 from/to）
   onSubmitDay: (day: DayItinerary) => void = () => {};
   // 编辑模式：提交天级 patch（from/to/date/note 始终传字符串，'' = 清空）
@@ -51,6 +53,13 @@ export struct DayFormSheet {
   @State private buttonPressed: boolean = false;
   @State private deletePressed: boolean = false;
   @State private focusedField: string = '';
+
+  aboutToAppear(): void {
+    this.dayFrom = this.initialFrom;
+    this.dayTo = this.initialTo;
+    this.dayDate = this.initialDate;
+    this.dayNote = this.initialNote;
+  }
 
   private isFormValid(): boolean {
     return this.dayFrom.trim().length > 0 && this.dayTo.trim().length > 0;
@@ -73,7 +82,7 @@ export struct DayFormSheet {
           .border({ width: 1, color: this.focusedField === 'from' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
           .onFocus(() => { this.focusedField = 'from'; })
           .onBlur(() => { if (this.focusedField === 'from') this.focusedField = ''; })
-          .onChange((value: string) => { this.onFromChange(value); })
+          .onChange((value: string) => { this.dayFrom = value; })
 
         // 目的地（必填）
         TextInput({ placeholder: '到达哪里（必填）', text: this.dayTo })
@@ -89,7 +98,7 @@ export struct DayFormSheet {
           .border({ width: 1, color: this.focusedField === 'to' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
           .onFocus(() => { this.focusedField = 'to'; })
           .onBlur(() => { if (this.focusedField === 'to') this.focusedField = ''; })
-          .onChange((value: string) => { this.onToChange(value); })
+          .onChange((value: string) => { this.dayTo = value; })
 
         // 日期（可选，点击弹出 DatePickerDialog）
         Row() {
@@ -121,7 +130,7 @@ export struct DayFormSheet {
               const y = value.getFullYear();
               const m = (value.getMonth() + 1).toString().padStart(2, '0');
               const d = value.getDate().toString().padStart(2, '0');
-              this.onDateChange(`${y}-${m}-${d}`);
+              this.dayDate = `${y}-${m}-${d}`;
             }
           });
         })
@@ -140,7 +149,7 @@ export struct DayFormSheet {
           .border({ width: 1, color: this.focusedField === 'note' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
           .onFocus(() => { this.focusedField = 'note'; })
           .onBlur(() => { if (this.focusedField === 'note') this.focusedField = ''; })
-          .onChange((value: string) => { this.onNoteChange(value); })
+          .onChange((value: string) => { this.dayNote = value; })
 
         // 提交按钮
         Button(this.editingDayId.length === 0 ? '添加一天' : '保存修改')

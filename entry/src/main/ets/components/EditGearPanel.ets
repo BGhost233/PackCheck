@@ -41,20 +41,22 @@ const SUB_GAP: number = 6;
 
 @Component
 export struct EditGearPanel {
-  @Prop gearName: string = '';
-  @Prop gearCategory: string = '其他';
-  @Prop gearWeight: string = '';
-  @Prop gearPrice: string = '';
-  @Prop gearNote: string = '';
-  @Prop errorText: string = '';
+  // 初始值由 Index 传入，组件内以 @State 自持编辑
+  initialName: string = '';
+  initialCategory: string = '其他';
+  initialWeight: string = '';
+  initialPrice: string = '';
+  initialNote: string = '';
   @Prop categories: string[] = [];
 
-  onNameChange: (value: string) => void = () => {};
-  onCategoryChange: (value: string) => void = () => {};
-  onWeightChange: (value: string) => void = () => {};
-  onPriceChange: (value: string) => void = () => {};
-  onNoteChange: (value: string) => void = () => {};
-  onSave: () => void = () => {};
+  @State gearName: string = '';
+  @State gearCategory: string = '其他';
+  @State gearWeight: string = '';
+  @State gearPrice: string = '';
+  @State gearNote: string = '';
+  @State errorText: string = '';
+
+  onSave: (name: string, category: string, weight: string, price: string, note: string) => void = () => {};
   onClose: () => void = () => {};
   onRename: (oldName: string, newName: string) => void = () => {};
   onDelete: (category: string) => void = () => {};
@@ -68,6 +70,14 @@ export struct EditGearPanel {
   @State private closePressed: boolean = false;
 
   aboutToAppear(): void {
+    // 从初始值初始化 @State
+    this.gearName = this.initialName;
+    this.gearCategory = this.initialCategory;
+    this.gearWeight = this.initialWeight;
+    this.gearPrice = this.initialPrice;
+    this.gearNote = this.initialNote;
+    this.errorText = '';
+
     setTimeout(() => {
       this.getUIContext().animateTo({
         curve: SPRING_PANEL_ENTER()
@@ -146,7 +156,7 @@ export struct EditGearPanel {
           .borderRadius(SMALL_CARD_RADIUS)
           .padding({ left: 12, right: 12 })
           .onChange((value: string) => {
-            this.onNameChange(value);
+            this.gearName = value;
           })
 
         Text('选择分组')
@@ -163,7 +173,7 @@ export struct EditGearPanel {
             mode: 'single',
             editable: true,
             onSelect: (category: string) => {
-              this.onCategoryChange(category);
+              this.gearCategory = category;
             },
             onRename: (oldName: string, _newName: string) => {
               this.onRename(oldName, '');
@@ -185,10 +195,10 @@ export struct EditGearPanel {
         // 重量 + 价格
         Row({ space: ITEM_GAP }) {
           this.MetricInput('重量', this.gearWeight, 'g', (value: string) => {
-            this.onWeightChange(value);
+            this.gearWeight = value;
           })
           this.MetricInput('价格', this.gearPrice, '¥', (value: string) => {
-            this.onPriceChange(value);
+            this.gearPrice = value;
           })
         }
         .width('100%')
@@ -205,7 +215,7 @@ export struct EditGearPanel {
           .borderRadius(SMALL_CARD_RADIUS)
           .padding({ left: 12, right: 12 })
           .onChange((value: string) => {
-            this.onNoteChange(value);
+            this.gearNote = value;
           })
 
         if (this.errorText.length > 0) {
@@ -236,7 +246,11 @@ export struct EditGearPanel {
             }
           })
           .onClick(() => {
-            this.onSave();
+            if (this.gearName.trim().length === 0) {
+              this.errorText = '装备名称不能为空';
+              return;
+            }
+            this.onSave(this.gearName, this.gearCategory, this.gearWeight, this.gearPrice, this.gearNote);
           })
       }
       .width('85%')

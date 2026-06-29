@@ -32,7 +32,6 @@ export interface TicketInfo {
   code?: string;            // 航班号/车次
   seat?: string;            // 座位
   price?: number;           // 价格
-  note?: string;            // 备注
 }
 
 // 单段路程

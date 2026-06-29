@@ -27,7 +27,7 @@ import { RouteSegment, TransportMode, TicketInfo, makeId } from '../../models/Pa
 
 /**
  * 路段编辑表单 — 新增 / 编辑复用。
- * 受控模式：外部通过 @Prop 传入各字段，通过回调接收变更。
+ * 内聚模式：外部通过 initial* 传入初始值，组件内部 @State 管理表单状态。
  * 提交时组装完整 RouteSegment 通过 onSubmit 返回。
  */
 
@@ -53,30 +53,31 @@ export struct SegmentFormSheet {
   // 编辑模式：有 editingSegmentId 则为编辑，否则为新增
   @Prop editingSegmentId: string = '';
 
-  // 表单字段
-  @Prop segFrom: string = '';
-  @Prop segTo: string = '';
-  @Prop segTransport: TransportMode = 'other';
-  @Prop segDepartTime: string = '';
-  @Prop segArriveTime: string = '';
-  @Prop segNote: string = '';
-  @Prop segAccommodation: string = '';
-  // 票务（可选展开）
-  @Prop ticketCode: string = '';
-  @Prop ticketSeat: string = '';
-  @Prop ticketPrice: string = '';
+  // 初始值（外部传入，仅在 aboutToAppear 时赋给 @State）
+  initialFrom: string = '';
+  initialTo: string = '';
+  initialTransport: TransportMode = 'other';
+  initialDepartTime: string = '';
+  initialArriveTime: string = '';
+  initialNote: string = '';
+  initialAccommodation: string = '';
+  initialTicketCode: string = '';
+  initialTicketSeat: string = '';
+  initialTicketPrice: string = '';
+
+  // 表单状态（组件内部管理）
+  @State segFrom: string = '';
+  @State segTo: string = '';
+  @State segTransport: TransportMode = 'other';
+  @State segDepartTime: string = '';
+  @State segArriveTime: string = '';
+  @State segNote: string = '';
+  @State segAccommodation: string = '';
+  @State ticketCode: string = '';
+  @State ticketSeat: string = '';
+  @State ticketPrice: string = '';
 
   // 回调
-  onFromChange: (v: string) => void = () => {};
-  onToChange: (v: string) => void = () => {};
-  onTransportChange: (v: TransportMode) => void = () => {};
-  onDepartTimeChange: (v: string) => void = () => {};
-  onArriveTimeChange: (v: string) => void = () => {};
-  onNoteChange: (v: string) => void = () => {};
-  onAccommodationChange: (v: string) => void = () => {};
-  onTicketCodeChange: (v: string) => void = () => {};
-  onTicketSeatChange: (v: string) => void = () => {};
-  onTicketPriceChange: (v: string) => void = () => {};
   onSubmit: (segment: RouteSegment) => void = () => {};
   onDeleteSegment: () => void = () => {};
 
@@ -84,6 +85,19 @@ export struct SegmentFormSheet {
   @State private deletePressed: boolean = false;
   @State private showTicket: boolean = false;
   @State private focusedField: string = '';
+
+  aboutToAppear(): void {
+    this.segFrom = this.initialFrom;
+    this.segTo = this.initialTo;
+    this.segTransport = this.initialTransport;
+    this.segDepartTime = this.initialDepartTime;
+    this.segArriveTime = this.initialArriveTime;
+    this.segNote = this.initialNote;
+    this.segAccommodation = this.initialAccommodation;
+    this.ticketCode = this.initialTicketCode;
+    this.ticketSeat = this.initialTicketSeat;
+    this.ticketPrice = this.initialTicketPrice;
+  }
 
   private isFormValid(): boolean {
     return this.segFrom.trim().length > 0 && this.segTo.trim().length > 0;
@@ -130,7 +144,7 @@ export struct SegmentFormSheet {
           .border({ width: 1, color: this.focusedField === 'from' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
           .onFocus(() => { this.focusedField = 'from'; })
           .onBlur(() => { if (this.focusedField === 'from') this.focusedField = ''; })
-          .onChange((value: string) => { this.onFromChange(value); })
+          .onChange((value: string) => { this.segFrom = value; })
 
         // 到达地（必填）
         TextInput({ placeholder: '到达地（必填）', text: this.segTo })
@@ -146,7 +160,7 @@ export struct SegmentFormSheet {
           .border({ width: 1, color: this.focusedField === 'to' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
           .onFocus(() => { this.focusedField = 'to'; })
           .onBlur(() => { if (this.focusedField === 'to') this.focusedField = ''; })
-          .onChange((value: string) => { this.onToChange(value); })
+          .onChange((value: string) => { this.segTo = value; })
 
         // 交通方式 Chip 选择器
         Text('交通方式')
@@ -161,7 +175,7 @@ export struct SegmentFormSheet {
               .backgroundColor(this.segTransport === mode ? PRIMARY_COLOR : CHIP_BG_DEFAULT)
               .borderRadius(16)
               .padding({ left: 12, right: 12, top: 6, bottom: 6 })
-              .onClick(() => { this.onTransportChange(mode); })
+              .onClick(() => { this.segTransport = mode; })
           })
         }
         .width('100%')
@@ -182,7 +196,7 @@ export struct SegmentFormSheet {
             .border({ width: 1, color: this.focusedField === 'depart' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
             .onFocus(() => { this.focusedField = 'depart'; })
             .onBlur(() => { if (this.focusedField === 'depart') this.focusedField = ''; })
-            .onChange((value: string) => { this.onDepartTimeChange(value); })
+            .onChange((value: string) => { this.segDepartTime = value; })
           TextInput({ placeholder: '到达 HH:mm', text: this.segArriveTime })
             .type(InputType.Normal)
             .maxLength(5)
@@ -197,7 +211,7 @@ export struct SegmentFormSheet {
             .border({ width: 1, color: this.focusedField === 'arrive' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
             .onFocus(() => { this.focusedField = 'arrive'; })
             .onBlur(() => { if (this.focusedField === 'arrive') this.focusedField = ''; })
-            .onChange((value: string) => { this.onArriveTimeChange(value); })
+            .onChange((value: string) => { this.segArriveTime = value; })
         }
 
         // 票务信息（折叠区）
@@ -234,7 +248,7 @@ export struct SegmentFormSheet {
               .border({ width: 1, color: this.focusedField === 'ticketCode' ? PRIMARY_COLOR : Color.Transparent, radius: 10 })
               .onFocus(() => { this.focusedField = 'ticketCode'; })
               .onBlur(() => { if (this.focusedField === 'ticketCode') this.focusedField = ''; })
-              .onChange((v: string) => { this.onTicketCodeChange(v); })
+              .onChange((v: string) => { this.ticketCode = v; })
             TextInput({ placeholder: '座位', text: this.ticketSeat })
               .type(InputType.Normal)
               .maxLength(100)
@@ -249,7 +263,7 @@ export struct SegmentFormSheet {
               .border({ width: 1, color: this.focusedField === 'ticketSeat' ? PRIMARY_COLOR : Color.Transparent, radius: 10 })
               .onFocus(() => { this.focusedField = 'ticketSeat'; })
               .onBlur(() => { if (this.focusedField === 'ticketSeat') this.focusedField = ''; })
-              .onChange((v: string) => { this.onTicketSeatChange(v); })
+              .onChange((v: string) => { this.ticketSeat = v; })
             TextInput({ placeholder: '¥', text: this.ticketPrice })
               .type(InputType.Number)
               .maxLength(20)
@@ -264,7 +278,7 @@ export struct SegmentFormSheet {
               .border({ width: 1, color: this.focusedField === 'ticketPrice' ? PRIMARY_COLOR : Color.Transparent, radius: 10 })
               .onFocus(() => { this.focusedField = 'ticketPrice'; })
               .onBlur(() => { if (this.focusedField === 'ticketPrice') this.focusedField = ''; })
-              .onChange((v: string) => { this.onTicketPriceChange(v); })
+              .onChange((v: string) => { this.ticketPrice = v; })
           }
           .transition(
             TransitionEffect.asymmetric(
@@ -290,7 +304,7 @@ export struct SegmentFormSheet {
           .border({ width: 1, color: this.focusedField === 'accommodation' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
           .onFocus(() => { this.focusedField = 'accommodation'; })
           .onBlur(() => { if (this.focusedField === 'accommodation') this.focusedField = ''; })
-          .onChange((value: string) => { this.onAccommodationChange(value); })
+          .onChange((value: string) => { this.segAccommodation = value; })
 
         // 备注
         TextInput({ placeholder: '备注（可选）', text: this.segNote })
@@ -306,7 +320,7 @@ export struct SegmentFormSheet {
           .border({ width: 1, color: this.focusedField === 'note' ? PRIMARY_COLOR : Color.Transparent, radius: 12 })
           .onFocus(() => { this.focusedField = 'note'; })
           .onBlur(() => { if (this.focusedField === 'note') this.focusedField = ''; })
-          .onChange((value: string) => { this.onNoteChange(value); })
+          .onChange((value: string) => { this.segNote = value; })
 
         // 提交按钮
         Button(this.editingSegmentId.length === 0 ? '添加路段' : '保存修改')

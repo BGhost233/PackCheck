@@ -30,18 +30,20 @@ import { CategoryTagGroup } from './CategoryTagGroup';
 
 @Component
 export struct EditItemPanel {
-  @Prop editingItemName: string = '';
-  @Prop editingItemGroup: string = '其他';
-  @Prop editingItemWeight: string = '';
-  @Prop editingItemPrice: string = '';
-  @Prop errorText: string = '';
+  // 初始值由 Index 传入，组件内以 @State 自持编辑
+  initialName: string = '';
+  initialGroup: string = '其他';
+  initialWeight: string = '';
+  initialPrice: string = '';
   @Prop categories: string[] = [];
 
-  onNameChange: (value: string) => void = () => {};
-  onGroupChange: (value: string) => void = () => {};
-  onWeightChange: (value: string) => void = () => {};
-  onPriceChange: (value: string) => void = () => {};
-  onSave: () => void = () => {};
+  @State editingItemName: string = '';
+  @State editingItemGroup: string = '其他';
+  @State editingItemWeight: string = '';
+  @State editingItemPrice: string = '';
+  @State errorText: string = '';
+
+  onSave: (name: string, group: string, weight: string, price: string) => void = () => {};
   onClose: () => void = () => {};
   onRename: (oldName: string, newName: string) => void = () => {};
   onDelete: (category: string) => void = () => {};
@@ -56,6 +58,13 @@ export struct EditItemPanel {
   private entryTimerId: number = -1;
 
   aboutToAppear(): void {
+    // 从初始值初始化 @State
+    this.editingItemName = this.initialName;
+    this.editingItemGroup = this.initialGroup;
+    this.editingItemWeight = this.initialWeight;
+    this.editingItemPrice = this.initialPrice;
+    this.errorText = '';
+
     this.entryTimerId = setTimeout(() => {
       this.entryTimerId = -1;
       this.getUIContext().animateTo({
@@ -142,7 +151,7 @@ export struct EditItemPanel {
           .borderRadius(12)
           .padding({ left: 12, right: 12 })
           .onChange((value: string) => {
-            this.onNameChange(value);
+            this.editingItemName = value;
           })
 
         Text('所属分组')
@@ -157,7 +166,7 @@ export struct EditItemPanel {
           mode: 'single',
           editable: true,
           onSelect: (category: string) => {
-            this.onGroupChange(category);
+            this.editingItemGroup = category;
           },
           onRename: (oldName: string, _newName: string) => {
             this.onRename(oldName, '');
@@ -176,10 +185,10 @@ export struct EditItemPanel {
         // 重量 + 价格
         Row({ space: 12 }) {
           this.MetricInput('重量', this.editingItemWeight, 'g', (value: string) => {
-            this.onWeightChange(value);
+            this.editingItemWeight = value;
           })
           this.MetricInput('价格', this.editingItemPrice, '¥', (value: string) => {
-            this.onPriceChange(value);
+            this.editingItemPrice = value;
           })
         }
         .width('100%')
@@ -210,7 +219,11 @@ export struct EditItemPanel {
             }
           })
           .onClick(() => {
-            this.onSave();
+            if (this.editingItemName.trim().length === 0) {
+              this.errorText = '物品名称不能为空';
+              return;
+            }
+            this.onSave(this.editingItemName, this.editingItemGroup, this.editingItemWeight, this.editingItemPrice);
           })
       }
       .width('85%')

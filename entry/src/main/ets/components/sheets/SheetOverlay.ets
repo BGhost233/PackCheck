@@ -126,21 +126,17 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
   onActionViewDetail: (item: ChecklistItem) => void = () => {};
   onActionRemove: (itemId: string) => void = () => {};
 
-  // DayForm props & callbacks（天级 4 字段：出发地/目的地/日期/备注）
+  // DayForm props & callbacks（子组件自持编辑状态，仅传初始值）
   @Prop editingDayId: string = '';
   @Prop dayFrom: string = '';
   @Prop dayTo: string = '';
   @Prop dayDate: string = '';
   @Prop dayNote: string = '';
-  onDayFromChange: (v: string) => void = () => {};
-  onDayToChange: (v: string) => void = () => {};
-  onDayDateChange: (v: string) => void = () => {};
-  onDayNoteChange: (v: string) => void = () => {};
   onSubmitDay: (day: DayItinerary) => void = () => {};
   onSubmitEditDay: (dayId: string, from: string, to: string, date: string, note: string) => void = () => {};
   onDeleteDayFromSheet: () => void = () => {};
 
-  // SegmentForm props & callbacks
+  // SegmentForm props & callbacks（子组件自持编辑状态，仅传初始值）
   @Prop editingSegmentId: string = '';
   @Prop segFrom: string = '';
   @Prop segTo: string = '';
@@ -152,16 +148,6 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
   @Prop ticketCode: string = '';
   @Prop ticketSeat: string = '';
   @Prop ticketPrice: string = '';
-  onSegFromChange: (v: string) => void = () => {};
-  onSegToChange: (v: string) => void = () => {};
-  onSegTransportChange: (v: TransportMode) => void = () => {};
-  onSegDepartTimeChange: (v: string) => void = () => {};
-  onSegArriveTimeChange: (v: string) => void = () => {};
-  onSegNoteChange: (v: string) => void = () => {};
-  onSegAccommodationChange: (v: string) => void = () => {};
-  onTicketCodeChange: (v: string) => void = () => {};
-  onTicketSeatChange: (v: string) => void = () => {};
-  onTicketPriceChange: (v: string) => void = () => {};
   onSubmitSegment: (segment: RouteSegment) => void = () => {};
   onDeleteSegmentFromSheet: () => void = () => {};
 
@@ -325,14 +311,10 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
         } else if (this.sheetMode === SHEET_DAY_FORM) {
           DayFormSheet({
             editingDayId: this.editingDayId,
-            dayFrom: this.dayFrom,
-            dayTo: this.dayTo,
-            dayDate: this.dayDate,
-            dayNote: this.dayNote,
-            onFromChange: this.onDayFromChange,
-            onToChange: this.onDayToChange,
-            onDateChange: this.onDayDateChange,
-            onNoteChange: this.onDayNoteChange,
+            initialFrom: this.dayFrom,
+            initialTo: this.dayTo,
+            initialDate: this.dayDate,
+            initialNote: this.dayNote,
             onSubmitDay: this.onSubmitDay,
             onSubmitEdit: this.onSubmitEditDay,
             onDeleteDay: this.onDeleteDayFromSheet
@@ -340,26 +322,16 @@ onPickerAddGear: (name: string, zone: string, weight: number | undefined, catego
         } else if (this.sheetMode === SHEET_SEGMENT_FORM) {
           SegmentFormSheet({
             editingSegmentId: this.editingSegmentId,
-            segFrom: this.segFrom,
-            segTo: this.segTo,
-            segTransport: this.segTransport,
-            segDepartTime: this.segDepartTime,
-            segArriveTime: this.segArriveTime,
-            segNote: this.segNote,
-            segAccommodation: this.segAccommodation,
-            ticketCode: this.ticketCode,
-            ticketSeat: this.ticketSeat,
-            ticketPrice: this.ticketPrice,
-            onFromChange: this.onSegFromChange,
-            onToChange: this.onSegToChange,
-            onTransportChange: this.onSegTransportChange,
-            onDepartTimeChange: this.onSegDepartTimeChange,
-            onArriveTimeChange: this.onSegArriveTimeChange,
-            onNoteChange: this.onSegNoteChange,
-            onAccommodationChange: this.onSegAccommodationChange,
-            onTicketCodeChange: this.onTicketCodeChange,
-            onTicketSeatChange: this.onTicketSeatChange,
-            onTicketPriceChange: this.onTicketPriceChange,
+            initialFrom: this.segFrom,
+            initialTo: this.segTo,
+            initialTransport: this.segTransport,
+            initialDepartTime: this.segDepartTime,
+            initialArriveTime: this.segArriveTime,
+            initialNote: this.segNote,
+            initialAccommodation: this.segAccommodation,
+            initialTicketCode: this.ticketCode,
+            initialTicketSeat: this.ticketSeat,
+            initialTicketPrice: this.ticketPrice,
             onSubmit: this.onSubmitSegment,
             onDeleteSegment: this.onDeleteSegmentFromSheet
           })
