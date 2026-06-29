@@ -374,6 +374,124 @@ export function findLatestChecklist(checklists: TripChecklist[]): TripChecklist 
   return checklists[0];
 }
 
+// ─── Wave 2C：从 HomePage 提取的纯计算 ──────────────────────────────────
+
+/**
+ * 距出发还有多少天（正数=未来，0=今天，负数=已过）。
+ */
+export function daysLeftCount(checklist: TripChecklist): number | undefined {
+  const dateAt = checklistDateAt(checklist);
+  if (dateAt === undefined) {
+    return undefined;
+  }
+  return Math.floor((dateAt - startOfDay(new Date())) / 86400000);
+}
+
+/**
+ * 未来行程列表（dateAt >= 今天），按 dateAt 升序。
+ */
+export function futureTrips(checklists: TripChecklist[]): TripChecklist[] {
+  const today = startOfDay(new Date());
+  const result: TripChecklist[] = [];
+  for (let i = 0; i < checklists.length; i++) {
+    const dateAt = checklistDateAt(checklists[i]);
+    if (dateAt !== undefined && dateAt >= today) {
+      result.push(checklists[i]);
+    }
+  }
+  result.sort((a: TripChecklist, b: TripChecklist) => {
+    const da = checklistDateAt(a);
+    const db = checklistDateAt(b);
+    if (da === undefined || db === undefined) { return 0; }
+    return da - db;
+  });
+  return result;
+}
+
+/**
+ * 过去行程 + 无日期行程（有日期的按 dateAt 降序，无日期的按 createdAt 降序排后面）。
+ */
+export function pastTrips(checklists: TripChecklist[]): TripChecklist[] {
+  const today = startOfDay(new Date());
+  const withDate: TripChecklist[] = [];
+  const noDate: TripChecklist[] = [];
+  for (let i = 0; i < checklists.length; i++) {
+    const dateAt = checklistDateAt(checklists[i]);
+    if (dateAt === undefined) {
+      noDate.push(checklists[i]);
+    } else if (dateAt < today) {
+      withDate.push(checklists[i]);
+    }
+  }
+  withDate.sort((a: TripChecklist, b: TripChecklist) => {
+    const da = checklistDateAt(a);
+    const db = checklistDateAt(b);
+    if (da === undefined || db === undefined) { return 0; }
+    return db - da;
+  });
+  noDate.sort((a: TripChecklist, b: TripChecklist) => b.createdAt - a.createdAt);
+  const combined: TripChecklist[] = [];
+  for (let i = 0; i < withDate.length; i++) {
+    combined.push(withDate[i]);
+  }
+  for (let i = 0; i < noDate.length; i++) {
+    combined.push(noDate[i]);
+  }
+  return combined;
+}
+
+/**
+ * 倒计时主数字（用于 HeroCard 大字展示）。
+ */
+export function countdownLead(checklist: TripChecklist): string {
+  const days = daysLeftCount(checklist);
+  if (days === undefined) {
+    return '待定';
+  }
+  if (days > 0) {
+    return days.toString();
+  }
+  if (days === 0) {
+    return '今天';
+  }
+  return Math.abs(days).toString();
+}
+
+/**
+ * 倒计时后缀文本。
+ */
+export function countdownSuffix(checklist: TripChecklist): string {
+  const days = daysLeftCount(checklist);
+  if (days === undefined) {
+    return '';
+  }
+  if (days > 0) {
+    return ' 天后出发';
+  }
+  if (days === 0) {
+    return ' 出发！';
+  }
+  return ' 天前出发';
+}
+
+/**
+ * 行程行日期文本（用于行程列表行展示）。
+ */
+export function rowDateText(checklist: TripChecklist): string {
+  const dateAt = checklistDateAt(checklist);
+  if (dateAt === undefined) {
+    return '日期待定';
+  }
+  const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
+  if (dayDiff > 0) {
+    return '还有 ' + dayDiff.toString() + ' 天';
+  }
+  if (dayDiff === 0) {
+    return '今天出发';
+  }
+  return Math.abs(dayDiff).toString() + ' 天前';
+}
+
 export function addItemsToChecklist(checklists: TripChecklist[], checklistId: string, items: ChecklistItem[]): TripChecklist[] {
   const nextChecklists: TripChecklist[] = [];
   for (let index = 0; index < checklists.length; index++) {

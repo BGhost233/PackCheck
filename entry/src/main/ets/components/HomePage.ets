@@ -6,7 +6,16 @@ import {
   progressTotal,
   isChecklistDone,
   startOfDay,
-  checklistDateAt
+  checklistDateAt,
+  findLatestChecklist,
+  daysLeftCount,
+  countdownLead,
+  countdownSuffix,
+  rowDateText,
+  futureTrips,
+  pastTrips,
+  checklistItemWeight,
+  checklistTotalWeight
 } from '../services/ChecklistService';
 import {
   AMBER_ACCENT,
@@ -107,7 +116,7 @@ export struct HomePage {
   private celebrateTimerId: number = -1;
 
   private onChecklistsChange(): void {
-    this.cachedLatest = this.computeLatestChecklist();
+    this.cachedLatest = findLatestChecklist(this.checklists);
   }
 
   private onChecklistRenderNonceChange(): void {
@@ -200,14 +209,14 @@ export struct HomePage {
 
   private getAnimatedHeroLead(checklist: TripChecklist): string {
     if (this.heroNumberAnimated) {
-      return this.countdownLead(checklist);
+      return countdownLead(checklist);
     }
-    const days = this.daysLeft(checklist);
+    const days = daysLeftCount(checklist);
     if (days === undefined) {
-      return this.countdownLead(checklist);
+      return countdownLead(checklist);
     }
     if (days === 0) {
-      return this.countdownLead(checklist);
+      return countdownLead(checklist);
     }
     return Math.round(this.heroDaysDisplay).toString();
   }
@@ -218,12 +227,12 @@ export struct HomePage {
       this.heroNumberAnimated = true;
       return;
     }
-    const days = this.daysLeft(checklist);
+    const days = daysLeftCount(checklist);
     if (days === undefined || days === 0) {
       this.heroNumberAnimated = true;
       return;
     }
-    const target = Math.abs(days);
+    const target: number = Math.abs(days);
     this.getUIContext().animateTo({
       curve: SPRING_GENERAL(),
       onFinish: (): void => {
@@ -254,118 +263,20 @@ export struct HomePage {
   private latestChecklist(): TripChecklist | undefined {
     // 直接返回 @Watch('onChecklistsChange') 预缓存的结果，避免 build 内多次 O(N) 扫描
     if (this.cachedLatest === undefined) {
-      this.cachedLatest = this.computeLatestChecklist();
+      this.cachedLatest = findLatestChecklist(this.checklists);
     }
     return this.cachedLatest;
-  }
-
-  private computeLatestChecklist(): TripChecklist | undefined {
-    if (this.checklists.length === 0) {
-      return undefined;
-    }
-    const today = startOfDay(new Date());
-    // 找最近的未来行程（dateAt >= 今天0点），按 dateAt 升序取第一个
-    let nearestFuture: TripChecklist | undefined = undefined;
-    for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = checklistDateAt(this.checklists[i]);
-      if (dateAt !== undefined && dateAt >= today) {
-        const nearestDateAt = nearestFuture !== undefined ? checklistDateAt(nearestFuture) : undefined;
-        if (nearestFuture === undefined || (nearestDateAt !== undefined && dateAt < nearestDateAt)) {
-          nearestFuture = this.checklists[i];
-        }
-      }
-    }
-    if (nearestFuture !== undefined) {
-      return nearestFuture;
-    }
-    // 无未来行程，找最近的历史行程（dateAt < 今天0点），按 dateAt 降序取第一个
-    let latestPast: TripChecklist | undefined = undefined;
-    for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = checklistDateAt(this.checklists[i]);
-      if (dateAt !== undefined && dateAt < today) {
-        const latestDateAt = latestPast !== undefined ? checklistDateAt(latestPast) : undefined;
-        if (latestPast === undefined || (latestDateAt !== undefined && dateAt > latestDateAt)) {
-          latestPast = this.checklists[i];
-        }
-      }
-    }
-    if (latestPast !== undefined) {
-      return latestPast;
-    }
-    // 全部无日期，按 createdAt 降序取第一个（checklists 已按 createdAt 降序排列）
-    return this.checklists[0];
   }
 
   private homeStatusText(): string {
     if (this.checklists.length === 0) {
       return '还没有行程，创建一个吧';
     }
-    const futureCount = this.futureTrips().length;
+    const futureCount = futureTrips(this.checklists).length;
     if (futureCount > 0) {
       return futureCount.toString() + ' 个行程待出发';
     }
-    return '已完成 ' + this.pastTrips().length.toString() + ' 个行程';
-  }
-
-  private daysLeft(checklist: TripChecklist): number | undefined {
-    const dateAt = checklistDateAt(checklist);
-    if (dateAt === undefined) {
-      return undefined;
-    }
-    return Math.floor((dateAt - startOfDay(new Date())) / 86400000);
-  }
-
-  private countdownLead(checklist: TripChecklist): string {
-    const days = this.daysLeft(checklist);
-    if (days === undefined) {
-      return '待定';
-    }
-    if (days > 0) {
-      return days.toString();
-    }
-    if (days === 0) {
-      return '今天';
-    }
-    return Math.abs(days).toString();
-  }
-
-  private countdownSuffix(checklist: TripChecklist): string {
-    const days = this.daysLeft(checklist);
-    if (days === undefined) {
-      return '';
-    }
-    if (days > 0) {
-      return ' 天后出发';
-    }
-    if (days === 0) {
-      return ' 出发！';
-    }
-    return ' 天前出发';
-  }
-
-  private checklistItemWeight(item: ChecklistItem): number | undefined {
-    if (item.weight !== undefined) {
-      return item.weight;
-    }
-    if (item.fromGearId !== undefined) {
-      for (let index = 0; index < this.gears.length; index++) {
-        if (this.gears[index].id === item.fromGearId) {
-          return this.gears[index].weight;
-        }
-      }
-    }
-    return undefined;
-  }
-
-  private checklistTotalWeight(checklist: TripChecklist): number {
-    let total = 0;
-    for (let index = 0; index < checklist.items.length; index++) {
-      const weight = this.checklistItemWeight(checklist.items[index]);
-      if (weight !== undefined) {
-        total += weight;
-      }
-    }
-    return total;
+    return '已完成 ' + pastTrips(this.checklists).length.toString() + ' 个行程';
   }
 
   private heroSubtitleText(): string {
@@ -385,7 +296,7 @@ export struct HomePage {
       parts.push('未设置日期');
     }
     // 总重
-    parts.push(formatKg(this.checklistTotalWeight(checklist)));
+    parts.push(formatKg(checklistTotalWeight(checklist, this.gears)));
     return parts.join(' · ');
   }
 
@@ -406,7 +317,7 @@ export struct HomePage {
     if (c === undefined) {
       return undefined;
     }
-    return this.daysLeft(c);
+    return daysLeftCount(c);
   }
 
   private heroStatusLabel(): string {
@@ -454,7 +365,7 @@ export struct HomePage {
     if (c === undefined) {
       return '';
     }
-    return this.countdownSuffix(c);
+    return countdownSuffix(c);
   }
 
   private heroProgressTotal(): number {
@@ -471,21 +382,6 @@ export struct HomePage {
       return '0';
     }
     return c.items.length.toString();
-  }
-
-  private rowDateText(item: TripChecklist): string {
-    const dateAt = checklistDateAt(item);
-    if (dateAt === undefined) {
-      return '日期待定';
-    }
-    const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
-    if (dayDiff > 0) {
-      return '还有 ' + dayDiff.toString() + ' 天';
-    }
-    if (dayDiff === 0) {
-      return '今天出发';
-    }
-    return Math.abs(dayDiff).toString() + ' 天前';
   }
 
   private rowDateColor(item: TripChecklist): string {
@@ -514,55 +410,6 @@ export struct HomePage {
     }
     const dayDiff = Math.floor((dateAt - startOfDay(new Date())) / 86400000);
     return dayDiff === 0 ? FontWeight.Bold : FontWeight.Normal;
-  }
-
-  private futureTrips(): TripChecklist[] {
-    const today = startOfDay(new Date());
-    const result: TripChecklist[] = [];
-    for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = checklistDateAt(this.checklists[i]);
-      if (dateAt !== undefined && dateAt >= today) {
-        result.push(this.checklists[i]);
-      }
-    }
-    // 按 dateAt 升序排列（最近的在前）— 已过滤确保 dateAt 非空
-    result.sort((a: TripChecklist, b: TripChecklist) => {
-      const da = checklistDateAt(a);
-      const db = checklistDateAt(b);
-      if (da === undefined || db === undefined) { return 0; }
-      return da - db;
-    });
-    return result;
-  }
-
-  private pastTrips(): TripChecklist[] {
-    const today = startOfDay(new Date());
-    const withDate: TripChecklist[] = [];
-    const noDate: TripChecklist[] = [];
-    for (let i = 0; i < this.checklists.length; i++) {
-      const dateAt = checklistDateAt(this.checklists[i]);
-      if (dateAt === undefined) {
-        noDate.push(this.checklists[i]);
-      } else if (dateAt < today) {
-        withDate.push(this.checklists[i]);
-      }
-    }
-    // 有日期的按 dateAt 降序（最近的在前），无日期的按 createdAt 降序排后面
-    withDate.sort((a: TripChecklist, b: TripChecklist) => {
-      const da = checklistDateAt(a);
-      const db = checklistDateAt(b);
-      if (da === undefined || db === undefined) { return 0; }
-      return db - da;
-    });
-    noDate.sort((a: TripChecklist, b: TripChecklist) => b.createdAt - a.createdAt);
-    const combined: TripChecklist[] = [];
-    for (let i = 0; i < withDate.length; i++) {
-      combined.push(withDate[i]);
-    }
-    for (let i = 0; i < noDate.length; i++) {
-      combined.push(noDate[i]);
-    }
-    return combined;
   }
 
   private checkCelebration(): void {
@@ -596,7 +443,7 @@ export struct HomePage {
     if (latest === undefined) {
       return '';
     }
-    const days = this.daysLeft(latest);
+    const days = daysLeftCount(latest);
     if (days === undefined) {
       return '· ' + latest.title;
     }
@@ -919,7 +766,7 @@ export struct HomePage {
     if (this.checklists.length === 0) {
       return 64;
     }
-    const hasBoth = this.futureTrips().length > 0 && this.pastTrips().length > 0;
+    const hasBoth = futureTrips(this.checklists).length > 0 && pastTrips(this.checklists).length > 0;
     // 即将启程 28vp + 走过的路 36vp + margin top 16vp = 80vp
     return this.checklists.length * 60 + (hasBoth ? 80 : 0);
   }
@@ -941,7 +788,7 @@ export struct HomePage {
           .textAlign(TextAlign.Center)
       } else {
         List({ scroller: this.historyListScroller }) {
-          if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
+          if (futureTrips(this.checklists).length > 0 && pastTrips(this.checklists).length > 0) {
             ListItem() {
               Text('即将启程')
                 .fontSize(FONT_SIZE_BODY_SMALL)
@@ -954,7 +801,7 @@ export struct HomePage {
             .height(28)
             .selectable(false)
           }
-          ForEach(this.futureTrips(), (item: TripChecklist, index: number) => {
+          ForEach(futureTrips(this.checklists), (item: TripChecklist, index: number) => {
             ListItem() {
               this.HistoryRow(item);
             }
@@ -974,7 +821,7 @@ export struct HomePage {
               }
             })
           }, (item: TripChecklist) => item.id + '_' + item.items.length.toString() + '_' + this.checklistRenderNonce.toString())
-          if (this.futureTrips().length > 0 && this.pastTrips().length > 0) {
+          if (futureTrips(this.checklists).length > 0 && pastTrips(this.checklists).length > 0) {
             ListItem() {
               Text('走过的路')
                 .fontSize(FONT_SIZE_BODY_SMALL)
@@ -988,13 +835,13 @@ export struct HomePage {
             .margin({ top: 16 })
             .selectable(false)
           }
-          ForEach(this.pastTrips(), (item: TripChecklist, index: number) => {
+          ForEach(pastTrips(this.checklists), (item: TripChecklist, index: number) => {
             ListItem() {
               this.HistoryRow(item);
             }
             .opacity(this.historyStaggerReady ? 1 : 0)
             .translate({ y: this.historyStaggerReady ? 0 : STAGGER_OFFSET_Y })
-            .animation({ delay: staggerDelay(this.futureTrips().length + index), curve: SPRING_GENERAL() })
+            .animation({ delay: staggerDelay(futureTrips(this.checklists).length + index), curve: SPRING_GENERAL() })
             .onClick(() => {
               this.onOpenChecklist(item.id);
             })
@@ -1051,7 +898,7 @@ export struct HomePage {
             .fontColor(TEXT_TERTIARY)
             .fontFeature(FONT_FEATURE_TNUM)
         }
-        Text(this.rowDateText(item))
+        Text(rowDateText(item))
           .fontSize(FONT_SIZE_CAPTION)
           .fontColor(this.rowDateColor(item))
           .fontWeight(this.rowDateBold(item))
