@@ -547,3 +547,154 @@ export function updateItemFields(checklists: TripChecklist[], checklistId: strin
   }
   return result;
 }
+
+// ─── Wave 2A：从 Index.ets 提取的纯数据变换 ────────────────────────────
+
+/**
+ * 将指定 item 移动到目标 zone（插入到该 zone 第一个 item 之前），返回新数组。
+ * F-1：落点对齐目标格顶部。若目标 zone 为空，插到末尾。
+ */
+export function moveChecklistItemToZone(checklists: TripChecklist[], checklistId: string,
+  itemId: string, zone: string): TripChecklist[] {
+  const result: TripChecklist[] = [];
+  for (let index = 0; index < checklists.length; index++) {
+    const cl = checklists[index];
+    if (cl.id !== checklistId) {
+      result.push(cl);
+      continue;
+    }
+    const targetItem = cl.items.find(item => item.id === itemId);
+    if (targetItem === undefined) {
+      result.push(cl);
+      continue;
+    }
+    const movedItem = cloneChecklistItem(targetItem, { group: zone });
+    const withoutMoved = cl.items.filter(item => item.id !== itemId);
+    let insertAt = withoutMoved.length;
+    for (let i = 0; i < withoutMoved.length; i++) {
+      if (withoutMoved[i].group === zone) {
+        insertAt = i;
+        break;
+      }
+    }
+    const updatedItems = withoutMoved.slice();
+    updatedItems.splice(insertAt, 0, movedItem);
+    result.push(cloneChecklist(cl, { items: updatedItems }));
+  }
+  return result;
+}
+
+/**
+ * 按 orderedIds 重排指定 zone 的 items，其他 zone 位置不变，返回新数组。
+ */
+export function reorderItemsInZone(checklists: TripChecklist[], checklistId: string,
+  zone: string, orderedIds: string[]): TripChecklist[] {
+  const result: TripChecklist[] = [];
+  for (let index = 0; index < checklists.length; index++) {
+    const cl = checklists[index];
+    if (cl.id !== checklistId) {
+      result.push(cl);
+      continue;
+    }
+    const zoneItems = cl.items.filter(item => item.group === zone);
+    const reordered: ChecklistItem[] = [];
+    for (const id of orderedIds) {
+      const found = zoneItems.find(item => item.id === id);
+      if (found !== undefined) {
+        reordered.push(found);
+      }
+    }
+    const merged: ChecklistItem[] = [];
+    let zoneInserted = false;
+    for (const item of cl.items) {
+      if (item.group === zone) {
+        if (!zoneInserted) {
+          merged.push(...reordered);
+          zoneInserted = true;
+        }
+      } else {
+        merged.push(item);
+      }
+    }
+    if (!zoneInserted) {
+      merged.push(...reordered);
+    }
+    result.push(cloneChecklist(cl, { items: merged }));
+  }
+  return result;
+}
+
+/**
+ * 批量移动多个 items 到目标 zone（就地变更 group，保持数组顺序），返回新数组。
+ */
+export function batchMoveItems(checklists: TripChecklist[], checklistId: string,
+  itemIds: string[], zone: string): TripChecklist[] {
+  const result: TripChecklist[] = [];
+  for (let index = 0; index < checklists.length; index++) {
+    const cl = checklists[index];
+    if (cl.id !== checklistId) {
+      result.push(cl);
+      continue;
+    }
+    const updatedItems: ChecklistItem[] = [];
+    for (let i = 0; i < cl.items.length; i++) {
+      const item = cl.items[i];
+      if (itemIds.indexOf(item.id) >= 0) {
+        updatedItems.push(cloneChecklistItem(item, { group: zone }));
+      } else {
+        updatedItems.push(item);
+      }
+    }
+    result.push(cloneChecklist(cl, { items: updatedItems }));
+  }
+  return result;
+}
+
+/**
+ * setItemChecked 返回结果：新的 checklists 数组 + 被更新的目标 checklist（用于完成检测）。
+ */
+export interface SetItemCheckedResult {
+  checklists: TripChecklist[];
+  updatedChecklist: TripChecklist | undefined;
+}
+
+/**
+ * 将指定 item 的 checked 状态设为目标值，返回新数组和更新后的目标 checklist。
+ * 不含任何 UI 副作用（动画/成就弹窗），副作用由调用方处理。
+ */
+export function setItemChecked(checklists: TripChecklist[], checklistId: string,
+  itemId: string, checked: boolean): SetItemCheckedResult {
+  const nextChecklists: TripChecklist[] = [];
+  let updatedChecklist: TripChecklist | undefined = undefined;
+  for (let index = 0; index < checklists.length; index++) {
+    const source = checklists[index];
+    if (source.id === checklistId) {
+      const nextItems: ChecklistItem[] = [];
+      for (let itemIndex = 0; itemIndex < source.items.length; itemIndex++) {
+        const item = source.items[itemIndex];
+        if (item.id === itemId) {
+          nextItems.push(cloneChecklistItem(item, { checked: checked }));
+        } else {
+          nextItems.push(item);
+        }
+      }
+      const updated = cloneChecklist(source, { items: nextItems });
+      updatedChecklist = updated;
+      nextChecklists.push(updated);
+    } else {
+      nextChecklists.push(source);
+    }
+  }
+  return { checklists: nextChecklists, updatedChecklist: updatedChecklist };
+}
+
+/**
+ * 判断 checklist 是否在本次勾选后刚好全部完成（最后一个 item 被勾选）。
+ */
+export function isJustCompleted(beforeCheckedCount: number, beforeTotal: number,
+  updatedChecklist: TripChecklist | undefined): boolean {
+  if (updatedChecklist === undefined || beforeTotal === 0) {
+    return false;
+  }
+  return beforeCheckedCount === beforeTotal - 1 && checkedCount(updatedChecklist) === beforeTotal;
+}

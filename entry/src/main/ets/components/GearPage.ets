@@ -16,7 +16,7 @@ import { hdsEffect } from '@kit.UIDesignKit';
 import { CATEGORY_ALL, GearItem, TripChecklist } from '../models/PackModels';
 import { getPackStore, PackStore } from '../services/PackStore';
 import { buildGearTripCountMap } from '../services/FootprintService';
-import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice, updateGear } from '../services/GearService';
+import { numberOrZero, gearValueRatio, gearSortLabel, totalGearWeight, totalGearPrice, updateGear, formatKg } from '../services/GearService';
 import {
   ARROW_COLOR,
   CARD_BG,
@@ -590,14 +590,6 @@ export struct GearPage {
     return 0;
   }
 
-  private formatKg(weightGram: number): string {
-    if (weightGram <= 0) {
-      return '0kg';
-    }
-    return (Math.round(weightGram / 100) / 10).toString() + 'kg';
-  }
-
-
   private gearGroupCount(group: string): number {
     return this.filteredGearsByGroup(group).length;
   }
@@ -662,7 +654,7 @@ export struct GearPage {
   }
 
   private gearSummaryText(): string {
-    return this.gears.length.toString() + '件 · ' + this.formatKg(totalGearWeight(this.gears)) +
+    return this.gears.length.toString() + '件 · ' + formatKg(totalGearWeight(this.gears)) +
       ' · ¥' + totalGearPrice(this.gears).toString();
   }
 

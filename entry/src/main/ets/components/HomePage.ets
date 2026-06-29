@@ -1,4 +1,5 @@
 import { ChecklistItem, GearItem, TripChecklist } from '../models/PackModels';
+import { formatKg } from '../services/GearService';
 import {
   checkedCount,
   progressText,
@@ -367,13 +368,6 @@ export struct HomePage {
     return total;
   }
 
-  private formatKg(weightGram: number): string {
-    if (weightGram <= 0) {
-      return '0kg';
-    }
-    return (Math.round(weightGram / 100) / 10).toString() + 'kg';
-  }
-
   private heroSubtitleText(): string {
     const checklist = this.latestChecklist();
     if (checklist === undefined) {
@@ -391,7 +385,7 @@ export struct HomePage {
       parts.push('未设置日期');
     }
     // 总重
-    parts.push(this.formatKg(this.checklistTotalWeight(checklist)));
+    parts.push(formatKg(this.checklistTotalWeight(checklist)));
     return parts.join(' · ');
   }
 

@@ -111,9 +111,13 @@ import {
   TripProfileUpdate,
   resolveItemName,
   cloneChecklist,
-  cloneChecklistItem,
   createChecklist as createChecklistFactory,
-  createEmptyChecklistItem
+  createEmptyChecklistItem,
+  moveChecklistItemToZone,
+  reorderItemsInZone,
+  batchMoveItems,
+  setItemChecked,
+  isJustCompleted
 } from '../services/ChecklistService';
 import { ProfilePage } from '../components/ProfilePage';
 import {
@@ -1241,31 +1245,7 @@ this.openSheetAnimated();
     if (checklist === undefined) {
       return;
     }
-    const nextChecklists = this.checklists.map(cl => {
-      if (cl.id !== checklist.id) {
-        return cl;
-      }
-      // 找到目标 item 并创建更新后的副本
-      const targetItem = cl.items.find(item => item.id === itemId);
-      if (targetItem === undefined) {
-        return cl;
-      }
-      const movedItem = cloneChecklistItem(targetItem, { group: zone });
-      // 从数组中移除原 item（immutable spread 副本，避坑 #38）
-      const withoutMoved = cl.items.filter(item => item.id !== itemId);
-      // F-1：落点对齐目标格顶部（unshift）。
-      // 找目标 zone 第一个 item 的索引，插到它前面；若目标 zone 为空，插到末尾。
-      let insertAt = withoutMoved.length;
-      for (let i = 0; i < withoutMoved.length; i++) {
-        if (withoutMoved[i].group === zone) {
-          insertAt = i;
-          break;
-        }
-      }
-      const updatedItems = withoutMoved.slice();
-      updatedItems.splice(insertAt, 0, movedItem);
-      return cloneChecklist(cl, { items: updatedItems });
-    });
+    const nextChecklists = moveChecklistItemToZone(this.checklists, checklist.id, itemId, zone);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
     this.closeSheet();
@@ -1277,41 +1257,7 @@ this.openSheetAnimated();
     if (checklist === undefined) {
       return;
     }
-    const nextChecklists = this.checklists.map(cl => {
-      if (cl.id !== checklist.id) {
-        return cl;
-      }
-      // 分离：该 zone 的 items 和其他 zone 的 items
-      const zoneItems = cl.items.filter(item => item.group === zone);
-      const otherItems = cl.items.filter(item => item.group !== zone);
-      // 按 orderedIds 排序 zone items
-      const reordered: ChecklistItem[] = [];
-      for (const id of orderedIds) {
-        const found = zoneItems.find(item => item.id === id);
-        if (found !== undefined) {
-          reordered.push(found);
-        }
-      }
-      // 合并：保持其他 zone 的 items 位置不变，zone items 按新顺序插入原位置
-      const result: ChecklistItem[] = [];
-      let zoneInserted = false;
-      for (const item of cl.items) {
-        if (item.group === zone) {
-          if (!zoneInserted) {
-            // 第一次遇到该 zone 的 item 时，插入全部重排后的 items
-            result.push(...reordered);
-            zoneInserted = true;
-          }
-          // 跳过原始 zone items（已被 reordered 替代）
-        } else {
-          result.push(item);
-        }
-      }
-      if (!zoneInserted) {
-        result.push(...reordered);
-      }
-      return cloneChecklist(cl, { items: result });
-    });
+    const nextChecklists = reorderItemsInZone(this.checklists, checklist.id, zone, orderedIds);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
   }
@@ -1356,19 +1302,7 @@ this.openSheetAnimated();
     if (checklist === undefined) {
       return;
     }
-    const nextChecklists = this.checklists.map(cl => {
-      if (cl.id !== checklist.id) {
-        return cl;
-      }
-      // 将所有选中 items 的 group 改为目标 zone
-      const updatedItems = cl.items.map(item => {
-        if (itemIds.indexOf(item.id) >= 0) {
-          return cloneChecklistItem(item, { group: zone });
-        }
-        return item;
-      });
-      return cloneChecklist(cl, { items: updatedItems });
-    });
+    const nextChecklists = batchMoveItems(this.checklists, checklist.id, itemIds, zone);
     this.applyChecklistState(nextChecklists);
     await this.store.saveChecklists(nextChecklists);
     this.batchMoveItemIds = [];
@@ -1461,33 +1395,12 @@ this.closeSheet();
     if (checklist === undefined) {
       return;
     }
-    const beforeCheckedCount = checkedCount(checklist);
+    const beforeCount = checkedCount(checklist);
     const beforeTotal = checklist.items.length;
-    const nextChecklists: TripChecklist[] = [];
-    let updatedCurrent: TripChecklist | undefined = undefined;
-    for (let index = 0; index < this.checklists.length; index++) {
-      const source = this.checklists[index];
-      if (source.id === checklist.id) {
-        const nextItems: ChecklistItem[] = [];
-        for (let itemIndex = 0; itemIndex < source.items.length; itemIndex++) {
-          const item = source.items[itemIndex];
-          if (item.id === itemId) {
-            nextItems.push(cloneChecklistItem(item, { checked: checked }));
-          } else {
-            nextItems.push(item);
-          }
-        }
-        const updatedChecklist = cloneChecklist(source, { items: nextItems });
-        updatedCurrent = updatedChecklist;
-        nextChecklists.push(updatedChecklist);
-      } else {
-        nextChecklists.push(source);
-      }
-    }
-    this.applyChecklistState(nextChecklists, true);
-    await this.store.saveChecklists(nextChecklists);
-    if (updatedCurrent !== undefined && beforeTotal > 0 &&
-      beforeCheckedCount === beforeTotal - 1 && checkedCount(updatedCurrent) === beforeTotal) {
+    const result = setItemChecked(this.checklists, checklist.id, itemId, checked);
+    this.applyChecklistState(result.checklists, true);
+    await this.store.saveChecklists(result.checklists);
+    if (isJustCompleted(beforeCount, beforeTotal, result.updatedChecklist)) {
       this.showAchievement();
     }
   }
@@ -1497,7 +1410,7 @@ this.closeSheet();
     if (checklist === undefined) {
       return;
     }
-    const beforeCheckedCount = checkedCount(checklist);
+    const beforeCount = checkedCount(checklist);
     const beforeTotal = checklist.items.length;
     const nextChecklists = toggleItemInChecklists(this.checklists, checklist.id, itemId);
     this.highlightedItemId = itemId;
@@ -1509,8 +1422,7 @@ this.closeSheet();
       }
     }, 600));
     const updatedCurrent = nextChecklists.find((c: TripChecklist) => c.id === checklist.id);
-    if (updatedCurrent !== undefined && beforeTotal > 0 &&
-      beforeCheckedCount === beforeTotal - 1 && checkedCount(updatedCurrent) === beforeTotal) {
+    if (isJustCompleted(beforeCount, beforeTotal, updatedCurrent)) {
       this.showAchievement();
     }
   }

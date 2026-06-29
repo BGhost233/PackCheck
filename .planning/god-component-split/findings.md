@@ -250,7 +250,17 @@ Index.ets                          GearPage.ets
 
 ---
 
-## 9. ArkUI 技术约束备忘
+## 9. Wave 1B 跳过决策记录
+
+**决策**: 跳过 SheetOverlay → SheetContainer 重构，保持 SheetOverlay 当前形态。
+
+**原因**: Wave 1A 内化后 SheetOverlay 已从 85 成员（46 @Prop + 39 回调）降至 ~60 成员（38 @Prop + 22 回调），且这些成员是各子 sheet 实际需要的初始值和回调——不再是"无脑透传"。SheetContainer + @BuilderParam 方案的核心收益（消除透传中间层）已大幅缩水，而 §8.2 @Builder this 绑定风险不变。改造后 Index.ets 的 @Builder 定义 + SheetContainer 调用行数与当前 SheetOverlay 调用行数相当，净减为零。
+
+**SheetOverlay 当前职责（合理）**: 统一壳（overlay + swipe-to-dismiss 手势 + 动画 + 标题栏）+ sheet 路由。
+
+---
+
+## 10. ArkUI 技术约束备忘
 
 | 约束 | 影响 | 来源 |
 |------|------|------|
