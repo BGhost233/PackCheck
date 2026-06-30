@@ -230,7 +230,7 @@ export struct DayCard {
     Column({ space: 8 }) {
       ForEach(this.day.segments, (seg: RouteSegment, index: number) => {
         this.buildSegmentRow(seg, index)
-      }, (seg: RouteSegment, index: number) => seg.id + '_' + index.toString())
+      }, (seg: RouteSegment, index: number) => seg.id + '_' + seg.from + '_' + seg.to + '_' + seg.transport + '_' + (seg.departTime ?? '') + '_' + (seg.arriveTime ?? '') + '_' + (seg.note ?? '') + '_' + (seg.accommodation ?? '') + '_' + index.toString())
 
       // 添加路段节点
       Row({ space: 10 }) {

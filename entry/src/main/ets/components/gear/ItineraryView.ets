@@ -191,7 +191,7 @@ export struct ItineraryView {
                   .animation({ curve: SPRING_GENERAL() })
               )
             )
-        }, (day: DayItinerary) => day.id + '_' + (day.from ?? '') + '_' + (day.to ?? '') + '_' + day.segments.length.toString())
+        }, (day: DayItinerary) => day.id + '_' + (day.from ?? '') + '_' + (day.to ?? '') + '_' + (day.date ?? '') + '_' + (day.note ?? '') + '_' + day.segments.length.toString() + '_' + this.renderNonce.toString())
 
         // 底部添加一天按钮
         Text('+ 添加一天')
